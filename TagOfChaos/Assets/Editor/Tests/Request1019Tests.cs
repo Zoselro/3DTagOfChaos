@@ -94,16 +94,18 @@ public class Request1019Tests
         foreach (string shell in new[] { "CF_MonsterHouse", "CF_Tent" })
         {
             GameObject go = (GameObject)PrefabUtility.InstantiatePrefab(CandyForestAssets.LoadPrefab(shell));
+            Vector3 o = new Vector3(5000f, -3000f, 5000f); // 열린 씬의 물체와 겹치지 않는 먼 곳에서 잰다
+            go.transform.position = o;
             try
             {
                 Collider holeBlock = go.GetComponentInChildren<CookieHole>().GetComponent<Collider>();
                 Physics.SyncTransforms();
-                float r = go.GetComponentsInChildren<BoxCollider>().Where(c => c.name.StartsWith("COL_Wall_")).Min(c => new Vector2(c.transform.position.x, c.transform.position.z).magnitude);
-                Assert.IsFalse(Physics.CheckSphere(new Vector3(0f, 1.2f, r), 2f), shell + " front door is monster wide");
-                Assert.IsTrue(Physics.CheckSphere(new Vector3(0f, 1.2f, -r), 0.3f), shell + " back hole blocks the monster");
+                float r = go.GetComponentsInChildren<BoxCollider>().Where(c => c.name.StartsWith("COL_Wall_")).Min(c => new Vector2(c.transform.position.x - o.x, c.transform.position.z - o.z).magnitude);
+                Assert.IsFalse(Physics.CheckSphere(o + new Vector3(0f, 1.2f, r), 2f), shell + " front door is monster wide");
+                Assert.IsTrue(Physics.CheckSphere(o + new Vector3(0f, 1.2f, -r), 0.3f), shell + " back hole blocks the monster");
                 holeBlock.enabled = false; // 쿠키에게는 열린 구멍
                 Physics.SyncTransforms();
-                Assert.IsFalse(Physics.CheckSphere(new Vector3(0f, 1.2f, -r), 0.6f), shell + " back hole fits a 0.6 m body");
+                Assert.IsFalse(Physics.CheckSphere(o + new Vector3(0f, 1.2f, -r), 0.6f), shell + " back hole fits a 0.6 m body");
                 Assert.Less(go.GetComponentsInChildren<BoxCollider>().Where(c => c.name.StartsWith("COL_Wall_")).Max(c => c.size.z), 1f, "hole depth under 1 m");
             }
             finally { Object.DestroyImmediate(go); }
