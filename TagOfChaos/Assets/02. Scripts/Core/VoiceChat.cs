@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 // PUN 방과 같은 음성 방에 들어가고, 씬을 나가면 없앤다. 말하는 사람마다 Speaker(3D 소리)가 생기고 매 프레임 그 사람 캐릭터 머리 위치로 옮긴다
 // — 음성 방의 번호는 PUN 번호와 달라서, 음성 방 닉네임에 PUN 번호를 넣어 짝을 찾는다.
 // 보내기: 누르면서 말하기(키 = KeyBindings.PushToTalk) / 항상 말하기(VoiceChatSettings). 녹음기(VoiceRecorderPanel)가 녹음하는 동안은
-// 마이크를 놓고 보내지 않는다(같은 마이크를 두 곳에서 열 수 없다).
+// 마이크를 놓고 보내지 않으며, 들어오는 음성도 끈다(같은 마이크를 두 곳에서 열 수 없고, 남의 목소리가 녹음에 섞이지 않게).
 public class VoiceChat : MonoBehaviour
 {
     private static VoiceChat instance;
@@ -106,17 +106,19 @@ public class VoiceChat : MonoBehaviour
         }
         bool transmit = VoiceChatSettings.ShouldTransmit(VoiceChatSettings.Mode, PlayerInput.PushToTalkHeld, recording);
         if (recorder.TransmitEnabled != transmit) recorder.TransmitEnabled = transmit;
-        FollowSpeakers();
+        FollowSpeakers(recording);
     }
 
     // 말하는 사람의 소리를 그 사람 캐릭터 머리에 둔다. 캐릭터가 없으면(들어오는 중) 그 자리에 둔다.
-    private void FollowSpeakers()
+    // 녹음하는 동안은 들어오는 음성 채팅도 끈다 — 스피커로 나온 남의 목소리가 내 녹음에 섞이지 않게.
+    private void FollowSpeakers(bool muted)
     {
         float mouth = VoiceChatSettingsSO.Current.MouthHeight;
         for (int i = speakers.Count - 1; i >= 0; i--)
         {
             Speaker s = speakers[i];
             if (s == null) { speakers.RemoveAt(i); continue; }
+            if (s.TryGetComponent(out AudioSource source) && source.mute != muted) source.mute = muted;
             if (s.RemoteVoice == null) continue;
             int actor = PunActorOf(s.RemoteVoice.PlayerId);
             Transform body = BodyOf(actor);

@@ -11,11 +11,43 @@ using UnityEngine.SceneManagement;
 // - 쿠키: 캡슐 r 0.46 h 2.0, 한 칸에 1.8 m까지 오른다(점프).
 // - 괴물: 통로 폭 4 m 기준(반경 1.9 m, 높이 3 m), 한 칸에 0.9 m까지 오른다.
 // 보고: 쿠키 스폰에서 닿지 않는 바닥(갇힌 주머니), 괴물이 2.5 m 안으로 다가갈 수 없는 쿠키 자리(쿠키 전용), 스폰 연결 여부.
+// 몸 크기(Body)를 여러 개 주면 한 번의 격자로 몸마다 따로 검사한다 — 앞으로 만들 캐릭터 크기 범위(Request1009Plan.md §28.10).
 public static class MapPassabilityCheck
 {
+    // 플레이어 캐릭터 몸(캡슐 반경·키·한 번에 오르는 높이)
+    public readonly struct Body
+    {
+        public readonly string Name;
+        public readonly float Radius, Height, Rise;
+        public Body(string name, float radius, float height, float rise) { Name = name; Radius = radius; Height = height; Rise = rise; }
+        public override string ToString() => $"{Name}(r {Radius:F2} h {Height:F1} jump {Rise:F1})";
+    }
+
+    public static readonly Body CookieBody = new Body("Cookie", 0.46f, 2f, 1.8f);
+    // 새 캐릭터 설계 범위(§28.10): 반경 0.35~0.6 m, 키 2.4 m 이하, 점프 1.8 m 이하 — 네 모서리 + 지금 쿠키
+    public static readonly Body[] DesignRange =
+    {
+        CookieBody,
+        new Body("Thin", 0.35f, 1.6f, 1.8f), new Body("ThinTall", 0.35f, 2.4f, 1.8f),
+        new Body("Wide", 0.6f, 1.6f, 1.8f), new Body("WideTall", 0.6f, 2.4f, 1.8f),
+    };
+
+    public sealed class Options
+    {
+        public float Half = MapCompactor.NewHalf;
+        public float Cell = MapPassabilityCheck.Cell;
+        public Body[] Bodies = { CookieBody };
+        public System.Func<Vector3, bool> CookieForbidden; // 쿠키가 들어갈 수 없는 곳(술래방, S11) — 주머니·쿠키 전용 판정에서도 뺀다
+        public System.Func<Vector3, bool> IgnorePocket;    // 주머니로 보지 않는 곳(울타리 밖처럼 놀이 공간이 아닌 바닥)
+        public (string name, Vector3 pos)[] Targets;       // 쿠키·괴물이 모두 TargetReach m 안까지 와야 하는 자리(상자·수리 자리·탈출구 …)
+        // 괴물 출발점을 더한다 — 술래방 문(폭 3 m)은 실제 괴물 충돌체(반경 0.31 m)는 지나가지만 4 m 통로 기준 격자로는 막힌다
+        public Vector3[] MonsterSeeds;
+        public string MapImage; // 첫 몸 기준 위에서 본 통행 지도 PNG(초록 = 괴물·쿠키 모두, 노랑 = 괴물 손 닿는 쿠키 자리, 빨강 = 쿠키 전용, 보라 = 주머니)
+    }
+
+    public const float TargetReach = 3f;
     private const string LogTag = "[Passability]";
     private const float Cell = 0.5f;   // 4 m 통로(규칙 R3)를 격자가 놓치지 않을 만큼 촘촘하게
-    private const float CookieRadius = 0.46f, CookieHeight = 2f, CookieRise = 1.8f;
     private const float MonsterRadius = 1.8f, MonsterHeight = 3f, MonsterRise = 0.9f; // 통로 폭 3.6 m 이상(4 m 규칙 안에서 격자 오차 몫을 뺐다)
     // 괴물은 Rigidbody 속도 이동이고 계단 처리가 없으며 캡슐이 작다(r 0.31 m) — 수직 턱은 이 높이까지만 넘는다. 이어진 경사는 MonsterRise까지.
     private const float MonsterStep = 0.15f;
@@ -28,23 +60,31 @@ public static class MapPassabilityCheck
     public sealed class Result
     {
         public string Scene;
+        public string BodyName = CookieBody.ToString();
         public int Cells, CookieNodes, CookieReached, MonsterReached;
         public int PocketCells, CookieOnlyCells, SealedCells;
         public bool CookieSpawnOnGraph, MonsterSpawnOnGraph, SpawnsConnected;
         public readonly List<string> Pockets = new List<string>();
         public readonly List<string> CookieOnly = new List<string>();
-        public bool Clean => CookieSpawnOnGraph && MonsterSpawnOnGraph && SpawnsConnected && Pockets.Count == 0 && CookieOnly.Count == 0;
+        public readonly List<string> UnreachedTargets = new List<string>();
+        public int Targets;
+        public bool Clean => CookieSpawnOnGraph && MonsterSpawnOnGraph && SpawnsConnected && Pockets.Count == 0 && CookieOnly.Count == 0 && UnreachedTargets.Count == 0;
 
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"{Scene}: cells {Cells}, cookie nodes {CookieNodes}, cookie reached {CookieReached}, monster reached {MonsterReached}");
+            sb.AppendLine($"{Scene} [{BodyName}]: cells {Cells}, cookie nodes {CookieNodes}, cookie reached {CookieReached}, monster reached {MonsterReached}");
             sb.AppendLine($"  spawns on graph cookie {CookieSpawnOnGraph} monster {MonsterSpawnOnGraph}, connected {SpawnsConnected}");
             sb.AppendLine($"  sealed interiors (covered, nobody can enter) {SealedCells} cells");
             sb.AppendLine($"  pockets (unreached open ground) {PocketCells} cells, clusters >= {ReportClusterMin}: {Pockets.Count}");
             foreach (string p in Pockets) sb.AppendLine("    " + p);
             sb.AppendLine($"  cookie-only (monster cannot come within {MonsterReach} m) {CookieOnlyCells} cells, clusters >= {ReportClusterMin}: {CookieOnly.Count}");
             foreach (string p in CookieOnly) sb.AppendLine("    " + p);
+            if (Targets > 0)
+            {
+                sb.AppendLine($"  targets {Targets}, not reached by both within {TargetReach} m: {UnreachedTargets.Count}");
+                foreach (string p in UnreachedTargets) sb.AppendLine("    " + p);
+            }
             return sb.ToString();
         }
     }
@@ -66,29 +106,42 @@ public static class MapPassabilityCheck
     {
         string text = r.ToString();
         Directory.CreateDirectory("Temp");
-        File.WriteAllText($"Temp/Passability_{r.Scene}.txt", text);
+        File.WriteAllText($"Temp/Passability_{r.Scene}{(r.BodyName == CookieBody.ToString() ? "" : "_" + r.BodyName.Split('(')[0])}.txt", text);
         if (r.Clean) Debug.Log($"{LogTag} {text}");
         else Debug.LogWarning($"{LogTag} {text}");
     }
 
-    // Ground: 그 칸의 가장 낮은 걷는 면, Covered: 그 위를 다른 물체가 덮고 있음(닫힌 천막·건물 안)
-    private struct Node { public float Y; public bool Cookie, Monster, Ground, Covered; }
+    // Ground: 그 칸의 가장 낮은 걷는 면, Covered: 그 위를 다른 물체가 덮고 있음(닫힌 천막·건물 안).
+    // Fits: 몸마다(비트) 그 자리에 설 수 있는지. 0번 비트는 FindPath가 쓰는 지금 쿠키.
+    private struct Node { public float Y; public int Fits; public bool Monster, Ground, Covered; public bool Cookie => (Fits & 1) != 0; }
 
     public static Result Run(Scene scene) => Run(scene, MapCompactor.NewHalf, Cell);
 
     // half·cell을 바꾸면 원본 크기 씬(±172 m)도 비교용으로 검사할 수 있다.
-    public static Result Run(Scene scene, float half, float cell)
-    {
-        var result = new Result { Scene = scene.name };
-        int n = Mathf.RoundToInt(half * 2f / cell) + 1;
-        gridCell = cell;
-        result.Cells = n * n;
+    public static Result Run(Scene scene, float half, float cell) => Run(scene, new Options { Half = half, Cell = cell })[0];
 
-        // 문은 열린 것으로 본다(문짝 충돌체를 잠시 끈다)
+    // 몸마다 결과 하나. 문(InteractableDoor)·탈출구 문(EscapeGate)은 열린 것으로, 술래방 문은 괴물만 지나가는 것으로 본다.
+    public static Result[] Run(Scene scene, Options options)
+    {
+        float half = options.Half;
+        int n = Mathf.RoundToInt(half * 2f / options.Cell) + 1;
+        gridCell = options.Cell;
+        Body[] bodies = options.Bodies;
+        var results = bodies.Select(b => new Result { Scene = scene.name, BodyName = b.ToString(), Cells = n * n }).ToArray();
+
         var disabled = new List<Collider>();
-        foreach (InteractableDoor door in Object.FindObjectsByType<InteractableDoor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-            foreach (Collider c in door.GetComponentsInChildren<Collider>())
+        void Open(Component root)
+        {
+            foreach (Collider c in root.GetComponentsInChildren<Collider>())
                 if (c.enabled) { c.enabled = false; disabled.Add(c); }
+        }
+        foreach (InteractableDoor door in Object.FindObjectsByType<InteractableDoor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)) Open(door);
+        foreach (MonsterRoomDoor door in Object.FindObjectsByType<MonsterRoomDoor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)) Open(door);
+        // 쿠키 구멍은 쿠키에게 열려 있다(괴물 몸 격자는 1.4 m 구멍에 들어가지 못한다)
+        foreach (CookieHole hole in Object.FindObjectsByType<CookieHole>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)) Open(hole);
+        foreach (EscapeGate gate in Object.FindObjectsByType<EscapeGate>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (Transform t in gate.GetComponentsInChildren<Transform>())
+                if (t.name.StartsWith("Door_")) Open(t);
         Physics.SyncTransforms();
 
         try
@@ -98,60 +151,124 @@ public static class MapPassabilityCheck
                 for (int iz = 0; iz < n; iz++)
                 {
                     Vector3 p = CellPos(ix, iz, half);
-                    nodes[ix, iz] = FindNodes(p);
-                    result.CookieNodes += nodes[ix, iz].Count(x => x.Cookie);
+                    nodes[ix, iz] = FindNodes(p, bodies);
+                    if (options.CookieForbidden != null && options.CookieForbidden(p))
+                        for (int k = 0; k < nodes[ix, iz].Length; k++) nodes[ix, iz][k].Fits = 0;
+                    for (int b = 0; b < bodies.Length; b++) results[b].CookieNodes += nodes[ix, iz].Count(x => (x.Fits & (1 << b)) != 0);
                 }
 
-            bool[,][] cookie = Flood(nodes, n, half, SceneSpawnPoints.Cookie, true, out bool cookieOnGraph);
-            bool[,][] monster = Flood(nodes, n, half, SceneSpawnPoints.Monster, false, out bool monsterOnGraph);
-            result.CookieSpawnOnGraph = cookieOnGraph;
-            result.MonsterSpawnOnGraph = monsterOnGraph;
-            result.SpawnsConnected = cookieOnGraph && monsterOnGraph && MonsterSpawnReachedByCookie(nodes, cookie, n, half);
+            bool[,][] monster = Flood(nodes, n, half, SceneSpawnPoints.Monster, -1, default, out bool monsterOnGraph, options.MonsterSeeds);
+            int reach = Mathf.CeilToInt(MonsterReach / options.Cell);
+            for (int b = 0; b < bodies.Length; b++)
+            {
+                Result result = results[b];
+                int bit = 1 << b;
+                bool[,][] cookie = Flood(nodes, n, half, SceneSpawnPoints.Cookie, b, bodies[b], out bool cookieOnGraph);
+                result.CookieSpawnOnGraph = cookieOnGraph;
+                result.MonsterSpawnOnGraph = monsterOnGraph;
+                // 술래방이 쿠키 금지면 괴물 스폰 대신 괴물이 닿는 바닥과 쿠키가 닿는 바닥이 이어지는지로 본다
+                result.SpawnsConnected = cookieOnGraph && monsterOnGraph &&
+                    (options.CookieForbidden != null ? Overlaps(nodes, cookie, monster, n) : MonsterSpawnReachedByCookie(nodes, cookie, n, half));
 
-            var pocket = new bool[n, n];
-            var cookieOnly = new bool[n, n];
-            int reach = Mathf.CeilToInt(MonsterReach / Cell);
-            for (int ix = 0; ix < n; ix++)
-                for (int iz = 0; iz < n; iz++)
-                {
-                    Node[] list = nodes[ix, iz];
-                    for (int k = 0; k < list.Length; k++)
+                var pocket = new bool[n, n];
+                var cookieOnly = new bool[n, n];
+                for (int ix = 0; ix < n; ix++)
+                    for (int iz = 0; iz < n; iz++)
                     {
-                        if (cookie[ix, iz][k]) result.CookieReached++;
-                        if (monster[ix, iz][k]) result.MonsterReached++;
-                    }
-                    int ground = System.Array.FindIndex(list, x => x.Cookie && x.Ground);
-                    if (ground >= 0 && !cookie[ix, iz][ground])
-                    {
-                        if (list[ground].Covered) result.SealedCells++; // 아무도 들어갈 수 없는 닫힌 내부 — 문제 아님
-                        else { pocket[ix, iz] = true; result.PocketCells++; }
+                        Node[] list = nodes[ix, iz];
+                        for (int k = 0; k < list.Length; k++)
+                        {
+                            if (cookie[ix, iz][k]) result.CookieReached++;
+                            if (monster[ix, iz][k]) result.MonsterReached++;
+                        }
+                        int ground = System.Array.FindIndex(list, x => (x.Fits & bit) != 0 && x.Ground);
+                        if (ground >= 0 && !cookie[ix, iz][ground])
+                        {
+                            if (list[ground].Covered) result.SealedCells++; // 아무도 들어갈 수 없는 닫힌 내부 — 문제 아님
+                            else if (options.IgnorePocket == null || !options.IgnorePocket(CellPos(ix, iz, half))) { pocket[ix, iz] = true; result.PocketCells++; }
+                        }
+
+                        for (int k = 0; k < list.Length; k++)
+                        {
+                            if (!cookie[ix, iz][k]) continue;
+                            if (!MonsterNear(nodes, monster, n, ix, iz, list[k].Y, reach)) { cookieOnly[ix, iz] = true; result.CookieOnlyCells++; break; }
+                        }
                     }
 
-                    for (int k = 0; k < list.Length; k++)
+                Clusters(pocket, n, half, result.Pockets);
+                Clusters(cookieOnly, n, half, result.CookieOnly);
+                if (b == 0 && !string.IsNullOrEmpty(options.MapImage)) WriteMap(options.MapImage, nodes, cookie, monster, pocket, cookieOnly, n);
+                if (options.Targets != null)
+                    foreach ((string name, Vector3 pos) in options.Targets)
                     {
-                        if (!cookie[ix, iz][k]) continue;
-                        if (!MonsterNear(nodes, monster, n, ix, iz, list[k].Y, reach)) { cookieOnly[ix, iz] = true; result.CookieOnlyCells++; break; }
+                        result.Targets++;
+                        bool c = Near(nodes, cookie, n, half, pos), m = Near(nodes, monster, n, half, pos);
+                        if (!c || !m) result.UnreachedTargets.Add($"{name} {pos:F1} cookie {c} monster {m}");
                     }
-                }
-
-            Clusters(pocket, n, half, result.Pockets);
-            Clusters(cookieOnly, n, half, result.CookieOnly);
+            }
         }
         finally
         {
             foreach (Collider c in disabled) c.enabled = true;
             Physics.SyncTransforms();
         }
-        return result;
+        return results;
+    }
+
+    private static void WriteMap(string path, Node[,][] nodes, bool[,][] cookie, bool[,][] monster, bool[,] pocket, bool[,] cookieOnly, int n)
+    {
+        var tex = new Texture2D(n, n, TextureFormat.RGB24, false);
+        var pixels = new Color32[n * n];
+        for (int ix = 0; ix < n; ix++)
+            for (int iz = 0; iz < n; iz++)
+            {
+                bool c = cookie[ix, iz].Any(x => x), m = monster[ix, iz].Any(x => x);
+                Color32 col = pocket[ix, iz] ? new Color32(170, 60, 200, 255)
+                    : cookieOnly[ix, iz] ? new Color32(230, 40, 40, 255)
+                    : c && m ? new Color32(70, 170, 80, 255)
+                    : c ? new Color32(220, 200, 60, 255)
+                    : m ? new Color32(60, 110, 200, 255)
+                    : nodes[ix, iz].Length > 0 ? new Color32(45, 45, 50, 255) : new Color32(15, 15, 18, 255);
+                pixels[iz * n + ix] = col;
+            }
+        tex.SetPixels32(pixels);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        File.WriteAllBytes(path, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    // 자리(pos)에서 수평 TargetReach m 안, 높이 차 2.5 m 안에 닿은 칸이 있는지
+    private static bool Near(Node[,][] nodes, bool[,][] reached, int n, float half, Vector3 pos)
+    {
+        int cx = Mathf.RoundToInt((pos.x + half) / gridCell), cz = Mathf.RoundToInt((pos.z + half) / gridCell);
+        int r = Mathf.CeilToInt(TargetReach / gridCell);
+        for (int x = Mathf.Max(0, cx - r); x <= Mathf.Min(n - 1, cx + r); x++)
+            for (int z = Mathf.Max(0, cz - r); z <= Mathf.Min(n - 1, cz + r); z++)
+            {
+                if ((x - cx) * (x - cx) + (z - cz) * (z - cz) > r * r) continue;
+                for (int k = 0; k < nodes[x, z].Length; k++)
+                    if (reached[x, z][k] && Mathf.Abs(nodes[x, z][k].Y - pos.y) <= MonsterReach) return true;
+            }
+        return false;
+    }
+
+    private static bool Overlaps(Node[,][] nodes, bool[,][] a, bool[,][] b, int n)
+    {
+        for (int ix = 0; ix < n; ix++)
+            for (int iz = 0; iz < n; iz++)
+                for (int k = 0; k < nodes[ix, iz].Length; k++)
+                    if (a[ix, iz][k] && b[ix, iz][k]) return true;
+        return false;
     }
 
     private static float gridCell = Cell;
 
     // Play Mode 검증용: from에서 to까지 쿠키(cookie=true) 또는 괴물이 갈 수 있는 격자 경로(칸 중심, 바닥 높이). 없으면 null.
     // 닫힌 문은 지나갈 수 있는 것으로 본다(가는 길에 여는 것은 MapPlaytestDriver가 한다). 이미 열린 문짝은 장애물로 둔다.
-    public static List<Vector3> FindPath(Vector3 from, Vector3 to, bool cookie)
+    public static List<Vector3> FindPath(Vector3 from, Vector3 to, bool cookie) => FindPath(from, to, cookie, MapCompactor.NewHalf);
+
+    public static List<Vector3> FindPath(Vector3 from, Vector3 to, bool cookie, float half)
     {
-        float half = MapCompactor.NewHalf;
         gridCell = Cell;
         int n = Mathf.RoundToInt(half * 2f / Cell) + 1;
         var disabled = new List<Collider>();
@@ -170,7 +287,7 @@ public static class MapPassabilityCheck
             var nodes = new Node[n, n][];
             for (int ix = 0; ix < n; ix++)
                 for (int iz = 0; iz < n; iz++)
-                    nodes[ix, iz] = FindNodes(CellPos(ix, iz, half));
+                    nodes[ix, iz] = FindNodes(CellPos(ix, iz, half), CookieOnlyBody);
 
             (int x, int z) Index(Vector3 p) => (Mathf.Clamp(Mathf.RoundToInt((p.x + half) / Cell), 0, n - 1), Mathf.Clamp(Mathf.RoundToInt((p.z + half) / Cell), 0, n - 1));
             var (sx, sz) = Index(from);
@@ -186,7 +303,7 @@ public static class MapPassabilityCheck
                     int k = Nearest(nodes[ix, iz], from.y, cookie);
                     float d = (ix - ox) * (ix - ox) + (iz - oz) * (iz - oz);
                     // 시작 칸은 지금 자리에서 곧장 갈 수 있어야 한다(열린 문짝 너머의 칸을 고르면 끼어 버린다)
-                    if (k >= 0 && d < startD && (d == 0 || Sweep(from, from.y, CellPos(ix, iz, half), nodes[ix, iz][k].Y))) { startD = d; start = k; (sx, sz) = (ix, iz); }
+                    if (k >= 0 && d < startD && (d == 0 || Sweep(from, from.y, CellPos(ix, iz, half), nodes[ix, iz][k].Y, CookieBody))) { startD = d; start = k; (sx, sz) = (ix, iz); }
                 }
             if (start < 0) return null;
 
@@ -217,7 +334,7 @@ public static class MapPassabilityCheck
                         if (parent.ContainsKey((nx, nz, j)) || !(cookie ? list[j].Cookie : list[j].Monster)) continue;
                         float dy = list[j].Y - here.Y;
                         if (dy > rise) continue;
-                        if (cookie && !Sweep(CellPos(x, z, half), here.Y, CellPos(nx, nz, half), list[j].Y)) continue;
+                        if (cookie && !Sweep(CellPos(x, z, half), here.Y, CellPos(nx, nz, half), list[j].Y, CookieBody)) continue;
                         if (dy > MonsterStep && !IsSlope(CellPos(x, z, half), here.Y, CellPos(nx, nz, half), list[j].Y)) continue;
                         parent[(nx, nz, j)] = (x, z, k);
                         queue.Enqueue((nx, nz, j));
@@ -246,8 +363,10 @@ public static class MapPassabilityCheck
 
     private static Vector3 CellPos(int ix, int iz, float half) => new Vector3(-half + ix * gridCell, 0f, -half + iz * gridCell);
 
+    private static readonly Body[] CookieOnlyBody = { CookieBody };
+
     // 위에서 아래로 훑어 걸을 수 있는 면(법선 y ≥ 0.7)마다 쿠키·괴물이 설 수 있는지 본다. 아래층부터.
-    private static Node[] FindNodes(Vector3 p)
+    private static Node[] FindNodes(Vector3 p, Body[] bodies)
     {
         RaycastHit[] hits = Physics.RaycastAll(new Vector3(p.x, 300f, p.z), Vector3.down, 400f, ~0, QueryTriggerInteraction.Ignore);
         var list = new List<Node>();
@@ -263,16 +382,13 @@ public static class MapPassabilityCheck
                 list.RemoveAt(list.Count - 1);
             }
             Vector3 f = h.point;
-            var node = new Node
-            {
-                Y = f.y,
-                Cookie = Free(f, CookieRadius * 0.9f, CookieHeight),
-                Monster = Free(f, MonsterRadius, MonsterHeight),
-            };
+            var node = new Node { Y = f.y, Monster = Free(f, MonsterRadius, MonsterHeight) };
+            for (int b = 0; b < bodies.Length; b++)
+                if (Free(f, bodies[b].Radius * 0.9f, bodies[b].Height)) node.Fits |= 1 << b;
             node.Ground = ground;
             if (ground) node.Covered = hits.Any(o => o.point.y > f.y + 0.5f && !IsWalkableGround(o.collider));
             first = false;
-            if ((node.Cookie || node.Monster) && !InsideSolid(f)) list.Add(node);
+            if ((node.Fits != 0 || node.Monster) && !InsideSolid(f)) list.Add(node);
             if (list.Count >= MaxLayers) break;
         }
         return list.ToArray();
@@ -321,8 +437,11 @@ public static class MapPassabilityCheck
         return c.transform.parent != null && c.transform.parent.name == "MapColliders";
     }
 
-    private static bool[,][] Flood(Node[,][] nodes, int n, float half, string spawnName, bool cookie, out bool onGraph)
+    // body < 0이면 괴물
+    private static bool[,][] Flood(Node[,][] nodes, int n, float half, string spawnName, int body, Body shape, out bool onGraph, Vector3[] extraSeeds = null)
     {
+        bool cookie = body >= 0;
+        int bit = cookie ? 1 << body : 0;
         var seen = new bool[n, n][];
         for (int ix = 0; ix < n; ix++)
             for (int iz = 0; iz < n; iz++)
@@ -334,14 +453,23 @@ public static class MapPassabilityCheck
         Vector3 s = spawn.transform.position;
         int sx = Mathf.Clamp(Mathf.RoundToInt((s.x + half) / Cell), 0, n - 1);
         int sz = Mathf.Clamp(Mathf.RoundToInt((s.z + half) / Cell), 0, n - 1);
-        int start = Nearest(nodes[sx, sz], s.y, cookie);
+        int start = cookie ? NearestFit(nodes[sx, sz], s.y, bit) : Nearest(nodes[sx, sz], s.y, false);
         if (start < 0) return seen;
         onGraph = true;
 
-        float rise = cookie ? CookieRise : MonsterRise * gridCell; // 괴물은 비탈 기울기(1 m당 0.9 m), 쿠키는 한 번 뛰는 높이
+        float rise = cookie ? shape.Rise : MonsterRise * gridCell; // 괴물은 비탈 기울기(1 m당 0.9 m), 쿠키는 한 번 뛰는 높이
         var queue = new Queue<(int x, int z, int k)>();
         seen[sx, sz][start] = true;
         queue.Enqueue((sx, sz, start));
+        if (extraSeeds != null)
+            foreach (Vector3 e in extraSeeds)
+            {
+                int ex = Mathf.Clamp(Mathf.RoundToInt((e.x + half) / gridCell), 0, n - 1), ez = Mathf.Clamp(Mathf.RoundToInt((e.z + half) / gridCell), 0, n - 1);
+                int k = cookie ? NearestFit(nodes[ex, ez], e.y, bit) : Nearest(nodes[ex, ez], e.y, false);
+                if (k < 0 || seen[ex, ez][k]) continue;
+                seen[ex, ez][k] = true;
+                queue.Enqueue((ex, ez, k));
+            }
         int[] dx = { 1, -1, 0, 0 }, dz = { 0, 0, 1, -1 };
         while (queue.Count > 0)
         {
@@ -354,11 +482,11 @@ public static class MapPassabilityCheck
                 Node[] list = nodes[nx, nz];
                 for (int j = 0; j < list.Length; j++)
                 {
-                    if (seen[nx, nz][j] || !(cookie ? list[j].Cookie : list[j].Monster)) continue;
+                    if (seen[nx, nz][j] || !(cookie ? (list[j].Fits & bit) != 0 : list[j].Monster)) continue;
                     float dy = list[j].Y - from.Y;
                     if (dy > rise) continue;                       // 오르기는 한계까지, 내려가기는 떨어져도 된다
                     if (!cookie && dy > MonsterStep && !IsSlope(CellPos(x, z, half), from.Y, CellPos(nx, nz, half), list[j].Y)) continue;
-                    if (cookie && !Sweep(CellPos(x, z, half), from.Y, CellPos(nx, nz, half), list[j].Y)) continue;
+                    if (cookie && !Sweep(CellPos(x, z, half), from.Y, CellPos(nx, nz, half), list[j].Y, shape)) continue;
                     seen[nx, nz][j] = true;
                     queue.Enqueue((nx, nz, j));
                 }
@@ -368,11 +496,11 @@ public static class MapPassabilityCheck
     }
 
     // 쿠키가 이웃 칸으로 옮겨 갈 때 얇은 벽·울타리에 막히는지(두 칸 모두 비어 있어도 사이에 벽이 있을 수 있다)
-    private static bool Sweep(Vector3 a, float ya, Vector3 b, float yb)
+    private static bool Sweep(Vector3 a, float ya, Vector3 b, float yb, Body body)
     {
         float y = Mathf.Max(ya, yb) + 0.05f;
-        float r = CookieRadius * 0.6f;
-        Vector3 p1 = new Vector3(a.x, y + r + 0.1f, a.z), p2 = new Vector3(a.x, y + CookieHeight - r, a.z);
+        float r = body.Radius * 0.6f;
+        Vector3 p1 = new Vector3(a.x, y + r + 0.1f, a.z), p2 = new Vector3(a.x, y + body.Height - r, a.z);
         Vector3 dir = b - a;
         dir.y = 0f;
         foreach (RaycastHit hit in Physics.CapsuleCastAll(p1, p2, r, dir.normalized, dir.magnitude, ~0, QueryTriggerInteraction.Ignore))
@@ -398,6 +526,19 @@ public static class MapPassabilityCheck
         for (int k = 0; k < list.Length; k++)
         {
             if (!(cookie ? list[k].Cookie : list[k].Monster)) continue;
+            float d = Mathf.Abs(list[k].Y - y);
+            if (d < bestD) { bestD = d; best = k; }
+        }
+        return best;
+    }
+
+    private static int NearestFit(Node[] list, float y, int bit)
+    {
+        int best = -1;
+        float bestD = 3f;
+        for (int k = 0; k < list.Length; k++)
+        {
+            if ((list[k].Fits & bit) == 0) continue;
             float d = Mathf.Abs(list[k].Y - y);
             if (d < bestD) { bestD = d; best = k; }
         }

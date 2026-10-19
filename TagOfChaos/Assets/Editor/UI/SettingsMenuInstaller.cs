@@ -22,6 +22,7 @@ public static class SettingsMenuInstaller
         public string title = "Settings";
         public string tabControls = "Controls", tabOutput = "Output device", tabInput = "Input device";
         public string close = "Close", reset = "Reset to defaults", listening = "Press a key (Esc: cancel)";
+        public string resetConfirm = "Reset all keys to their defaults?";
         public string[] actionLabels = new string[0];
         public string micLabel = "Microphone", refresh = "Refresh", levelLabel = "Input level", talkModeLabel = "Talk mode";
         public string noMicrophone = "No microphone", pushToTalk = "Push to talk", alwaysOn = "Always on", keyHintFormat = "Talk key: {0}";
@@ -161,6 +162,7 @@ public static class SettingsMenuInstaller
         so.FindProperty("content").objectReferenceValue = contentRt;
         so.FindProperty("rowTemplate").objectReferenceValue = row.gameObject;
         so.FindProperty("resetButton").objectReferenceValue = reset;
+        AddResetConfirm(page, so, style, tx);
         so.FindProperty("listeningText").stringValue = tx.listening;
         so.FindProperty("normalKeyColor").colorValue = style.labelColor;
         SerializedProperty labels = so.FindProperty("actionLabels");
@@ -168,6 +170,49 @@ public static class SettingsMenuInstaller
         for (int i = 0; i < tx.actionLabels.Length; i++) labels.GetArrayElementAtIndex(i).stringValue = tx.actionLabels[i];
         so.ApplyModifiedPropertiesWithoutUndo();
         return page.gameObject;
+    }
+
+    // "기본값으로" 확인창(§27 후속): 조작키 탭 위를 어둡게 덮는 판 + 문구 + 예/아니오.
+    private static void AddResetConfirm(RectTransform page, SerializedObject so, S.Style style, Texts tx)
+    {
+        Transform old = page.Find("ResetConfirm");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        RectTransform dim = S.Child(page, "ResetConfirm", typeof(Image));
+        S.Stretch(dim);
+        dim.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
+        RectTransform box = Box(dim, style, new Vector2(620f, 260f));
+        TMP_Text message = S.Text(box, "Message", tx.resetConfirm, 30f, style.font, style.textColor, TextAlignmentOptions.Center);
+        S.SetRect(message.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -40f), new Vector2(-40f, 90f), new Vector2(0.5f, 1f));
+        Button yes = S.CreateButton(box, "YesButton", tx.yes, style);
+        Button no = S.CreateButton(box, "BackButton", tx.no, style);
+        S.SetRect((RectTransform)yes.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-120f, 34f), new Vector2(200f, 64f), new Vector2(0.5f, 0f));
+        S.SetRect((RectTransform)no.transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(120f, 34f), new Vector2(200f, 64f), new Vector2(0.5f, 0f));
+        UiSoundInstaller.Attach(new[] { yes, no });
+        dim.SetAsLastSibling();
+        dim.gameObject.SetActive(false);
+        so.FindProperty("resetConfirm").objectReferenceValue = dim.gameObject;
+        so.FindProperty("resetYesButton").objectReferenceValue = yes;
+        so.FindProperty("resetNoButton").objectReferenceValue = no;
+    }
+
+    // 이미 있는 프리팹의 조작키 탭에 확인창만 넣는다(프리팹 전체를 다시 만들지 않는다 — 다른 문구·배치 보존).
+    public static string AddResetConfirmToPrefab(Texts tx)
+    {
+        GameObject core = PrefabUtility.LoadPrefabContents(S.CorePrefabPath);
+        S.Style style = S.ReadStyle(core.GetComponentInChildren<EscMenu>(true));
+        PrefabUtility.UnloadPrefabContents(core);
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            KeyBindingsPage page = root.GetComponentInChildren<KeyBindingsPage>(true);
+            if (page == null) return "no KeyBindingsPage";
+            var so = new SerializedObject(page);
+            AddResetConfirm((RectTransform)page.transform, so, style, tx);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            return "ok";
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
     // 소리 설정 창 프리팹을 풀어 막대 4줄 + 출력 장치 줄만 남긴다(문구·장치 줄은 그 프리팹 것을 그대로).

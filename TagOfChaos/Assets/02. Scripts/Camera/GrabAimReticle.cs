@@ -73,7 +73,7 @@ public class GrabAimReticle : MonoBehaviour
             return;
         }
 
-        HideOrSeekPlayer target = trigger != null ? trigger.AimTarget : null;
+        Transform target = trigger != null ? trigger.AimTransform : null; // 쿠키·AI 모두 같은 빨간 표시
         bool hasTarget = target != null;
         if (hasTarget && !hadTarget) GameAudio.Play(SoundId.MonsterAimLock); // 잡을 수 있는 쿠키를 조준에 잡은 순간(괴물 본인 2D, S4)
         hadTarget = hasTarget;
@@ -86,7 +86,7 @@ public class GrabAimReticle : MonoBehaviour
         bool showMarker = hasTarget && cam != null;
         if (showMarker)
         {
-            Vector3 screen = cam.WorldToScreenPoint(target.transform.position + Vector3.up * MarkerHeight);
+            Vector3 screen = cam.WorldToScreenPoint(target.position + Vector3.up * MarkerHeight);
             showMarker = screen.z > 0f;
             if (showMarker) markerRect.position = screen;
         }

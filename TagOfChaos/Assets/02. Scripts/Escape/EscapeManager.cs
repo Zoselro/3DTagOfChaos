@@ -21,6 +21,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     [SerializeField] private RainbowChest rainbowChest;
     [SerializeField] private Transform monsterRoom;
     [SerializeField] private float monsterRoomHalfSize = 13f;
+    // 0이면 Ground 사각형이 맵 경계. 0보다 크면 맵 가운데를 중심으로 한 이 반지름의 원(캔디숲 실제 맵, Request1009Plan.md §28.6).
+    [SerializeField, Min(0f)] private float mapRadius;
     [SerializeField] private WitchPresenter witch;
     [Tooltip("비우면 씬 이름(Game_<Map>·Test_<Map>)으로 카탈로그에서 찾는다.")]
     [SerializeField] private EscapeRecipeSO recipeOverride;
@@ -32,7 +34,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private readonly List<GroundItemView> groundPool = new List<GroundItemView>();
     private readonly HashSet<int> brokenReported = new HashSet<int>();
     private bool initRequested;
-    private Rect mapRect;
+    private MapArea area;
     private Transform firstEscapeFocus;
 
     public EscapeState State { get; private set; }
@@ -40,7 +42,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public EscapeRecipeSO Recipe => recipe;
     public SpyRocket Rocket => rocket;
     public WitchPresenter Witch => witch;
-    public Rect MapRect => mapRect;
+    public Rect MapRect => area.Rect;
+    public MapArea Area => area;
     public event System.Action StateChanged;
 
     // "탈출했나"의 단일 기준은 방장이 쓴 EscapeState다(AuditFixPlan.md F-07·S-05). 다른 도메인은 이 두 함수만 부른다.
@@ -121,7 +124,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
             return;
         }
 
-        if (!WitchPath.TryGetGroundRect(gameObject.scene, out mapRect)) mapRect = new Rect(-70f, -70f, 140f, 140f);
+        if (mapRadius > 0f) area = new MapArea(Vector2.zero, mapRadius);
+        else area = new MapArea(WitchPath.TryGetGroundRect(gameObject.scene, out Rect ground) ? ground : new Rect(-70f, -70f, 140f, 140f));
         chests = new MaterialChest[chestAnchors.Length];
         for (int i = 0; i < chestAnchors.Length; i++)
         {
@@ -347,9 +351,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         return Mathf.Abs(p.x - c.x) < monsterRoomHalfSize && Mathf.Abs(p.z - c.z) < monsterRoomHalfSize;
     }
 
-    // 맵 경계(Ground 사각형) 밖으로 margin m 넘게 나갔는지 — 헬리콥터 모자 탈출(§25.5 H).
-    public bool IsOutsideMap(Vector3 p, float margin) =>
-        p.x < mapRect.xMin - margin || p.x > mapRect.xMax + margin || p.z < mapRect.yMin - margin || p.z > mapRect.yMax + margin;
+    // 맵 경계(Ground 사각형 또는 원) 밖으로 margin m 넘게 나갔는지 — 헬리콥터 모자 탈출(§25.5 H).
+    public bool IsOutsideMap(Vector3 p, float margin) => area.IsOutside(p, margin);
 
     private const float CapsuleRadius = 0.45f, CapsuleHeight = 1.9f, MapInset = 4f;
 
@@ -358,9 +361,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         for (int i = 0; i < 30; i++)
         {
-            float x = Mathf.Lerp(mapRect.xMin + MapInset, mapRect.xMax - MapInset, (float)random.NextDouble());
-            float z = Mathf.Lerp(mapRect.yMin + MapInset, mapRect.yMax - MapInset, (float)random.NextDouble());
-            point = SnapToGround(new Vector3(x, 30f, z));
+            Vector2 xz = area.RandomPoint(random, MapInset);
+            point = SnapToGround(new Vector3(xz.x, 30f, xz.y));
             if (point.y > 20f || InMonsterRoom(point)) continue;
             if (IsClearForCharacter(point)) return true;
         }
@@ -459,5 +461,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         monsterRoom = room;
         witch = witchPresenter;
     }
+
+    public void EditorSetMapRadius(float radius) => mapRadius = Mathf.Max(0f, radius);
 #endif
 }

@@ -4,13 +4,17 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // 설정 창 "조작키" 탭(§27 K2): 조작마다 한 줄(이름 + 키 칸). 키 칸을 누르면 다음에 누른 키·마우스 버튼으로 바뀌고 바로 적용된다(Esc = 취소).
-// 같은 묶음(쿠키·괴물·관전)에서 겹치는 키는 빨간색으로 보인다(막지는 않는다). "기본값으로"는 모든 키를 되돌린다.
+// 같은 묶음(쿠키·괴물·관전)에서 겹치는 키는 빨간색으로 보인다(막지는 않는다). "기본값으로"는 확인창(예/아니오)을 거쳐 모든 키를 되돌린다.
 // 줄은 프리팹의 줄 틀(rowTemplate)을 복제해 열 때 만든다. 조작 이름은 actionLabels(KeyAction 순서)에 프리팹에서 입력한다.
 public class KeyBindingsPage : MonoBehaviour
 {
     [SerializeField] private RectTransform content;
     [SerializeField] private GameObject rowTemplate;   // Label(TMP) + KeyButton(Button + TMP)
     [SerializeField] private Button resetButton;
+    [Tooltip("기본값으로 되돌릴지 묻는 창(예/아니오). 없으면 바로 되돌린다.")]
+    [SerializeField] private GameObject resetConfirm;
+    [SerializeField] private Button resetYesButton;
+    [SerializeField] private Button resetNoButton;
     [SerializeField] private string[] actionLabels = new string[0];
     [SerializeField] private string listeningText = "Press a key";
     [SerializeField] private Color normalKeyColor = Color.black;
@@ -25,13 +29,19 @@ public class KeyBindingsPage : MonoBehaviour
     private int listenStartFrame;
     private static KeyCode[] allKeys;
 
-    // 키 입력을 기다리는 중이면 ESC는 취소에 쓰인다 — ESC 메뉴·설정 창이 닫히지 않게 확인한다.
-    public static bool ConsumesEscape => listening != null || escapeFrame == Time.frameCount;
+    private static KeyBindingsPage confirming;
+
+    // 키 입력을 기다리는 중이거나 초기화 확인창이 떠 있으면 ESC는 그것을 취소하는 데 쓰인다 — ESC 메뉴·설정 창이 닫히지 않게 확인한다.
+    public static bool ConsumesEscape => listening != null || confirming != null || escapeFrame == Time.frameCount;
+    public bool IsConfirmingReset => resetConfirm != null && resetConfirm.activeSelf;
 
     private void Awake()
     {
         if (rowTemplate != null) rowTemplate.SetActive(false);
-        if (resetButton != null) resetButton.onClick.AddListener(() => { StopListening(); KeyBindings.ResetAll(); });
+        if (resetButton != null) resetButton.onClick.AddListener(AskReset);
+        if (resetYesButton != null) resetYesButton.onClick.AddListener(ConfirmReset);
+        if (resetNoButton != null) resetNoButton.onClick.AddListener(CancelReset);
+        if (resetConfirm != null) resetConfirm.SetActive(false);
         BuildRows();
     }
 
@@ -45,6 +55,27 @@ public class KeyBindingsPage : MonoBehaviour
     {
         KeyBindings.Changed -= RefreshKeys;
         StopListening();
+        CancelReset();
+    }
+
+    public void AskReset()
+    {
+        StopListening();
+        if (resetConfirm == null) { KeyBindings.ResetAll(); return; }
+        resetConfirm.SetActive(true);
+        confirming = this;
+    }
+
+    public void ConfirmReset()
+    {
+        KeyBindings.ResetAll();
+        CancelReset();
+    }
+
+    public void CancelReset()
+    {
+        if (resetConfirm != null && resetConfirm.activeSelf) resetConfirm.SetActive(false);
+        if (confirming == this) confirming = null;
     }
 
     private void BuildRows()
@@ -92,6 +123,12 @@ public class KeyBindingsPage : MonoBehaviour
 
     private void Update()
     {
+        if (confirming == this && Input.GetKeyDown(KeyCode.Escape))
+        {
+            escapeFrame = Time.frameCount;
+            CancelReset();
+            return;
+        }
         if (listening != this || Time.frameCount == listenStartFrame) return;
         if (Input.GetKeyDown(KeyCode.Escape))
         {

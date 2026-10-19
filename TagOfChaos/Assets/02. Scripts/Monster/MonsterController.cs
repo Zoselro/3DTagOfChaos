@@ -165,7 +165,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
 
     // 조준한 쿠키를 잡는다(GameFixPlan.md F1). CharacterInteractor가 E키 입력 때 다른 상호작용보다 먼저 부른다.
     public bool TryGrabAimTarget() => grabKillTrigger != null && grabKillTrigger.TryGrabAimTarget();
-    public bool HasGrabAimTarget => grabKillTrigger != null && grabKillTrigger.AimTarget != null;
+    public bool HasGrabAimTarget => grabKillTrigger != null && grabKillTrigger.AimTransform != null;
 
     private void Start()
     {

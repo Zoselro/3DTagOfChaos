@@ -67,6 +67,9 @@ public class EscapeTextsSO : ScriptableObject
     public string rocketTitle = "Spy rocket";
     public string reRecordVoice = "Record again (5s)"; // 대기실 녹음 버튼 — 이미 녹음했을 때(§26 H11)
     public string listenVoice = "Listen";
+    public string cookieCaughtWithFinal = "'{0}' was caught!"; // 괴물이 쿠키를 잡음 — 닉네임 끝 글자 받침 있음(이), 없음(가), 한글 아님(이(가))
+    public string cookieCaughtNoFinal = "'{0}' was caught!";
+    public string cookieCaughtOther = "'{0}' was caught!";
     public string skillDash = "Dash";         // 스킬 칸 이름(§26 H9)
     public string skillBomb = "Noise bomb";
     public string skillBombPlaced = "Placed";

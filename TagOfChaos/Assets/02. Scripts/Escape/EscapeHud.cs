@@ -113,7 +113,11 @@ public class EscapeHud : MonoBehaviour
         EscapeTextsSO t = instance.texts;
         switch (kind)
         {
-            case EscapeNoticeKind.SpyCaught: Toast(t.spyCaught, alert: true); break;
+            // 같은 순간에 오는 "잡혔습니다" 알림이 먼저 보이도록 스파이 알림은 조금 뒤에 띄운다.
+            case EscapeNoticeKind.SpyCaught: instance.StartCoroutine(instance.ToastLater(t.spyCaught, SpyCaughtToastDelay)); break;
+            case EscapeNoticeKind.CookieCaught:
+                Toast(CookieCaughtText(t, itemId), alert: true);
+                break;
             case EscapeNoticeKind.DeviceComplete: Toast(t.deviceComplete); break;
             case EscapeNoticeKind.BuildingRepaired: Toast(t.buildingRepaired); break;
             case EscapeNoticeKind.ExitsOpened: Toast(t.exitsOpened, alert: true); break;
@@ -376,6 +380,21 @@ public class EscapeHud : MonoBehaviour
 
     // 마녀 타이머 알림과 같은 순간에 오므로 그 알림이 지나간 뒤 띄운다.
     private const float DecoysGoneToastDelay = 4f;
+    private const float SpyCaughtToastDelay = 2.5f;
+
+    // "'닉네임'이(가) 잡혔습니다!" — 닉네임 끝 글자로 조사를 고른다.
+    public static string CookieCaughtText(EscapeTextsSO t, string actorText)
+    {
+        string name = actorText;
+        if (int.TryParse(actorText, out int actor) && PhotonNetwork.CurrentRoom != null)
+        {
+            Photon.Realtime.Player p = PhotonNetwork.CurrentRoom.GetPlayer(actor);
+            if (p != null) name = string.IsNullOrEmpty(p.NickName) ? "#" + actor : p.NickName;
+        }
+        string format = !KoreanText.EndsWithHangul(name) ? t.cookieCaughtOther
+            : KoreanText.HasFinalConsonant(name) ? t.cookieCaughtWithFinal : t.cookieCaughtNoFinal;
+        return string.Format(format, name);
+    }
 
     private IEnumerator ToastLater(string message, float delay)
     {

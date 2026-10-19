@@ -1,0 +1,16 @@
+{
+ "name": "CF_Lollipop_Yellow",
+ "tris": {
+  "CF_Lollipop_Yellow": 986
+ },
+ "min": [
+  -0.279,
+  0.0,
+  -0.281
+ ],
+ "max": [
+  0.279,
+  0.9,
+  0.281
+ ]
+}

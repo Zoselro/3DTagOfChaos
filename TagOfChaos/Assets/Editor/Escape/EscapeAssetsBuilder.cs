@@ -57,7 +57,7 @@ public static class EscapeAssetsBuilder
         ItemSO[] cells =
         {
             Mat("CandyCell_Red", "Candy Cell", new Color(1f, 0.15f, 0.15f)),
-            Mat("CandyCell_Orange", "Candy Cell", new Color(1f, 0.55f, 0.1f)),
+            Mat("CandyCell_Blue", "Candy Cell", new Color(0.2f, 0.45f, 1f)), // 캔디숲 막대사탕 4색(Request1009Plan.md §28.5 — 주황 → 파랑)
             Mat("CandyCell_Yellow", "Candy Cell", new Color(1f, 0.9f, 0.15f)),
             Mat("CandyCell_Green", "Candy Cell", new Color(0.3f, 0.95f, 0.3f)),
         };

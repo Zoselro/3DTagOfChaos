@@ -37,6 +37,8 @@ public static class MapPlaytestDriver
     }
 
     private static readonly List<Walk> walks = new List<Walk>();
+    // 경로 격자 반 크기 — 캔디숲 실제 맵은 둥근 울타리(80 m) + 탈출구 받침까지(§28 C11)
+    public static float GridHalf = MapCompactor.NewHalf;
     public static IReadOnlyList<Walk> Walks => walks;
 
     public static string Status => string.Join("\n", walks.Select(w => w.ToString()));
@@ -45,7 +47,7 @@ public static class MapPlaytestDriver
     public static Walk Begin(string name, GameObject character, Vector3 destination, bool cookie, float speed, params string[] controllerTypes)
     {
         var walk = new Walk { Name = name, Character = character, Body = character.GetComponent<Rigidbody>(), Speed = speed, Cookie = cookie };
-        walk.Path = MapPassabilityCheck.FindPath(character.transform.position, destination, cookie);
+        walk.Path = MapPassabilityCheck.FindPath(character.transform.position, destination, cookie, GridHalf);
         walk.Start = character.transform.position;
         walk.StartTime = walk.LastProgressTime = Time.time;
         walk.LastProgressPos = walk.Start;
@@ -155,7 +157,7 @@ public static class MapPlaytestDriver
             else if (Time.time - w.LastProgressTime > StuckSeconds)
             {
                 // 열린 문짝처럼 계획 뒤에 생긴 장애물이면 지금 자리에서 다시 찾는다(최대 3번)
-                List<Vector3> again = w.Replans < 3 ? MapPassabilityCheck.FindPath(pos, w.Path[w.Path.Count - 1], w.Cookie) : null;
+                List<Vector3> again = w.Replans < 3 ? MapPassabilityCheck.FindPath(pos, w.Path[w.Path.Count - 1], w.Cookie, GridHalf) : null;
                 if (again != null && again.Count > 1) { w.Path = again; w.Index = 0; w.Replans++; w.LastProgressTime = Time.time; }
                 else Finish(w, $"stuck near {pos:F1}");
             }

@@ -1006,10 +1006,22 @@ public sealed class EscapeAuthority
             Vector3 at = lastPositions.TryGetValue(player.ActorNumber, out Vector3 p) ? p : manager.FallbackDropPoint(rng.Next());
             bool changed = DropAll(player.ActorNumber, at);
             changed |= ClearPersonal(player.ActorNumber);
+            changed |= RemoveDecoysOf(player.ActorNumber); // 부서진 쿠키의 AI는 모두 사라진다(§26 후속)
             if (changed) Commit();
         }
+        // 괴물에게 잡혔으면 모두에게 "'닉네임'이(가) 잡혔습니다!"(마녀 처단은 판 끝 연출이라 알리지 않는다)
+        if (RoomState.TryGetPlayerInt(player, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Monster)
+            Notice(EscapeNoticeKind.CookieCaught, player.ActorNumber.ToString());
         if (RoomState.IsSpy(player.ActorNumber)) Notice(EscapeNoticeKind.SpyCaught, null);
         Reevaluate();
+    }
+
+    // 그 사람의 AI 중 아직 잡히지 않은 것을 모두 지운다(잡히는 중인 AI는 동작을 끝까지 보여 준 뒤 Tick이 지운다).
+    private bool RemoveDecoysOf(int actor)
+    {
+        int removed = State.Decoys.RemoveAll(d => d.Owner == actor && !d.Caught);
+        if (removed > 0) Debug.Log($"[EscapeAuthority] Actor {actor} broken: {removed} AIs removed.");
+        return removed > 0;
     }
 
     // 그 사람의 수리·비행을 멈춘다(잡힘·나감).

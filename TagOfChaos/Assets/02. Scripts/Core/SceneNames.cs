@@ -8,7 +8,7 @@ public static class SceneNames
     public const string MapScenePrefix = "Game_";
     public const string TestMapScenePrefix = "Test_"; // 개편 시험 맵(Request1009Plan.md §25 G1)
 
-    // 맵 씬 이름 → 맵 이름(레시피·연출이 쓰는 이름). Game_CandyForest·Test_CandyForest → CandyForest.
+    // 맵 씬 이름 → 맵 이름(레시피·연출이 쓰는 이름). Game_CandyForest·Test_CandyForest·CandyForest → CandyForest.
     public static string MapOf(string sceneName)
     {
         if (string.IsNullOrEmpty(sceneName)) return sceneName;
@@ -18,4 +18,11 @@ public static class SceneNames
     }
 
     public static bool IsTestMap(string sceneName) => sceneName != null && sceneName.StartsWith(TestMapScenePrefix);
+
+    // 실제 모델 맵 씬은 맵 이름 그대로(예: CandyForest, Request1009Plan.md §28.11 Q11).
+    public static readonly string[] RealMapScenes = { "CandyForest" };
+
+    // 판에 쓰는 맵 씬인가(Game_·Test_·실제 모델 맵).
+    public static bool IsMapScene(string sceneName) =>
+        sceneName != null && (sceneName.StartsWith(MapScenePrefix) || IsTestMap(sceneName) || System.Array.IndexOf(RealMapScenes, sceneName) >= 0);
 }

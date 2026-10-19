@@ -27,7 +27,7 @@ MonoBehaviour:
   paintColliderRefreshInterval: 0.2
   characterCatalog: {fileID: 11400000, guid: 7f50eb2f81f0802428745357591b82ca, type: 2}
   gameMapScenes:
-  - Test_CandyForest
+  - CandyForest
   - Test_GingerbreadVillage
   - Test_ChocolateFactory
   - Test_CursedCandyCarnival
@@ -45,7 +45,6 @@ MonoBehaviour:
   grabAimRadius: 0.4
   maxGrabHeight: 6
   monsterDefaultView: 0
-  allowMonsterViewToggle: 1
   characterSyncRate: 10
   paintStrokeSendRate: 15
   paintStrokeReferencePlayers: 4

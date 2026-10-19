@@ -23,8 +23,8 @@ public static class MusicRules
             case SceneNames.Lobby: return MusicScene.Lobby;
             case SceneNames.GameLobby: return MusicScene.GameLobby;
         }
-        if (sceneName == null || (!sceneName.StartsWith(SceneNames.MapScenePrefix) && !SceneNames.IsTestMap(sceneName))) return MusicScene.Other;
-        switch (SceneNames.MapOf(sceneName)) // Game_·Test_ 맵 모두(§25 G1)
+        if (!SceneNames.IsMapScene(sceneName)) return MusicScene.Other;
+        switch (SceneNames.MapOf(sceneName)) // Game_·Test_·실제 모델 맵 모두(§25 G1, §28)
         {
             case "CandyForest": return MusicScene.CandyForest;
             case "GingerbreadVillage": return MusicScene.Gingerbread;

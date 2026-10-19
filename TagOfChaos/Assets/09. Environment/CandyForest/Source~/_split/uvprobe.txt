@@ -1,0 +1,9 @@
+split 2 ((0.8, 0.4, 0.43), ['UVMap'])
+split 3 ((0.45, 0.55, 0.69), ['UVMap'])
+split 4 ((0.47, 0.66, 0.42), ['UVMap'])
+split 5 ((0.78, 0.65, 0.42), ['UVMap'])
+fbx Red ((0.79, 0.39, 0.42), ['UVMap'])
+fbx Blue ((0.45, 0.56, 0.69), ['UVMap'])
+fbx Green ((0.46, 0.66, 0.42), ['UVMap'])
+fbx Yellow ((0.78, 0.65, 0.42), ['UVMap'])
+size 2048 2048

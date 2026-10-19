@@ -12,6 +12,7 @@ public static class EscapeModelBuilder
 {
     private const string LogTag = "[EscapeModels]";
     private const string ItemFolder = "Assets/03. SO/Escape/Items";
+    public const string ItemPrefabFolder = "Assets/04. Prefabs/Items";
 
     // 발광해야 하는 머티리얼(Blender 팔레트의 발광 값과 같다). FBX 기본 임포트가 발광을 빼먹어도 여기서 맞춘다.
     private static readonly Dictionary<string, float> Emission = new Dictionary<string, float>
@@ -53,7 +54,9 @@ public static class EscapeModelBuilder
         foreach (string guid in AssetDatabase.FindAssets("t:ItemSO", new[] { ItemFolder }))
         {
             var item = AssetDatabase.LoadAssetAtPath<ItemSO>(AssetDatabase.GUIDToAssetPath(guid));
-            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>($"{EscapeModelImportPostprocessor.ModelFolder}/ITEM_{item.ItemId}.fbx");
+            // 프리팹이 있으면 그것(캔디숲 막대사탕처럼 다른 곳에서 만든 모델, §28.5), 없으면 escape_assets.py FBX
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>($"{ItemPrefabFolder}/ITEM_{item.ItemId}.prefab")
+                ?? AssetDatabase.LoadAssetAtPath<GameObject>($"{EscapeModelImportPostprocessor.ModelFolder}/ITEM_{item.ItemId}.fbx");
             if (model == null) { missing.Add(item.ItemId); continue; }
             var so = new SerializedObject(item);
             so.FindProperty("modelPrefab").objectReferenceValue = model;

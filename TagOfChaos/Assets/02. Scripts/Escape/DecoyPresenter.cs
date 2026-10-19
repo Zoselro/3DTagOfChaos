@@ -4,7 +4,7 @@ using UnityEngine;
 
 // 맵에 깔린 AI(미끼, Request1009Plan.md §25.5 L)를 그린다. PhotonView 없이 상태의 Decoys만 보고 각 화면이 만든다.
 // 모습 = 그 사람 캐릭터(쿠키 프리팹을 겉모습만 남기고 복제 + 판의 캐릭터 색). 늘 가만히 서 있고(Idle), 녹음기가 붙으면
-// 주인의 녹음 목소리를 5~20초 간격으로 3D로 낸다(§26 H7). 괴물은 E로 잡는다(DecoyView — 잡기 동작 뒤 사라짐).
+// 주인의 녹음 목소리를 5~20초 간격으로 3D로 낸다(§26 H7). 괴물은 진짜 쿠키처럼 조준 + E로 잡는다(DecoyView — 잡기 동작·가루 뒤 사라짐). 주인이 잡히면 그 사람 AI는 모두 사라진다.
 public class DecoyPresenter : MonoBehaviour
 {
     private const string CookiePrefabPath = "HideOrSeekPlayer";

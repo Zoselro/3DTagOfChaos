@@ -5,6 +5,7 @@ using UnityEngine;
 // 예전에는 몸 주변 구 트리거에 쿠키가 닿으면 자동으로 처형했지만, 두 쿠키가 겹쳐 있을 때 누구를 잡을지 괴물이
 // 고를 수 있도록 "화면 가운데 조준 + E"로 바꿨다. 촉수 돌진도 더 이상 처형하지 않고 쿠키 앞에서 멈추기만 한다.
 // E키 입력은 CharacterInteractor가 받아 문 등 다른 상호작용보다 먼저 여기로 넘긴다(F1-1).
+// 맵의 AI(DecoyView)도 진짜 쿠키와 똑같이 조준(빨간 표시) + E로 잡는다 — 잡는 동작·눌림·가루도 같다(§26 H6 후속).
 [RequireComponent(typeof(Collider))]
 public class MonsterGrabKillTrigger : MonoBehaviour
 {
@@ -31,23 +32,27 @@ public class MonsterGrabKillTrigger : MonoBehaviour
 
     public float BodyFrontOffset => bodyFrontOffset;
 
-    // 지금 조준 중인 잡을 수 있는 쿠키(괴물 소유 클라이언트에서만 계산, 없으면 null). 조준 표시 UI가 읽는다.
+    // 지금 조준 중인 잡을 수 있는 쿠키 또는 AI(괴물 소유 클라이언트에서만 계산, 없으면 null). 조준 표시 UI가 읽는다.
     public HideOrSeekPlayer AimTarget { get; private set; }
+    public DecoyView AimDecoy { get; private set; }
+    public Transform AimTransform => AimTarget != null ? AimTarget.transform : AimDecoy != null ? AimDecoy.transform : null;
 
     private void Update()
     {
         if (monsterPv == null || !monsterPv.IsMine) return;
-        AimTarget = onCooldown || !monsterController.CanInteract ? null : FindAimTarget();
+        AimTarget = null;
+        AimDecoy = null;
+        if (!onCooldown && monsterController.CanInteract) FindAimTarget();
     }
 
     // 화면 가운데에서 앞으로 구를 쏘아, 벽보다 가깝고 몸 앞면에서 잡기 거리 안에 있는 가장 가까운 쿠키를 고른다.
     // 3인칭이면 카메라가 괴물 뒤에 있으므로 최대 거리에 카메라~괴물 거리를 더한다.
     // 구조물 위의 쿠키(Request1009Plan.md §11): 올려다보는 조준선은 쿠키보다 구조물 모서리·윗면에 먼저 맞는다. 그래서 막힌 것으로
     // 보이는 쿠키도 괴물 눈 또는 손 높이에서 쿠키 가슴까지 직선이 비어 있으면 잡을 수 있다. 높이는 MaxGrabHeight까지.
-    private HideOrSeekPlayer FindAimTarget()
+    private void FindAimTarget()
     {
         Camera cam = Camera.main;
-        if (cam == null) return null;
+        if (cam == null) return;
 
         GameSettingsSO settings = GameSettings.Current;
         Transform self = monsterPv.transform;
@@ -63,25 +68,28 @@ public class MonsterGrabKillTrigger : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Collider c = aimHits[i].collider;
-            if (c.transform.IsChildOf(self) || c.GetComponentInParent<HideOrSeekPlayer>() != null) continue;
+            if (c.transform.IsChildOf(self) || c.GetComponentInParent<HideOrSeekPlayer>() != null || c.GetComponentInParent<DecoyView>() != null) continue;
             if (aimHits[i].distance > 0f) blockDistance = Mathf.Min(blockDistance, aimHits[i].distance);
         }
 
-        HideOrSeekPlayer best = null;
         float bestDistance = float.MaxValue;
         Vector3 center = self.position;
         for (int i = 0; i < count; i++)
         {
-            var cookie = aimHits[i].collider.GetComponentInParent<HideOrSeekPlayer>();
-            if (cookie == null || aimHits[i].distance >= bestDistance) continue;
-            if (!IsCatchable(cookie)) continue;
-            if (!InReach(center, cookie.transform.position, reachFromCenter, settings.MaxGrabHeight)) continue; // 몸 앞면에서 잡기 거리 밖·너무 높음
-            if (aimHits[i].distance > blockDistance && !HasLineOfSight(self, cookie)) continue;
+            if (aimHits[i].distance >= bestDistance) continue;
+            Collider hit = aimHits[i].collider;
+            var cookie = hit.GetComponentInParent<HideOrSeekPlayer>();
+            DecoyView decoy = cookie == null ? hit.GetComponentInParent<DecoyView>() : null;
+            Transform body = cookie != null ? cookie.transform : decoy != null ? decoy.transform : null;
+            if (body == null) continue;
+            if (cookie != null ? !IsCatchable(cookie) : !decoy.IsCatchable) continue;
+            if (!InReach(center, body.position, reachFromCenter, settings.MaxGrabHeight)) continue; // 몸 앞면에서 잡기 거리 밖·너무 높음
+            if (aimHits[i].distance > blockDistance && !HasLineOfSight(self, body)) continue;
 
-            best = cookie;
+            AimTarget = cookie;
+            AimDecoy = decoy;
             bestDistance = aimHits[i].distance;
         }
-        return best;
     }
 
     // 수평 거리는 몸 중심에서 reach 안, 높이는 쿠키 발이 괴물 발보다 maxHeight 이하(아래쪽은 제한 없음 — 경사·계단 아래).
@@ -93,11 +101,11 @@ public class MonsterGrabKillTrigger : MonoBehaviour
         return flat.sqrMagnitude <= reachFromCenter * reachFromCenter && rise <= maxHeight;
     }
 
-    private bool HasLineOfSight(Transform self, HideOrSeekPlayer cookie)
+    private bool HasLineOfSight(Transform self, Transform body)
     {
-        Vector3 to = cookie.transform.position + Vector3.up * CookieChestHeight;
+        Vector3 to = body.position + Vector3.up * CookieChestHeight;
         Vector3 eyePoint = eye != null ? eye.position : self.position + Vector3.up * FallbackEyeHeight;
-        return LineClear(eyePoint, to, self, cookie.transform) || LineClear(self.position + Vector3.up * HandHeight, to, self, cookie.transform);
+        return LineClear(eyePoint, to, self, body) || LineClear(self.position + Vector3.up * HandHeight, to, self, body);
     }
 
     private bool LineClear(Vector3 from, Vector3 to, Transform self, Transform cookie)
@@ -126,9 +134,21 @@ public class MonsterGrabKillTrigger : MonoBehaviour
     // 상호작용 키로 조준 대상을 잡는다. 잡기를 시작했으면 true(CharacterInteractor가 문 등보다 먼저 호출, F1-1).
     public bool TryGrabAimTarget()
     {
+        if (!monsterController.CanInteract) return false;
+        if (AimDecoy != null) return TryGrabDecoy(AimDecoy);
         HideOrSeekPlayer target = AimTarget;
-        if (target == null || !monsterController.CanInteract) return false;
-        return TryGrabKill(target);
+        return target != null && TryGrabKill(target);
+    }
+
+    // AI 잡기: 진짜 쿠키와 같은 잡는 동작을 시작하고 방장에게 알린다. 방장이 잡힘(CaughtBy)을 쓰면 모든 화면의 DecoyView가
+    // 이 괴물의 손을 따라가 눌리고 가루가 되어 사라진다.
+    private bool TryGrabDecoy(DecoyView decoy)
+    {
+        if (onCooldown || decoy == null || !decoy.IsCatchable || !monsterPv.IsMine) return false;
+        onCooldown = true;
+        monsterController.PlayGrabKill();
+        decoy.RequestCatch();
+        return true;
     }
 
     // 처형 시작의 단일 진입점. 처형을 시작했으면 true.

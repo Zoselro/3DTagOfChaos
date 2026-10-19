@@ -34,7 +34,7 @@ public class EscapeTests
         Assert.AreEqual(15f, s.PrepareSeconds, 1e-4f);
         Assert.NotNull(s.CharacterCatalog, "characterCatalog");
         Assert.AreEqual(4, s.CharacterCatalog.Count, "four characters");
-        foreach (string scene in s.GameMapScenes) StringAssert.StartsWith(SceneNames.TestMapScenePrefix, scene);
+        foreach (string scene in s.GameMapScenes) Assert.IsTrue(SceneNames.IsMapScene(scene), scene); // Test_ 맵 + 실제 모델 맵(§28)
     }
 
     // §25.5 B: 고른 캐릭터는 입장 순서대로 인정, 겹치거나 안 고른 사람은 남은 캐릭터

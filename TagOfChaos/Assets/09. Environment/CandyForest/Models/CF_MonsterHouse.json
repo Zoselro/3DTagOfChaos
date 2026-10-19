@@ -1,0 +1,29 @@
+{
+ "name": "CF_MonsterHouse",
+ "tris": {
+  "Shell": 18000,
+  "Inner": 5000,
+  "Floor": 38
+ },
+ "min": [
+  -8.005,
+  -0.804,
+  -7.135
+ ],
+ "max": [
+  8.008,
+  13.12,
+  7.13
+ ],
+ "kind": "shell",
+ "ring_radius": 6.34,
+ "door": [
+  6.6,
+  7.6
+ ],
+ "hole": [
+  1.4,
+  2.6
+ ],
+ "faces_cut": 23517
+}

@@ -37,6 +37,59 @@ public class Request1016Tests
         Assert.AreEqual(visible, ChatRules.IsVisible(round, senderOut, viewerOut));
     }
 
+    // 녹음: 마이크 주파수(48 kHz 등)로 녹음한 것을 8 kHz로 줄인다 — 길이는 비율대로, 소리는 구간 평균
+    [Test]
+    public void VoiceRecorder_DownsamplesToStoreRate()
+    {
+        var src = new float[48000];
+        for (int i = 0; i < src.Length; i++) src[i] = 0.5f;
+        float[] dst = VoiceRecorderPanel.Downsample(src, 48000, VoiceStore.SampleRate);
+        Assert.AreEqual(VoiceStore.SampleRate, dst.Length);
+        Assert.AreEqual(0.5f, dst[100], 1e-5f);
+        Assert.AreSame(src, VoiceRecorderPanel.Downsample(src, 8000, 8000), "already at the store rate");
+    }
+
+    // 작게 녹음된 목소리는 키우고(최대 12배), 거의 무음은 그대로 둔다
+    [Test]
+    public void VoiceRecorder_NormalizesQuietRecording()
+    {
+        float[] quiet = { 0.05f, -0.02f, 0.01f };
+        VoiceRecorderPanel.Normalize(quiet);
+        Assert.AreEqual(0.6f, quiet[0], 1e-4f, "0.05 x 12 (gain capped)");
+        float[] normal = { 0.425f, -0.1f };
+        VoiceRecorderPanel.Normalize(normal);
+        Assert.AreEqual(0.85f, normal[0], 1e-4f);
+        float[] silent = { 0.001f };
+        VoiceRecorderPanel.Normalize(silent);
+        Assert.AreEqual(0.001f, silent[0], 1e-6f);
+    }
+
+    // "'닉네임'이(가) 잡혔습니다!" 조사: 받침 있음 → 이, 없음 → 가, 한글이 아니면 → 이(가)
+    [Test]
+    public void CookieCaught_PicksParticleFromNickname()
+    {
+        var t = ScriptableObject.CreateInstance<EscapeTextsSO>();
+        t.cookieCaughtWithFinal = "W{0}"; t.cookieCaughtNoFinal = "N{0}"; t.cookieCaughtOther = "O{0}";
+        Assert.AreEqual("OPlayer1", EscapeHud.CookieCaughtText(t, "Player1"));
+        Assert.AreEqual("W\uAE40\uBC25", EscapeHud.CookieCaughtText(t, "\uAE40\uBC25"));
+        Assert.AreEqual("N\uCFE0\uD0A4", EscapeHud.CookieCaughtText(t, "\uCFE0\uD0A4"));
+        Object.DestroyImmediate(t);
+    }
+
+    // §27 후속: "기본값으로"는 확인창(예/아니오)을 거친다
+    [Test]
+    public void SettingsMenu_ResetAsksFirst()
+    {
+        var menu = UnityEditor.AssetDatabase.LoadAssetAtPath<SettingsMenu>(SettingsMenuInstaller.PrefabPath);
+        var page = menu.GetComponentInChildren<KeyBindingsPage>(true);
+        var so = new UnityEditor.SerializedObject(page);
+        var confirm = so.FindProperty("resetConfirm").objectReferenceValue as GameObject;
+        Assert.IsNotNull(confirm, "confirm dialog");
+        Assert.IsFalse(confirm.activeSelf, "hidden until asked");
+        Assert.IsNotNull(so.FindProperty("resetYesButton").objectReferenceValue);
+        Assert.IsNotNull(so.FindProperty("resetNoButton").objectReferenceValue);
+    }
+
     [Test]
     public void KeyBindings_EscapeIsNeverBindable_AndDefaultsMatchThePlan()
     {

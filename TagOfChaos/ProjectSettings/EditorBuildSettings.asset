@@ -26,7 +26,7 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Scenes/Maps/Game_HauntedBakery.unity
     guid: 19f19a5a817a0c84da6fa95d57be8004
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Maps/Test/Test_CandyForest.unity
     guid: 2da44bee43447904681042bcd6f6d8cb
   - enabled: 1
@@ -41,6 +41,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/Test/Test_HauntedBakery.unity
     guid: b47ba8faefd5d4146a39771f70d6bcbf
+  - enabled: 1
+    path: Assets/Scenes/Maps/CandyForest.unity
+    guid: f70c2cdd5ad69ae4d9470b45805ce514
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0

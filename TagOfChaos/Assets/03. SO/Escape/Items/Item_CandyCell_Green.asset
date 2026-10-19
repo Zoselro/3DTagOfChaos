@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Item_CandyCell_Green
   m_EditorClassIdentifier: 
   itemId: CandyCell_Green
-  displayName: "\uCD08\uB85D \uC54C\uC0AC\uD0D5 \uC804\uC9C0"
+  displayName: "\uCD08\uB85D \uB9C9\uB300\uC0AC\uD0D5"
   icon: {fileID: 21300000, guid: 81990082b0c983645bd1d85beea59616, type: 3}
-  modelPrefab: {fileID: 919132149155446097, guid: ac2be14d443d9364fb44c2e756e49a07, type: 3}
+  modelPrefab: {fileID: 4677737318742868614, guid: d4625fc0ff6bc6e488e093ae0e62967f, type: 3}
   tint: {r: 0.3, g: 0.95, b: 0.3, a: 1}
   holdType: 1
   category: 0

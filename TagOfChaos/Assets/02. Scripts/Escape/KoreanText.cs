@@ -6,6 +6,10 @@ public static class KoreanText
     private const int SyllableEnd = 0xD7A3;
     private const int FinalCount = 28;
 
+    // 마지막 글자가 한글 음절인지(아니면 "이(가)"처럼 두 조사를 함께 쓴다).
+    public static bool EndsWithHangul(string word) =>
+        !string.IsNullOrEmpty(word) && word[word.Length - 1] >= SyllableStart && word[word.Length - 1] <= SyllableEnd;
+
     public static bool HasFinalConsonant(string word)
     {
         if (string.IsNullOrEmpty(word)) return false;

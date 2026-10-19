@@ -54,7 +54,7 @@ public class HatFlight : MonoBehaviour
         Vector3 p = transform.position;
         if (since * RiseSpeed >= CruiseHeight)
         {
-            if (cruiseDirection == Vector3.zero) cruiseDirection = NearestEdgeDirection(manager.MapRect, p);
+            if (cruiseDirection == Vector3.zero) cruiseDirection = manager.Area.EdgeDirection(p);
             p += cruiseDirection * CruiseSpeed * Time.deltaTime;
             transform.rotation = Quaternion.LookRotation(cruiseDirection);
         }
@@ -69,15 +69,8 @@ public class HatFlight : MonoBehaviour
         }
     }
 
-    // 맵(x·z 사각형)에서 이 점과 가장 가까운 가장자리로 향하는 수평 방향(순수 계산, 시험용).
-    public static Vector3 NearestEdgeDirection(Rect map, Vector3 p)
-    {
-        float left = p.x - map.xMin, right = map.xMax - p.x, down = p.z - map.yMin, up = map.yMax - p.z;
-        float best = Mathf.Min(Mathf.Min(left, right), Mathf.Min(down, up));
-        if (best == left) return Vector3.left;
-        if (best == right) return Vector3.right;
-        return best == down ? Vector3.back : Vector3.forward;
-    }
+    // 맵(x·z 사각형)에서 이 점과 가장 가까운 가장자리로 향하는 수평 방향(순수 계산, 시험용). 원 맵은 MapArea.EdgeDirection.
+    public static Vector3 NearestEdgeDirection(Rect map, Vector3 p) => MapArea.RectEdgeDirection(map, p);
 
     // 나는 동안은 중력·충돌 없이(키네마틱) 직접 옮긴다. 끝나면(잡힘 등) 되돌린다.
     private void SetPhysics(bool on)
