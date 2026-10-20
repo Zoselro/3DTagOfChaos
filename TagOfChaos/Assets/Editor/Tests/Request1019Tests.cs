@@ -127,7 +127,7 @@ public class Request1019Tests
         Assert.IsEmpty(CandyForestAssets.LoadPrefab("CF_Pond").GetComponentsInChildren<Collider>(true), "pond stays walkable");
     }
 
-    // 2026-10-20: 빛기둥은 꽂는 자리(받침)에서 시작해 지붕 위로 — 공중에 떠 보이지 않게
+    // 2026-10-20·21: 빛기둥은 받침대 한가운데 바닥에서 시작해 지붕 위로 — 공중에 떠 보이지 않고 받침대에서 솟는다
     [Test]
     public void BuildingGlow_StartsAtSocket_AndClearsTheRoof()
     {
@@ -139,9 +139,11 @@ public class Request1019Tests
             Renderer glow = b.GetComponentsInChildren<Renderer>(true).First(r => r.name.StartsWith("ESC_Glow"));
             Transform rp = b.GetComponentsInChildren<Transform>(true).First(t => t.name.StartsWith("Repair_Point"));
             float roof = b.GetComponentsInChildren<Renderer>(true).Where(r => r.name == "Exterior").Max(r => r.bounds.max.y);
-            Assert.Less(glow.bounds.min.y, rp.position.y, "starts at the socket");
+            Transform pedestal = b.GetComponentsInChildren<Transform>(true).First(t => t.name == "COL_Pedestal");
+            Vector3 pc = pedestal.TransformPoint(pedestal.GetComponent<CapsuleCollider>().center);
+            Assert.Less(glow.bounds.min.y, 0.2f, "starts at the floor (inside the pedestal)");
             Assert.Greater(glow.bounds.max.y, roof + 10f, "rises well above the roof");
-            Assert.Less(new Vector2(glow.bounds.center.x - rp.position.x, glow.bounds.center.z - rp.position.z).magnitude, 0.05f, "above the socket");
+            Assert.Less(new Vector2(glow.bounds.center.x - pc.x, glow.bounds.center.z - pc.z).magnitude, 0.05f, "centered on the pedestal");
             }
             finally { Object.DestroyImmediate(b); }
         }

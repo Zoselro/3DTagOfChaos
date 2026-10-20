@@ -445,12 +445,16 @@ public static class CandyForestAssets
         if (repair == null) repair = Child(root, "Repair_Point");
         repair.localPosition = new Vector3(px, RepairHeight, pz + ped.radius + 0.5f);
         repair.localRotation = Quaternion.identity;
-        Transform socket = Primitive(root, "Socket_Bld", PrimitiveType.Cylinder, repair.localPosition + Vector3.down * 0.25f, new Vector3(1.4f, 0.08f, 1.4f), LoadMaterial(SocketMaterial));
+        // 꽂는 자리: 바닥에서 올라온 작은 받침(위가 손 높이) — 원판만 두면 공중에 떠 보였다(10-21)
+        float socketTop = repair.localPosition.y - 0.2f;
+        Transform socket = Primitive(root, "Socket_Bld", PrimitiveType.Cylinder, new Vector3(repair.localPosition.x, socketTop / 2f, repair.localPosition.z),
+            new Vector3(0.9f, socketTop / 2f, 0.9f), LoadMaterial(SocketMaterial));
         socket.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         // 가동 빛기둥: 받침대에서 지붕을 뚫고 위로(밖에서도 보이게)
-        // 꽂는 자리(받침)에서 시작해 지붕을 뚫고 올라간다 — 공중에서 시작하면 떠 보인다(2026-10-20)
-        float glowBottom = repair.localPosition.y - 0.25f, glowTop = 60f;
-        Primitive(root, "ESC_Glow", PrimitiveType.Cylinder, new Vector3(repair.localPosition.x, (glowBottom + glowTop) / 2f, repair.localPosition.z),
+        // 받침대 한가운데에서 바닥부터 올라간다 — 받침대 속을 지나 꼭대기에서 솟고 지붕을 뚫는다
+        // (공중에서 시작하면 떠 보이고(10-20), 꽂는 자리에 두면 받침대 옆에 붙어 보였다(10-21))
+        float glowBottom = 0.05f, glowTop = 60f;
+        Primitive(root, "ESC_Glow", PrimitiveType.Cylinder, new Vector3(px, (glowBottom + glowTop) / 2f, pz),
             new Vector3(0.9f, (glowTop - glowBottom) / 2f, 0.9f), LoadMaterial(GlowMaterial));
         var light = Child(root, "Light_Inside").gameObject.AddComponent<Light>();
         light.transform.localPosition = new Vector3(0f, 6.5f, 0f);

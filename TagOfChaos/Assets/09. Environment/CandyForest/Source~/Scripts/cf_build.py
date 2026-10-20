@@ -356,6 +356,35 @@ BUILDINGS = {
 EXT_W, INT_W = 23.0, 17.0
 
 
+def find_pedestal(o, cell=0.25, reach=3.5, seed_r=2.0, min_h=0.45, rel=0.6):
+    """Pedestal = the raised lump connected to the tallest point near the room center (height map + flood fill).
+    Averaging every high vertex near the center mixed in nearby decor and missed low pedestals (10-21)."""
+    grid = {}
+    for v in o.data.vertices:
+        if math.hypot(v.co.x, v.co.y) > reach + 1.0: continue
+        k = (math.floor(v.co.x / cell), math.floor(v.co.y / cell))
+        grid[k] = max(grid.get(k, -1.0), v.co.z)
+    near = [k for k, h in grid.items() if h > min_h and math.hypot((k[0] + 0.5) * cell, (k[1] + 0.5) * cell) < seed_r]
+    if not near:
+        return 0.0, 0.0, 1.0, 1.0
+    seed = max(near, key=lambda k: grid[k])
+    sx, sy = (seed[0] + 0.5) * cell, (seed[1] + 0.5) * cell
+    level = max(min_h, grid[seed] * rel)   # the pedestal body, not the low platform ring around it
+    filled, todo = {seed}, [seed]
+    while todo:
+        cx, cy = todo.pop()
+        for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+            if (nx, ny) in filled or grid.get((nx, ny), -1.0) <= level: continue
+            if math.hypot((nx + 0.5) * cell - sx, (ny + 0.5) * cell - sy) > reach: continue
+            filled.add((nx, ny)); todo.append((nx, ny))
+    xs = [(k[0] + 0.5) * cell for k in filled]; ys = [(k[1] + 0.5) * cell for k in filled]
+    px, py = sum(xs) / len(xs), sum(ys) / len(ys)
+    pr = max(math.hypot(x - px, y - py) for x, y in zip(xs, ys)) + cell / 2
+    top = max(grid[k] for k in filled)
+    log("pedestal", round(px, 2), round(py, 2), "top", round(top, 2), "r", round(pr, 2), "cells", len(filled), "seed", round(grid[seed], 2))
+    return px, py, top, min(pr, 3.0)
+
+
 def build_building(name, spec):
     ext_idx, int_set, int_idx = spec
     reset()
@@ -367,14 +396,7 @@ def build_building(name, spec):
     floor = skirt_top(inn, 3.0)
     drop(inn, floor - 0.02)
     ilo, ihi = bbox(inn)
-    # pedestal = the tall structure in the middle of the room
-    mid = [v.co for v in inn.data.vertices if v.co.z > 1.4 and math.hypot(v.co.x, v.co.y) < 3.0]
-    if mid:
-        px = sum(v.x for v in mid) / len(mid); py = sum(v.y for v in mid) / len(mid)
-        top = max(v.z for v in mid)
-        pr = min(2.2, max(math.hypot(v.x - px, v.y - py) for v in mid))
-    else:
-        px = py = 0.0; top = 1.0; pr = 1.0
+    px, py, top, pr = find_pedestal(inn)
     keep = max(abs(py) + pr + 0.5, 3.0)
     # doorways: through the exterior shell anywhere on that side, through the interior rim only (keep the floor + pedestal)
     n_ext = cut(ext, door_test((DOOR_W / 2, DOOR_H), (DOOR_W / 2, DOOR_H)))

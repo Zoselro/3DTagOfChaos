@@ -234,3 +234,29 @@ OK CF_Bld_Q3
 EXPORT CF_Bld_Q4 {'Exterior': 22000, 'Interior': 35999, 'Inner': 6000, 'COL_Exterior': 3871, 'COL_Interior': 7787} size [21.24, 22.84, 26.06]
 OK CF_Bld_Q4
 DONE 4
+pedestal 0.95 0.99 top 4.73 r 5.72 cells 596
+EXPORT CF_Bld_Q1 {'Exterior': 21999, 'Interior': 36000, 'Inner': 5999, 'COL_Exterior': 2166, 'COL_Interior': 11483} size [22.04, 21.94, 23.5]
+OK CF_Bld_Q1
+pedestal 0.04 0.23 top 2.61 r 5.4 cells 520
+EXPORT CF_Bld_Q2 {'Exterior': 21999, 'Interior': 36000, 'Inner': 5999, 'COL_Exterior': 3371, 'COL_Interior': 12000} size [22.01, 22.69, 24.79]
+OK CF_Bld_Q2
+pedestal 0.06 1.73 top 4.66 r 5.2 cells 725
+EXPORT CF_Bld_Q3 {'Exterior': 22000, 'Interior': 36000, 'Inner': 5999, 'COL_Exterior': 4153, 'COL_Interior': 12000} size [22.41, 22.84, 23.44]
+OK CF_Bld_Q3
+pedestal 1.29 -0.02 top 4.63 r 5.94 cells 425
+EXPORT CF_Bld_Q4 {'Exterior': 22000, 'Interior': 36000, 'Inner': 6000, 'COL_Exterior': 3871, 'COL_Interior': 8276} size [21.24, 22.84, 26.06]
+OK CF_Bld_Q4
+DONE 4
+pedestal 0.49 0.05 top 3.79 r 1.27 cells 55 seed 3.79
+EXPORT CF_Bld_Q1 {'Exterior': 21999, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 2166, 'COL_Interior': 10613} size [22.04, 21.94, 23.5]
+OK CF_Bld_Q1
+pedestal 0.05 -0.48 top 2.34 r 1.24 cells 60 seed 2.34
+EXPORT CF_Bld_Q2 {'Exterior': 21999, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 3371, 'COL_Interior': 11999} size [22.01, 22.69, 24.79]
+OK CF_Bld_Q2
+pedestal 0.11 1.59 top 3.86 r 0.71 cells 15 seed 3.86
+EXPORT CF_Bld_Q3 {'Exterior': 22000, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 4153, 'COL_Interior': 11999} size [22.41, 22.84, 23.44]
+OK CF_Bld_Q3
+pedestal 0.27 -0.57 top 1.49 r 2.36 cells 79 seed 1.49
+EXPORT CF_Bld_Q4 {'Exterior': 22000, 'Interior': 35999, 'Inner': 6000, 'COL_Exterior': 3871, 'COL_Interior': 8152} size [21.24, 22.84, 26.06]
+OK CF_Bld_Q4
+DONE 4
