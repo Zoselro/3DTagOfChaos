@@ -1,7 +1,8 @@
 {
  "name": "CF_MonsterBox",
  "tris": {
-  "CF_MonsterBox": 5000
+  "CF_MonsterBox": 5000,
+  "COL_Mesh": 4436
  },
  "min": [
   -2.747,

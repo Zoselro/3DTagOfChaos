@@ -1,7 +1,8 @@
 {
  "name": "CF_FenceGate",
  "tris": {
-  "CF_FenceGate": 1800
+  "CF_FenceGate": 1800,
+  "COL_Mesh": 1548
  },
  "min": [
   -3.002,

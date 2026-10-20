@@ -24,7 +24,7 @@ public static class CandyForestAssets
     private const string MenuRoot = "Tools/TagOfChaos/CandyForest/";
 
     public static readonly string[] Sets =
-        { "SwirlTree", "BubblegumTree", "GateItems", "Cottage", "Tiles", "Trinkets", "MatBuildings", "Park", "Whimsical", "Interior1", "Interior234" };
+        { "SwirlTree", "BubblegumTree", "GateItems", "Cottage", "Tiles", "Trinkets", "MatBuildings", "Park", "Whimsical", "Interior1", "Interior234", "GreenFloor" };
 
     public const string InnerMaterial = "CF_Inner";
     public const string InnerFloorMaterial = "CF_InnerFloor";
@@ -282,6 +282,7 @@ public static class CandyForestAssets
         public float[] hole;
         public float ring_radius;
         public float clearance, inner_half_span;
+        public float[] decor_radii; // 재료 건물 안 장식(1 m보다 높은)까지의 거리, 5°마다(Unity 축)
     }
 
     private static Meta ReadMeta(string modelPath)
@@ -344,7 +345,23 @@ public static class CandyForestAssets
                 if (meta != null) ShellWalls(root, meta); break;
             default:
                 if (asset.StartsWith("CF_Bld_") && meta != null) BuildingWalls(root, meta);
-                break;                                                   // 그 밖의 작은 장식·바닥 타일은 충돌 없음(S2)
+                break;
+        }
+        AddMeshColliders(root);
+    }
+
+    // 충돌용 메시(cf_build.py가 만든 COL_* — 겉모습에서 바닥 근처 0.25 m(건물 안은 1 m) 아래 면을 뺀 것)를 Mesh Collider로.
+    // 플레이어가 장식 속으로 들어가 숨지 못하게 한다(2026-10-20). 바닥 근처 낮은 턱은 빼서 괴물(턱 0.15 m)이 걸리지 않는다.
+    private static void AddMeshColliders(Transform root)
+    {
+        foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (!mf.name.StartsWith("COL_") || mf.sharedMesh == null) continue;
+            var r = mf.GetComponent<Renderer>();
+            if (r != null) { r.enabled = false; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; }
+            // 재료 건물 안 장식은 메시 대신 벽 고리를 장식까지 두껍게 해서 막는다(장식과 벽 사이 쿠키만 들어가는 틈이 생겼다)
+            if (mf.name.StartsWith("COL_Interior")) continue;
+            if (mf.GetComponent<MeshCollider>() == null) mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
         }
     }
 
@@ -410,7 +427,8 @@ public static class CandyForestAssets
         {
             float c = Mathf.Cos(ang), s = Mathf.Sin(ang);
             float rin = 1f / Mathf.Sqrt(c * c / (a * a) + s * s / (b * b)); // 타원 반지름
-            return new Vector2(Mathf.Min(rin, outer - 0.6f), outer);
+            rin = Mathf.Min(rin, DecorRadius(meta, ang));                   // 장식이 있는 쪽은 장식까지 벽
+            return new Vector2(Mathf.Max(MinRoomRadius, Mathf.Min(rin, outer - 0.6f)), outer);
         }, p => Mathf.Abs(p.x) < doorHalf);
         // 문 위 막음(괴물 겉모습 높이보다 위) — 지붕 위로 못 감
         foreach (int s in new[] { -1, 1 })
@@ -430,7 +448,10 @@ public static class CandyForestAssets
         Transform socket = Primitive(root, "Socket_Bld", PrimitiveType.Cylinder, repair.localPosition + Vector3.down * 0.25f, new Vector3(1.4f, 0.08f, 1.4f), LoadMaterial(SocketMaterial));
         socket.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         // 가동 빛기둥: 받침대에서 지붕을 뚫고 위로(밖에서도 보이게)
-        Primitive(root, "ESC_Glow", PrimitiveType.Cylinder, new Vector3(px, top + 13f, pz), new Vector3(0.9f, 13f, 0.9f), LoadMaterial(GlowMaterial));
+        // 꽂는 자리(받침)에서 시작해 지붕을 뚫고 올라간다 — 공중에서 시작하면 떠 보인다(2026-10-20)
+        float glowBottom = repair.localPosition.y - 0.25f, glowTop = 60f;
+        Primitive(root, "ESC_Glow", PrimitiveType.Cylinder, new Vector3(repair.localPosition.x, (glowBottom + glowTop) / 2f, repair.localPosition.z),
+            new Vector3(0.9f, (glowTop - glowBottom) / 2f, 0.9f), LoadMaterial(GlowMaterial));
         var light = Child(root, "Light_Inside").gameObject.AddComponent<Light>();
         light.transform.localPosition = new Vector3(0f, 6.5f, 0f);
         light.type = LightType.Point;
@@ -438,6 +459,21 @@ public static class CandyForestAssets
         light.intensity = 1.7f;
         light.color = new Color(1f, 0.82f, 0.7f);
         light.shadows = LightShadows.None;
+    }
+
+    private const float MinRoomRadius = 6.8f; // 받침대(약 1.8 m) 둘레를 괴물(통로 4 m)이 돌 수 있는 넓이
+
+    // 그 방향 ±15°에서 가장 가까운 장식까지(0.3 m 여유). 넓게 잡아 벽이 좁게 오목해지지 않게 한다(쿠키만 들어가는 틈). 장식이 없으면 아주 큼.
+    private const int DecorWindow = 3;
+
+    private static float DecorRadius(Meta meta, float ang)
+    {
+        if (meta.decor_radii == null || meta.decor_radii.Length == 0) return float.MaxValue;
+        int n = meta.decor_radii.Length;
+        int k = Mathf.FloorToInt(Mathf.Repeat(ang * Mathf.Rad2Deg, 360f) / (360f / n)) % n;
+        float d = float.MaxValue;
+        for (int i = -DecorWindow; i <= DecorWindow; i++) d = Mathf.Min(d, meta.decor_radii[(k + i + n) % n]);
+        return d - 0.3f;
     }
 
     private static Transform Primitive(Transform root, string name, PrimitiveType type, Vector3 pos, Vector3 scale, Material material)

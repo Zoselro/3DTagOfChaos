@@ -1,7 +1,8 @@
 {
  "name": "CF_Mushrooms",
  "tris": {
-  "CF_Mushrooms": 3500
+  "CF_Mushrooms": 3500,
+  "COL_Mesh": 2552
  },
  "min": [
   -1.843,

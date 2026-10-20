@@ -15,7 +15,7 @@ public static class CandyForestLayout
     public const float RoadHalf = 5f;
     public const float RowOffset = 6.2f;       // 큰길 가장자리 소품 줄(길 가운데에서)
     public const float RowHalfDepth = 0.4f;
-    public const float BuildingRadius = 45f;
+    public const float BuildingRadius = 42f; // 바닥 장식까지 충돌(약 13 m) — 가장자리 무리(66~68 m)와 4 m 넘게
     public const float ArchRadius = 42f;
     public const float HalfGap = 2f;            // 충돌체 사이 4 m의 절반
 
@@ -45,6 +45,17 @@ public static class CandyForestLayout
             if (Mathf.Abs(c.x) < RoomHalf + 2f + keep && Mathf.Abs(c.y) < RoomHalf + 2f + keep) return false; // 술래방
             foreach ((Vector2 tc, float tr) in taken) if ((tc - c).sqrMagnitude < (tr + keep) * (tr + keep)) return false;
             return true;
+        }
+
+        // 원하는 자리가 안 되는 까닭(경고용)
+        public string Why(Vector2 c, float keep, bool solid)
+        {
+            if (c.magnitude + keep > (solid ? FenceInner - HalfGap : MapRadius - 1f)) return "fence";
+            float band = RowOffset + RowHalfDepth + keep;
+            if (Mathf.Abs(c.x) < band || Mathf.Abs(c.y) < band) return "road";
+            if (Mathf.Abs(c.x) < RoomHalf + 2f + keep && Mathf.Abs(c.y) < RoomHalf + 2f + keep) return "room";
+            foreach ((Vector2 tc, float tr) in taken) if ((tc - c).sqrMagnitude < (tr + keep) * (tr + keep)) return $"near {tc:F0} r {tr:F1}";
+            return "free";
         }
 
         // 원하는 자리에서 나선으로 가장 가까운 빈자리
@@ -93,7 +104,7 @@ public static class CandyForestLayout
 
         bool Put(string asset, string group, Vector2 want, float? yaw = null)
         {
-            if (!solver.Place(want, Keep(asset), Solid(asset), out Vector2 at)) { warn.Add($"{asset} near {want}: no room"); return false; }
+            if (!solver.Place(want, Keep(asset), Solid(asset), out Vector2 at)) { warn.Add($"{asset} near {want} (keep {Keep(asset):F1}): no room — {solver.Why(want, Keep(asset), Solid(asset))}"); return false; }
             Add(asset, group, at, yaw ?? YawToCenter(at));
             return true;
         }
@@ -166,16 +177,16 @@ public static class CandyForestLayout
         Quad(0, "CF_Lamp", 22f, 8f); Quad(0, "CF_Bench", 24f, 14f); Quad(0, "CF_Mushrooms", 70f, 10f);
         // 2 파랑(북동): 솜사탕 나무 · 버섯 · 보라 나무 · 둥근 울타리 · 이정표
         Quad(1, "CF_CottonTree", 26f, 20f); Quad(1, "CF_CottonTree", 28f, -22f); Quad(1, "CF_CottonTree", 63f, 8f);
-        Quad(1, "CF_PurpleTree", 34f, -32f); Quad(1, "CF_Mushrooms", 22f, -2f); Quad(1, "CF_Mushrooms", 66f, -14f);
-        Quad(1, "CF_RingFence", 30f, 34f); Quad(1, "CF_Signpost", 20f, 12f);
+        Quad(1, "CF_PurpleTree", 34f, -32f); Quad(1, "CF_Mushrooms", 22f, -2f);
+        Quad(1, "CF_Signpost", 20f, 12f);
         // 3 초록(남서): 연못 · 보라 나무 · 버섯 · 막대사탕 · 이정표 · 벤치
         Quad(2, "CF_Pond", 26f, 26f);
-        Quad(2, "CF_PurpleTree", 28f, -22f); Quad(2, "CF_PurpleTree", 62f, 12f); Quad(2, "CF_PurpleTree", 64f, -12f);
+        Quad(2, "CF_PurpleTree", 62f, 12f); Quad(2, "CF_PurpleTree", 64f, -12f);
         Quad(2, "CF_Mushrooms", 30f, 40f); Quad(2, "CF_LollipopTree", 36f, -34f); Quad(2, "CF_Signpost", 20f, -8f); Quad(2, "CF_Bench", 22f, 36f);
         // 4 노랑(남동): 사탕 가게 · 캔디 더미 · 나무 · 둥근 울타리 · 가로등
-        Quad(3, "CF_Shop", 27f, -22f);
+        Quad(3, "CF_Shop", 58f, 25f);
         Quad(3, "CF_CandyPile", 26f, 24f); Quad(3, "CF_CandyPile", 64f, 10f);
-        Quad(3, "CF_LollipopTree", 34f, 34f); Quad(3, "CF_CottonTree", 62f, -12f); Quad(3, "CF_PurpleTree", 36f, -36f);
+        Quad(3, "CF_CottonTree", 62f, -12f);
         Quad(3, "CF_RingFence", 22f, 4f); Quad(3, "CF_Lamp", 20f, -12f);
 
         // 5) 울타리 밖 숲(겉모습만, 충돌 없음 — §28.6)

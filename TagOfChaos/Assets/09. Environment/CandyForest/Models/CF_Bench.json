@@ -1,7 +1,8 @@
 {
  "name": "CF_Bench",
  "tris": {
-  "CF_Bench": 1500
+  "CF_Bench": 1500,
+  "COL_Mesh": 1388
  },
  "min": [
   -1.436,

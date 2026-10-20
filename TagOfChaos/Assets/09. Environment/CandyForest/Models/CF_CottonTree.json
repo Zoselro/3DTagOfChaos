@@ -1,7 +1,8 @@
 {
  "name": "CF_CottonTree",
  "tris": {
-  "CF_CottonTree": 7000
+  "CF_CottonTree": 7000,
+  "COL_Mesh": 5999
  },
  "min": [
   -2.952,

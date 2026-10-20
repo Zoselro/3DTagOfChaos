@@ -1,7 +1,8 @@
 {
  "name": "CF_PurpleTree",
  "tris": {
-  "CF_PurpleTree": 7000
+  "CF_PurpleTree": 7000,
+  "COL_Mesh": 6000
  },
  "min": [
   -3.743,

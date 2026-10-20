@@ -111,4 +111,39 @@ public class Request1019Tests
             finally { Object.DestroyImmediate(go); }
         }
     }
+
+    // 2026-10-20: 장식 속에 숨지 못하게 소품·괴물집·천막·겉 건물은 메시 충돌(바닥 근처 낮은 턱은 뺀 충돌용 메시)
+    [Test]
+    public void Prefabs_HaveMeshColliders()
+    {
+        foreach (string asset in new[] { "CF_LollipopTree", "CF_Mushrooms", "CF_CandyPile", "CF_Bench", "CF_RingFence", "CF_Shop", "CF_Cottage", "CF_MonsterHouse", "CF_Tent", "CF_Bld_Q1" })
+        {
+            GameObject prefab = CandyForestAssets.LoadPrefab(asset);
+            Assert.NotNull(prefab, asset);
+            MeshCollider[] mesh = prefab.GetComponentsInChildren<MeshCollider>(true);
+            Assert.IsNotEmpty(mesh, asset + " has a mesh collider");
+            foreach (MeshCollider c in mesh) Assert.IsFalse(c.GetComponent<Renderer>().enabled, asset + " collision mesh is not drawn");
+        }
+        Assert.IsEmpty(CandyForestAssets.LoadPrefab("CF_Pond").GetComponentsInChildren<Collider>(true), "pond stays walkable");
+    }
+
+    // 2026-10-20: 빛기둥은 꽂는 자리(받침)에서 시작해 지붕 위로 — 공중에 떠 보이지 않게
+    [Test]
+    public void BuildingGlow_StartsAtSocket_AndClearsTheRoof()
+    {
+        for (int q = 1; q <= 4; q++)
+        {
+            GameObject b = (GameObject)PrefabUtility.InstantiatePrefab(CandyForestAssets.LoadPrefab("CF_Bld_Q" + q));
+            try
+            {
+            Renderer glow = b.GetComponentsInChildren<Renderer>(true).First(r => r.name.StartsWith("ESC_Glow"));
+            Transform rp = b.GetComponentsInChildren<Transform>(true).First(t => t.name.StartsWith("Repair_Point"));
+            float roof = b.GetComponentsInChildren<Renderer>(true).Where(r => r.name == "Exterior").Max(r => r.bounds.max.y);
+            Assert.Less(glow.bounds.min.y, rp.position.y, "starts at the socket");
+            Assert.Greater(glow.bounds.max.y, roof + 10f, "rises well above the roof");
+            Assert.Less(new Vector2(glow.bounds.center.x - rp.position.x, glow.bounds.center.z - rp.position.z).magnitude, 0.05f, "above the socket");
+            }
+            finally { Object.DestroyImmediate(b); }
+        }
+    }
 }

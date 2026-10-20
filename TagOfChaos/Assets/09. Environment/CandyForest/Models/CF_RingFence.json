@@ -1,7 +1,8 @@
 {
  "name": "CF_RingFence",
  "tris": {
-  "CF_RingFence": 3500
+  "CF_RingFence": 3500,
+  "COL_Mesh": 2576
  },
  "min": [
   -2.512,

@@ -1,7 +1,8 @@
 {
  "name": "CF_Signpost",
  "tris": {
-  "CF_Signpost": 1500
+  "CF_Signpost": 1500,
+  "COL_Mesh": 1058
  },
  "min": [
   -0.785,

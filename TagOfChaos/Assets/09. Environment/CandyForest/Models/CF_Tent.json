@@ -3,7 +3,8 @@
  "tris": {
   "Shell": 13999,
   "Inner": 5000,
-  "Floor": 38
+  "Floor": 38,
+  "COL_Shell": 7999
  },
  "min": [
   -7.004,

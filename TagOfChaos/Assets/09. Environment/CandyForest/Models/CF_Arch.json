@@ -1,7 +1,8 @@
 {
  "name": "CF_Arch",
  "tris": {
-  "CF_Arch": 3000
+  "CF_Arch": 3000,
+  "COL_Mesh": 2934
  },
  "min": [
   -8.998,

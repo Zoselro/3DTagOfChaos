@@ -1,7 +1,8 @@
 {
  "name": "CF_LollipopTree",
  "tris": {
-  "CF_LollipopTree": 7000
+  "CF_LollipopTree": 7000,
+  "COL_Mesh": 5999
  },
  "min": [
   -2.993,

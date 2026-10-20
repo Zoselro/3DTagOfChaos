@@ -1,7 +1,8 @@
 {
  "name": "CF_CandyCane",
  "tris": {
-  "CF_CandyCane": 2000
+  "CF_CandyCane": 2000,
+  "COL_Mesh": 1867
  },
  "min": [
   -1.928,

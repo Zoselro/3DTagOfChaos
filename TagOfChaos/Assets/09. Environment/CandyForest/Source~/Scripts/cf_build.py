@@ -171,6 +171,17 @@ def sector_radii(o, zmax, sectors=36):
     return [round(x, 2) for x in r]
 
 
+def collision_copy(src, name, zmin, target):
+    """Collision mesh for Unity (MeshCollider): the visual mesh without the faces near the ground (height < zmin),
+    so floor-level bumps stay walkable (monster climbs only 0.15 m) while everything a player could hide in is solid."""
+    o = src.copy(); o.data = src.data.copy(); o.name = name; o.data.name = name
+    bpy.context.scene.collection.objects.link(o)
+    cut(o, lambda c: c.z < zmin)
+    decimate(o, target)
+    o.data.materials.clear(); o.data.materials.append(simple_material("CF_Collision", (1.0, 0.0, 1.0)))
+    return o
+
+
 def export(name, objs, meta=None):
     bpy.ops.object.select_all(action="DESELECT")
     for o in objs:
@@ -202,7 +213,7 @@ def render(name, objs):
     sc.render.image_settings.file_format = "JPEG"
     lo = Vector((1e9, 1e9, 1e9)); hi = -lo
     for o in objs:
-        if o.type != "MESH": continue
+        if o.type != "MESH" or o.name.startswith("COL_"): continue
         a, b = bbox(o)
         lo = Vector(tuple(min(lo[k], a[k]) for k in range(3))); hi = Vector(tuple(max(hi[k], b[k]) for k in range(3)))
     c = (lo + hi) / 2; ext = (hi - lo).length
@@ -214,7 +225,7 @@ def render(name, objs):
     bpy.context.view_layer.update()
     cam.location = c + (cam.matrix_world.to_3x3() @ Vector((0, 0, 1))) * ext * 3
     sc.camera = cam
-    hidden = [o for o in sc.objects if o.type == "MESH" and o not in objs]
+    hidden = [o for o in sc.objects if o.type == "MESH" and (o not in objs or o.name.startswith("COL_"))]
     for o in hidden: o.hide_render = True
     sc.render.filepath = os.path.join(SPLIT, "out_" + name + ".jpg")
     bpy.ops.render.render(write_still=True)
@@ -269,7 +280,28 @@ def build_prop(name, spec):
         meta["clearance"] = round(min(under), 2) if under else 0
         legs = [abs(v.co.x) for v in o.data.vertices if v.co.z < 1.0]
         meta["inner_half_span"] = round(min(legs), 2) if legs else 0
-    export(name, [o], meta)
+    objs = [o]
+    if not (name in NO_COLLISION or name.startswith("CF_Lollipop_")):
+        objs.append(collision_copy(o, "COL_Mesh", 0.25, min(6000, target)))
+    export(name, objs, meta)
+
+
+# walk-over or moving pieces: no mesh collision (pond water, item models, exit doors that sink)
+NO_COLLISION = {"CF_Pond", "CF_ExitOpen", "CF_ExitClosed"}
+
+
+def build_moss_tile(name):
+    """New green floor block (2026-10-20): ~10 x 9 m, the grass top 4 cm above the floor collider, bumps kept low."""
+    reset()
+    o = load_piece("GreenFloor", 0, name)
+    lo, hi = bbox(o)
+    d = hi - lo
+    s = 10.0 / max(d.x, d.y)
+    m = Matrix.Diagonal((s, s, s * 0.45, 1)) @ Matrix.Translation(-Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, hi.z)))
+    bake(o, m)
+    drop(o, skirt_top(o, 1.0) - 0.04)
+    decimate(o, 900)
+    export(name, [o])
 
 
 def build_tile(name, idx):
@@ -304,11 +336,12 @@ def build_shell(name, spec):
     removed = cut(o, door_test((DOOR_W / 2, DOOR_H), (HOLE_W / 2, HOLE_H)))
     decimate(o, target)
     inner = inner_shell(o, "Inner", 0.97, 5000)
+    col = collision_copy(o, "COL_Shell", 0.25, 8000)
     radii = sector_radii(o, 3.0)
     wall = round(sorted(radii)[len(radii) // 4] * 0.9, 2)      # collider ring inside the visual wall
     flo = floor_disc("Floor", wall + 0.3)
     meta = dict(kind="shell", ring_radius=wall, door=[6.6, 7.6], hole=[1.4, 2.6], faces_cut=removed)
-    export(name, [o, inner, flo], meta)
+    export(name, [o, inner, flo, col], meta)
 
 
 # ---------------------------------------------------------------- material buildings (exterior + interior, §28.4)
@@ -349,12 +382,25 @@ def build_building(name, spec):
     decimate(ext, 22000)
     decimate(inn, 36000)
     inner = inner_shell(ext, "Inner", 0.97, 6000)
+    col_ext = collision_copy(ext, "COL_Exterior", 0.25, 8000)
+    # inside the room the wall ring + pedestal collide; exterior pieces poking into the room (tree trunk ...) would leave cookie-only gaps
+    cut(col_ext, lambda c: ilo.x + 0.5 < c.x < ihi.x - 0.5 and ilo.y + 0.5 < c.y < ihi.y - 0.5)
+    col_int = collision_copy(inn, "COL_Interior", 1.0, 12000)   # room floor rails/bumps (< 1 m) stay walk-through
     radii = sector_radii(ext, 3.0)
     rp = empty("Repair_Point", (px, py, top + 0.15))
+    # nearest decor (taller than 1 m, outside the pedestal) per 5-degree sector in Unity axes (x = -x, z = -y):
+    # the room's wall collider ring is thickened inward to this radius, so nobody can stand inside / behind decor
+    decor = [999.0] * 72
+    for v in col_int.data.vertices:
+        ux, uz = -v.co.x, -v.co.y
+        r = math.hypot(ux, uz)
+        if r < pr + 1.2: continue
+        k = int((math.degrees(math.atan2(uz, ux)) % 360.0) / 5.0) % 72
+        decor[k] = min(decor[k], r)
     meta = dict(kind="building", outer_radii=radii, inner_half=[round((ihi.x - ilo.x) / 2, 2), round((ihi.y - ilo.y) / 2, 2)],
                 pedestal=[round(-px, 2), round(-py, 2), round(top, 2), round(pr, 2)], door=[6.6, 7.6],
-                faces_cut=[n_ext, n_int], interior_floor=round(floor, 2))
-    export(name, [ext, inn, inner, rp], meta)
+                faces_cut=[n_ext, n_int], interior_floor=round(floor, 2), decor_radii=[round(x, 2) for x in decor])
+    export(name, [ext, inn, inner, rp, col_ext, col_int], meta)
 
 
 # ---------------------------------------------------------------- main
@@ -364,6 +410,7 @@ for k, v in PROPS.items():
     if wanted(k): jobs.append((k, lambda k=k, v=v: build_prop(k, v)))
 for k, v in TILES.items():
     if wanted(k): jobs.append((k, lambda k=k, v=v: build_tile(k, v)))
+if wanted("CF_Tile_Moss"): jobs.append(("CF_Tile_Moss", lambda: build_moss_tile("CF_Tile_Moss")))
 for k, v in SHELLS.items():
     if wanted(k): jobs.append((k, lambda k=k, v=v: build_shell(k, v)))
 for k, v in BUILDINGS.items():

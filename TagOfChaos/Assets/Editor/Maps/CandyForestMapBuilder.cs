@@ -102,11 +102,30 @@ public static class CandyForestMapBuilder
         GameObject go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
         try
         {
-            foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) f.Collider = Mathf.Max(f.Collider, FlatReach(c.bounds));
+            foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) f.Collider = Mathf.Max(f.Collider, ColliderReach(c));
             foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true)) f.Visual = Mathf.Max(f.Visual, FlatReach(r.bounds));
         }
         finally { Object.DestroyImmediate(go); }
         return f;
+    }
+
+    private const float WalkZoneHeight = 3f; // 사람이 지나가는 높이 — 나무 머리처럼 그 위에 있는 충돌은 틈 계산에서 뺀다
+
+    // 메시 충돌체는 실제 꼭짓점(사람 높이 아래)으로, 상자·캡슐은 범위로 잰다
+    private static float ColliderReach(Collider c)
+    {
+        if (c is MeshCollider mc && mc.sharedMesh != null)
+        {
+            float reach = 0f;
+            Matrix4x4 m = mc.transform.localToWorldMatrix;
+            foreach (Vector3 v in mc.sharedMesh.vertices)
+            {
+                Vector3 w = m.MultiplyPoint3x4(v);
+                if (w.y <= WalkZoneHeight) reach = Mathf.Max(reach, new Vector2(w.x, w.z).magnitude);
+            }
+            return reach;
+        }
+        return FlatReach(c.bounds);
     }
 
     private static float FlatReach(Bounds b)
@@ -322,10 +341,22 @@ public static class CandyForestMapBuilder
         float half = CandyForestLayout.RoadHalf, room = CandyForestLayout.RoomHalf;
         var buildings = layout.placements.Where(p => p.asset.StartsWith("CF_Bld_")).Select(p => new Vector2(p.position.x, p.position.z)).ToList();
         var rng = new System.Random(7);
-        // 술래방 용암
+        // 술래방: 붉은 용암 바닥판 + 용암 타일(타일의 붉은 면이 바닥판보다 위에 오게 올림 — 초록 바닥이 비치지 않게)
+        var lavaFloor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.DestroyImmediate(lavaFloor.GetComponent<Collider>());
+        lavaFloor.name = "RoomLavaFloor";
+        lavaFloor.transform.SetParent(tiles, false);
+        lavaFloor.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+        lavaFloor.transform.localScale = new Vector3(room * 2f + 0.6f, 0.02f, room * 2f + 0.6f);
+        Material lava = PlainMaterial("CF_RoomLava", new Color(0.45f, 0.05f, 0.03f));
+        lava.EnableKeyword("_EMISSION");
+        lava.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+        lava.SetColor("_EmissionColor", new Color(0.55f, 0.08f, 0.02f));
+        lavaFloor.GetComponent<Renderer>().sharedMaterial = lava;
+        GameObjectUtility.SetStaticEditorFlags(lavaFloor, StaticEditorFlags.BatchingStatic);
         for (int ix = 0; ix < 4; ix++)
             for (int iz = 0; iz < 3; iz++)
-            { Spawn("CF_Tile_Lava", tiles, new Vector3(-9f + ix * 6f, 0f, -9.5f + iz * 9.5f), rng.Next(2) * 180f, true); n++; }
+            { Spawn("CF_Tile_Lava", tiles, new Vector3(-9f + ix * 6f, 0.13f, -9.5f + iz * 9.5f), rng.Next(2) * 180f, true); n++; }
         // 큰길 포장(10 m가 길 너비, 6 m씩 길을 따라)
         for (int d = 0; d < 4; d++)
         {
@@ -334,16 +365,17 @@ public static class CandyForestMapBuilder
             for (float t = room + 3f; t < CandyForestLayout.MapRadius + 1f; t += 5.7f)
             { Spawn("CF_Tile_Path", tiles, new Vector3(dir.x, 0f, dir.y) * t + Vector3.up * 0.012f, yaw + rng.Next(2) * 180f, true); n++; } // 풀밭과 겹치는 곳에서 길이 위
         }
-        // 풀밭(6 × 10 m, 10% 넘게 겹침, 반쯤 180° 돌려 이음매를 숨김). 큰길 밑으로 조금 들어가 길가에 틈이 없게(길 타일이 1 cm 위)
-        for (float x = -84f; x <= 84f; x += 5.3f)
-            for (float z = -84f; z <= 84f; z += 8.8f)
+        // 풀밭: 새 초록 바닥 모델(약 10 × 9 m, 2026-10-20) — 10% 넘게 겹침, 반쯤 180° 돌려 이음매를 숨김.
+        // 큰길 밑으로 조금 들어가 길가에 틈이 없게(길 타일이 1 cm 위)
+        for (float x = -84f; x <= 84f; x += 8.8f)
+            for (float z = -84f; z <= 84f; z += 7.9f)
             {
                 var c = new Vector2(x, z);
                 if (c.magnitude > 84f) continue;
                 if (Mathf.Abs(x) < half || Mathf.Abs(z) < half + 1f) continue;
                 if (Mathf.Abs(x) < room + 3f && Mathf.Abs(z) < room + 5f) continue;
                 if (buildings.Any(b => (b - c).magnitude < 8f)) continue;
-                Spawn("CF_Tile_Grass", tiles, new Vector3(x, 0f, z), rng.Next(2) * 180f, true);
+                Spawn("CF_Tile_Moss", tiles, new Vector3(x, 0f, z), rng.Next(2) * 180f, true);
                 n++;
             }
         return n;

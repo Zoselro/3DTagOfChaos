@@ -1,7 +1,8 @@
 {
  "name": "CF_CandyPile",
  "tris": {
-  "CF_CandyPile": 3000
+  "CF_CandyPile": 3000,
+  "COL_Mesh": 2705
  },
  "min": [
   -2.509,

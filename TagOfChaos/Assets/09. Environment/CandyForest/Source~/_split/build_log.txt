@@ -149,3 +149,88 @@ OK CF_Tile_Path
 EXPORT CF_Tile_Lava {'CF_Tile_Lava': 500} size [6.01, 9.99, 0.3]
 OK CF_Tile_Lava
 DONE 3
+EXPORT CF_LollipopTree {'CF_LollipopTree': 7000, 'COL_Mesh': 5999} size [5.98, 4.08, 9.0]
+OK CF_LollipopTree
+EXPORT CF_CottonTree {'CF_CottonTree': 7000, 'COL_Mesh': 5999} size [5.92, 5.01, 8.0]
+OK CF_CottonTree
+EXPORT CF_PurpleTree {'CF_PurpleTree': 7000, 'COL_Mesh': 6000} size [7.48, 6.19, 8.51]
+OK CF_PurpleTree
+EXPORT CF_Mushrooms {'CF_Mushrooms': 3500, 'COL_Mesh': 2552} size [3.69, 3.68, 3.0]
+OK CF_Mushrooms
+EXPORT CF_RingFence {'CF_RingFence': 3500, 'COL_Mesh': 2576} size [5.01, 4.28, 3.83]
+OK CF_RingFence
+EXPORT CF_Shop {'CF_Shop': 9000, 'COL_Mesh': 5999} size [9.01, 6.21, 10.12]
+OK CF_Shop
+EXPORT CF_Cottage {'CF_Cottage': 16000, 'COL_Mesh': 5999} size [13.99, 10.71, 13.34]
+OK CF_Cottage
+EXPORT CF_Pond {'CF_Pond': 4000} size [11.79, 12.02, 2.37]
+OK CF_Pond
+EXPORT CF_Lamp {'CF_Lamp': 1500, 'COL_Mesh': 1298} size [1.38, 1.52, 5.0]
+OK CF_Lamp
+EXPORT CF_FenceGate {'CF_FenceGate': 1800, 'COL_Mesh': 1548} size [6.01, 0.9, 3.72]
+OK CF_FenceGate
+EXPORT CF_Signpost {'CF_Signpost': 1500, 'COL_Mesh': 1058} size [1.57, 0.85, 3.5]
+OK CF_Signpost
+EXPORT CF_Bench {'CF_Bench': 1500, 'COL_Mesh': 1388} size [2.87, 3.0, 1.63]
+OK CF_Bench
+EXPORT CF_CandyCane {'CF_CandyCane': 2000, 'COL_Mesh': 1867} size [3.86, 1.75, 8.0]
+OK CF_CandyCane
+EXPORT CF_CandyPile {'CF_CandyPile': 3000, 'COL_Mesh': 2705} size [5.0, 4.17, 3.07]
+OK CF_CandyPile
+EXPORT CF_Arch {'CF_Arch': 3000, 'COL_Mesh': 2934} size [18.01, 8.83, 11.2]
+OK CF_Arch
+EXPORT CF_MonsterAltar {'CF_MonsterAltar': 5000, 'COL_Mesh': 4488} size [4.08, 5.99, 3.26]
+OK CF_MonsterAltar
+EXPORT CF_MonsterBox {'CF_MonsterBox': 5000, 'COL_Mesh': 4436} size [5.49, 7.9, 4.01]
+OK CF_MonsterBox
+EXPORT CF_Lollipop_Red {'CF_Lollipop_Red': 1000} size [0.56, 0.56, 0.9]
+OK CF_Lollipop_Red
+EXPORT CF_Lollipop_Blue {'CF_Lollipop_Blue': 1000} size [0.56, 0.56, 0.9]
+OK CF_Lollipop_Blue
+EXPORT CF_Lollipop_Green {'CF_Lollipop_Green': 1000} size [0.56, 0.56, 0.9]
+OK CF_Lollipop_Green
+EXPORT CF_Lollipop_Yellow {'CF_Lollipop_Yellow': 986} size [0.56, 0.56, 0.9]
+OK CF_Lollipop_Yellow
+EXPORT CF_ExitOpen {'CF_ExitOpen': 3478} size [9.0, 4.12, 7.82]
+OK CF_ExitOpen
+EXPORT CF_ExitClosed {'CF_ExitClosed': 4000} size [9.0, 4.44, 8.59]
+OK CF_ExitClosed
+EXPORT CF_Tile_Grass {'CF_Tile_Grass': 500} size [6.01, 10.01, 0.3]
+OK CF_Tile_Grass
+EXPORT CF_Tile_Path {'CF_Tile_Path': 500} size [5.99, 10.02, 0.29]
+OK CF_Tile_Path
+EXPORT CF_Tile_Lava {'CF_Tile_Lava': 500} size [6.01, 9.99, 0.3]
+OK CF_Tile_Lava
+EXPORT CF_Tile_Moss {'CF_Tile_Moss': 900} size [10.04, 9.01, 2.08]
+OK CF_Tile_Moss
+EXPORT CF_MonsterHouse {'Shell': 18000, 'Inner': 5000, 'Floor': 38, 'COL_Shell': 8000} size [16.02, 14.27, 13.93]
+OK CF_MonsterHouse
+EXPORT CF_Tent {'Shell': 13999, 'Inner': 5000, 'Floor': 38, 'COL_Shell': 7999} size [14.01, 12.4, 13.18]
+OK CF_Tent
+EXPORT CF_Bld_Q1 {'Exterior': 21999, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 8000, 'COL_Interior': 10613} size [22.04, 21.94, 23.5]
+OK CF_Bld_Q1
+EXPORT CF_Bld_Q2 {'Exterior': 21999, 'Interior': 36000, 'Inner': 5999, 'COL_Exterior': 7999, 'COL_Interior': 12000} size [22.01, 22.69, 24.79]
+OK CF_Bld_Q2
+EXPORT CF_Bld_Q3 {'Exterior': 22000, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 7999, 'COL_Interior': 11999} size [22.41, 22.84, 23.44]
+OK CF_Bld_Q3
+EXPORT CF_Bld_Q4 {'Exterior': 22000, 'Interior': 35999, 'Inner': 6000, 'COL_Exterior': 7999, 'COL_Interior': 7787} size [21.24, 22.84, 26.06]
+OK CF_Bld_Q4
+DONE 33
+EXPORT CF_Bld_Q1 {'Exterior': 21999, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 8000, 'COL_Interior': 10613} size [22.04, 21.94, 23.5]
+OK CF_Bld_Q1
+EXPORT CF_Bld_Q2 {'Exterior': 21999, 'Interior': 36000, 'Inner': 5999, 'COL_Exterior': 7999, 'COL_Interior': 12000} size [22.01, 22.69, 24.79]
+OK CF_Bld_Q2
+EXPORT CF_Bld_Q3 {'Exterior': 22000, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 7999, 'COL_Interior': 11999} size [22.41, 22.84, 23.44]
+OK CF_Bld_Q3
+EXPORT CF_Bld_Q4 {'Exterior': 22000, 'Interior': 35999, 'Inner': 6000, 'COL_Exterior': 7999, 'COL_Interior': 7787} size [21.24, 22.84, 26.06]
+OK CF_Bld_Q4
+DONE 4
+EXPORT CF_Bld_Q1 {'Exterior': 21999, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 2166, 'COL_Interior': 10613} size [22.04, 21.94, 23.5]
+OK CF_Bld_Q1
+EXPORT CF_Bld_Q2 {'Exterior': 21999, 'Interior': 36000, 'Inner': 5999, 'COL_Exterior': 3371, 'COL_Interior': 12000} size [22.01, 22.69, 24.79]
+OK CF_Bld_Q2
+EXPORT CF_Bld_Q3 {'Exterior': 22000, 'Interior': 35999, 'Inner': 5999, 'COL_Exterior': 4153, 'COL_Interior': 11999} size [22.41, 22.84, 23.44]
+OK CF_Bld_Q3
+EXPORT CF_Bld_Q4 {'Exterior': 22000, 'Interior': 35999, 'Inner': 6000, 'COL_Exterior': 3871, 'COL_Interior': 7787} size [21.24, 22.84, 26.06]
+OK CF_Bld_Q4
+DONE 4

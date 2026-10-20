@@ -1,7 +1,8 @@
 {
  "name": "CF_Lamp",
  "tris": {
-  "CF_Lamp": 1500
+  "CF_Lamp": 1500,
+  "COL_Mesh": 1298
  },
  "min": [
   -0.686,

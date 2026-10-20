@@ -1,7 +1,8 @@
 {
  "name": "CF_MonsterAltar",
  "tris": {
-  "CF_MonsterAltar": 5000
+  "CF_MonsterAltar": 5000,
+  "COL_Mesh": 4488
  },
  "min": [
   -2.043,
