@@ -1,0 +1,94 @@
+{
+ "scale": 10.5,
+ "cars": [
+  {
+   "name": "Car_0",
+   "pivot": -7.359,
+   "length": 4.744,
+   "width": 2.223,
+   "height": 3.277,
+   "wheel_half": 1.332,
+   "front": 2.6585,
+   "back": 2.0854,
+   "tris": 23651,
+   "behind_head": 0.0
+  },
+  {
+   "name": "Car_1",
+   "pivot": -3.8439,
+   "length": 3.067,
+   "width": 1.8,
+   "height": 2.49,
+   "wheel_half": 0.7284,
+   "front": 1.5844,
+   "back": 1.4829,
+   "tris": 11556,
+   "behind_head": 3.5151
+  },
+  {
+   "name": "Car_2",
+   "pivot": -1.0825,
+   "length": 2.943,
+   "width": 1.747,
+   "height": 2.289,
+   "wheel_half": 0.631,
+   "front": 1.5541,
+   "back": 1.3886,
+   "tris": 11029,
+   "behind_head": 6.2765
+  },
+  {
+   "name": "Car_3",
+   "pivot": 1.3561,
+   "length": 2.516,
+   "width": 1.731,
+   "height": 2.299,
+   "wheel_half": 0.6378,
+   "front": 1.157,
+   "back": 1.3586,
+   "tris": 10783,
+   "behind_head": 8.7151
+  },
+  {
+   "name": "Car_4",
+   "pivot": 3.8466,
+   "length": 2.727,
+   "width": 1.741,
+   "height": 2.361,
+   "wheel_half": 0.6382,
+   "front": 1.3252,
+   "back": 1.402,
+   "tris": 10711,
+   "behind_head": 11.2056
+  },
+  {
+   "name": "Car_5",
+   "pivot": 6.2888,
+   "length": 2.466,
+   "width": 1.745,
+   "height": 2.219,
+   "wheel_half": 0.6223,
+   "front": 1.249,
+   "back": 1.2172,
+   "tris": 10867,
+   "behind_head": 13.6478
+  },
+  {
+   "name": "Car_6",
+   "pivot": 8.5143,
+   "length": 2.598,
+   "width": 1.73,
+   "height": 2.24,
+   "wheel_half": 0.6045,
+   "front": 1.1649,
+   "back": 1.4336,
+   "tris": 10701,
+   "behind_head": 15.8733
+  }
+ ],
+ "metal_size": [
+  2048,
+  2048
+ ],
+ "train_length": 19.965
+}

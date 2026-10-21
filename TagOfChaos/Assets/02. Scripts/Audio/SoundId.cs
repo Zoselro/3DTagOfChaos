@@ -93,6 +93,9 @@ public enum SoundId
     CoasterStartup = 712,
     CoasterLapBar = 713,
     CoasterDepart = 714,
+    CoasterRoll = 715,   // 롤러코스터 열차가 달리는 소리(반복, 속도에 따라 크기 — Request1009Plan.md §31)
+    CoasterChain = 716,  // 체인/부스터 구간 딸각딸각(반복)
+    CoasterWhoosh = 717, // 빠른 내리막 바람(한 번)
     OvenGears = 720,
     OvenPiston = 721,
     OvenDoorRoll = 722,

@@ -181,7 +181,7 @@ public static class CoasterExitBuilder
         mc.convex = true;
     }
 
-    private static Mesh RampMesh()
+    internal static Mesh RampMesh()
     {
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(RampMeshPath);
         if (mesh != null) return mesh;
@@ -351,7 +351,7 @@ public static class CoasterExitBuilder
 
     // ---------------- assets ----------------
 
-    private static GameObject Import(string path)
+    internal static GameObject Import(string path)
     {
         var importer = AssetImporter.GetAtPath(path) as ModelImporter;
         if (importer == null) return null;
@@ -370,7 +370,7 @@ public static class CoasterExitBuilder
         return AssetDatabase.LoadAssetAtPath<GameObject>(path);
     }
 
-    private static Texture2D Texture(string name, bool normal)
+    internal static Texture2D Texture(string name, bool normal)
     {
         string path = $"{Folder}/{name}.png";
         if (AssetImporter.GetAtPath(path) is TextureImporter ti)
@@ -386,7 +386,7 @@ public static class CoasterExitBuilder
         return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
     }
 
-    private static Material EntranceMaterial()
+    internal static Material EntranceMaterial()
     {
         Material m = LoadOrCreate("M_CUR_CoasterEntrance");
         m.mainTexture = Texture("CoasterEntrance_albedo", false);
@@ -397,10 +397,10 @@ public static class CoasterExitBuilder
         return m;
     }
 
-    private static Material TunnelMaterial() => PlainMaterial("M_CUR_CoasterTunnel", new Color(0.08f, 0.03f, 0.09f), Color.black, 0.1f);
+    internal static Material TunnelMaterial() => PlainMaterial("M_CUR_CoasterTunnel", new Color(0.08f, 0.03f, 0.09f), Color.black, 0.1f);
 
     // 레일·지지대: 색(참고 그림) + 구운 그늘(AO)
-    private static Material TrackMaterial(string part, Color color)
+    internal static Material TrackMaterial(string part, Color color)
     {
         Material m = LoadOrCreate("M_CUR_" + part);
         m.color = color;
@@ -411,7 +411,7 @@ public static class CoasterExitBuilder
         return m;
     }
 
-    private static Material PlainMaterial(string name, Color color, Color emission, float gloss)
+    internal static Material PlainMaterial(string name, Color color, Color emission, float gloss)
     {
         Material m = LoadOrCreate(name);
         m.color = color;
@@ -426,7 +426,7 @@ public static class CoasterExitBuilder
         return m;
     }
 
-    private static Material LoadOrCreate(string name)
+    internal static Material LoadOrCreate(string name)
     {
         string path = $"{Folder}/{name}.mat";
         var m = AssetDatabase.LoadAssetAtPath<Material>(path);

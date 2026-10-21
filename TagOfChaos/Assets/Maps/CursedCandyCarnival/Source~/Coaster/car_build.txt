@@ -1,0 +1,9 @@
+Car_0 {'name': 'Car_0', 'pivot': -7.359, 'length': np.float64(4.744), 'width': np.float64(2.223), 'height': np.float64(3.277), 'wheel_half': 1.332, 'front': 2.6585, 'back': 2.0854, 'tris': 23651}
+Car_1 {'name': 'Car_1', 'pivot': -3.8439, 'length': np.float64(3.067), 'width': np.float64(1.8), 'height': np.float64(2.49), 'wheel_half': 0.7284, 'front': 1.5844, 'back': 1.4829, 'tris': 11556}
+Car_2 {'name': 'Car_2', 'pivot': -1.0825, 'length': np.float64(2.943), 'width': np.float64(1.747), 'height': np.float64(2.289), 'wheel_half': 0.631, 'front': 1.5541, 'back': 1.3886, 'tris': 11029}
+Car_3 {'name': 'Car_3', 'pivot': 1.3561, 'length': np.float64(2.516), 'width': np.float64(1.731), 'height': np.float64(2.299), 'wheel_half': 0.6378, 'front': 1.157, 'back': 1.3586, 'tris': 10783}
+Car_4 {'name': 'Car_4', 'pivot': 3.8466, 'length': np.float64(2.727), 'width': np.float64(1.741), 'height': np.float64(2.361), 'wheel_half': 0.6382, 'front': 1.3252, 'back': 1.402, 'tris': 10711}
+Car_5 {'name': 'Car_5', 'pivot': 6.2888, 'length': np.float64(2.466), 'width': np.float64(1.745), 'height': np.float64(2.219), 'wheel_half': 0.6223, 'front': 1.249, 'back': 1.2172, 'tris': 10867}
+Car_6 {'name': 'Car_6', 'pivot': 8.5143, 'length': np.float64(2.598), 'width': np.float64(1.73), 'height': np.float64(2.24), 'wheel_half': 0.6045, 'front': 1.1649, 'back': 1.4336, 'tris': 10701}
+train length 19.965
+DONE

@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 // 캔디숲 실제 모델 맵 씬(Request1009Plan.md §28, 단계 C6~C8·C10).
 // Test_CandyForest를 복사한 CandyForest 씬에서 놀이 공간을 실제 모델로 바꾼다:
-//   둥근 바닥·울타리(반지름 80 m) · 바닥 타일(겉모습만) · 술래방 꾸미기 · 재료 건물 4 · 탈출구 4 · 큰길 소품 줄 ·
+//   둥근 바닥·울타리(반지름 CandyForestLayout.MapRadius, §32에서 155 m) · 바닥 타일(겉모습만) · 술래방 꾸미기 · 재료 건물 4 · 탈출구 4 · 큰길 소품 줄 ·
 //   가장자리 괴물집·천막 무리 · 사분면 꾸미기 · 울타리 밖 숲 · 상자/로켓/무지개/스폰 자리 · 조명.
 // 배치는 위치표(Assets/03. SO/Maps/CandyForestLayout.asset)를 따른다. 카메라·관리자·마녀·환경음은 테스트 씬 그대로.
 // 여러 번 실행해도 같은 결과(위치표가 locked면 위치표를 다시 만들지 않는다).
@@ -22,7 +22,8 @@ public static class CandyForestMapBuilder
     private static readonly string[] KeepInMap = { "Background", WitchPath.FarBackdropName, "Ground", "MonsterRoom" };
     private const float ExitOpening = 5.6f, ExitPostWidth = 1.8f, ExitHeight = 7.5f, PadDepth = 10f;
     private const float FenceHeight = 6f, FenceThickness = 0.8f;
-    private const float ForestClearRadius = 95f;
+    private const float ForestClearRadius = CandyForestLayout.MapRadius + 15f;
+    private const float BackgroundHugeSize = 190f; // 이보다 큰 배경(옛 지형 고리 265 m)은 지우지 않는다
     // 옛 캔디숲 지형 고리(흰 땅, §28.15 E2): 원본에서 이 맵에 맞춘 메시를 만든다
     private const string TerrainSource = "Assets/Maps/CandyForest/Compact/CAN_Terrain_Decor.asset";
     private const string TerrainMeshPath = CandyForestAssets.Root + "/Models/CF_TerrainRing.asset";
@@ -30,9 +31,12 @@ public static class CandyForestMapBuilder
     private const float TerrainInsideY = -0.05f;    // 울타리 안에 걸친 면의 안쪽 꼭짓점은 바닥판 밑으로
     private const string GrassDiscPath = CandyForestAssets.Root + "/Models/CF_GrassDisc.asset";
     private const float GrassDiscY = 0.008f;
-    private const float TerrainDropRadius = 79.5f;  // 이 안쪽에만 있는 면은 지운다(울타리 80 m 안)
-    private const float TerrainFlatRadius = 86f;    // 여기까지 평평
-    private const float TerrainExitFlatRadius = 93f;// 탈출구 받침(울타리 밖 10 m) 앞은 더 멀리까지 평평
+    private const float TerrainDropRadius = CandyForestLayout.MapRadius - 0.5f;   // 이 안쪽에만 있는 면은 지운다(울타리 안)
+    private const float TerrainFlatRadius = CandyForestLayout.MapRadius + 6f;     // 여기까지 평평
+    private const float TerrainExitFlatRadius = CandyForestLayout.MapRadius + 13f;// 탈출구 받침(울타리 밖 10 m) 앞은 더 멀리까지 평평
+    private const float FloorSize = 2f * (CandyForestLayout.MapRadius + 45f);  // 사각 바닥판 한 변(울타리 밖 흰 땅·숲까지 덮는다)
+    private const float FarBackdropClear = CandyForestLayout.MapRadius + 45f;    // 이 안의 먼 배경 나무는 맵이 넓어진 만큼 바깥으로 민다(§32)
+    private const float MossScale = 1.4f;                     // 풀밭 타일 배율 — 넓어진 맵에서 타일 수(면 수)를 줄인다(비율 유지)
     private const float TerrainRiseLength = 12f;    // 평평한 곳 끝에서 원래 언덕 높이까지
 
     [MenuItem(MenuRoot + "2 Build Map Scene")]
@@ -56,6 +60,7 @@ public static class CandyForestMapBuilder
                 if (child.name != "WITCH_Anchor") Object.DestroyImmediate(child.gameObject);
 
         ClearBackground(map);
+        SpreadFarBackdrop(map);
         BuildGround(map);
         BuildMonsterRoom(map);
         int placed = PlaceLayout(map, layout);
@@ -73,6 +78,7 @@ public static class CandyForestMapBuilder
             EditorUtility.SetDirty(manager);
         }
         MoveSpawn(scene, SceneSpawnPoints.Cookie, map, "Spawn_Cookie_Q1");
+        MoveWitchAnchor(scene);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -164,8 +170,25 @@ public static class CandyForestMapBuilder
         {
             if (r == null) continue;
             Bounds b = r.bounds;
-            bool huge = b.size.x > ForestClearRadius * 2f || b.size.z > ForestClearRadius * 2f;
+            bool huge = b.size.x > BackgroundHugeSize || b.size.z > BackgroundHugeSize; // 지형 고리처럼 맵을 둘러싼 것은 남긴다
             if (!huge && new Vector2(b.center.x, b.center.z).magnitude < ForestClearRadius) Object.DestroyImmediate(r.gameObject);
+        }
+    }
+
+    // 마녀가 걸어오는 먼 배경(WitchBackdropBuilder, 예전 80 m 맵 기준)의 나무 중 넓어진 울타리·숲에 걸리는 것은 그만큼 바깥으로(§32).
+    private static void SpreadFarBackdrop(Transform map)
+    {
+        Transform far = map.Find(WitchPath.FarBackdropName);
+        if (far == null) return;
+        float push = CandyForestLayout.MapRadius - 80f;
+        foreach (Transform t in far.Cast<Transform>().ToList())
+        {
+            Renderer r = t.GetComponentInChildren<Renderer>(true);
+            if (r == null || r.bounds.size.x > FarBackdropClear) continue; // 먼 바닥판
+            var flat = new Vector2(r.bounds.center.x, r.bounds.center.z);
+            if (flat.magnitude >= FarBackdropClear || flat.sqrMagnitude < 1f) continue;
+            Vector2 move = flat.normalized * push;
+            t.position += new Vector3(move.x, 0f, move.y);
         }
     }
 
@@ -177,13 +200,13 @@ public static class CandyForestMapBuilder
             if (child.name.StartsWith("Wall_")) Object.DestroyImmediate(child.gameObject);
         Transform floor = ground.Find("Floor");
         if (floor == null) return;
-        // 바닥 모델은 Blender 축 회전을 들고 있다 — 수평으로 놓인 축만 늘린다(140 m → 220 m)
+        // 바닥 모델은 Blender 축 회전을 들고 있다 — 수평으로 놓인 축만 늘린다(140 m → FloorSize)
         Vector3 scale = Vector3.one;
         for (int i = 0; i < 3; i++)
         {
             Vector3 axis = Vector3.zero;
             axis[i] = 1f;
-            if (Mathf.Abs((floor.rotation * axis).y) < 0.5f) scale[i] = 220f / 140f;
+            if (Mathf.Abs((floor.rotation * axis).y) < 0.5f) scale[i] = FloorSize / 140f;
         }
         floor.localScale = scale;
         // 바닥판은 흰 땅과 같은 재질(지형 고리 틈·모서리가 같은 색), 울타리 안은 초록 원판(풀밭 타일 틈으로 보여도 어색하지 않은 색)
@@ -245,6 +268,9 @@ public static class CandyForestMapBuilder
         Transform terrain = map.Find("Background/CAN_Terrain_Decor");
         var source = AssetDatabase.LoadAssetAtPath<Mesh>(TerrainSource);
         if (terrain == null || source == null) { Debug.LogWarning("[CandyForestMap] old terrain ring missing — skipped"); return; }
+        // 예전 지형 고리는 80 m 맵에 맞춰 있다 — 수평으로 맵이 넓어진 만큼 늘려 언덕이 울타리 밖에서 시작하게(§32)
+        terrain.localScale = new Vector3(CandyForestLayout.Spread, 1f, CandyForestLayout.Spread);
+        Physics.SyncTransforms();
 
         Matrix4x4 toWorld = terrain.localToWorldMatrix, toLocal = terrain.worldToLocalMatrix;
         Vector3[] vertices = source.vertices;
@@ -312,24 +338,60 @@ public static class CandyForestMapBuilder
         return 0f;
     }
 
-    // 술래방: 벽·문은 그대로(괴물만 지나감, S11), 바닥은 용암 타일, 벽 바깥 가운데에 빨간 상자, 안쪽에 제단.
+    // 술래방(§32): 문을 동서남북 벽 가운데로 — 예전 대각선 문은 재료 건물 쪽을 바로 봐서 술래가 문에서 꽂는 곳을 지켜볼 수 있었다.
+    // 대각선 모서리 조각은 지우고 네모 방(벽 안쪽 면 ±RoomHalf−0.3)으로, 벽마다 가운데를 문 폭만큼 비워 두 조각으로 나눈다.
+    // 문(MonsterDoor_0~3 = 북·동·남·서)은 괴물만 지나감(S11). 바닥은 용암 타일, 빨간 상자는 문 앞을 막지 않게 바깥 모서리 대각선에, 제단은 안쪽 모서리에.
+    private const float RoomWallOuter = CandyForestLayout.RoomHalf + 0.3f;
+    private const float BoxCornerGap = 4f; // 방 모서리와 빨간 상자 사이 — 괴물(몸 지름 3.6 m)이 모서리를 돌아갈 수 있게
+
     private static void BuildMonsterRoom(Transform map)
     {
         Transform room = map.Find("MonsterRoom");
         Material wall = PlainMaterial("CF_RoomWall", new Color(0.32f, 0.08f, 0.1f));
+        foreach (Transform corner in room.Cast<Transform>().Where(t => t.name.StartsWith("RoomCorner_")).ToList()) Object.DestroyImmediate(corner.gameObject);
+        Transform[] doors = room.GetComponentsInChildren<MonsterRoomDoor>(true).Select(d => d.transform).OrderBy(t => t.name).ToArray();
+        string[] sides = { "N", "E", "S", "W" };
+        for (int i = 0; i < 4; i++)
+        {
+            Transform source = room.Find("RoomWall_" + sides[i]);
+            if (source == null) continue;
+            Vector2 dir = CandyForestLayout.RoadDir[i];
+            Vector3 normal = new Vector3(dir.x, 0f, dir.y), along = new Vector3(dir.y, 0f, -dir.x);
+            float length = source.GetComponent<MeshFilter>().sharedMesh.bounds.size.x;
+            float doorWidth = doors.Length > i ? doors[i].GetComponent<MeshFilter>().sharedMesh.bounds.size.x : 4f;
+            float piece = RoomWallOuter - doorWidth / 2f;          // 문 옆에서 바깥 모서리(벽 두께 바깥 면)까지
+            float centerY = source.position.y;
+            foreach (int s in new[] { -1, 1 })
+            {
+                Transform part = Object.Instantiate(source.gameObject, room).transform;
+                part.name = $"RoomWall_{sides[i]}_{(s < 0 ? "A" : "B")}";
+                part.SetPositionAndRotation(normal * CandyForestLayout.RoomHalf + along * (s * (doorWidth / 2f + piece / 2f)) + Vector3.up * centerY, source.rotation);
+                Vector3 scale = part.localScale;
+                scale.x *= piece / length;
+                part.localScale = scale;
+            }
+            if (doors.Length > i)
+            {
+                doors[i].SetPositionAndRotation(normal * CandyForestLayout.RoomHalf + Vector3.up * doors[i].position.y, source.rotation);
+                doors[i].name = "MonsterDoor_" + i;
+            }
+            Object.DestroyImmediate(source.gameObject);
+        }
         foreach (Renderer r in room.GetComponentsInChildren<Renderer>(true))
         {
-            if (r.name.StartsWith("RoomWall_") || r.name.StartsWith("RoomCorner_")) r.sharedMaterial = wall;
+            if (r.name.StartsWith("RoomWall_")) r.sharedMaterial = wall;
             if (r.name == "RoomFloorMark") r.enabled = false;
         }
         Transform deco = Group(room, "CF_RoomDeco");
-        for (int i = 0; i < 4; i++)
+        for (int q = 0; q < 4; q++)
         {
-            Vector2 dir = CandyForestLayout.RoadDir[i];
-            Vector3 p = new Vector3(dir.x, 0f, dir.y) * (CandyForestLayout.RoomHalf + 0.3f + 2.8f);
-            Spawn("CF_MonsterBox", deco, p, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg + 90f, false);
+            Vector2 dir = CandyForestLayout.QuadrantDir[q];
+            Vector3 corner = new Vector3(Mathf.Sign(dir.x), 0f, Mathf.Sign(dir.y)) * RoomWallOuter;
+            Vector3 p = corner + new Vector3(dir.x, 0f, dir.y) * (BoxCornerGap + 3.8f); // 상자 반 대각선 약 3.8 m
+            Spawn("CF_MonsterBox", deco, p, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg + 45f, false);
         }
-        Spawn("CF_MonsterAltar", deco, new Vector3(0f, 0f, 6.5f), 180f, true);
+        var altar = new Vector2(-1f, 1f).normalized * 9f;
+        Spawn("CF_MonsterAltar", deco, new Vector3(altar.x, 0f, altar.y), CandyForestLayout.YawToCenter(altar), true);
     }
 
     // ---------------------------------------------------------------- placements
@@ -424,7 +486,7 @@ public static class CandyForestMapBuilder
         Transform cols = Group(fence, "Colliders");
         float r = CandyForestLayout.MapRadius;
         float exitHalf = ExitOpening / 2f + ExitPostWidth;
-        int segments = 80;
+        int segments = Mathf.RoundToInt(80f * CandyForestLayout.Spread); // 울타리 문 모델이 둘레에 빈틈 없이(예전 80 m에 80개)
         for (int i = 0; i < segments; i++)
         {
             float a = (i + 0.5f) * 360f / segments;
@@ -432,7 +494,7 @@ public static class CandyForestMapBuilder
             Vector2 p = CandyForestLayout.Polar(r + 0.4f, a);
             Spawn("CF_FenceGate", fence, new Vector3(p.x, 0f, p.y), CandyForestLayout.YawToCenter(p), true);
         }
-        int colSegments = 120;
+        int colSegments = Mathf.RoundToInt(120f * CandyForestLayout.Spread);
         float step = 360f / colSegments;
         for (int i = 0; i < colSegments; i++)
         {
@@ -489,9 +551,10 @@ public static class CandyForestMapBuilder
         lava.SetColor("_EmissionColor", new Color(0.55f, 0.08f, 0.02f));
         lavaFloor.GetComponent<Renderer>().sharedMaterial = lava;
         GameObjectUtility.SetStaticEditorFlags(lavaFloor, StaticEditorFlags.BatchingStatic);
+        // 타일 5.9 × 10 m(원본 비율, §28.16) 4 × 2장 — 네모 방(§32) 벽 안에 들어가게(남은 가장자리는 붉은 바닥판)
         for (int ix = 0; ix < 4; ix++)
-            for (int iz = 0; iz < 3; iz++)
-            { Spawn("CF_Tile_Lava", tiles, new Vector3(-8.7f + ix * 5.8f, 0.13f, -9.5f + iz * 9.5f), rng.Next(2) * 180f, true); n++; } // 타일 5.9 × 10 m(원본 비율, §28.16)
+            for (int iz = 0; iz < 2; iz++)
+            { Spawn("CF_Tile_Lava", tiles, new Vector3(-8.7f + ix * 5.8f, 0.13f, -5f + iz * 10f), rng.Next(2) * 180f, true); n++; }
         // 큰길 포장(10 m가 길 너비, 길이 5.48 m 타일을 5.2 m씩 — 원본 비율, §28.16)
         for (int d = 0; d < 4; d++)
         {
@@ -502,15 +565,17 @@ public static class CandyForestMapBuilder
         }
         // 풀밭: 새 초록 바닥 모델(약 10 × 9 m, 2026-10-20) — 10% 넘게 겹침, 반쯤 180° 돌려 이음매를 숨김.
         // 큰길 밑으로 조금 들어가 길가에 틈이 없게(길 타일이 1 cm 위)
-        for (float x = -84f; x <= 84f; x += 8.8f)
-            for (float z = -84f; z <= 84f; z += 7.9f)
+        float reach = CandyForestLayout.MapRadius + 4f;
+        for (float x = -reach; x <= reach; x += 8.8f * MossScale)
+            for (float z = -reach; z <= reach; z += 7.9f * MossScale)
             {
                 var c = new Vector2(x, z);
-                if (c.magnitude > 84f) continue;
+                if (c.magnitude > reach) continue;
                 if (Mathf.Abs(x) < half || Mathf.Abs(z) < half + 1f) continue;
                 if (Mathf.Abs(x) < room + 3f && Mathf.Abs(z) < room + 5f) continue;
                 if (buildings.Any(b => (b - c).magnitude < 8f)) continue;
-                Spawn("CF_Tile_Moss", tiles, new Vector3(x, 0f, z), rng.Next(2) * 180f, true);
+                GameObject moss = Spawn("CF_Tile_Moss", tiles, new Vector3(x, 0f, z), rng.Next(2) * 180f, true);
+                if (moss != null) moss.transform.localScale = Vector3.one * MossScale;
                 n++;
             }
         return n;
@@ -541,6 +606,19 @@ public static class CandyForestMapBuilder
             n++;
         }
         return n;
+    }
+
+    // 마녀 서 있는 자리(테스트 씬 그대로 155 m)는 넓어진 울타리 위라 같은 방향으로 울타리 밖 WitchBeyondFence m까지 민다(§32).
+    private const float WitchBeyondFence = 75f;
+
+    private static void MoveWitchAnchor(Scene scene)
+    {
+        Transform anchor = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "WITCH_Anchor");
+        if (anchor == null) return;
+        var flat = new Vector2(anchor.position.x, anchor.position.z);
+        if (flat.sqrMagnitude < 1f) flat = new Vector2(-1f, -1f);
+        Vector2 at = flat.normalized * (CandyForestLayout.MapRadius + WitchBeyondFence);
+        anchor.position = new Vector3(at.x, anchor.position.y, at.y);
     }
 
     private static void MoveSpawn(Scene scene, string spawnName, Transform map, string markerName)
@@ -665,7 +743,8 @@ public static class CandyForestMapBuilder
             IgnorePocket = p => new Vector2(p.x, p.z).magnitude > CandyForestLayout.MapRadius + 0.5f,
             Targets = Targets(scene).ToArray(),
             // 술래방 문(대각선 네 곳) 바로 바깥 — 괴물은 문을 지나 나온다
-            MonsterSeeds = Enumerable.Range(0, 4).Select(i => new Vector3(i % 2 == 0 ? -1f : 1f, 0f, i < 2 ? 1f : -1f) * 12.5f).ToArray(),
+            // 술래방 문(동서남북, §32) 바로 바깥 — 괴물은 문을 지나 나온다
+            MonsterSeeds = CandyForestLayout.RoadDir.Select(d => new Vector3(d.x, 0f, d.y) * (CandyForestLayout.RoomHalf + 1.5f)).ToArray(),
             MapImage = "Temp/CandyForest_PassabilityMap.png",
         };
         MapPassabilityCheck.Result[] results = MapPassabilityCheck.Run(scene, options);

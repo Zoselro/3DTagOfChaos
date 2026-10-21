@@ -194,6 +194,14 @@ public static class SoundDefaults
                 e.importance = SoundImportance.High;
                 if (id == SoundId.OvenGears || id == SoundId.AltarHum) { e.pitchRange = Vector2.one; e.volume = 0.5f; } // 반복음 — 출발까지 계속 나므로 배경음보다 작게(S9 믹스)
                 else if (id == SoundId.OvenBroken) { e.pitchRange = Vector2.one; e.volume = 0.75f; } // 반복음 — 음원이 톱니보다 4dB 작아(피크 제한) 조금 크게
+                else if (id == SoundId.CoasterRoll || id == SoundId.CoasterChain)
+                {
+                    e.pitchRange = Vector2.one; // 반복음 — 열차 2편성이 판 내내 돌므로 배경음보다 작게
+                    e.volume = id == SoundId.CoasterRoll ? 0.6f : 0.5f;
+                    e.cooldown = 0f;
+                    e.importance = SoundImportance.Normal;
+                }
+                else if (id == SoundId.CoasterWhoosh) { e.volume = 0.6f; e.cooldown = 0.5f; e.importance = SoundImportance.Normal; }
                 else if (id == SoundId.LanternFlicker)
                 {
                     e.volume = 0.5f;          // 등불 여러 개가 따로 깜빡인다 — 작게, 가까이서만
@@ -261,6 +269,9 @@ public static class SoundDefaults
                 falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return;
             case SoundId.AmbFactory: falloff = SoundFalloff.Landmark; min = 6f; max = 28f; return;
             case SoundId.CarouselSpin: falloff = SoundFalloff.Landmark; min = 8f; max = 40f; return;
+            case SoundId.CoasterRoll: falloff = SoundFalloff.Landmark; min = 6f; max = 45f; return;  // 열차(2편성) — 가까이 가야 또렷
+            case SoundId.CoasterChain: falloff = SoundFalloff.Landmark; min = 4f; max = 30f; return;
+            case SoundId.CoasterWhoosh: falloff = SoundFalloff.Landmark; min = 5f; max = 40f; return;
             case SoundId.LanternFlicker: falloff = SoundFalloff.Action; min = 1.5f; max = 10f; return;
         }
         int group = (int)id / 100;

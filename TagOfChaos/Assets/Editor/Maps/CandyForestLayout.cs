@@ -3,20 +3,23 @@ using System.Linq;
 using UnityEngine;
 
 // 캔디숲 실제 모델 맵의 배치 규칙(Request1009Plan.md §28.6~28.11). 위치표(CandyForestLayoutSO)를 만든다.
-// - 둥근 맵(반지름 80 m), 가운데 술래방(24 m), 동서남북 십자 큰길(폭 10 m) 끝에 탈출구.
+// - 둥근 맵(반지름 155 m — §32에서 80 m를 넓힘), 가운데 술래방(24 m, 문은 동서남북), 동서남북 십자 큰길(폭 10 m) 끝에 탈출구.
+// - 재료 건물은 대각선 116.25 m((±82.2, ±82.2), §32 — 술래방 문에서 바로 보이지 않게 멀리). 나머지 거리는 예전 80 m 맵 기준 값에
+//   Spread(155/80)를 곱해 가운데에서 바깥으로 같은 비율로 펼친다(개수는 그대로).
 // - 큰길 양쪽 가장자리에 소품 줄(울타리 문·가로등·지팡이 사탕) + 지나갈 틈 5 m(F1, S1: 틈은 4 m 이상).
 // - 사분면 대각선에 재료 건물(앞문이 맵 가운데를 본다), 가장자리 다섯 무리(괴물집·천막·지팡이 사탕, G4).
 // - 사분면 꾸미기는 그림(§28.7)대로, 겹치지 않게 원(충돌 반지름 + 2 m)으로 자리를 잡는다 — 충돌체끼리 틈이 늘 4 m 이상.
 public static class CandyForestLayout
 {
-    public const float MapRadius = 80f;
-    public const float FenceInner = 79.6f;     // 울타리 충돌 안쪽 면
+    public const float MapRadius = 155f;
+    public const float FenceInner = MapRadius - 0.4f; // 울타리 충돌 안쪽 면
+    public const float Spread = MapRadius / 80f;      // 예전 80 m 맵 기준 거리 → 지금 거리
     public const float RoomHalf = 12f;
     public const float RoadHalf = 5f;
     public const float RowOffset = 6.2f;       // 큰길 가장자리 소품 줄(길 가운데에서)
     public const float RowHalfDepth = 0.4f;
-    public const float BuildingRadius = 42f; // 바닥 장식까지 충돌(약 13 m) — 가장자리 무리(66~68 m)와 4 m 넘게
-    public const float ArchRadius = 42f;
+    public const float BuildingRadius = 116.25f; // (±82.2, ±82.2) — 바닥 장식까지 충돌(약 13 m)
+    public const float ArchRadius = 42f * Spread;
     public const float HalfGap = 2f;            // 충돌체 사이 4 m의 절반
 
     // 사분면 방향(1 북서 · 2 북동 · 3 남서 · 4 남동 — 그림 번호, 테스트 맵과 같다)
@@ -61,7 +64,7 @@ public static class CandyForestLayout
         // 원하는 자리에서 나선으로 가장 가까운 빈자리
         public bool Place(Vector2 want, float keep, bool solid, out Vector2 at)
         {
-            for (float r = 0f; r <= 30f; r += 1f)
+            for (float r = 0f; r <= 30f * Spread; r += 1f)
             {
                 int steps = r < 0.5f ? 1 : Mathf.CeilToInt(2f * Mathf.PI * r / 1.5f);
                 for (int i = 0; i < steps; i++)
@@ -128,14 +131,14 @@ public static class CandyForestLayout
         {
             foreach ((string asset, float deg, float radius, float apron) in new[] { ("CF_MonsterHouse", house, 66f, 12f), ("CF_Tent", tent, 68f, 10.5f) })
             {
-                if (!Put(asset, "Edge", Polar(radius, deg))) continue;
+                if (!Put(asset, "Edge", Polar(radius * Spread, deg))) continue;
                 Vector3 at3 = list[list.Count - 1].position;
                 var at = new Vector2(at3.x, at3.z);
                 solver.Take(at.normalized * (at.magnitude - apron), 3f);
             }
             float mid = (house + tent) / 2f;
-            Put("CF_CandyCane", "Edge", Polar(74f, mid));
-            Put("CF_CandyCane", "Edge", Polar(54f, mid));
+            Put("CF_CandyCane", "Edge", Polar(74f * Spread, mid));
+            Put("CF_CandyCane", "Edge", Polar(54f * Spread, mid));
         }
 
         // 3) 큰길: 탈출구 앞까지 양쪽 소품 줄 + 길마다 아치 하나
@@ -146,15 +149,16 @@ public static class CandyForestLayout
             Add("CF_Arch", "Roads", dir * ArchRadius, roadYaw);   // 아치 너비(모델 x)가 길을 가로지른다 — 다리는 길 양옆
             foreach (int s in new[] { -1, 1 })
             {
-                float t = 17f;
+                float t = 17f, end = MapRadius - 6f;
                 int k = 0;
-                while (t < 74f)
+                while (t < end)
                 {
                     bool fence = k % 2 == 0;
                     float len = fence ? 6f : 1.2f;
                     float mid = t + len / 2f;
-                    if (Mathf.Abs(mid - ArchRadius) < 2.7f + 4f + len / 2f) { t = ArchRadius + 2.7f + 4f; continue; } // 아치 다리와 4 m
-                    if (mid + len / 2f > 74f) break;
+                    // 아치 다리와 4 m — 건너뛴 자리는 조건 경계보다 조금 더 멀리(정수가 아닌 아치 거리에서 부동소수 오차로 같은 자리를 되풀이하지 않게)
+                    if (Mathf.Abs(mid - ArchRadius) < 2.7f + 4f + len / 2f) { t = ArchRadius + 2.7f + 4f + 0.05f; continue; }
+                    if (mid + len / 2f > end) break;
                     Vector2 p = dir * mid + perp * (s * RowOffset);
                     string asset = fence ? "CF_FenceGate" : (k % 4 == 1 ? "CF_Lamp" : "CF_CandyCane");
                     Add(asset, "Roads", p, fence ? roadYaw + 90f + (s > 0 ? 180f : 0f) : 0f);
@@ -168,7 +172,7 @@ public static class CandyForestLayout
         void Quad(int q, string asset, float radius, float deltaDeg)
         {
             float baseDeg = Mathf.Atan2(QuadrantDir[q].y, QuadrantDir[q].x) * Mathf.Rad2Deg;
-            Put(asset, $"Quadrant_Q{q + 1}", Polar(radius, baseDeg + deltaDeg));
+            Put(asset, $"Quadrant_Q{q + 1}", Polar(radius * Spread, baseDeg + deltaDeg));
         }
         // 1 빨강(북서): 체리 케이크 집 · 막대사탕 나무 · 솜사탕 나무 · 가로등 · 벤치
         Quad(0, "CF_Cottage", 60f, 20f);
@@ -194,7 +198,7 @@ public static class CandyForestLayout
         for (int i = 0; i < 64; i++)
         {
             float deg = i * 360f / 64f + (float)rng.NextDouble() * 3f;
-            float radius = 87f + (float)rng.NextDouble() * 22f;
+            float radius = MapRadius + 7f + (float)rng.NextDouble() * 22f;
             bool nearExit = Enumerable.Range(0, 4).Any(e => Mathf.Abs(Mathf.DeltaAngle(deg, e * 90f)) < 8f);
             if (nearExit) radius += 12f; // 탈출구 바깥 받침과 겹치지 않게
             Add(trees[i % trees.Length], "Forest", Polar(radius, deg), (float)rng.NextDouble() * 360f, true);
@@ -212,7 +216,7 @@ public static class CandyForestLayout
         public int PerQuadrant;
         public float Clear;     // 이만큼 둘레가 비어야 함(충돌 검사 반지름)
         public float Spacing;   // 같은 종류끼리 떨어진 거리
-        public float MinRadius, MaxRadius;
+        public float MinRadius, MaxRadius; // 예전 80 m 맵 기준(× Spread)
     }
 
     public static readonly MarkerSpec[] Markers =
@@ -238,7 +242,7 @@ public static class CandyForestLayout
                 int got = 0;
                 for (int tries = 0; tries < 4000 && got < want; tries++)
                 {
-                    float radius = Mathf.Lerp(spec.MinRadius, spec.MaxRadius, (float)rng.NextDouble());
+                    float radius = Mathf.Lerp(spec.MinRadius, spec.MaxRadius, (float)rng.NextDouble()) * Spread;
                     float baseDeg = Mathf.Atan2(QuadrantDir[q].y, QuadrantDir[q].x) * Mathf.Rad2Deg;
                     Vector2 p2 = Polar(radius, baseDeg + Mathf.Lerp(-40f, 40f, (float)rng.NextDouble()));
                     float band = RowOffset + RowHalfDepth + spec.Clear + 1.5f;

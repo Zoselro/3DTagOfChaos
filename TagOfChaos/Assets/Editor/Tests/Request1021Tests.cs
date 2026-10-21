@@ -22,15 +22,16 @@ public class Request1021Tests
         Assert.IsFalse(MonsterRoomGuard.IsInside(Vector3.zero, 11.7f, CornerDoors, new Vector3(30f, 0f, 2f)));
     }
 
-    // E2: 지형 높이 — 울타리 안은 바닥판 밑, 울타리 둘레는 평평, 탈출구 받침 앞은 더 멀리까지 평평, 바깥은 원래 언덕
+    // E2: 지형 높이 — 울타리 안은 바닥판 밑, 울타리 둘레는 평평, 탈출구 받침 앞은 더 멀리까지 평평, 바깥은 원래 언덕(§32: 맵 반지름 기준)
     [Test]
     public void TerrainHeight_FlatAroundFence_RisesOutside()
     {
-        Assert.Less(CandyForestMapBuilder.TerrainHeight(60f, 30f, 1.4f), 0f, "inside the fence");
-        Assert.AreEqual(0.015f, CandyForestMapBuilder.TerrainHeight(58f, 58f, 3f), 1e-4f, "r 82 diagonal is flat");
-        Assert.AreEqual(0.015f, CandyForestMapBuilder.TerrainHeight(0f, 91f, 4f), 1e-4f, "exit pad stays flat");
-        Assert.Greater(CandyForestMapBuilder.TerrainHeight(64f, 64f, 4f), 1f, "r 90.5 diagonal is rising");
-        Assert.AreEqual(5f, CandyForestMapBuilder.TerrainHeight(0f, 110f, 5f), 1e-4f, "far out keeps the hill");
+        float r = CandyForestLayout.MapRadius, d = 1f / Mathf.Sqrt(2f);
+        Assert.Less(CandyForestMapBuilder.TerrainHeight((r - 20f) * 0.9f, (r - 20f) * 0.44f, 1.4f), 0f, "inside the fence");
+        Assert.AreEqual(0.015f, CandyForestMapBuilder.TerrainHeight((r + 2f) * d, (r + 2f) * d, 3f), 1e-4f, "just outside the fence (diagonal) is flat");
+        Assert.AreEqual(0.015f, CandyForestMapBuilder.TerrainHeight(0f, r + 11f, 4f), 1e-4f, "exit pad stays flat");
+        Assert.Greater(CandyForestMapBuilder.TerrainHeight((r + 10.5f) * d, (r + 10.5f) * d, 4f), 1f, "diagonal is rising");
+        Assert.AreEqual(5f, CandyForestMapBuilder.TerrainHeight(0f, r + 30f, 5f), 1e-4f, "far out keeps the hill");
     }
 
     // E1·E2 씬: 술래방 지킴이, 울타리 안에 흰 땅이 솟지 않음, 초록 원판, 울타리 밖 숲이 땅 위에
@@ -58,12 +59,12 @@ public class Request1021Tests
             foreach (Vector3 v in mesh.vertices)
             {
                 Vector3 w = m.MultiplyPoint3x4(v);
-                if (new Vector2(w.x, w.z).magnitude < 86f) Assert.LessOrEqual(w.y, 0.02f, $"white ground pokes up at {w}");
+                if (new Vector2(w.x, w.z).magnitude < CandyForestLayout.MapRadius + 6f) Assert.LessOrEqual(w.y, 0.02f, $"white ground pokes up at {w}");
             }
 
             Renderer disc = map.Find("Ground/GrassDisc").GetComponent<Renderer>();
             Assert.Less(disc.bounds.size.y, 0.01f, "grass disc lies flat");
-            Assert.Greater(disc.bounds.size.x, 160f);
+            Assert.Greater(disc.bounds.size.x, CandyForestLayout.MapRadius * 2f);
 
             var col = terrain.GetComponent<MeshCollider>();
             Transform forest = map.Find("Forest");
@@ -77,6 +78,52 @@ public class Request1021Tests
                 checkedTrees++;
             }
             Assert.Greater(checkedTrees, 20);
+        }
+        finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
+    }
+
+    // §32: 재료 건물 (±82.2, ±82.2) · 맵 반지름 155 m · 술래방 문 동서남북(대각선은 벽으로 막힘) · 쿠키 내보내기 판정이 네모 방
+    [Test]
+    public void CandyForest_FarBuildingsAndCardinalRoomDoors()
+    {
+        Assert.AreEqual(155f, CandyForestLayout.MapRadius);
+        Scene scene = SceneManager.GetSceneByPath(CandyForestMapBuilder.ScenePath);
+        bool opened = !scene.isLoaded;
+        if (opened) scene = EditorSceneManager.OpenScene(CandyForestMapBuilder.ScenePath, OpenSceneMode.Additive);
+        try
+        {
+            Transform map = scene.GetRootGameObjects().First(g => g.name == "Map").transform;
+            for (int q = 0; q < 4; q++)
+            {
+                Transform b = map.GetComponentsInChildren<Transform>(true).First(t => t.name == "Building_Q" + (q + 1));
+                Vector2 want = CandyForestLayout.QuadrantDir[q] * CandyForestLayout.BuildingRadius;
+                Assert.Less((new Vector2(b.position.x, b.position.z) - want).magnitude, 0.05f, b.name);
+            }
+            Assert.AreEqual(82.2f, Mathf.Abs(CandyForestLayout.QuadrantDir[0].x * CandyForestLayout.BuildingRadius), 0.05f);
+
+            Transform room = map.Find("MonsterRoom");
+            Assert.IsFalse(room.GetComponentsInChildren<Transform>(true).Any(t => t.name.StartsWith("RoomCorner_")), "diagonal corners removed");
+            var doors = room.GetComponentsInChildren<MonsterRoomDoor>(true).OrderBy(d => d.name).ToArray();
+            Assert.AreEqual(4, doors.Length);
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 dir = CandyForestLayout.RoadDir[i];
+                Vector3 want = new Vector3(dir.x, 0f, dir.y) * CandyForestLayout.RoomHalf;
+                Assert.Less(new Vector2(doors[i].transform.position.x - want.x, doors[i].transform.position.z - want.z).magnitude, 0.05f, doors[i].name + " at 12/3/6/9 o'clock");
+            }
+            Physics.SyncTransforms();
+            foreach (Vector2 diag in CandyForestLayout.QuadrantDir)
+            {
+                // 다른 씬이 같이 열려 있을 수 있다 — 이 씬의 충돌체 중 가장 가까운 것
+                var hits = Physics.RaycastAll(new Vector3(0f, 1.5f, 0f), new Vector3(diag.x, 0f, diag.y), 30f)
+                    .Where(h => h.collider.gameObject.scene == scene).OrderBy(h => h.distance).ToList();
+                Assert.IsNotEmpty(hits, $"diagonal {diag} is walled");
+                Assert.IsTrue(hits[0].collider.name.StartsWith("RoomWall_"), hits[0].collider.name);
+                Assert.Less(hits[0].distance, 18f, "wall at the corner");
+            }
+            var guard = room.GetComponent<MonsterRoomGuard>();
+            Assert.IsTrue(guard.IsInside(new Vector3(11f, 0.5f, 11f)), "square room: corner is inside");
+            Assert.IsFalse(guard.IsInside(new Vector3(0f, 0.5f, 12.5f)), "in the north doorway outside");
         }
         finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
     }
@@ -173,6 +220,109 @@ public class Request1021Tests
             {
                 var mc = all.First(t => t.name == ramp).GetComponent<MeshCollider>();
                 Assert.IsTrue(mc.convex, ramp);
+            }
+        }
+        finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
+    }
+
+    // §31 롤러코스터 경로: 닫힌 고리·고른 간격·위쪽이 진행 방향에 직교(고리 꼭대기에서 뒤집힘)·시간표가 늘어남
+    [Test]
+    public void CoasterPath_ClosedSmoothAndTimed()
+    {
+        var path = UnityEditor.AssetDatabase.LoadAssetAtPath<CoasterPathSO>(CoasterPathBaker.AssetPath);
+        Assert.NotNull(path, "baked path asset");
+        Assert.IsTrue(path.IsValid);
+        Assert.Greater(path.Length, 150f, "both loops + the shared section twice");
+        bool inverted = false;
+        for (int i = 0; i < path.Count; i++)
+        {
+            int j = (i + 1) % path.Count;
+            float gap = (path.Point(j) - path.Point(i)).magnitude;
+            Assert.Less(gap, 0.6f, $"spacing at {i} (closed loop when j = 0)");
+            Assert.AreEqual(1f, path.Up(i).magnitude, 1e-3f);
+            if (j > 0) Assert.Greater(path.TimeAt(j), path.TimeAt(i), $"time increases at {i}");
+            if (path.Up(i).y < -0.9f) inverted = true;
+        }
+        Assert.IsTrue(inverted, "upside down at the loop tops");
+        Vector3 prev = Vector3.zero;
+        for (float s = 0f; s <= path.Length; s += 0.05f)
+        {
+            path.Sample(s, out Vector3 pos, out Vector3 fwd, out Vector3 up);
+            Assert.Less(Mathf.Abs(Vector3.Dot(fwd, up)), 1e-3f, $"up orthogonal at {s}");
+            if (s > 0f) Assert.Less((pos - prev).magnitude, 0.12f, $"continuous at {s}");
+            prev = pos;
+        }
+        Assert.AreEqual(path.DistanceAtTime(1.5), path.DistanceAtTime(1.5 + path.LapTime), 1e-2f, "wraps every lap");
+    }
+
+    // §31 Test 씬 놀이기구: 열차 2편성(칸마다 키네마틱 Rigidbody + 상자 충돌)·레일/지지대 고정 충돌·울타리·회전목마 회전·
+    // 두 열차가 한 바퀴 동안 서로 떨어져 있고 칸이 레일 위에 있음·옮긴 상자/표시가 놀이기구 자리에 없음
+    [Test]
+    public void TestCarnivalRides_CoasterAndCarousel()
+    {
+        Scene scene = SceneManager.GetSceneByPath(CarnivalRidesBuilder.ScenePath);
+        bool opened = !scene.isLoaded;
+        if (opened) scene = EditorSceneManager.OpenScene(CarnivalRidesBuilder.ScenePath, OpenSceneMode.Additive);
+        try
+        {
+            var all = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).ToList();
+            var ride = all.Select(t => t.GetComponent<CoasterRide>()).First(r => r != null);
+            Assert.AreEqual(2, ride.TrainCount);
+            for (int t = 0; t < 2; t++)
+            {
+                CoasterTrain train = ride.Train(t);
+                Assert.AreEqual(7, train.CarCount);
+                Assert.NotNull(train.GetComponent<CoasterTrainAudio>());
+                for (int c = 0; c < train.CarCount; c++)
+                {
+                    Assert.IsTrue(train.CarBody(c).isKinematic);
+                    Assert.NotNull(train.CarBody(c).GetComponent<BoxCollider>());
+                }
+            }
+            foreach (string part in new[] { "CoasterRail", "CoasterSupports" })
+            {
+                var mc = all.First(x => x.name == part).GetComponent<MeshCollider>();
+                Assert.NotNull(mc, part);
+                Assert.IsFalse(mc.convex, part);
+            }
+            Assert.NotNull(all.First(x => x.name == "Fence_E").GetComponent<BoxCollider>());
+            Assert.NotNull(all.First(x => x.name == "Fence_N").GetComponent<BoxCollider>());
+            foreach (string gate in new[] { "Gate_Front", "Gate_Back" }) Assert.NotNull(all.First(x => x.name == gate).GetComponent<BoxCollider>(), gate);
+
+            CoasterPathSO path = ride.Path;
+            Transform track = ride.transform;
+            float minGap = float.MaxValue;
+            for (int k = 0; k < 120; k++)
+            {
+                double time = path.LapTime * k / 120;
+                ride.EditorPlaceAt(time);
+                var a = Enumerable.Range(0, 7).Select(c => ride.Train(0).CarBody(c).transform.position).ToList();
+                var b = Enumerable.Range(0, 7).Select(c => ride.Train(1).CarBody(c).transform.position).ToList();
+                foreach (Vector3 p in a) foreach (Vector3 q in b) minGap = Mathf.Min(minGap, (p - q).magnitude);
+                // 칸 기준점(바퀴 사이)은 레일 윗면 가운데 선에서 가깝다
+                foreach (Vector3 p in a)
+                {
+                    Vector3 local = track.InverseTransformPoint(p);
+                    float best = float.MaxValue;
+                    for (int i = 0; i < path.Count; i++) best = Mathf.Min(best, (path.Point(i) + path.Up(i) * path.RailTop - local).magnitude);
+                    Assert.Less(best, 0.6f, $"car on the rail at t {time:F1}");
+                }
+            }
+            Assert.Greater(minGap, 3f, "two trains never meet");
+            ride.EditorPlaceAt(0d);
+
+            Transform top = all.First(x => x.name == CarouselModelSwap.TopName);
+            Assert.NotNull(top.GetComponent<Animator>().runtimeAnimatorController, "carousel spins");
+            Assert.IsTrue(top.GetComponent<Rigidbody>().isKinematic);
+            Assert.IsTrue(top.GetComponent<MeshCollider>().convex);
+            Vector3 amb = all.First(x => x.name == "AMB_Carousel").position;
+            Assert.Less(new Vector2(amb.x - CarnivalRidesBuilder.CarouselCenter.x, amb.z - CarnivalRidesBuilder.CarouselCenter.z).magnitude, 0.1f, "carousel sound at the carousel");
+
+            foreach (Transform x in all.Where(x => x.GetComponent<MaterialChest>() != null || x.name.StartsWith("RocketSpawn_") || x.name.StartsWith("RainbowSpawn_") || x.name.StartsWith("Spawn_Cookie_")))
+            {
+                Vector3 p = x.position;
+                Assert.IsFalse(p.x < CarnivalRidesBuilder.FenceEastX && p.z < CarnivalRidesBuilder.FenceNorthZ, x.name + " inside the coaster fence");
+                Assert.Greater(new Vector2(p.x - CarnivalRidesBuilder.CarouselCenter.x, p.z - CarnivalRidesBuilder.CarouselCenter.z).magnitude, CarnivalRidesBuilder.CarouselRadius, x.name + " under the carousel");
             }
         }
         finally { if (opened) EditorSceneManager.CloseScene(scene, true); }

@@ -16,127 +16,127 @@ MonoBehaviour:
   placements:
   - asset: CF_Bld_Q1
     group: Buildings
-    position: {x: -29.698484, y: 0, z: 29.698484}
+    position: {x: -82.201164, y: 0, z: 82.201164}
     yaw: 135
     noColliders: 0
   - asset: CF_Bld_Q2
     group: Buildings
-    position: {x: 29.698484, y: 0, z: 29.698484}
+    position: {x: 82.201164, y: 0, z: 82.201164}
     yaw: -135
     noColliders: 0
   - asset: CF_Bld_Q3
     group: Buildings
-    position: {x: -29.698484, y: 0, z: -29.698484}
+    position: {x: -82.201164, y: 0, z: -82.201164}
     yaw: 45
     noColliders: 0
   - asset: CF_Bld_Q4
     group: Buildings
-    position: {x: 29.698484, y: 0, z: -29.698484}
+    position: {x: 82.201164, y: 0, z: -82.201164}
     yaw: -45
     noColliders: 0
   - asset: CF_MonsterHouse
     group: Edge
-    position: {x: 62.769733, y: 0, z: 20.395123}
+    position: {x: 121.616356, y: 0, z: 39.51555}
     yaw: -108.00001
     noColliders: 0
   - asset: CF_Tent
     group: Edge
-    position: {x: 54.20414, y: 0, z: 40.557182}
-    yaw: -126.80495
+    position: {x: 107.58799, y: 0, z: 77.440704}
+    yaw: -125.74594
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: 48.909775, y: 0, z: 27.750702}
-    yaw: -119.56995
+    position: {x: 127.74806, y: 0, z: 65.09089}
+    yaw: -117.00001
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: 43.114353, y: 0, z: 15.855231}
-    yaw: -110.19092
+    position: {x: 93.22156, y: 0, z: 47.498756}
+    yaw: -117.00001
     noColliders: 0
   - asset: CF_MonsterHouse
     group: Edge
-    position: {x: 20.39512, y: 0, z: 62.769733}
+    position: {x: 39.515545, y: 0, z: 121.616356}
     yaw: -162
     noColliders: 0
   - asset: CF_Tent
     group: Edge
-    position: {x: 39.160385, y: 0, z: 54.425373}
-    yaw: -144.26405
+    position: {x: 77.749725, y: 0, z: 107.53905}
+    yaw: -144.13342
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: 16.30461, y: 0, z: 43.91104}
-    yaw: -159.62955
+    position: {x: 65.09089, y: 0, z: 127.74806}
+    yaw: -153
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: 24.515488, y: 0, z: 48.114353}
+    position: {x: 47.498756, y: 0, z: 93.22156}
     yaw: -153
     noColliders: 0
   - asset: CF_MonsterHouse
     group: Edge
-    position: {x: -20.395119, y: 0, z: 62.769733}
+    position: {x: -39.51554, y: 0, z: 121.616356}
     yaw: 162
     noColliders: 0
   - asset: CF_Tent
     group: Edge
-    position: {x: -39.660374, y: 0, z: 54.0621}
-    yaw: 143.73593
+    position: {x: -77.13168, y: 0, z: 107.53905}
+    yaw: 144.35027
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: -26.364769, y: 0, z: 49.45057}
-    yaw: 151.93552
+    position: {x: -65.09087, y: 0, z: 127.74807}
+    yaw: 153.00002
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: -16.600218, y: 0, z: 43.830833}
-    yaw: 159.25662
+    position: {x: -47.498745, y: 0, z: 93.221565}
+    yaw: 153.00002
     noColliders: 0
   - asset: CF_MonsterHouse
     group: Edge
-    position: {x: -62.769733, y: 0, z: -20.39512}
+    position: {x: -121.616356, y: 0, z: -39.515545}
     yaw: 72
     noColliders: 0
   - asset: CF_Tent
     group: Edge
-    position: {x: -54.01316, y: 0, z: -39.969387}
-    yaw: 53.4988
+    position: {x: -106.588, y: 0, z: -77.44069}
+    yaw: 54.000008
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: -49.45057, y: 0, z: -26.36478}
-    yaw: 61.9355
+    position: {x: -127.74806, y: 0, z: -65.0909}
+    yaw: 63
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: -44.614353, y: 0, z: -18.453312}
-    yaw: 67.52912
+    position: {x: -93.22156, y: 0, z: -47.49876}
+    yaw: 63
     noColliders: 0
   - asset: CF_MonsterHouse
     group: Edge
-    position: {x: 20.39513, y: 0, z: -62.76973}
+    position: {x: 39.515564, y: 0, z: -121.61635}
     yaw: -18.000008
     noColliders: 0
   - asset: CF_Tent
     group: Edge
-    position: {x: 40.2784, y: 0, z: -54.062107}
-    yaw: -36.68756
+    position: {x: 77.44068, y: 0, z: -106.588005}
+    yaw: -35.99999
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: 26.364761, y: 0, z: -49.450577}
-    yaw: -28.064478
+    position: {x: 65.09085, y: 0, z: -127.74808}
+    yaw: -26.999985
     noColliders: 0
   - asset: CF_CandyCane
     group: Edge
-    position: {x: 20.02441, y: 0, z: -44.135624}
-    yaw: -24.403881
+    position: {x: 47.49873, y: 0, z: -93.22157}
+    yaw: -26.999985
     noColliders: 0
   - asset: CF_Arch
     group: Roads
-    position: {x: 0, y: 0, z: 42}
+    position: {x: 0, y: 0, z: 81.375}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
@@ -151,18 +151,63 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -6.2, y: 0, z: 51.7}
+    position: {x: -6.2, y: 0, z: 37.2}
     yaw: 90
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: -6.2, y: 0, z: 60.3}
+    position: {x: -6.2, y: 0, z: 45.8}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -6.2, y: 0, z: 68.9}
+    position: {x: -6.2, y: 0, z: 54.4}
     yaw: 90
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -6.2, y: 0, z: 63}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: 71.6}
+    yaw: 90
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -6.2, y: 0, z: 88.725}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: 97.325}
+    yaw: 90
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -6.2, y: 0, z: 105.924995}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: 114.524994}
+    yaw: 90
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -6.2, y: 0, z: 123.12499}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: 131.72499}
+    yaw: 90
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -6.2, y: 0, z: 140.325}
+    yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
@@ -176,22 +221,67 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 6.2, y: 0, z: 51.7}
+    position: {x: 6.2, y: 0, z: 37.2}
     yaw: 270
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: 6.2, y: 0, z: 60.3}
+    position: {x: 6.2, y: 0, z: 45.8}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 6.2, y: 0, z: 68.9}
+    position: {x: 6.2, y: 0, z: 54.4}
     yaw: 270
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 6.2, y: 0, z: 63}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: 71.6}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 6.2, y: 0, z: 88.725}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: 97.325}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 6.2, y: 0, z: 105.924995}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: 114.524994}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 6.2, y: 0, z: 123.12499}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: 131.72499}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 6.2, y: 0, z: 140.325}
+    yaw: 0
     noColliders: 0
   - asset: CF_Arch
     group: Roads
-    position: {x: 42, y: 0, z: 0}
+    position: {x: 81.375, y: 0, z: 0}
     yaw: 90
     noColliders: 0
   - asset: CF_FenceGate
@@ -206,18 +296,63 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 51.7, y: 0, z: 6.2}
+    position: {x: 37.2, y: 0, z: 6.2}
     yaw: 180
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: 60.3, y: 0, z: 6.2}
+    position: {x: 45.8, y: 0, z: 6.2}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 68.9, y: 0, z: 6.2}
+    position: {x: 54.4, y: 0, z: 6.2}
     yaw: 180
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 63, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 71.6, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 88.725, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 97.325, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 105.924995, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 114.524994, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 123.12499, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 131.72499, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 140.325, y: 0, z: 6.2}
+    yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
@@ -231,22 +366,67 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 51.7, y: 0, z: -6.2}
+    position: {x: 37.2, y: 0, z: -6.2}
     yaw: 360
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: 60.3, y: 0, z: -6.2}
+    position: {x: 45.8, y: 0, z: -6.2}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 68.9, y: 0, z: -6.2}
+    position: {x: 54.4, y: 0, z: -6.2}
     yaw: 360
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 63, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 71.6, y: 0, z: -6.2}
+    yaw: 360
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 88.725, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 97.325, y: 0, z: -6.2}
+    yaw: 360
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 105.924995, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 114.524994, y: 0, z: -6.2}
+    yaw: 360
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 123.12499, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 131.72499, y: 0, z: -6.2}
+    yaw: 360
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 140.325, y: 0, z: -6.2}
+    yaw: 0
     noColliders: 0
   - asset: CF_Arch
     group: Roads
-    position: {x: 0, y: 0, z: -42}
+    position: {x: 0, y: 0, z: -81.375}
     yaw: 180
     noColliders: 0
   - asset: CF_FenceGate
@@ -261,18 +441,63 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 6.2, y: 0, z: -51.7}
+    position: {x: 6.2, y: 0, z: -37.2}
     yaw: 270
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: 6.2, y: 0, z: -60.3}
+    position: {x: 6.2, y: 0, z: -45.8}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: 6.2, y: 0, z: -68.9}
+    position: {x: 6.2, y: 0, z: -54.4}
     yaw: 270
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 6.2, y: 0, z: -63}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: -71.6}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 6.2, y: 0, z: -88.725}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: -97.325}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 6.2, y: 0, z: -105.924995}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: -114.524994}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: 6.2, y: 0, z: -123.12499}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: 6.2, y: 0, z: -131.72499}
+    yaw: 270
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: 6.2, y: 0, z: -140.325}
+    yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
@@ -286,22 +511,67 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -6.2, y: 0, z: -51.7}
+    position: {x: -6.2, y: 0, z: -37.2}
     yaw: 450
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: -6.2, y: 0, z: -60.3}
+    position: {x: -6.2, y: 0, z: -45.8}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -6.2, y: 0, z: -68.9}
+    position: {x: -6.2, y: 0, z: -54.4}
     yaw: 450
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -6.2, y: 0, z: -63}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: -71.6}
+    yaw: 450
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -6.2, y: 0, z: -88.725}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: -97.325}
+    yaw: 450
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -6.2, y: 0, z: -105.924995}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: -114.524994}
+    yaw: 450
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -6.2, y: 0, z: -123.12499}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -6.2, y: 0, z: -131.72499}
+    yaw: 450
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -6.2, y: 0, z: -140.325}
+    yaw: 0
     noColliders: 0
   - asset: CF_Arch
     group: Roads
-    position: {x: -42, y: 0, z: 0}
+    position: {x: -81.375, y: 0, z: 0}
     yaw: -90
     noColliders: 0
   - asset: CF_FenceGate
@@ -316,17 +586,62 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -51.7, y: 0, z: -6.2}
+    position: {x: -37.2, y: 0, z: -6.2}
     yaw: 0
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: -60.3, y: 0, z: -6.2}
+    position: {x: -45.8, y: 0, z: -6.2}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -68.9, y: 0, z: -6.2}
+    position: {x: -54.4, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -63, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -71.6, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -88.725, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -97.325, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -105.924995, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -114.524994, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -123.12499, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -131.72499, y: 0, z: -6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -140.325, y: 0, z: -6.2}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
@@ -341,476 +656,521 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -51.7, y: 0, z: 6.2}
+    position: {x: -37.2, y: 0, z: 6.2}
     yaw: 180
     noColliders: 0
   - asset: CF_CandyCane
     group: Roads
-    position: {x: -60.3, y: 0, z: 6.2}
+    position: {x: -45.8, y: 0, z: 6.2}
     yaw: 0
     noColliders: 0
   - asset: CF_FenceGate
     group: Roads
-    position: {x: -68.9, y: 0, z: 6.2}
+    position: {x: -54.4, y: 0, z: 6.2}
     yaw: 180
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -63, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -71.6, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -88.725, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -97.325, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -105.924995, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -114.524994, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_CandyCane
+    group: Roads
+    position: {x: -123.12499, y: 0, z: 6.2}
+    yaw: 0
+    noColliders: 0
+  - asset: CF_FenceGate
+    group: Roads
+    position: {x: -131.72499, y: 0, z: 6.2}
+    yaw: 180
+    noColliders: 0
+  - asset: CF_Lamp
+    group: Roads
+    position: {x: -140.325, y: 0, z: 6.2}
+    yaw: 0
     noColliders: 0
   - asset: CF_Cottage
     group: Quadrant_Q1
-    position: {x: -54.378464, y: 0, z: 25.3571}
+    position: {x: -105.35828, y: 0, z: 49.12938}
     yaw: 115.00001
     noColliders: 0
   - asset: CF_LollipopTree
     group: Quadrant_Q1
-    position: {x: -38.752934, y: 0, z: 11.682626}
-    yaw: 106.776184
+    position: {x: -49.93739, y: 0, z: 21.197165}
+    yaw: 113
     noColliders: 0
   - asset: CF_LollipopTree
     group: Quadrant_Q1
-    position: {x: -48.434673, y: 0, z: 42.358715}
-    yaw: 131.17143
+    position: {x: -65.373566, y: 0, z: 93.42165}
+    yaw: 145.01688
     noColliders: 0
   - asset: CF_LollipopTree
     group: Quadrant_Q1
-    position: {x: -48.595085, y: 0, z: 11.544378}
-    yaw: 103.36362
+    position: {x: -67.37333, y: 0, z: 18.052635}
+    yaw: 105.00001
     noColliders: 0
   - asset: CF_CottonTree
     group: Quadrant_Q1
-    position: {x: -58.066906, y: 0, z: 39.466854}
-    yaw: 124.203125
+    position: {x: -102.65821, y: 0, z: 62.82}
+    yaw: 121.46387
     noColliders: 0
   - asset: CF_CottonTree
     group: Quadrant_Q1
-    position: {x: -10.986598, y: 0, z: 36.57811}
-    yaw: 163.28183
+    position: {x: -11.015545, y: 0, z: 58.426743}
+    yaw: 169.32301
     noColliders: 0
   - asset: CF_Lamp
     group: Quadrant_Q1
-    position: {x: -17.56998, y: 0, z: 13.239932}
+    position: {x: -34.041836, y: 0, z: 25.652369}
     yaw: 127.00001
     noColliders: 0
   - asset: CF_Bench
     group: Quadrant_Q1
-    position: {x: -11.939223, y: 0, z: 19.178162}
-    yaw: 148.09598
+    position: {x: -40.667297, y: 0, z: 24.537054}
+    yaw: 121.10514
     noColliders: 0
   - asset: CF_Mushrooms
     group: Quadrant_Q1
-    position: {x: -68.39647, y: 0, z: 25.945824}
-    yaw: 110.77397
+    position: {x: -111.097496, y: 0, z: 77.791306}
+    yaw: 125
     noColliders: 0
   - asset: CF_CottonTree
     group: Quadrant_Q2
-    position: {x: 10.988074, y: 0, z: 23.564003}
+    position: {x: 21.289394, y: 0, z: 45.655254}
     yaw: -155
     noColliders: 0
   - asset: CF_CottonTree
     group: Quadrant_Q2
-    position: {x: 21.842243, y: 0, z: 11.675469}
-    yaw: -118.126114
+    position: {x: 49.93739, y: 0, z: 21.197165}
+    yaw: -113
     noColliders: 0
   - asset: CF_CottonTree
     group: Quadrant_Q2
-    position: {x: 10.8852825, y: 0, z: 37.297523}
-    yaw: -163.73012
+    position: {x: 64.459045, y: 0, z: 97.48345}
+    yaw: -146.5261
     noColliders: 0
   - asset: CF_PurpleTree
     group: Quadrant_Q2
-    position: {x: 39.044964, y: 0, z: -12.501018}
-    yaw: -72.246506
+    position: {x: 64.18663, y: 0, z: 14.81865}
+    yaw: -103
     noColliders: 0
   - asset: CF_Mushrooms
     group: Quadrant_Q2
-    position: {x: 19.79833, y: 0, z: -11.740132}
-    yaw: -59.332653
+    position: {x: 31.173952, y: 0, z: 29.07018}
+    yaw: -133
     noColliders: 0
   - asset: CF_Signpost
     group: Quadrant_Q2
-    position: {x: 28.962856, y: 0, z: 10.902089}
-    yaw: -110.62715
+    position: {x: 21.104763, y: 0, z: 32.498486}
+    yaw: -147
     noColliders: 0
   - asset: CF_Pond
     group: Quadrant_Q3
-    position: {x: -12.915192, y: 0, z: -44.082043}
-    yaw: 16.32957
+    position: {x: -16.400494, y: 0, z: -47.6305}
+    yaw: 18.999996
     noColliders: 0
   - asset: CF_PurpleTree
     group: Quadrant_Q3
-    position: {x: -33.76762, y: 0, z: -51.997574}
+    position: {x: -65.42477, y: 0, z: -100.7453}
     yaw: 33
     noColliders: 0
   - asset: CF_PurpleTree
     group: Quadrant_Q3
-    position: {x: -46.336163, y: 0, z: -54.53284}
-    yaw: 40.35432
+    position: {x: -100.58676, y: 0, z: -62.597336}
+    yaw: 58.105095
     noColliders: 0
   - asset: CF_Mushrooms
     group: Quadrant_Q3
-    position: {x: -10.87706, y: 0, z: -24.25264}
-    yaw: 24.155745
+    position: {x: -11.065929, y: 0, z: -57.903816}
+    yaw: 10.819272
     noColliders: 0
   - asset: CF_LollipopTree
     group: Quadrant_Q3
-    position: {x: -38.746964, y: 0, z: -11.807028}
-    yaw: 73.0529
+    position: {x: -68.4685, y: 0, z: -13.3089285}
+    yaw: 79
     noColliders: 0
   - asset: CF_Signpost
     group: Quadrant_Q3
-    position: {x: -16.97271, y: 0, z: -10.304252}
-    yaw: 58.73777
+    position: {x: -30.947124, y: 0, z: -23.320335}
+    yaw: 52.999992
     noColliders: 0
   - asset: CF_Bench
     group: Quadrant_Q3
-    position: {x: -10.867448, y: 0, z: -33.597427}
-    yaw: 17.924356
+    position: {x: -11.159082, y: 0, z: -38.12148}
+    yaw: 16.316034
     noColliders: 0
   - asset: CF_Shop
     group: Quadrant_Q4
-    position: {x: 54.50217, y: 0, z: -19.837168}
+    position: {x: 105.59796, y: 0, z: -38.434513}
     yaw: -70
     noColliders: 0
   - asset: CF_CandyPile
     group: Quadrant_Q4
-    position: {x: 12.082025, y: 0, z: -22.5606}
-    yaw: -28.170675
+    position: {x: 47.029114, y: 0, z: -18.052786}
+    yaw: -69
     noColliders: 0
   - asset: CF_CandyPile
     group: Quadrant_Q4
-    position: {x: 52.42573, y: 0, z: -36.708893}
+    position: {x: 101.57485, y: 0, z: -71.12348}
     yaw: -55
     noColliders: 0
   - asset: CF_CottonTree
     group: Quadrant_Q4
-    position: {x: 51.837692, y: 0, z: -46.12625}
-    yaw: -48.33665
+    position: {x: 63.54538, y: 0, z: -100.061264}
+    yaw: -32.418194
     noColliders: 0
   - asset: CF_RingFence
     group: Quadrant_Q4
-    position: {x: 12.13974, y: 0, z: -34.953384}
-    yaw: -19.152742
+    position: {x: 32.1695, y: 0, z: -27.964516}
+    yaw: -49.000004
     noColliders: 0
   - asset: CF_Lamp
     group: Quadrant_Q4
-    position: {x: 26.62035, y: 0, z: -13.833419}
-    yaw: -62.541092
+    position: {x: 21.104763, y: 0, z: -32.498486}
+    yaw: -33
     noColliders: 0
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 99.709885, y: 0, z: 1.8491678}
+    position: {x: 174.69699, y: 0, z: 3.2398398}
     yaw: 122.28711
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 116.71286, y: 0, z: 14.803639}
+    position: {x: 191.11674, y: 0, z: 24.24089}
     yaw: 10.088418
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 95.40919, y: 0, z: 21.33495}
+    position: {x: 168.60156, y: 0, z: 37.70188}
     yaw: 158.98225
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 101.60362, y: 0, z: 34.334023}
+    position: {x: 172.65646, y: 0, z: 58.34429}
     yaw: 117.8349
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 79.4863, y: 0, z: 37.30834}
+    position: {x: 147.37958, y: 0, z: 69.17528}
     yaw: 209.29086
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 87.67756, y: 0, z: 49.961437}
+    position: {x: 152.84058, y: 0, z: 87.093376}
     yaw: 127.91817
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 74.03323, y: 0, z: 51.945488}
+    position: {x: 135.42798, y: 0, z: 95.02316}
     yaw: 193.42188
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 77.05654, y: 0, z: 68.239685}
+    position: {x: 133.20442, y: 0, z: 117.96309}
     yaw: 293.15155
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 68.20439, y: 0, z: 71.45242}
+    position: {x: 119.99, y: 0, z: 125.70417}
     yaw: 2.6775522
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 58.972656, y: 0, z: 72.14019}
+    position: {x: 106.44083, y: 0, z: 130.20714}
     yaw: 227.22426
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 56.04086, y: 0, z: 89.06825}
+    position: {x: 95.98187, y: 0, z: 152.5483}
     yaw: 200.39146
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 42.26659, y: 0, z: 86.454605}
+    position: {x: 75.20728, y: 0, z: 153.83347}
     yaw: 351.5141
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 36.134792, y: 0, z: 90.21792}
+    position: {x: 64.020775, y: 0, z: 159.84099}
     yaw: 49.750305
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 21.502817, y: 0, z: 84.3148}
+    position: {x: 40.036846, y: 0, z: 156.98866}
     yaw: 178.21439
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 18.178839, y: 0, z: 95.001305}
+    position: {x: 32.274612, y: 0, z: 168.6648}
     yaw: 241.09392
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 8.77915, y: 0, z: 117.66682}
+    position: {x: 14.359408, y: 0, z: 192.45892}
     yaw: 322.5074
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -5.508346, y: 0, z: 119.158005}
+    position: {x: -8.971691, y: 0, z: 194.078}
     yaw: 238.71439
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -13.912589, y: 0, z: 119.51183}
+    position: {x: -22.584911, y: 0, z: 194.00876}
     yaw: 69.23577
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -23.843517, y: 0, z: 98.15223}
+    position: {x: -41.547913, y: 0, z: 171.03264}
     yaw: 111.24151
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -28.164988, y: 0, z: 84.41552}
+    position: {x: -51.902153, y: 0, z: 155.56006}
     yaw: 112.40115
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -36.882824, y: 0, z: 88.772255}
+    position: {x: -65.65875, y: 0, z: 158.03226}
     yaw: 75.08225
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -45.064247, y: 0, z: 76.33222}
+    position: {x: -83.19312, y: 0, z: 140.91695}
     yaw: 32.991432
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -53.68403, y: 0, z: 73.721756}
+    position: {x: -97.83359, y: 0, z: 134.35027}
     yaw: 222.10577
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -61.536156, y: 0, z: 70.31742}
+    position: {x: -110.927826, y: 0, z: 126.75733}
     yaw: 61.002975
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -71.32595, y: 0, z: 69.72231}
+    position: {x: -124.95845, y: 0, z: 122.14897}
     yaw: 56.056614
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -77.228294, y: 0, z: 63.094276}
+    position: {x: -135.30917, y: 0, z: 110.545425}
     yaw: 101.51962
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -90.92831, y: 0, z: 59.765537}
+    position: {x: -153.60222, y: 0, z: 100.95997}
     yaw: 241.93826
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -79.970345, y: 0, z: 42.146206}
+    position: {x: -146.31985, y: 0, z: 77.11392}
     yaw: 129.13998
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -85.811226, y: 0, z: 30.548838}
+    position: {x: -156.46739, y: 0, z: 55.70247}
     yaw: 309.48376
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -102.54486, y: 0, z: 28.982573}
+    position: {x: -174.71762, y: 0, z: 49.38098}
     yaw: 281.8894
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -101.042984, y: 0, z: 16.451784}
+    position: {x: -175.06819, y: 0, z: 28.504543}
     yaw: 134.10365
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -117.200806, y: 0, z: 6.444001}
+    position: {x: -192.08769, y: 0, z: 10.561475}
     yaw: 210.83192
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -106.217834, y: 0, z: -1.5933821}
+    position: {x: -181.2094, y: 0, z: -2.7183363}
     yaw: 132.26747
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -113.06507, y: 0, z: -14.60271}
+    position: {x: -187.44727, y: 0, z: -24.209404}
     yaw: 242.13248
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -91.03703, y: 0, z: -19.494514}
+    position: {x: -164.37442, y: 0, z: -35.198856}
     yaw: 226.54077
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -85.10418, y: 0, z: -28.237692}
+    position: {x: -156.28807, y: 0, z: -51.856613}
     yaw: 140.33897
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -95.73026, y: 0, z: -39.867935}
+    position: {x: -164.9661, y: 0, z: -68.701965}
     yaw: 20.973143
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -84.05134, y: 0, z: -45.07928}
+    position: {x: -150.14539, y: 0, z: -80.52752}
     yaw: 35.65553
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -86.92346, y: 0, z: -62.393047}
+    position: {x: -147.85225, y: 0, z: -106.1273}
     yaw: 93.80779
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -78.5184, y: 0, z: -70.511185}
+    position: {x: -134.32033, y: 0, z: -120.622505}
     yaw: 319.99396
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -67.01074, y: 0, z: -68.65862}
+    position: {x: -119.39574, y: 0, z: -122.33182}
     yaw: 108.57249
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -64.58013, y: 0, z: -86.096466}
+    position: {x: -109.58361, y: 0, z: -146.09386}
     yaw: 213.83241
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -49.753273, y: 0, z: -81.6397}
+    position: {x: -88.78337, y: 0, z: -145.68384}
     yaw: 267.7878
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -46.10011, y: 0, z: -92.80786}
+    position: {x: -79.4651, y: 0, z: -159.97763}
     yaw: 89.92354
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -33.62072, y: 0, z: -93.609406}
+    position: {x: -58.97216, y: 0, z: -164.19484}
     yaw: 111.3878
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: -25.258905, y: 0, z: -102.245384}
+    position: {x: -43.2463, y: 0, z: -175.05646}
     yaw: 315.74908
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: -15.346181, y: 0, z: -96.2216}
+    position: {x: -27.158485, y: 0, z: -170.28555}
     yaw: 23.239866
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: -7.807178, y: 0, z: -105.92235}
+    position: {x: -13.320219, y: 0, z: -180.71944}
     yaw: 46.82745
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 4.290603, y: 0, z: -113.00779}
+    position: {x: 7.136102, y: 0, z: -187.95378}
     yaw: 114.48942
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 11.572232, y: 0, z: -102.435905}
+    position: {x: 19.991463, y: 0, z: -176.96185}
     yaw: 333.48734
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 20.456768, y: 0, z: -94.4153}
+    position: {x: 36.33836, y: 0, z: -167.71452}
     yaw: 175.05737
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 29.72477, y: 0, z: -89.823555}
+    position: {x: 53.287395, y: 0, z: -161.0261}
     yaw: 99.23496
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 38.76955, y: 0, z: -88.68513}
+    position: {x: 68.81132, y: 0, z: -157.40552}
     yaw: 122.328674
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 48.403515, y: 0, z: -90.15541}
+    position: {x: 83.880455, y: 0, z: -156.23404}
     yaw: 262.81567
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 56.74085, y: 0, z: -78.99835}
+    position: {x: 100.49361, y: 0, z: -139.91383}
     yaw: 1.2009995
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 59.63723, y: 0, z: -66.69967}
+    position: {x: 109.62755, y: 0, z: -122.61001}
     yaw: 293.12283
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 74.37909, y: 0, z: -68.46965}
+    position: {x: 129.5588, y: 0, z: -119.26532}
     yaw: 27.472137
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 70.42735, y: 0, z: -55.469677}
+    position: {x: 129.34677, y: 0, z: -101.87552}
     yaw: 132.4497
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 88.6859, y: 0, z: -53.873207}
+    position: {x: 152.78592, y: 0, z: -92.811455}
     yaw: 28.311245
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 79.22052, y: 0, z: -41.4339}
+    position: {x: 145.67944, y: 0, z: -76.19323}
     yaw: 106.95346
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 91.55255, y: 0, z: -36.38165}
+    position: {x: 161.25096, y: 0, z: -64.07878}
     yaw: 73.93245
     noColliders: 1
   - asset: CF_CottonTree
     group: Forest
-    position: {x: 89.47841, y: 0, z: -23.011576}
+    position: {x: 162.11482, y: 0, z: -41.69182}
     yaw: 114.88549
     noColliders: 1
   - asset: CF_PurpleTree
     group: Forest
-    position: {x: 95.41459, y: 0, z: -15.042972}
+    position: {x: 169.4995, y: 0, z: -26.723127}
     yaw: 79.36031
     noColliders: 1
   - asset: CF_LollipopTree
     group: Forest
-    position: {x: 112.302216, y: 0, z: -10.8604145}
+    position: {x: 186.95395, y: 0, z: -18.079762}
     yaw: 139.5833
     noColliders: 1
