@@ -10516,6 +10516,7 @@ MonoBehaviour:
   rainbowChest: {fileID: 1990443476}
   monsterRoom: {fileID: 8513478934205757514}
   monsterRoomHalfSize: 13
+  mapRadius: 0
   witch: {fileID: 1495556923}
   recipeOverride: {fileID: 11400000, guid: 5ec41f19bf1fe8240a2d5e33037ae0f7, type: 2}
 --- !u!4 &715234438
@@ -51591,6 +51592,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8513478934205757514}
+  - component: {fileID: 8513478934205757515}
   m_Layer: 0
   m_Name: MonsterRoom
   m_TagString: Untagged
@@ -62980,6 +62982,24 @@ Transform:
   - {fileID: 167019369049071696}
   m_Father: {fileID: 1523810510}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8513478934205757515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6041213398304342325}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70ac77c04226b994484f3cdd52e42a5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  innerHalf: 11.7
+  doors:
+  - {fileID: 6279101257729780956}
+  - {fileID: 2237271344278869390}
+  - {fileID: 373707620542892849}
+  - {fileID: 4308947640828997663}
 --- !u!33 &8514116469859949735
 MeshFilter:
   m_ObjectHideFlags: 0

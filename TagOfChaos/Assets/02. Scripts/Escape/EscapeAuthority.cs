@@ -243,7 +243,8 @@ public sealed class EscapeAuthority
                 var cookie = c as HideOrSeekPlayer;
                 if (cookie != null && cookie.CurrentCarrierViewId < 0
                     && !NetSecurityRules.IsPlausibleMove(prev, pos, now - prevAt, cookie.MaxMoveSpeed * PlausibleSpeedFactor)
-                    && !manager.IsNearCookieSpawn(pos)) // 맵 밖으로 떨어져 스폰 자리로 돌아온 것은 정상(§26 H2)
+                    && !manager.IsNearCookieSpawn(pos) // 맵 밖으로 떨어져 스폰 자리로 돌아온 것은 정상(§26 H2)
+                    && !manager.IsRoomEjectMove(prev, pos)) // 술래방에서 문 밖으로 내보내진 것도 정상(§28.15 E1)
                 {
                     suspectUntil[actor] = now + SuspectSeconds;
                     Debug.LogWarning($"[NetGuard] Actor {actor} moved {Vector3.Distance(prev, pos):F1} m in {now - prevAt:F2}s — escape requests ignored for {SuspectSeconds}s.");

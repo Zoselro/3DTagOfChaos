@@ -1,0 +1,13 @@
+{
+ "diameter": 29.6,
+ "height": 27.48,
+ "floor": 4.95,
+ "roof": 14.98,
+ "pole_radius": 11.66,
+ "horse_height": 3.42,
+ "tris": {
+  "body": 30000,
+  "horses": 96000,
+  "collision": 110
+ }
+}

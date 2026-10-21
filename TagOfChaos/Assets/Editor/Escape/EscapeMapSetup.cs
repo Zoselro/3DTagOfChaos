@@ -41,6 +41,28 @@ public static class EscapeMapSetup
         }
     }
 
+    // 술래방 지킴이만 붙인다(§28.15 E1) — 상자·로켓 배치는 그대로 두고 맵 씬마다 MonsterRoomGuard만 맞춘다.
+    [MenuItem("Tools/TagOfChaos/Escape/Setup Monster Room Guard (All Map Scenes)")]
+    public static void SetupRoomGuardAll() => Debug.Log(SetupRoomGuards());
+
+    public static string SetupRoomGuards()
+    {
+        var report = new List<string>();
+        foreach (string map in MapSceneBuilder.MapNames)
+        {
+            string path = TestMapBuilder.ScenePath(map);
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null) continue;
+            Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            Transform room = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "MonsterRoom");
+            if (room == null) { report.Add($"{map}: no MonsterRoom"); continue; }
+            MonsterRoomGuard guard = BindRoomGuard(room);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            report.Add($"{map}: inner {guard.InnerHalf:F2}");
+        }
+        return "[EscapeMapSetup] room guards — " + string.Join(", ", report);
+    }
+
     public static string Apply(Scene scene, string map)
     {
         List<Transform> all = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).ToList();
@@ -102,6 +124,7 @@ public static class EscapeMapSetup
         WitchPresenter witch = witchAnchor.GetComponent<WitchPresenter>() ?? witchAnchor.gameObject.AddComponent<WitchPresenter>();
 
         Transform room = mapRoot.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "MonsterRoom");
+        if (room != null) BindRoomGuard(room);
         manager.EditorBind(chests.ToArray(), buildings, exits.ToArray(), rocket, rocketSpots, rainbowSpots, rainbow, room, witch);
         var so = new SerializedObject(manager);
         EscapeCatalogSO catalog = EscapeCatalogSO.Current;
@@ -112,6 +135,27 @@ public static class EscapeMapSetup
     }
 
     private static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
+
+    // 술래방 안 쿠키 내보내기(§28.15 E1): 벽 안쪽 면 = RoomWall_ 충돌체 중 가운데에서 가장 가까운 면.
+    private static MonsterRoomGuard BindRoomGuard(Transform room)
+    {
+        Physics.SyncTransforms();
+        Vector3 c = room.position;
+        float inner = float.MaxValue;
+        foreach (Collider wall in room.GetComponentsInChildren<Collider>(true).Where(w => w.name.StartsWith("RoomWall_")))
+        {
+            Bounds b = wall.bounds;
+            bool alongX = b.size.z > b.size.x; // 동·서 벽(긴 쪽이 z)
+            float near = alongX ? Mathf.Min(Mathf.Abs(b.min.x - c.x), Mathf.Abs(b.max.x - c.x)) : Mathf.Min(Mathf.Abs(b.min.z - c.z), Mathf.Abs(b.max.z - c.z));
+            inner = Mathf.Min(inner, near);
+        }
+        if (inner == float.MaxValue) inner = 11.7f;
+        Transform[] doors = room.GetComponentsInChildren<MonsterRoomDoor>(true).Select(d => d.transform).OrderBy(t => t.name).ToArray();
+        MonsterRoomGuard guard = room.GetComponent<MonsterRoomGuard>() ?? room.gameObject.AddComponent<MonsterRoomGuard>();
+        guard.EditorBind(inner, doors);
+        EditorUtility.SetDirty(guard);
+        return guard;
+    }
 
     // 지금 맵 로켓 모델(SPY_Rocket_<Map>)을 그대로 쓴다(§25 결정 — 지금 것 그대로). 위치는 판마다 RocketSpawn 중 하나로 옮긴다.
     private static SpyRocket BuildRocket(Transform parent, string map, Vector3 pos, Vector3 center)

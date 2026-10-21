@@ -1,0 +1,12 @@
+Support all objects [('mesh_node', 'MESH', (1.0, 1.0, 1.0), (-0.0, 0.0, 0.0))]
+Support bbox (-0.951, -0.803, -0.559) (0.947, 0.806, 0.554) size (1.898, 1.609, 1.113)
+Support mesh_node tris 199066 verts 99493 uv [] mats [] colors []
+Support mesh_node islands 7
+   island verts  24092  lo (-0.95, 0.08, -0.56)  hi (-0.39, 0.81, 0.55)  size (0.56, 0.72, 1.11)
+   island verts  19640  lo (0.07, 0.1, -0.56)  hi (0.95, 0.81, 0.3)  size (0.88, 0.71, 0.86)
+   island verts  17396  lo (-0.95, -0.8, -0.56)  hi (-0.39, -0.07, 0.37)  size (0.56, 0.73, 0.93)
+   island verts  16867  lo (-0.22, -0.8, -0.56)  hi (0.17, -0.15, 0.37)  size (0.39, 0.65, 0.93)
+   island verts  15765  lo (0.39, -0.8, -0.56)  hi (0.95, -0.08, 0.18)  size (0.56, 0.72, 0.74)
+   island verts   4229  lo (-0.21, 0.32, -0.56)  hi (0.02, 0.42, 0.18)  size (0.23, 0.1, 0.74)
+   island verts   1504  lo (0.05, 0.1, -0.56)  hi (0.13, 0.18, -0.18)  size (0.08, 0.09, 0.38)
+DONE

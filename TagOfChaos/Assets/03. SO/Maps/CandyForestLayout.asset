@@ -431,8 +431,8 @@ MonoBehaviour:
     noColliders: 0
   - asset: CF_Pond
     group: Quadrant_Q3
-    position: {x: -14.381153, y: 0, z: -44.732838}
-    yaw: 17.822071
+    position: {x: -12.915192, y: 0, z: -44.082043}
+    yaw: 16.32957
     noColliders: 0
   - asset: CF_PurpleTree
     group: Quadrant_Q3

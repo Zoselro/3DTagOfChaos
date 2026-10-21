@@ -709,8 +709,10 @@ public static class MapSceneBuilder
                 ClearStatic(top.gameObject);
                 AnimationClip spin = WriteCarouselSpinClip();
                 AttachLoopAnimator(top.gameObject, "Carousel_Top_Spin", spin, kinematic: true);
+                // 받은 본체 + 목마 모델이 있으면 그것으로 바꾼다(Request1009Plan.md §29) — 없으면 예전 메시 그대로
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(CarouselModelSwap.ModelPath) != null) report.Add(CarouselModelSwap.Apply(top));
                 var mc = top.GetComponent<MeshCollider>();
-                MakeConvexIfFits(mc);
+                if (mc != null && !mc.convex) MakeConvexIfFits(mc);
                 report.Add($"carousel: {CarouselSecondsPerTurn}s/turn, convex {mc != null && mc.convex}");
             }
 

@@ -32,6 +32,8 @@ public static class MapPassabilityCheck
         new Body("Wide", 0.6f, 1.6f, 1.8f), new Body("WideTall", 0.6f, 2.4f, 1.8f),
     };
 
+    public const string ExitZonePrefix = "ExitZone_";
+
     public sealed class Options
     {
         public float Half = MapCompactor.NewHalf;
@@ -139,9 +141,15 @@ public static class MapPassabilityCheck
         foreach (MonsterRoomDoor door in Object.FindObjectsByType<MonsterRoomDoor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)) Open(door);
         // 쿠키 구멍은 쿠키에게 열려 있다(괴물 몸 격자는 1.4 m 구멍에 들어가지 못한다)
         foreach (CookieHole hole in Object.FindObjectsByType<CookieHole>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)) Open(hole);
+        // 탈출구 구역(ExitZone_ 표시 — 위치·크기만): 계단·통로·나가는 마당은 쿠키만 가도 된다(캔디숲 울타리 밖 받침과 같은 기준, §30)
+        var exitZones = new List<Bounds>();
         foreach (EscapeGate gate in Object.FindObjectsByType<EscapeGate>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
             foreach (Transform t in gate.GetComponentsInChildren<Transform>())
+            {
                 if (t.name.StartsWith("Door_")) Open(t);
+                else if (t.name.StartsWith(ExitZonePrefix)) exitZones.Add(new Bounds(t.position, t.lossyScale));
+            }
+        bool InExitZone(Vector3 p) => exitZones.Any(z => p.x >= z.min.x && p.x <= z.max.x && p.z >= z.min.z && p.z <= z.max.z);
         Physics.SyncTransforms();
 
         try
@@ -185,10 +193,10 @@ public static class MapPassabilityCheck
                         if (ground >= 0 && !cookie[ix, iz][ground])
                         {
                             if (list[ground].Covered) result.SealedCells++; // 아무도 들어갈 수 없는 닫힌 내부 — 문제 아님
-                            else if (options.IgnorePocket == null || !options.IgnorePocket(CellPos(ix, iz, half))) { pocket[ix, iz] = true; result.PocketCells++; }
+                            else if ((options.IgnorePocket == null || !options.IgnorePocket(CellPos(ix, iz, half))) && !InExitZone(CellPos(ix, iz, half))) { pocket[ix, iz] = true; result.PocketCells++; }
                         }
 
-                        for (int k = 0; k < list.Length; k++)
+                        for (int k = 0; k < list.Length && !InExitZone(CellPos(ix, iz, half)); k++)
                         {
                             if (!cookie[ix, iz][k]) continue;
                             if (!MonsterNear(nodes, monster, n, ix, iz, list[k].Y, reach)) { cookieOnly[ix, iz] = true; result.CookieOnlyCells++; break; }

@@ -36,6 +36,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private bool initRequested;
     private MapArea area;
     private Transform firstEscapeFocus;
+    private MonsterRoomGuard roomGuard;
 
     public EscapeState State { get; private set; }
     public EscapeCatalogSO Catalog => catalog;
@@ -349,6 +350,13 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         Vector3 c = monsterRoom != null ? monsterRoom.position : Vector3.zero;
         return Mathf.Abs(p.x - c.x) < monsterRoomHalfSize && Mathf.Abs(p.z - c.z) < monsterRoomHalfSize;
+    }
+
+    // 술래방 안에서 문 바깥으로 내보내진 이동인지(MonsterRoomGuard, §28.15 E1) — 방장 이동 속도 검사 예외.
+    public bool IsRoomEjectMove(Vector3 from, Vector3 to)
+    {
+        if (roomGuard == null && monsterRoom != null) roomGuard = monsterRoom.GetComponent<MonsterRoomGuard>();
+        return roomGuard != null && roomGuard.IsEjectMove(from, to);
     }
 
     // 맵 경계(Ground 사각형 또는 원) 밖으로 margin m 넘게 나갔는지 — 헬리콥터 모자 탈출(§25.5 H).

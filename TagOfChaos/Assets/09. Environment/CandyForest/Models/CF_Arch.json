@@ -1,19 +1,19 @@
 {
  "name": "CF_Arch",
  "tris": {
-  "CF_Arch": 3000,
-  "COL_Mesh": 2934
+  "CF_Arch": 6000,
+  "COL_Mesh": 5848
  },
  "min": [
-  -8.998,
-  0.012,
+  -9.0,
+  0.007,
   -4.417
  ],
  "max": [
-  9.012,
-  11.209,
+  9.0,
+  11.207,
   4.412
  ],
- "clearance": 7.72,
+ "clearance": 7.65,
  "inner_half_span": 4.35
 }

@@ -3419,3 +3419,184 @@ v1 §S1~S8 그대로:
 
 ![빛기둥 — 받침대 가운데에서(안) · 지붕을 뚫고(밖)](images/r28_cf_glow1021.jpg)
 
+
+### 28.15 2026-10-21 후속 요청(2건)
+
+1. **술래방에 쿠키·스파이가 어떻게든 들어갔을 때**(답: 1번 — 자동으로 밖으로 내보내기). 지금은 문이 쿠키에게 늘 벽이라 안에 갇히고, 용암 바닥도 겉모습뿐이다.
+2. **흰 땅 어긋남**(`images/맵어긋남.png`): 탈출구 앞 흰 땅이 초록 바닥보다 높게 솟아 쿠키 다리가 묻혀 보인다. 원인 — 테스트 씬에서 가져온 옛 캔디숲 지형 고리(`Background/CAN_Terrain_Decor`, 충돌체 있음)가 울타리 안쪽 반지름 60~80 m까지 들어와 최대 1.45 m로 솟아 있다(울타리 밖은 반지름 90~130 m에서 5~7 m 언덕). 울타리 밖 숲(반지름 87~120 m)은 높이 0에 서 있어 언덕에 묻힌다.
+
+**설계**
+- E1 `MonsterRoomGuard`(술래방 루트에 붙음, 각 화면이 자기 캐릭터만): 내 캐릭터가 괴물이 아니고 살아 있고 들려 있지 않은데 술래방 **안쪽**(벽 안쪽 면·문 면 안)에 0.5초 넘게 있으면, 가장 가까운 술래방 문 바깥의 빈 자리(`EscapeManager.IsValidTeleport` — 맵 안·술래방 밖·끼지 않음)로 옮기고 되돌아오는 소리를 낸다. 방장 이동 속도 검사는 "술래방 안 → 바로 밖(10 m 안)" 이동을 예외로 둔다. 벽 안쪽 면은 맵 설정 도구가 `RoomWall_` 충돌체에서 재어 넣는다.
+- E2 지형 고리를 이 맵에 맞게 다시 깐다(맵 만들기 도구가 원본에서 새 메시 `CF_TerrainRing`을 만든다): 울타리 안(반지름 80 m 안) 면은 지우고, 울타리 둘레~86 m는 바닥 높이로 평평하게(초록 타일이 그 위에 보임), 86~98 m에서 원래 언덕 높이로 부드럽게 올라간다. 탈출구 받침(울타리 밖 10 m)은 93 m까지 평평. 울타리 밖 숲·꾸미기는 그 자리 지형 높이에 세운다.
+- E3 시험(편집 모드 + 통행 검사) · Play Mode 확인 · 문서.
+
+**단계**
+- [x] E1 술래방 안 쿠키 자동 내보내기
+- [x] E2 흰 땅(옛 지형 고리) 다시 깔기 + 숲 높이 맞춤
+- [x] E3 시험·Play Mode·문서
+
+**결과(2026-10-21)**
+- E1 `MonsterRoomGuard`(새 파일 `Assets/02. Scripts/Escape/MonsterRoomGuard.cs`): 술래방 루트에 붙는다(맵 설정 도구가 `RoomWall_`에서 벽 안쪽 면 11.7 m를 재어 넣음). 새 메뉴 `Tools/TagOfChaos/Escape/Setup Monster Room Guard (All Map Scenes)`로 맵 씬 5개(캔디숲·진저브레드·초콜릿 공장·저주받은 카니발·유령 베이커리)에 모두 붙였다. 방장 이동 속도 검사(`EscapeAuthority.TrackPositions`)는 `EscapeManager.IsRoomEjectMove`(방 안 → 문 바깥 8.5 m 안)를 예외로 둔다.
+- E2 `CandyForestMapBuilder`: 옛 지형 고리를 원본에서 새 메시 `CF_TerrainRing`(Models)으로 다시 만든다 — 울타리 안 면 삭제, 반지름 86 m(탈출구 앞 93 m)까지 높이 0.015 m로 평평, 그 바깥 12 m에서 원래 언덕으로. 바닥판(220 m)은 흰 땅과 같은 재질, 울타리 안은 초록 원판 `CF_GrassDisc`(반지름 80.6 m). 울타리 밖 숲 64그루는 그 자리 언덕 높이에 세운다.
+- 통행 검사(몸 5가지) 모두 CLEAN, 목표 66/66. 새 시험 `Request1021Tests` 3/3, 전체 EditMode 314/315(실패 1은 예전부터의 `MapCompactTests` CursedCandyCarnival 통행 검사).
+- Play Mode(캔디숲, 오프라인): 술래방 가운데·제단 옆·동쪽 벽 옆에 옮긴 쿠키가 0.5초 안에 가장 가까운 문 바깥으로 나옴. 문 바깥·벽 바깥에 선 쿠키는 그대로. 이동 검사 경고·Console 오류/경고 없음. 탈출구 앞 땅 턱 없음.
+
+![흰 땅 전/후·위에서 본 맵](images/r29_cf_ground1021.jpg)
+
+### 28.16 2026-10-21 바닥 타일·소품 뭉개짐(가공 방식 고치기)
+
+사용자 사진(`images/3D땅 오브젝트 fbx.png` 원본 / `images/3D 땅 오브젝트 fbx 뭉게짐.png` 게임)과 비교 렌더(`images/r30_tile_compare.jpg`)로 본 원인 — 받은 FBX 문제가 아니라 `cf_build.py` 가공:
+- 길 타일을 6×10 m에 맞추며 축마다 다른 배율(가로 21배·세로 19배)로 늘이고 두께 2.67 m → 0.3 m(약 9배 납작). 용암 2.0 → 0.3 m, 초록 바닥 높이 ×0.45.
+- 면 수를 길 10,214 → 500(5%), 용암 6,176 → 500(8%), 초록 바닥 81,194 → 900(1%)으로 줄여 UV까지 뭉개져 틈 무늬가 큰 삼각형 위에서 번진다.
+- 텍스처 공유(세트마다 2048 한 장)는 원인이 아니다(§ 답: 나눠도 픽셀은 같음 — 사용자 결정: 1번 가공 고치기부터).
+
+재본 값(비율 유지): 길 5.49×10 m, 걷는 면 위 사탕 알 최대 1.14 m, 땅속 면 22% / 용암 5.9×10 m, 테두리 0.97 m / 초록 바닥 10×9 m, 덤불 최대 1.72 m, 땅속 면 40%.
+
+**설계**
+- 바닥 타일: 가로·세로·두께 같은 배율(원본 비율). 걷는 면을 바닥 충돌체 4 cm 위에 두고, 걷는 면 0.6 m 아래(땅속)는 잘라낸다. 걷는 면 위로 솟은 장식만 낮춘다(사탕 알·용암 테두리 ≤ 약 0.4 m, 덤불 ≤ 약 0.8 m — 충돌체 없는 높은 장식에 숨거나 통과하지 않게). 면 수 길 3000·용암 2500·풀 2500·초록 바닥 3500. 길 타일 간격 5.7 → 5.2 m(길이 5.49 m).
+- 개수가 적은데 많이 줄였던 소품 면 수 올림: 가게 9000→20000, 버섯·링 울타리 3500→10000, 연못 4000→10000, 가로등 1500→원본(2888), 지팡이 사탕 2000→4500, 표지판·벤치 1500→4000, 아치·사탕 더미 3000→6000. 숲 나무·울타리 문·건물은 그대로.
+- 전체 면 수 약 223만 → 약 300만 예상.
+
+**단계**
+- [x] T1 `cf_build.py` 바닥 타일·초록 바닥 가공 바꾸기 + 소품 면 수
+- [x] T2 FBX 다시 내보내기 → 프리팹·맵 다시 만들기(길 간격) → 통행 검사
+- [x] T3 비교 렌더·시험·Play Mode·문서
+
+**결과(2026-10-21)**
+- `cf_build.py`: 새 `ground_block`(한 배율·땅속 0.6 m 아래 잘라냄·걷는 면 위 장식만 낮춤). 길 5.48×10 m·면 3000(사탕 알은 타일 본체에 붙은 한 덩어리라 떼지 못해 1.14 → 0.6 m 젤리 모양), 용암 5.9×10 m·면 2500(테두리 0.97 → 0.4 m), 풀 2500, 초록 바닥 10×9 m·면 3500(덤불 1.77 → 0.8 m). 소품 10종 면 수 올림(위 설계대로). 맵: 길 간격 5.2 m, 용암 간격 5.8 m.
+- 분석용 스크립트(Source~/Scripts): `cf_tilecompare.py`(원본/게임 비교 렌더), `cf_atlasprobe.py`(공용 텍스처 몫), `cf_tileprobe.py`(걷는 면·장식 높이), `cf_partprobe.py`(떨어진 조각).
+- 전체 면 수 약 223만 → 약 312만(초록 바닥 80만 포함).
+- 통행 검사(몸 5가지) 모두 CLEAN·목표 66/66, 위치표 경고 0. 전체 EditMode 314/315(실패 1은 예전부터의 `MapCompactTests` CursedCandyCarnival). Console 오류/경고 없음.
+- Play Mode(캔디숲, 오프라인): 길·초록 바닥·탈출구 앞에서 쿠키가 바닥 높이 0.00에 섬(가라앉거나 뜨지 않음), 길 따라 걷기 도착. 틈 무늬·사탕 알·덤불이 살아남.
+
+![사용자 사진(위) / 고친 뒤 쿠키 시점(아래)](images/r30_ground_after.jpg)
+
+## 29. 2026-10-21 저주받은 놀이공원 회전목마 교체(받은 FBX 2개)
+
+**요청**: `3DTagOfChaos\CursedCandyCarnival`의 FBX 두 개(회전목마의 목마·회전목마의 본체)를 Blender에서 조립해 `Game_CursedCandyCarnival` 씬의 `CUR_Carousel_Top` 대신 붙인다.
+
+**지금**: `CUR_Carousel_Top`(지름 33.2 m·높이 18 m, 면 14,526) — `MapSceneBuilder.BuildAnimated`가 Animator(`Carousel_Top_Spin`, 40초에 −360°, 위에서 볼 때 반시계)·키네마틱 Rigidbody·볼록 MeshCollider를 붙인다. 바닥 `CUR_Carousel_Base`(지름 29.6 m·두께 0.47 m)는 그대로.
+
+**받은 모델(원본 `Assets/Maps/CursedCandyCarnival/Source~/Carousel/Body`·`Horse`)**: 본체 = 3단 받침·가운데 기둥·기둥 16개(22.5° 간격)·줄무늬 지붕, 면 395,294, 텍스처 2048 4장. 목마 = 서 있는 유니콘 한 마리(머리 −Y), 면 633,232, 텍스처 4장.
+
+**설계**
+- Blender 스크립트 `Source~/Scripts/cur_carousel_build.py`: 본체를 지름 29.6 m(바닥 원판과 같은 지름, 원본 비율 — 높이 약 27.5 m)로, 목마는 기둥 사이 간격의 90% 길이로 한 배율. 목마 16마리를 기둥 16개에 꿰어(기둥이 몸통 가운데를 지남) 머리를 회전 방향(위에서 볼 때 반시계)으로, 높이를 번갈아 위아래로.
+- 면 수: 본체 → 약 30,000, 목마 → 약 6,000 × 16. 바닥 타일에서 본 뭉개짐을 피하려고 **원본(고해상도)에서 텍스처를 새로 굽는다**(새 UV, 색 + 노멀, 본체 2048·목마 1024).
+- 충돌: 단순 충돌 메시(본체를 줄인 것)를 Unity에서 볼록으로 — 지금처럼 들어갈 수 없는 단단한 놀이기구(숨을 곳 없음).
+- Unity: 에디터 도구 `CarouselModelSwap` — `CUR_Carousel_Top`의 메시 겉모습을 끄고 새 모델을 자식으로 붙이고(돌기·Rigidbody·Animator는 그대로) 충돌 메시를 바꾼다. `MapSceneBuilder.BuildAnimated`에서도 불러 맵을 다시 만들어도 유지.
+
+**단계**
+- [x] K1 Blender 조립·텍스처 굽기·FBX 내보내기
+- [x] K2 Unity 가져오기·재질·`CarouselModelSwap`·씬 적용
+- [x] K3 시험·통행 검사·Play Mode(도는 방향·충돌)·문서
+
+**결과(2026-10-21)**
+- K1 `cur_carousel_build.py`(+ 살펴보기 `cur_carousel_probe.py`): 본체 배율 15.59(지름 29.6 m·높이 27.5 m), 받침 윗면 4.95 m·지붕 아래 14.98 m, 기둥 16개(반지름 11.66 m, 11.25°부터 22.5°마다). 목마 배율 2.11(길이 4.0 m·높이 3.4 m), 몸통이 기둥에 꿰이고 머리는 반시계 방향, 발이 받침 위 약 1.3 m에서 위아래 번갈아. 면 수 본체 30,000 + 목마 6,000×16 = 126,000(옛 14,526). 원본에서 새 UV로 색·노멀을 구움(본체·목마 각 2048). 충돌 `COL_Carousel` = 본체 바깥 점(높이 5단×24방향)의 볼록 껍질 110면(Unity 볼록 한도 256 안, 받침 바닥~꼭대기). 출력 `Assets/Maps/CursedCandyCarnival/Models/Carousel/`(FBX·PNG 4장·carousel.json), 재질 `M_CUR_CarouselBody`·`M_CUR_CarouselHorse`.
+- K2 `Assets/Editor/Maps/CarouselModelSwap.cs`(메뉴 `Tools/TagOfChaos/Maps/Swap Carousel Model (Cursed Candy Carnival)`): `CUR_Carousel_Top`의 옛 MeshRenderer·MeshFilter를 지우고 `Model` 자식으로 새 모델, MeshCollider = `COL_Carousel`(볼록). Animator(`Carousel_Top_Spin`)·키네마틱 Rigidbody 그대로. `MapSceneBuilder.BuildAnimated`도 이 도구를 부름. 옛 바닥 원판 `CUR_Carousel_Base`는 새 받침 속에 들어감.
+- 회전목마가 작아져(옛 지름 33.2 → 29.6 m) 옆 광대 간판·머리 없는 말과 사이에 괴물이 못 들어가는 좁은 틈이 생겨 → `TwistedPropPlacer`로 이 맵 소품만 다시 배치(같은 시드, 2.5 m 여유 규칙).
+- 시험: `Request1021Tests.CarnivalCarousel_NewModelSpinsHorsesForward`(옛 메시 없음·돌기·볼록 충돌이 받침 바닥까지·목마 16마리 모두 진행 방향) 포함 4/4. 통행 검사 `MapCompactTests(CursedCandyCarnival)`은 교체 전과 같은 결과(예전부터의 (14, 69) 쿠키 전용 1곳만). 전체 EditMode 315/316(같은 실패 1).
+- Play Mode(`Game_CursedCandyCarnival` 오프라인): yaw 232.6° → 176.4°(위에서 볼 때 반시계, 목마도 같이 돔), 쿠키가 반지름 17 m에서 걸어 들어가다 15.1 m에서 막힘. Console의 "missing script" 2건은 `EscapeSetup/ESC_CursedCandyCarnival_Root`의 예전 것(손대지 않은 `Game_HauntedBakery`·`Game_ChocolateFactory`에도 같은 GUID).
+- 참고: 지금 판 맵 목록(`GameSettings.GameMapScenes`)은 `Test_CursedCandyCarnival`을 쓰고, 그 씬에는 회전목마 모델이 없다(조명·소리만).
+
+![본체·목마 원본(위)과 씬에 붙인 회전목마(아래)](images/r31_carousel.jpg)
+
+## 30. 2026-10-21 저주받은 놀이공원 롤러코스터 탈출구(받은 FBX: 입구·레일·지지대·Car)
+
+**요청**: 루트의 `롤러코스터 3D 모델링.png`(빨간 트랙 + 보라 지지대 + 괴물 입 성 입구, 조립 예시)를 참고해 `3DTagOfChaos\CursedCandyCarnival`의 롤러코스터 입구·레일·지지대를 조립해 지금 롤러코스터의 탈출 용도 대신 쓴다. 입구는 뒤가 막혀 있으니 앞 계단처럼 뒤에도 계단을 만든다(Blender 재작업). 레일·지지대는 텍스처가 없으니 그림을 참고해 입힌다. 재료 끼우는 곳은 임시로(나중에 캔디숲처럼 1~4사분면 재료 + 탈출구 4개 중 2개로 바꿀 예정 — 지금은 정상 작동 확인). Car는 레일에 붙여 자연스럽게 움직이게 할 계획만 세운다.
+
+**지금(`Game_CursedCandyCarnival`)**: 북쪽 큰길 끝 (7.7, 67.5)의 예전 롤러코스터 탈출 장치 `EscapeSetup/ESC_CursedCandyCarnival_Root`(역 건물·열차 3칸·맵 밖으로 가는 경로 점 44개)는 예전 방식(`Legacy~/CoasterSequence`) — 스크립트가 없어 동작하지 않는다(missing script 2). 현재 방식 `EscapeManager`는 있지만 재료 건물 0·탈출구 0이라 탈출구로 나갈 수 없다. 상자 20·스파이 로켓·마녀는 있다.
+
+**받은 모델(원본 `Assets/Maps/CursedCandyCarnival/Source~/Coaster/`)**
+- 입구(Entrance): 괴물 입 성, 면 578,774, 텍스처 4장. 앞(−Y) 계단이 입 안 통로 바닥까지, 통로는 뒤쪽 얇은 벽까지 이어지지만 폭 0.2·높이 0.28(원본 단위)로 좁고 뒤는 막힘.
+- 레일(Track): 8자 고리 트랙, 면 71,614, UV·재질 없음, 1.89 × 0.29 × 0.78.
+- 지지대(Support, 다시 받음): 비계 묶음 7덩어리(기둥·가로대), 면 199,066, UV·재질 없음, 1.9 × 1.6 × 1.11 — 레일(앞뒤 폭 0.29)과 바닥 모양이 맞지 않아 그대로 겹치면 레일 밑에 오지 않는다.
+- Car: 머리(용 입) + 좌석 차량 줄 2편성, 면 89,298, 텍스처 4장.
+
+**설계**
+- Blender `Source~/Scripts/cur_coaster_build.py`:
+  - 입구: 한 배율 9.0(높이 약 16.7 m), 원본에서 색·노멀을 새 UV로 굽고(§29와 같은 방법) 면 약 60,000. 통로 바닥 높이에 폭 3 m·높이 3 m 통로를 뒤까지 뚫고(안쪽 면은 어두운 재질), 앞 계단(난간 포함)을 앞뒤로 뒤집어 뒤쪽 출구 아래에 붙인다.
+  - 레일: 길이 48 m(한 배율), 가장 낮은 곳 1.5 m 위. 빨간 플라스틱 재질 + 그늘(AO) 굽기.
+  - 지지대: 받은 지지대 모델의 따로 떨어진 기둥 한 개(받침판·마디)를 잘라 레일 밑 일정 간격마다 땅~레일 높이로 세움(받침판·마디는 그대로, 몸통만 늘림) + 기둥 사이 가로대. 보라 재질 + AO.
+- Unity 에디터 도구 `CoasterExitBuilder`: 예전 장치 삭제, 입구를 북쪽 큰길 끝(앞이 맵 가운데)에, 트랙은 그 뒤(맵 가장자리 밖 배경), `Exit_N`(입 안 내려가는 창살 문 `Door_N`·뒤 계단 아래 `ExitTrigger_N`·열리면 켜지는 초록 표시) + 걷는 충돌(계단 경사판·통로 바닥·건물 덩어리). 임시 재료 꽂는 곳 `Building_Q1~Q4`(받침·`Repair_Point`·`Socket_`·`ESC_Glow`)를 입구 앞 광장에. `EscapeManager`의 건물·탈출구 연결(상자·로켓·마녀는 그대로).
+
+**단계**
+- [x] R1 Blender 입구 재작업(통로·뒤 계단)·레일·지지대 조립·재질·내보내기
+- [x] R2 Unity 가져오기·씬 적용(예전 장치 삭제·탈출구·임시 재료 받침·연결)
+- [x] R3 시험·통행 검사·Play Mode(재료 넣기 → 탈출구 열림 → 통로·뒤 계단으로 탈출)
+- [x] R4 Car를 레일에 붙여 움직이는 계획(코드 근거)
+
+### 30.1 결과(2026-10-21) — R1~R3
+
+- **R1 Blender** `Source~/Scripts/cur_coaster_build.py`(+ 살펴보기 `cur_coaster_probe.py`·`cur_entrance_probe.py`), 출력 `Assets/Maps/CursedCandyCarnival/Models/Coaster/`:
+  - 입구 `CUR_CoasterEntrance.fbx`: 배율 9.0(15.2 × 15.2 × 16.7 m), 원본(578,774면)에서 새 UV로 색·노멀 구움(2048), 면 64,276. 통로 바닥 3.97 m, **통로 폭 4.4 m·높이 4.2 m**를 입에서 뒤 벽(7.15 m)까지 뚫음(안쪽은 어두운 재질). 앞 계단(난간 포함, 7,808면)을 뒤집어 뒤 출구 아래에 붙임 — 앞 계단 끝 −7.58 m, 뒤 계단 끝 +13.5 m(입구 중심 기준).
+  - 트랙 `CUR_CoasterTrack.fbx`: 레일 길이 48 m(배율 25.4, 7.3 × 19.8 m, 바닥 1.5 m 위, 71,614면, 빨강). 지지대는 받은 지지대 모델의 따로 선 기둥 한 개(받침판·마디)로 레일 밑 21곳에 땅~레일 높이로 세움(몸통만 늘림) + 가로대 48개(보라, 64,428면). 레일·지지대 모두 그늘(AO) 1024 구움. 받은 지지대 묶음(1.9 × 1.6)은 레일 폭(0.29)과 맞지 않아 기둥 모양만 썼다.
+- **R2 Unity** `Assets/Editor/Maps/CoasterExitBuilder.cs`(메뉴 `Tools/TagOfChaos/Maps/Build Coaster Exit (Cursed Candy Carnival)`, 여러 번 실행해도 같은 결과):
+  - 예전 장치 `ESC_CursedCandyCarnival_Root`(missing script 2) 삭제. 입구를 (0, 0, 55)에 앞(계단)이 맵 가운데로, 트랙을 맵 경계 밖 z 76에.
+  - 입구 자리에 걸리는 장식 텐트 `CUR_CircusTent_Small_06`·`_09` 삭제, 계단 앞 상자 `CHEST_Slot_05`는 (1, 41)로.
+  - 탈출구 `Exit_N`: **앞 계단 아래 창살 문 `Door_N`**(폭 6 m·높이 3.6 m — 닫혀 있으면 계단에 못 오름, 열리면 땅속으로), 계단 양옆 난간 벽, `ExitTrigger_N` = 뒤 계단 아래(z 69.7), 열리면 통로 양옆 초록 빛줄 + 초록 빛(`ExitOpenLook_N`). 건물 뒤 마당은 양옆 쇠창살 울타리(맵 경계벽까지)로 막아 통로로만 간다.
+  - 걷는 충돌: 계단 = 속이 찬 볼록 쐐기(계단 밑에 숨지 못함), 통로 바닥·지붕, 건물 양쪽 덩어리.
+  - **임시 재료 꽂는 곳** `Map/TempSockets/Building_Q1~Q4`(받침·`Repair_Point`·`Socket_`·`ESC_Glow`) — 입구 앞 빈 자리 (−9, 46)·(7, 38)·(9, 48)·(−6, 35), 출발 자리·계단 앞길은 비움. `EscapeManager`에 건물 4·탈출구 1 연결(상자·로켓·마녀 그대로). 탈출구가 1개라 다 가동되면 그것이 열린다(`OpenExits`가 `Min(4, 탈출구 수)` 중 2개).
+  - 통행 검사: 탈출 구역 표시 `ExitZone_N`(충돌체 없이 위치·크기만) 안은 쿠키 전용으로 따지지 않게 `MapPassabilityCheck`에 더함 — 괴물 몸(바닥 위 1.95 m의 반지름 1.8 m 구)은 32° 계단에 닿아 못 오르므로, 문을 계단 아래에 두어 닫혀 있을 때 아무도 들어가지 못하게 하고, 열린 뒤에는 캔디숲 울타리 밖 받침처럼 쿠키가 나가는 길로 본다.
+- **R3 확인**
+  - 전체 EditMode **317/317 통과**(예전부터 실패하던 `MapCompactTests` CursedCandyCarnival 포함). 시험 `Request1021Tests.CarnivalCoasterExit_WiredForEscape` 포함 5/5. `MapCompactTests` 25/25 — 저주받은 놀이공원 통행 검사가 이번에 처음 통과(예전 롤러코스터 역 옆 (14, 69) 쿠키 전용 구역이 장치 삭제로 사라짐).
+  - Play Mode(`Game_CursedCandyCarnival` 오프라인, 쿠키 1명): 닫힌 문 앞에서 막힘 (0, 0, 46.4), 계단 옆으로는 땅 높이에서 건물 앞면에 막힘 (4.5, 0, 52.1) → 켜진 임시 받침 2개(Battery·Toolbox)에 재료를 들고 E 길게 → "All buildings running: exits 1 open", 문 −6.6 m로 내려감·충돌 꺼짐·초록 표시 켜짐 → 앞 계단·통로·뒤 계단을 걸어 "Actor 1 escaped through exit 0", 판 끝(AllResolved). Console 오류·경고 0.
+
+![롤러코스터 탈출구(앞·계단 아래 문·열림·뒤 계단)와 Blender 조립·참고 그림](images/r32_coaster_exit.jpg)
+
+### 30.2 R4 계획 — Car(용 열차)를 레일에 붙여 자연스럽게 움직이기
+
+**받은 Car**(`Source~/Coaster/Car/Car.fbx`): 한 덩어리 면 89,298, 1.90 × 0.21 × 0.31(원본 단위) — 앞에서 보면 용 머리 차 + 좌석 차 6칸이 두 줄(서로 반대를 보는 두 편성), 텍스처 4장.
+
+**지금 코드에서 쓸 수 있는 것 / 없는 것**
+- 예전 `Legacy~/Sequences/CoasterSequence`: 이름 붙인 경로 점(`Path_nn`) 사이를 **직선으로** 잇고 `0.5·a·t²`로만 가속, 차 방향은 `LookRotation(구간 방향, Vector3.up)` — 곡선·고리에서 꺾이고(점마다 방향이 튐), 기울기(뱅크)·뒤집힘(고리)이 없고, 칸마다 한 점이라 긴 칸이 레일을 벗어난다. 지금 판 규칙(§25)에서는 쓰지 않는다(Legacy~).
+- 공통 시계: `WitchTimeline`처럼 `PhotonNetwork.Time` + 방 속성만으로 모든 화면이 같은 위치를 계산(늦게 들어온 사람·방장 교체에도 맞음) — 열차도 이 방식이면 네트워크 메시지가 필요 없다.
+- 도는 물체: 회전목마·관람차는 `MapSceneBuilder.AttachLoopAnimator`(Animator 클립, 충돌체가 있으면 키네마틱 Rigidbody + 물리 스텝 갱신). 열차는 경로가 곡선이라 클립보다 스크립트가 맞다.
+- 소리: `SoundId.CoasterStartup/CoasterDepart/CoasterLapBar/CoasterSparks/CoasterBulbOn`(710~714)이 있고, 움직이는 물체에 붙이는 `GameAudio.PlayOn(id, transform)`, 가까울 때만 반복음을 켜는 `AmbientEmitter`(회전목마 `AMB_Carousel`)가 있다. 달리는 소리·오르막 체인 소리는 새로 필요.
+- **레일에는 경로 데이터가 없다**(한 덩어리 메시, UV·재질 없음) — 가운데 선을 메시에서 뽑아야 한다.
+
+**설계**
+1. **Blender: 레일 가운데 선 뽑기**(`cur_coaster_build.py`에 단계 추가 → `coaster_path.json`, Unity 축)
+   - 레일 메시 꼭짓점을 0.4 m 격자로 묶어 무게중심 점들을 만들고, 가장 가까운 점을 차례로 이어 닫힌 고리 순서를 정한다(8자 교차는 높이가 달라 3D 거리로 구분). 순서가 끊기거나(이웃 거리 > 2 m) 되돌아가면 실패로 멈춘다.
+   - 점마다 **위쪽 방향(up)** = 두 레일을 잇는 방향 × 진행 방향(레일 단면에서 양쪽 레일 꼭짓점을 찾아 계산) — 고리·기울어진 곡선에서 차가 레일 면을 따라 눕는다.
+   - Catmull-Rom(centripetal)으로 매끄럽게 하고 0.5 m 간격으로 다시 뽑아 저장(점·up·누적 길이). 레일 두 줄 간격(궤간)도 잰다.
+2. **Blender: 열차 나누기·굽기**(`cur_coaster_car_build.py`)
+   - 한 덩어리 Car를 x 방향 빈틈으로 칸마다 자른다(머리 1 + 좌석 6 × 2편성 → 쓰는 것은 1편성, 나머지는 두 번째 열차 후보). 칸마다 원점을 바퀴 가운데 바닥으로.
+   - 배율: 차 폭 = 궤간 + 0.4 m. 칸마다 면 약 3,000으로 줄이고 원본에서 색·노멀을 구움(§29 방식, 1편성이 한 텍스처 2048 공유).
+3. **Unity 실행 코드**(`Assets/02. Scripts/Map/` 새 파일 3개, OOP·할당 없음)
+   - `CoasterTrack`(MonoBehaviour, 데이터만): 점·up·누적 길이 배열. `Sample(s, out pos, out forward, out up)` — 길이 s를 이분 탐색으로 구간 찾고 Hermite 보간, up은 두 점 사이 Slerp 후 forward에 직교화. 닫힌 고리라 s는 전체 길이로 나머지.
+   - `CoasterTrain`: 칸 목록(머리부터), 칸마다 **앞·뒤 바퀴 두 점**을 레일 위에 놓고 칸 방향 = (앞 바퀴 − 뒤 바퀴), up은 두 바퀴 up의 평균 → 곡선·고리에서도 칸이 레일 위에 딱 맞고 칸 사이가 자연스럽게 꺾인다. 칸 간격은 레일 길이로 고정.
+   - 속도(자연스러움의 핵심): 에디터에서 미리 **시간표 t(s)** 를 만든다 — 오르막 체인 구간(경사가 큰 첫 오르막)은 일정 속도 2.5 m/s, 그 뒤는 에너지 보존 v = √(v₀² + 2g(h₀ − h(s))) − 마찰(구름 저항 0.015·g·거리 + 공기 저항 ∝ v²)로 내려가며 빨라지고 올라가며 느려짐, 최저 속도 아래로 떨어지면 체인으로 끌어올림, 한 바퀴 끝에 역(입구 뒤)에서 감속·정차 몇 초. 실행 중에는 `PhotonNetwork.Time`(방 속성 기준 시각부터)을 한 바퀴 시간으로 나눈 나머지로 s(t)를 표에서 찾기만 한다(모든 화면 같음, 프레임 비용 거의 0).
+   - 연출 연결(나중에 정함 — 두 방식 모두 가능): ① 판 내내 도는 배경 놀이기구, ② 역에 서 있다가 탈출구가 열리면(`EscapeState.ExitsOpenedAt`) 출발 — 예전 연출(전구 켜짐·시동 떨림·불꽃·안전바)을 새 차에 옮김.
+   - 소리: 앞 칸에 `GameAudio.PlayOn`으로 달리는 소리 반복(속도에 따라 음높이·크기), 체인 오르막 "딸각딸각", 내리막 바람 — 새 `SoundId` 2~3개 + `AudioCatalogBuilder` 등록, 멀면 끄기(`AmbientEmitter` 방식).
+   - 물리: 트랙은 맵 경계 밖이라 쿠키·괴물이 닿지 않는다 → 차에 충돌체를 두지 않는다(트랙이 맵 안으로 들어오게 바꾸면 회전목마처럼 키네마틱 Rigidbody + 볼록 충돌체).
+4. **에디터 도구**: `CoasterExitBuilder`에 열차 배치 단계 추가(`coaster_path.json`을 `CoasterTrack`에 굽고, 칸 프리팹을 `CoasterTrain` 아래에).
+5. **시험**: EditMode — 경로가 닫혀 있고 이웃 간격 ≤ 0.6 m, `Sample` 연속(작은 s 변화에 위치 변화 작음), 시간표 단조 증가·한 바퀴 시간 > 0, 칸의 두 바퀴가 레일 가운데 선에서 0.05 m 안. Play Mode — 같은 `PhotonNetwork.Time`에서 두 번 계산해 같은 자리, 10초 동안 차 위치가 레일 메시에서 0.3 m 안, 고리에서 up이 뒤집힘, 프레임 시간 확인.
+
+**정할 것(사용자)**: 열차를 판 내내 돌릴지(①) / 탈출구가 열릴 때 출발할지(②), 1편성(머리 + 6칸)만 쓸지 2편성 모두 쓸지, 쿠키가 타는 연출이 필요한지.
+
+## 31. 2026-10-21 Test 씬에 롤러코스터(움직이는 놀이기구)·회전목마 넣기
+
+**요청**: 앞으로 시험은 `Test_CursedCandyCarnival`에서만 하므로 롤러코스터와 회전목마를 그 씬에 넣는다. 롤러코스터는 탈출구가 아니라 **회전목마처럼 움직이는 일반 오브젝트** — 열차 2편성이 판 내내 돈다. 탈출은 캔디숲과 같은 사분면 재료 + 탈출구 4개 중 2개 방식 그대로. 롤러코스터의 모델·열차 2편성·소리·충돌을 구현한다. 자리는 **맵 안**(걸리는 상자·장식·표시는 가까운 빈 곳으로). `Game_CursedCandyCarnival`의 §30 탈출구 연결·안 쓰게 된 메서드·오브젝트 정리는 나중에 한다(지금은 손대지 않음).
+
+**지금(`Test_CursedCandyCarnival`)**: 140 × 140 m 네모 맵(벽 ±70, 각 벽 가운데 탈출구 4), 가운데 술래방(±12.3), 사분면 건물 4곳 (±41, ±41)(15 m), 축 따라 칸막이 공, 사분면 장식 공 4개씩, 상자 40개(격자), 표시(무지개·로켓·쿠키 출발). 회전목마는 조명 `LGT_Carousel_Top`과 소리 `AMB_Carousel`(0, 4, 0)만 있고 모델이 없다.
+
+**배치(맵 안)**
+- 롤러코스터 = 남서(Q3) 구석: 트랙(길이 48 m·높이 21 m·폭 7.3 m의 세로 8자 고리)을 **서쪽 벽 띠**(x −64~−56, z −66~−18)에 세로로, 입구(괴물 입 성)를 **남쪽 띠**(z 약 −61)에 앞(계단)이 동쪽을 보게 — 통로를 지나 뒤 계단으로 내려가면 트랙 울타리 앞. 트랙 둘레는 쇠창살 울타리(벽까지)로 막아 달리는 열차·낮은 레일 밑에 들어가거나 숨지 못하게 한다.
+- 회전목마 = 북동(Q2) 건물과 북쪽 칸막이 사이 (17.5, 45) 근처, 배율 0.65(지름 약 19 m·높이 18 m). 기존 회전(Animator `Carousel_Top_Spin`, 40초에 한 바퀴)·키네마틱 Rigidbody·볼록 충돌 그대로, `AMB_Carousel`·`LGT_Carousel_Top`을 그 자리로.
+- 걸리는 상자·장식 공·무지개/로켓/쿠키 출발 표시는 가까운 빈 곳으로 옮긴다(술래·쿠키 출발 자리는 비움). 통행 검사(`MapPassabilityCheck`, 몸 5가지)로 쿠키 전용 틈이 없는지 확인.
+
+**설계**
+1. **레일 가운데 선**(에디터 `CoasterPathBaker`): 가져온 `CUR_CoasterTrack.fbx`의 레일 메시(Unity 축)에서 — 가장 낮은 점에서 시작해 반지름 1.5 m 안 꼭짓점의 주성분으로 진행 방향·레일 면 법선(위쪽)을 구하고, 0.5 m씩 나아가며 진행 방향에 수직인 얇은 판 안 꼭짓점 무게중심으로 가운데를 맞춘다(8자 교차는 이전 법선 기준 판 두께로 다른 줄을 거름) → 처음 자리로 돌아오면 닫힌 고리. 위쪽 방향은 앞 점과 같은 쪽으로 이어(고리 꼭대기에서 뒤집힘), 궤간을 잰다. 결과를 SO `Assets/03. SO/Maps/CUR_CoasterPath.asset`(`CoasterPathSO`: 점·위쪽·누적 길이·속도표)에 굽는다.
+2. **속도표**(같은 도구): 가장 높은 점에서 체인 속도 2.5 m/s로 출발 → 에너지 보존 v² = v₀² + 2g(h₀ − h) − 마찰(구름 0.015·g·거리 + 공기 ∝ v²), 최저 속도(2.5 m/s) 아래면 체인/부스터가 끌어올림 → 한 바퀴 시간 T와 t(s) 표. 두 번째 편성은 T/2 늦게 — 두 열차 사이 최소 간격이 열차 길이 + 여유보다 큰지 확인.
+3. **열차 모델**(Blender `Source~/Scripts/cur_coaster_car_build.py`): 받은 Car(한 덩어리, 머리 + 좌석 6칸 × 2편성)를 칸마다 빈틈으로 자르고 원점을 바퀴 가운데 바닥으로, 레일 궤간에 맞춘 배율로 `Models/Coaster/CUR_CoasterCars.fbx`(Car_A0~A6·Car_B0~B6, 원래 UV·텍스처 그대로 — 면 수를 줄이지 않으므로 다시 굽지 않음).
+4. **실행 코드**(`Assets/02. Scripts/Map/`): `CoasterPathSO.Sample(s, out pos, out fwd, out up)`(이분 탐색 + Hermite, 위쪽 Slerp 후 직교화), `CoasterTrain`(칸마다 앞·뒤 바퀴 두 점을 레일 위에 놓아 칸 방향·기울기, 키네마틱 Rigidbody `MovePosition/MoveRotation`), `CoasterRide`(편성 2개·공통 시계 `PhotonNetwork.Time`(방 밖이면 `Time.timeAsDouble`)를 T로 나눈 나머지 → 모든 화면이 같은 위치, 네트워크 메시지 없음).
+5. **소리**: 새 `SoundId` — 달리는 소리(반복, 속도에 따라 크기·음높이), 체인 오르막 딸각(반복, 체인 구간에서만), 내리막 바람/비명(속도 클 때). 열차 앞 칸에 `GameAudio.StartLoop` + `SetLoopFade`, 멀면 끔(`AmbientEmitter`처럼 거리 기준). `AudioCatalogBuilder` 등록 + 시험음 합성.
+6. **충돌**: 레일·지지대 = 고정 MeshCollider(볼록 아님), 입구 = §30처럼 걷는 충돌(계단 경사·통로 바닥·건물 덩어리 — 회전한 자리에 맞춰 입구 기준 로컬로), 칸 = 키네마틱 Rigidbody + BoxCollider, 트랙 둘레 울타리.
+7. **에디터 도구** `CarnivalRidesBuilder`(메뉴, 여러 번 실행해도 같은 결과): Test 씬에 롤러코스터(입구·트랙·열차·울타리·소리)와 회전목마를 놓고 걸리는 것들을 옮긴다.
+
+**단계**
+- [ ] Q1 레일 가운데 선·위쪽·궤간 뽑기 + 속도표 → `CoasterPathSO`
+- [ ] Q2 Blender 열차 나누기·배율·내보내기
+- [ ] Q3 실행 코드(`CoasterPathSO`·`CoasterTrain`·`CoasterRide`) + 소리(SoundId·카탈로그·시험음)
+- [ ] Q4 `CarnivalRidesBuilder` — Test 씬 배치(롤러코스터·회전목마·충돌·울타리·옮기기)
+- [ ] Q5 시험(EditMode·통행 검사)·Play Mode(두 열차가 레일 위·겹치지 않음·소리·충돌·회전목마 돎)·문서

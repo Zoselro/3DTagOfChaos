@@ -1,0 +1,5 @@
+Tiles_00 scale 20.63 size (5.88, 10.0, 2.14) face z 1.35 (thickness 1.35) top +0.79 | polys 6052, fully >0.6 below face 1568 | area above +0.2/0.5/1.0/1.5: 4.6/1.6/0.0/0.0
+Tiles_01 scale 19.31 size (5.49, 10.0, 2.44) face z 1.30 (thickness 1.30) top +1.14 | polys 10214, fully >0.6 below face 2216 | area above +0.2/0.5/1.0/1.5: 10.2/4.1/0.4/0.0
+Tiles_02 scale 19.81 size (5.9, 10.0, 1.97) face z 1.00 (thickness 1.00) top +0.97 | polys 6176, fully >0.6 below face 1482 | area above +0.2/0.5/1.0/1.5: 17.6/2.0/0.0/0.0
+GreenFloor_00 scale 5.33 size (10.0, 8.99, 4.57) face z 2.85 (thickness 2.85) top +1.72 | polys 81194, fully >0.6 below face 32716 | area above +0.2/0.5/1.0/1.5: 19.0/10.7/5.0/1.4
+DONE

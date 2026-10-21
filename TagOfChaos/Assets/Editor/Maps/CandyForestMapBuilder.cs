@@ -23,6 +23,17 @@ public static class CandyForestMapBuilder
     private const float ExitOpening = 5.6f, ExitPostWidth = 1.8f, ExitHeight = 7.5f, PadDepth = 10f;
     private const float FenceHeight = 6f, FenceThickness = 0.8f;
     private const float ForestClearRadius = 95f;
+    // 옛 캔디숲 지형 고리(흰 땅, §28.15 E2): 원본에서 이 맵에 맞춘 메시를 만든다
+    private const string TerrainSource = "Assets/Maps/CandyForest/Compact/CAN_Terrain_Decor.asset";
+    private const string TerrainMeshPath = CandyForestAssets.Root + "/Models/CF_TerrainRing.asset";
+    private const float TerrainFlatY = 0.015f;      // 바닥판(0)·초록 원판 위, 초록 타일 풀 면(0.04) 아래
+    private const float TerrainInsideY = -0.05f;    // 울타리 안에 걸친 면의 안쪽 꼭짓점은 바닥판 밑으로
+    private const string GrassDiscPath = CandyForestAssets.Root + "/Models/CF_GrassDisc.asset";
+    private const float GrassDiscY = 0.008f;
+    private const float TerrainDropRadius = 79.5f;  // 이 안쪽에만 있는 면은 지운다(울타리 80 m 안)
+    private const float TerrainFlatRadius = 86f;    // 여기까지 평평
+    private const float TerrainExitFlatRadius = 93f;// 탈출구 받침(울타리 밖 10 m) 앞은 더 멀리까지 평평
+    private const float TerrainRiseLength = 12f;    // 평평한 곳 끝에서 원래 언덕 높이까지
 
     [MenuItem(MenuRoot + "2 Build Map Scene")]
     public static void BuildMenu() => Debug.Log(Build());
@@ -175,8 +186,130 @@ public static class CandyForestMapBuilder
             if (Mathf.Abs((floor.rotation * axis).y) < 0.5f) scale[i] = 220f / 140f;
         }
         floor.localScale = scale;
+        // 바닥판은 흰 땅과 같은 재질(지형 고리 틈·모서리가 같은 색), 울타리 안은 초록 원판(풀밭 타일 틈으로 보여도 어색하지 않은 색)
         var r = floor.GetComponent<Renderer>();
-        if (r != null) r.sharedMaterial = PlainMaterial("CF_Ground", new Color(0.3f, 0.42f, 0.2f)); // 풀밭 타일 틈으로 보여도 어색하지 않은 색
+        Transform terrain = map.Find("Background/CAN_Terrain_Decor");
+        Renderer terrainLook = terrain != null ? terrain.GetComponent<Renderer>() : null;
+        if (r != null) r.sharedMaterial = terrainLook != null ? terrainLook.sharedMaterial : PlainMaterial("CF_Ground", new Color(0.3f, 0.42f, 0.2f));
+        BuildGrassDisc(ground);
+        BuildTerrainRing(map);
+    }
+
+    private static void BuildGrassDisc(Transform ground)
+    {
+        const int segments = 128;
+        float radius = CandyForestLayout.MapRadius + 0.6f;
+        var vertices = new Vector3[segments + 1];
+        var tris = new int[segments * 3];
+        for (int i = 0; i < segments; i++)
+        {
+            float a = i * Mathf.PI * 2f / segments;
+            vertices[i + 1] = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
+            tris[i * 3] = 0;
+            tris[i * 3 + 1] = (i + 1) % segments + 1;
+            tris[i * 3 + 2] = i + 1;
+        }
+        var mesh = new Mesh { name = "CF_GrassDisc", vertices = vertices, triangles = tris };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        mesh = SaveMesh(mesh, GrassDiscPath);
+
+        var disc = new GameObject("GrassDisc");
+        disc.transform.SetParent(ground, false);
+        disc.transform.SetPositionAndRotation(new Vector3(0f, GrassDiscY, 0f), Quaternion.identity); // Ground는 Blender 축 회전을 들고 있다 — 월드 기준으로 눕힌다
+        disc.AddComponent<MeshFilter>().sharedMesh = mesh;
+        disc.AddComponent<MeshRenderer>().sharedMaterial = PlainMaterial("CF_Ground", new Color(0.3f, 0.42f, 0.2f));
+        GameObjectUtility.SetStaticEditorFlags(disc, StaticEditorFlags.BatchingStatic);
+    }
+
+    // 만든 메시를 에셋으로 저장(이미 있으면 내용만 바꿔 씬 참조를 지킨다).
+    private static Mesh SaveMesh(Mesh mesh, string path)
+    {
+        var saved = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        if (saved == null) AssetDatabase.CreateAsset(mesh, path);
+        else
+        {
+            EditorUtility.CopySerialized(mesh, saved);
+            Object.DestroyImmediate(mesh);
+            mesh = saved;
+        }
+        EditorUtility.SetDirty(mesh);
+        AssetDatabase.SaveAssets();
+        return mesh;
+    }
+
+    // 흰 땅(옛 지형 고리)을 이 맵에 맞춰 다시 깐다(§28.15 E2): 울타리 안 면은 지우고, 울타리 둘레는 바닥 높이로 평평하게,
+    // 그 바깥에서 원래 언덕 높이로 부드럽게 올라간다. 충돌체도 같은 메시를 쓴다.
+    private static void BuildTerrainRing(Transform map)
+    {
+        Transform terrain = map.Find("Background/CAN_Terrain_Decor");
+        var source = AssetDatabase.LoadAssetAtPath<Mesh>(TerrainSource);
+        if (terrain == null || source == null) { Debug.LogWarning("[CandyForestMap] old terrain ring missing — skipped"); return; }
+
+        Matrix4x4 toWorld = terrain.localToWorldMatrix, toLocal = terrain.worldToLocalMatrix;
+        Vector3[] vertices = source.vertices;
+        var inside = new bool[vertices.Length];
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            Vector3 w = toWorld.MultiplyPoint3x4(vertices[i]);
+            float radius = new Vector2(w.x, w.z).magnitude;
+            inside[i] = radius < TerrainDropRadius;
+            w.y = TerrainHeight(w.x, w.z, w.y);
+            vertices[i] = toLocal.MultiplyPoint3x4(w);
+        }
+
+        var mesh = new Mesh { name = "CF_TerrainRing", indexFormat = source.indexFormat };
+        mesh.vertices = vertices;
+        mesh.uv = source.uv;
+        if (source.colors.Length == vertices.Length) mesh.colors = source.colors;
+        mesh.subMeshCount = source.subMeshCount;
+        int dropped = 0;
+        for (int sub = 0; sub < source.subMeshCount; sub++)
+        {
+            int[] tris = source.GetTriangles(sub);
+            var kept = new List<int>(tris.Length);
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                if (inside[tris[t]] && inside[tris[t + 1]] && inside[tris[t + 2]]) { dropped++; continue; }
+                kept.Add(tris[t]); kept.Add(tris[t + 1]); kept.Add(tris[t + 2]);
+            }
+            mesh.SetTriangles(kept, sub);
+        }
+        mesh.RecalculateNormals();
+        mesh.RecalculateTangents();
+        mesh.RecalculateBounds();
+
+        mesh = SaveMesh(mesh, TerrainMeshPath);
+        terrain.GetComponent<MeshFilter>().sharedMesh = mesh;
+        var col = terrain.GetComponent<MeshCollider>();
+        if (col != null) col.sharedMesh = mesh;
+        Physics.SyncTransforms();
+        Debug.Log($"[CandyForestMap] terrain ring: dropped {dropped} faces inside the fence, flattened to {TerrainFlatRadius} m ({TerrainExitFlatRadius} m at exits)");
+    }
+
+    // 지형 고리 높이(월드): 평평한 곳 → 원래 높이로 부드럽게. 바닥판(220 m 사각) 위로는 늘 바닥판보다 위.
+    public static float TerrainHeight(float x, float z, float original)
+    {
+        var p = new Vector2(x, z);
+        float radius = p.magnitude, flat = TerrainFlatRadius;
+        foreach (Vector2 d in CandyForestLayout.RoadDir)
+        {
+            float along = Vector2.Dot(p, d), side = Mathf.Abs(d.x * p.y - d.y * p.x);
+            if (along > 0f) flat = Mathf.Max(flat, Mathf.Lerp(TerrainExitFlatRadius, TerrainFlatRadius, Mathf.InverseLerp(6f, 10f, side)));
+        }
+        float high = Mathf.Max(original, TerrainFlatY);
+        if (radius < CandyForestLayout.MapRadius + 0.5f) return TerrainInsideY;
+        if (radius <= flat) return TerrainFlatY;
+        return Mathf.Lerp(TerrainFlatY, high, Mathf.SmoothStep(0f, 1f, (radius - flat) / TerrainRiseLength));
+    }
+
+    // 울타리 밖 꾸미기를 세울 지형 높이(지형 충돌체 위, 없으면 0).
+    private static float GroundAt(Transform map, float x, float z)
+    {
+        Transform terrain = map.Find("Background/CAN_Terrain_Decor");
+        var col = terrain != null ? terrain.GetComponent<MeshCollider>() : null;
+        if (col != null && col.Raycast(new Ray(new Vector3(x, 60f, z), Vector3.down), out RaycastHit hit, 120f)) return Mathf.Max(0f, hit.point.y);
+        return 0f;
     }
 
     // 술래방: 벽·문은 그대로(괴물만 지나감, S11), 바닥은 용암 타일, 벽 바깥 가운데에 빨간 상자, 안쪽에 제단.
@@ -217,7 +350,9 @@ public static class CandyForestMapBuilder
                 n++;
                 continue;
             }
-            if (Spawn(p.asset, Group(map, p.group), p.position, p.yaw, p.noColliders) != null) n++;
+            Vector3 at = p.position;
+            if (new Vector2(at.x, at.z).magnitude > CandyForestLayout.MapRadius + 1f) at.y = GroundAt(map, at.x, at.z); // 울타리 밖은 흰 땅 언덕 위에(§28.15 E2)
+            if (Spawn(p.asset, Group(map, p.group), at, p.yaw, p.noColliders) != null) n++;
         }
         return n;
     }
@@ -356,13 +491,13 @@ public static class CandyForestMapBuilder
         GameObjectUtility.SetStaticEditorFlags(lavaFloor, StaticEditorFlags.BatchingStatic);
         for (int ix = 0; ix < 4; ix++)
             for (int iz = 0; iz < 3; iz++)
-            { Spawn("CF_Tile_Lava", tiles, new Vector3(-9f + ix * 6f, 0.13f, -9.5f + iz * 9.5f), rng.Next(2) * 180f, true); n++; }
-        // 큰길 포장(10 m가 길 너비, 6 m씩 길을 따라)
+            { Spawn("CF_Tile_Lava", tiles, new Vector3(-8.7f + ix * 5.8f, 0.13f, -9.5f + iz * 9.5f), rng.Next(2) * 180f, true); n++; } // 타일 5.9 × 10 m(원본 비율, §28.16)
+        // 큰길 포장(10 m가 길 너비, 길이 5.48 m 타일을 5.2 m씩 — 원본 비율, §28.16)
         for (int d = 0; d < 4; d++)
         {
             Vector2 dir = CandyForestLayout.RoadDir[d];
             float yaw = Mathf.Abs(dir.y) > 0.5f ? 90f : 0f;
-            for (float t = room + 3f; t < CandyForestLayout.MapRadius + 1f; t += 5.7f)
+            for (float t = room + 3f; t < CandyForestLayout.MapRadius + 1f; t += 5.2f)
             { Spawn("CF_Tile_Path", tiles, new Vector3(dir.x, 0f, dir.y) * t + Vector3.up * 0.012f, yaw + rng.Next(2) * 180f, true); n++; } // 풀밭과 겹치는 곳에서 길이 위
         }
         // 풀밭: 새 초록 바닥 모델(약 10 × 9 m, 2026-10-20) — 10% 넘게 겹침, 반쯤 180° 돌려 이음매를 숨김.

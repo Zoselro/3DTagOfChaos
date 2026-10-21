@@ -1,0 +1,8 @@
+Tiles_01 face 1.30 islands 2
+  verts   4888 z -1.30..+1.05 at (-0.00, 0.00) w 5.49
+  verts    221 z +0.23..+1.14 at (2.16, -0.95) w 0.83
+Tiles_02 face 1.00 islands 1
+  verts   3090 z -1.00..+0.97 at (0.00, 0.00) w 5.90
+GreenFloor_00 face 2.80 islands 1
+  verts  40599 z -2.80..+1.77 at (0.00, -0.00) w 10.00
+DONE

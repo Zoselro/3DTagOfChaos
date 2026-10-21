@@ -1,0 +1,11 @@
+ENTRANCE scale 9.0 size (15.17, 15.18, 16.66) floor 3.97 back wall 7.15 mouth -1.23
+BAKED CoasterEntrance tris 60000 tex 2048
+STAIRS faces 7808 front foot -7.58 back foot 13.5
+RAIL scale 25.432 size (48.0, 7.28, 19.81) tris 71614
+POST proto verts 1504 scale 11.63 height 4.39
+POSTS 21 from candidates 652 single-layer 402
+SUPPORTS posts 21 braces 48 tris 64428
+AO CoasterRail 1024
+AO CoasterSupports 1024
+EXPORT {'entrance': {'scale': 9.0, 'size': [15.17, 15.18, 16.66], 'floor': 3.965, 'pass_half': 2.2, 'pass_height': 4.2, 'stair_half': 2.7, 'front_foot': -7.582, 'mouth': -1.233, 'back_wall': 7.148, 'back_foot': 13.497, 'half_x': 7.58, 'tris': 64276, 'note': 'Blender axes: front is -y; Unity z = -y'}, 'track': {'scale': 25.432, 'size': [48.0, 7.28, 19.81], 'lift': 1.5, 'posts': 21, 'rail_tris': 71614, 'support_tris': 64428}}
+DONE

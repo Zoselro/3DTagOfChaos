@@ -1,0 +1,3 @@
+Tiles_01 orig 10214 tris size (6.0, 10.93, 2.67) | game 500 tris size (5.99, 10.02, 0.29)
+Tiles_02 orig 6176 tris size (6.0, 10.17, 2.0) | game 500 tris size (6.01, 9.99, 0.3)
+GreenFloor_00 orig 81194 tris size (10.0, 8.99, 4.57) | game 900 tris size (10.04, 9.01, 2.09)

@@ -242,18 +242,18 @@ PROPS = {
     "CF_LollipopTree": ("SwirlTree", 0, "h", 9.0, 7000),
     "CF_CottonTree": ("BubblegumTree", 0, "h", 8.0, 7000),
     "CF_PurpleTree": ("Trinkets", 2, "h", 8.5, 7000),
-    "CF_Mushrooms": ("Trinkets", 0, "h", 3.0, 3500),
-    "CF_RingFence": ("Trinkets", 1, "w", 5.0, 3500),
-    "CF_Shop": ("Trinkets", 3, "w", 9.0, 9000),
+    "CF_Mushrooms": ("Trinkets", 0, "h", 3.0, 10000),
+    "CF_RingFence": ("Trinkets", 1, "w", 5.0, 10000),
+    "CF_Shop": ("Trinkets", 3, "w", 9.0, 20000),
     "CF_Cottage": ("Cottage", 0, "w", 14.0, 16000),
-    "CF_Pond": ("Park", 0, "w", 12.0, 4000),
-    "CF_Lamp": ("Park", 1, "h", 5.0, 1500),
+    "CF_Pond": ("Park", 0, "w", 12.0, 10000),
+    "CF_Lamp": ("Park", 1, "h", 5.0, 3000),
     "CF_FenceGate": ("Park", 2, "w", 6.0, 1800),
-    "CF_Signpost": ("Park", 3, "h", 3.5, 1500),
-    "CF_Bench": ("Park", 4, "w", 3.0, 1500),
-    "CF_CandyCane": ("Whimsical", 2, "h", 8.0, 2000),
-    "CF_CandyPile": ("Tiles", 3, "w", 5.0, 3000),
-    "CF_Arch": ("Tiles", 4, "w", 18.0, 3000),
+    "CF_Signpost": ("Park", 3, "h", 3.5, 4000),
+    "CF_Bench": ("Park", 4, "w", 3.0, 4000),
+    "CF_CandyCane": ("Whimsical", 2, "h", 8.0, 4500),
+    "CF_CandyPile": ("Tiles", 3, "w", 5.0, 6000),
+    "CF_Arch": ("Tiles", 4, "w", 18.0, 6000),
     "CF_MonsterAltar": ("GateItems", 0, "w", 6.0, 5000),
     "CF_MonsterBox": ("GateItems", 1, "h", 4.0, 5000),
     "CF_Lollipop_Red": ("GateItems", 2, "h", 0.9, 1000),
@@ -290,32 +290,50 @@ def build_prop(name, spec):
 NO_COLLISION = {"CF_Pond", "CF_ExitOpen", "CF_ExitClosed"}
 
 
-def build_moss_tile(name):
-    """New green floor block (2026-10-20): ~10 x 9 m, the grass top 4 cm above the floor collider, bumps kept low."""
-    reset()
-    o = load_piece("GreenFloor", 0, name)
+def ground_block(o, fit, size, bump_max, target):
+    """Floor block (2026-10-21, §28.16): one uniform scale (the model's own proportions), the walking face 4 cm above
+    the floor collider, everything more than 0.6 m below the face cut away (it is buried), and only what rises above
+    the face lowered to bump_max (no collider on these — nothing tall enough to hide in or walk through)."""
     lo, hi = bbox(o)
     d = hi - lo
-    s = 10.0 / max(d.x, d.y)
-    m = Matrix.Diagonal((s, s, s * 0.45, 1)) @ Matrix.Translation(-Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, hi.z)))
-    bake(o, m)
-    drop(o, skirt_top(o, 1.0) - 0.04)
-    decimate(o, 900)
+    s = size / (d.y if fit == "y" else max(d.x, d.y))
+    bake(o, Matrix.Scale(s, 4) @ Matrix.Translation(-Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, lo.z))))
+    face = skirt_top(o, 1e6)
+    rise = max(v.co.z for v in o.data.vertices) - face
+    k = min(1.0, bump_max / rise) if rise > 0 else 1.0
+    for v in o.data.vertices:
+        if v.co.z > face: v.co.z = face + (v.co.z - face) * k
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(0, 0, face - 0.6), plane_no=(0, 0, 1), clear_inner=True)
+    bm.to_mesh(o.data)
+    bm.free()
+    o.data.update()
+    drop(o, face - 0.04)
+    decimate(o, target)
+    log("GROUND", o.name, "scale", round(s, 2), "bump", round(rise, 2), "->", round(rise * k, 2), "tris", tris(o))
+
+
+def build_moss_tile(name):
+    """New green floor block (2026-10-20): 10 x 9 m, the grass top 4 cm above the floor collider, bushes kept low."""
+    reset()
+    o = load_piece("GreenFloor", 0, name)
+    ground_block(o, "max", 10.0, 0.8, 3500)
     export(name, [o])
+
+
+TILE_SPEC = {  # bump limit, triangle target
+    "CF_Tile_Grass": (0.4, 2500),
+    "CF_Tile_Path": (0.6, 3000),  # candy balls are fused to the block — kept as low gumdrops
+    "CF_Tile_Lava": (0.4, 2500),
+}
 
 
 def build_tile(name, idx):
     reset()
     o = load_piece("Tiles", idx, name)
-    lo, hi = bbox(o)
-    c = Vector(((lo.x + hi.x) / 2, (lo.y + hi.y) / 2, hi.z))
-    d = hi - lo
-    # 6 m x 10 m footprint, 0.3 m thick, top at +0.04 (visual only — the walk floor is one flat collider)
-    m = Matrix.Diagonal((6.0 / d.x, 10.0 / d.y, 0.3 / d.z, 1)) @ Matrix.Translation(-c)
-    bake(o, m)
-    # the wide walking face (not the flower bumps) sits 4 cm above the floor collider
-    drop(o, skirt_top(o, 1.0) - 0.04)
-    decimate(o, 500)
+    bump, target = TILE_SPEC[name]
+    ground_block(o, "y", 10.0, bump, target)  # 10 m across the road, length from the model (about 5.5~5.9 m)
     export(name, [o])
 
 

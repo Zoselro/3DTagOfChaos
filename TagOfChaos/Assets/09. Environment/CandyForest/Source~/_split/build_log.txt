@@ -260,3 +260,40 @@ pedestal 0.27 -0.57 top 1.49 r 2.36 cells 79 seed 1.49
 EXPORT CF_Bld_Q4 {'Exterior': 22000, 'Interior': 35999, 'Inner': 6000, 'COL_Exterior': 3871, 'COL_Interior': 8152} size [21.24, 22.84, 26.06]
 OK CF_Bld_Q4
 DONE 4
+EXPORT CF_Mushrooms {'CF_Mushrooms': 10000, 'COL_Mesh': 6000} size [3.69, 3.67, 3.0]
+OK CF_Mushrooms
+EXPORT CF_RingFence {'CF_RingFence': 10000, 'COL_Mesh': 5999} size [5.0, 4.27, 3.83]
+OK CF_RingFence
+EXPORT CF_Shop {'CF_Shop': 20000, 'COL_Mesh': 6000} size [9.01, 6.21, 10.13]
+OK CF_Shop
+EXPORT CF_Pond {'CF_Pond': 10000} size [11.78, 12.0, 2.38]
+OK CF_Pond
+EXPORT CF_Lamp {'CF_Lamp': 2888, 'COL_Mesh': 2475} size [1.38, 1.53, 5.0]
+OK CF_Lamp
+EXPORT CF_Signpost {'CF_Signpost': 3998, 'COL_Mesh': 2838} size [1.56, 0.85, 3.5]
+OK CF_Signpost
+EXPORT CF_Bench {'CF_Bench': 4000, 'COL_Mesh': 3693} size [2.87, 3.0, 1.63]
+OK CF_Bench
+EXPORT CF_CandyCane {'CF_CandyCane': 4500, 'COL_Mesh': 4192} size [3.86, 1.75, 8.0]
+OK CF_CandyCane
+EXPORT CF_CandyPile {'CF_CandyPile': 6000, 'COL_Mesh': 5374} size [5.0, 4.16, 3.07]
+OK CF_CandyPile
+EXPORT CF_Arch {'CF_Arch': 6000, 'COL_Mesh': 5848} size [18.0, 8.83, 11.2]
+OK CF_Arch
+GROUND CF_Tile_Grass scale 20.63 bump 0.74 -> 0.4 tris 2500
+EXPORT CF_Tile_Grass {'CF_Tile_Grass': 2500} size [5.88, 10.0, 1.0]
+OK CF_Tile_Grass
+GROUND CF_Tile_Path scale 19.31 bump 1.14 -> 0.4 tris 3000
+EXPORT CF_Tile_Path {'CF_Tile_Path': 3000} size [5.48, 10.0, 1.0]
+OK CF_Tile_Path
+GROUND CF_Tile_Lava scale 19.81 bump 0.97 -> 0.4 tris 2500
+EXPORT CF_Tile_Lava {'CF_Tile_Lava': 2500} size [5.9, 10.0, 1.0]
+OK CF_Tile_Lava
+GROUND CF_Tile_Moss scale 5.33 bump 1.77 -> 0.8 tris 3498
+EXPORT CF_Tile_Moss {'CF_Tile_Moss': 3498} size [10.01, 9.0, 1.4]
+OK CF_Tile_Moss
+DONE 14
+GROUND CF_Tile_Path scale 19.31 bump 1.14 -> 0.6 tris 2999
+EXPORT CF_Tile_Path {'CF_Tile_Path': 2999} size [5.48, 10.0, 1.21]
+OK CF_Tile_Path
+DONE 1
