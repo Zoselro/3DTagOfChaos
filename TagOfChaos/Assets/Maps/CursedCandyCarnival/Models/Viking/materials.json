@@ -1,0 +1,213 @@
+{
+ "materials": [
+  {
+   "name": "VK_Banner",
+   "tex": "VK_Banner.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.8500000238418579,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_BarrelWood",
+   "tex": "VK_BarrelWood.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.75,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_DeckPlanks",
+   "tex": "VK_DeckPlanks.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.800000011920929,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_Flame",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    1.0,
+    0.75,
+    0.30000001192092896
+   ],
+   "metallic": 0.0,
+   "rough": 0.30000001192092896,
+   "emission": [
+    1.0,
+    0.550000011920929,
+    0.10000000149011612
+   ],
+   "strength": 25.0
+  },
+  {
+   "name": "VK_Gold",
+   "tex": "GD_Gold.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.8999999761581421,
+   "rough": 0.30000001192092896,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_LampGlass",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    1.0,
+    0.6000000238418579,
+    0.25
+   ],
+   "metallic": 0.0,
+   "rough": 0.20000000298023224,
+   "emission": [
+    1.0,
+    0.5,
+    0.15000000596046448
+   ],
+   "strength": 10.0
+  },
+  {
+   "name": "VK_PurpleMetal",
+   "tex": "GD_PurpleMetal.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.30000001192092896,
+   "rough": 0.44999998807907104,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_PurpleStone",
+   "tex": "GD_PurpleStone.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.8500000238418579,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_RedMetal",
+   "tex": "GD_RedMetal.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.30000001192092896,
+   "rough": 0.4000000059604645,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_ShipHull",
+   "tex": "VK_ShipHull_albedo.png",
+   "normal": "VK_ShipHull_normal.png",
+   "metalSmooth": "VK_ShipHull_metalSmooth.png",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "VK_SkullEmblem",
+   "tex": "VK_SkullEmblem.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  }
+ ]
+}

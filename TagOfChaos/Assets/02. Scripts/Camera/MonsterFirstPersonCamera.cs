@@ -9,6 +9,8 @@ public class MonsterFirstPersonCamera : MonoBehaviour
     [SerializeField] private float sensitivityY = 2f;
     [SerializeField] private float minPitch = -60f;
     [SerializeField] private float maxPitch = 70f;
+    [Tooltip("1인칭일 때 카메라 근접 클립(m). 몸 반지름(0.31 m)보다 작아야 벽에 붙어도 벽 너머가 비치지 않는다(Request1009Plan.md §35.3)")]
+    [SerializeField, Min(0.01f)] private float nearClip = 0.1f;
 
     [Header("Grab kill (EscapeVisualPlan.md §1.4)")]
     [Tooltip("처형이 시작되면 이 시간 동안 잡힌 쿠키 쪽으로 시점이 돌아간다(초)")]
@@ -22,6 +24,8 @@ public class MonsterFirstPersonCamera : MonoBehaviour
     private MonsterController monster;
     private float killBlend;          // 0 = 내 시점, 1 = 잡힌 쿠키를 보는 시점
     private Quaternion killLook;      // 마지막으로 본 쿠키 방향(돌아올 때 여기서부터 섞는다)
+    private Camera cam;
+    private float previousNearClip = -1f; // 3인칭(Camera_Ctrl)으로 돌아갈 때 되돌릴 값
 
     // 몸이 바라볼 수평 방향(MonsterController가 1인칭일 때 이 방향으로 몸을 돌린다).
     public Quaternion YawRotation => Quaternion.Euler(0f, yaw, 0f);
@@ -37,11 +41,18 @@ public class MonsterFirstPersonCamera : MonoBehaviour
     private void OnEnable()
     {
         if (!FreeCursor()) Cursor.lockState = CursorLockMode.Locked;
+        if (cam == null) cam = GetComponent<Camera>();
+        if (cam != null)
+        {
+            previousNearClip = cam.nearClipPlane;
+            cam.nearClipPlane = nearClip;
+        }
     }
 
     private void OnDisable()
     {
         Cursor.lockState = CursorLockMode.None;
+        if (cam != null && previousNearClip > 0f) cam.nearClipPlane = previousNearClip;
     }
 
     private void LateUpdate()

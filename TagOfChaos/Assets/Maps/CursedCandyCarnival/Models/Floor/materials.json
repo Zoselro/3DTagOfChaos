@@ -1,0 +1,156 @@
+{
+ "materials": [
+  {
+   "name": "FL_Basic",
+   "tex": "FL_Basic_albedo.png",
+   "normal": "FL_Basic_normal.png",
+   "metalSmooth": "FL_Basic_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "FL_Cobble",
+   "tex": "FL_Cobble_albedo.png",
+   "normal": "FL_Cobble_normal.png",
+   "metalSmooth": "FL_Cobble_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "FL_PatternCompass",
+   "tex": "FL_PatternCompass_albedo.png",
+   "normal": "FL_PatternCompass_normal.png",
+   "metalSmooth": "FL_PatternCompass_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "FL_PatternDiamond",
+   "tex": "FL_PatternDiamond_albedo.png",
+   "normal": "FL_PatternDiamond_normal.png",
+   "metalSmooth": "FL_PatternDiamond_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "FL_PatternFlower",
+   "tex": "FL_PatternFlower_albedo.png",
+   "normal": "FL_PatternFlower_normal.png",
+   "metalSmooth": "FL_PatternFlower_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "FL_PatternWheel",
+   "tex": "FL_PatternWheel_albedo.png",
+   "normal": "FL_PatternWheel_normal.png",
+   "metalSmooth": "FL_PatternWheel_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "FL_Sewer",
+   "tex": "FL_Sewer_albedo.png",
+   "normal": "FL_Sewer_normal.png",
+   "metalSmooth": "FL_Sewer_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "FL_Wet",
+   "tex": "FL_Wet_albedo.png",
+   "normal": "FL_Wet_normal.png",
+   "metalSmooth": "FL_Wet_metalSmooth.png",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 1.0,
+   "rough": 0.0,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  }
+ ]
+}

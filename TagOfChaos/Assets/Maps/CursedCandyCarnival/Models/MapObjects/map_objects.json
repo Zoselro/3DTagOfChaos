@@ -1,0 +1,200 @@
+{
+ "character_height": 2.0,
+ "objects": {
+  "MO_CherryJuice": {
+   "size": [
+    2.1,
+    2.15,
+    4.03
+   ],
+   "tris": 4430
+  },
+  "MO_CottonCandy": {
+   "size": [
+    2.97,
+    1.73,
+    3.95
+   ],
+   "tris": 7360
+  },
+  "MO_Popcorn": {
+   "size": [
+    2.85,
+    2.05,
+    5.06
+   ],
+   "tris": 5468
+  },
+  "MO_Candy": {
+   "size": [
+    2.32,
+    2.49,
+    4.16
+   ],
+   "tris": 6858
+  },
+  "MO_Tent": {
+   "size": [
+    9.74,
+    10.52,
+    8.66
+   ],
+   "tris": 10622
+  },
+  "MO_Bench": {
+   "size": [
+    2.0,
+    0.78,
+    1.08
+   ],
+   "tris": 1732
+  },
+  "MO_StreetLamp": {
+   "size": [
+    1.07,
+    0.75,
+    5.54
+   ],
+   "tris": 1730
+  },
+  "MO_CrateBarrel": {
+   "size": [
+    2.36,
+    1.24,
+    1.95
+   ],
+   "tris": 1972
+  },
+  "MO_Fountain": {
+   "size": [
+    4.8,
+    4.8,
+    4.36
+   ],
+   "tris": 3880
+  },
+  "MO_Fence": {
+   "size": [
+    3.36,
+    0.36,
+    2.33
+   ],
+   "tris": 1790
+  },
+  "MO_MonsterRoom": {
+   "size": [
+    25.05,
+    25.05,
+    6.92
+   ],
+   "tris": 22434
+  },
+  "MO_MonsterRoomDoor": {
+   "size": [
+    4.0,
+    0.57,
+    4.5
+   ],
+   "tris": 1876
+  },
+  "MO_ExitGate": {
+   "size": [
+    9.1,
+    2.1,
+    9.76
+   ],
+   "tris": 5618
+  },
+  "MO_ExitGateDoorL": {
+   "size": [
+    2.91,
+    0.28,
+    5.39
+   ],
+   "tris": 1270
+  },
+  "MO_ExitGateDoorR": {
+   "size": [
+    2.91,
+    0.28,
+    5.39
+   ],
+   "tris": 1270
+  },
+  "MO_ExitLever": {
+   "size": [
+    1.0,
+    0.86,
+    1.16
+   ],
+   "tris": 960
+  },
+  "MO_ExitLeverArm": {
+   "size": [
+    0.5,
+    0.32,
+    1.35
+   ],
+   "tris": 200
+  }
+ },
+ "tent": {
+  "radius": 4.2,
+  "wall": 3.2,
+  "door_width": 2.8,
+  "door_height": 2.9,
+  "doors": "front -Y, back +Y",
+  "markers": [
+   "COL_Wall_00",
+   "COL_Wall_01",
+   "COL_Wall_02",
+   "COL_Wall_03",
+   "COL_Wall_04",
+   "COL_Wall_05",
+   "COL_Wall_06",
+   "COL_Wall_07",
+   "COL_Wall_08",
+   "COL_Wall_09",
+   "COL_Wall_10",
+   "COL_Wall_11",
+   "COL_Wall_12",
+   "COL_Wall_13",
+   "COL_Crates",
+   "COL_Barrels",
+   "Light_Inside",
+   "Light_Exit_Front",
+   "Light_Exit_Back",
+   "Zone_Inside"
+  ]
+ },
+ "exit_gate": {
+  "opening": 5.6,
+  "leaf_height": 5.0,
+  "hinge_left": [
+   -2.8,
+   0,
+   0
+  ],
+  "hinge_right": [
+   2.8,
+   0,
+   0
+  ],
+  "open_angle_deg": 100,
+  "lever_offset": [
+   5.4,
+   -1.6,
+   0
+  ],
+  "lever_arm_pivot_z": 1.15
+ },
+ "monster_room": {
+  "radius": 12.0,
+  "wall": 0.6,
+  "height": 5.0,
+  "door_width": 4.0,
+  "door_height": 4.5,
+  "doors": "12/3/6/9 o'clock on the wall circle"
+ },
+ "note": "Blender z up, metres, each object origin = bottom centre (gate leaves / lever arm: on their hinge / pivot)."
+}

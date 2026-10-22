@@ -1,0 +1,18 @@
+{
+ "platform_floor": 1.2,
+ "pivot_height": 14.7,
+ "arm_length": 9.5,
+ "ship_length": 14.0,
+ "beam": 4.7,
+ "max_swing_deg": 75.0,
+ "period_s": 6.0,
+ "seats": 20,
+ "tris": {
+  "VK_Platform": 25932,
+  "VK_Frame": 15548,
+  "VK_Axle": 4072,
+  "VK_Ship": 3304,
+  "VK_ShipHull": 153620
+ },
+ "note": "Ship origin = pivot on the axle; swing = rotation about Blender Y (Unity X after export). Stairs at -Y (front)."
+}

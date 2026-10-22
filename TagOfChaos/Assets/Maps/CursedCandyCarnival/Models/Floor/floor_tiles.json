@@ -1,0 +1,37 @@
+{
+ "tiles": {
+  "FL_Basic": {
+   "size_m": 2.0,
+   "texture_px": 2048
+  },
+  "FL_Wet": {
+   "size_m": 2.0,
+   "texture_px": 2048
+  },
+  "FL_Cobble": {
+   "size_m": 2.0,
+   "texture_px": 2048
+  },
+  "FL_Sewer": {
+   "size_m": 2.0,
+   "texture_px": 2048
+  },
+  "FL_PatternCompass": {
+   "size_m": 4.0,
+   "texture_px": 4096
+  },
+  "FL_PatternWheel": {
+   "size_m": 4.0,
+   "texture_px": 4096
+  },
+  "FL_PatternDiamond": {
+   "size_m": 4.0,
+   "texture_px": 4096
+  },
+  "FL_PatternFlower": {
+   "size_m": 4.0,
+   "texture_px": 4096
+  }
+ },
+ "note": "Flat squares, origin = centre on the ground, UV 0..1. Every tile border is half a grout joint, so tiles of any kind sit side by side without a seam. Base tiles 2 m (slab rows 0.5 m, cobbles ~0.29 m), patterns 4 m."
+}

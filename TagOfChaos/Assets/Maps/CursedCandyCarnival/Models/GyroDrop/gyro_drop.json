@@ -1,0 +1,25 @@
+{
+ "platform_floor": 3.0,
+ "tower_top": 38.0,
+ "crown_base": 38.6,
+ "ring_low": 4.4,
+ "ring_high": 29.5,
+ "ring_inner": 2.6,
+ "ring_outer": 7.4,
+ "seats": 16,
+ "platform_radius": 11.0,
+ "cycle_seconds": {
+  "rise": 10.0,
+  "hold": 2.0,
+  "fall": 0.9,
+  "brake": 1.2,
+  "board": 2.0
+ },
+ "tris": {
+  "GD_Platform": 17970,
+  "GD_Tower": 17664,
+  "GD_Ring": 30288,
+  "GD_Crown": 9358
+ },
+ "note": "Blender z up. Unity: ring origin = ring centre, move along local Y between ring_low and ring_high; front (stairs) = -Y in Blender."
+}
