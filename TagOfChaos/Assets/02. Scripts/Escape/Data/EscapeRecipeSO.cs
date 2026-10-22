@@ -60,6 +60,9 @@ public class EscapeRecipeSO : ScriptableObject
     [Tooltip("건물 4곳에 넣는 재료 4종. 판마다 어느 건물에 어떤 재료를 넣을지 섞는다. 위의 칸 묶음·개수 모드·로켓 칸은 예전 규칙(쓰지 않음, 에셋 호환).")]
     [SerializeField] private ItemSO[] buildingMaterials = new ItemSO[0];
     public ItemSO[] BuildingMaterials => buildingMaterials;
+    [Tooltip("켜면 섞지 않고 buildingMaterials 순서대로 Building_Q1~Q4에 준다 — 건물 간판이 재료를 말하는 맵(저주받은 놀이공원, §36).")]
+    [SerializeField] private bool fixedBuildingOrder;
+    public bool FixedBuildingOrder => fixedBuildingOrder;
     [Tooltip("스파이 수리키트 수(§26: 0 = 로켓 칸 수). 1개는 스파이 상자, 나머지는 일반 상자. 위의 rocketSlots가 맵별 로켓 재료다.")]
     [SerializeField, Min(0)] private int repairKitCount;
     public int RepairKitCount => repairKitCount;
@@ -89,6 +92,11 @@ public class EscapeRecipeSO : ScriptableObject
 
 #if UNITY_EDITOR
     public void EditorSetBuildingMaterials(ItemSO[] materials) => buildingMaterials = materials ?? new ItemSO[0];
+    public void EditorSetBuildingMaterials(ItemSO[] materials, bool fixedOrder)
+    {
+        EditorSetBuildingMaterials(materials);
+        fixedBuildingOrder = fixedOrder;
+    }
 
     public void EditorSetup(string map, EscapeExitKind exit, RecipeMode recipeMode, SlotGroup[] slotGroups, string counterName,
         ItemSO[] counters, RocketSlot[] rocket, ItemSO toolbox, int toolboxesPerSpy, bool fillsCapacity = false)

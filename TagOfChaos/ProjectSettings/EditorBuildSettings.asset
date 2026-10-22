@@ -35,7 +35,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/Test/Test_ChocolateFactory.unity
     guid: fea4dba1cc176cf4fb34ccbdef0a155d
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Maps/Test/Test_CursedCandyCarnival.unity
     guid: bf303a3226d1b554191e328f906f4d41
   - enabled: 1
@@ -44,6 +44,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/CandyForest.unity
     guid: f70c2cdd5ad69ae4d9470b45805ce514
+  - enabled: 1
+    path: Assets/Scenes/Maps/CursedCandyCarnival.unity
+    guid: aa663cb4a16eae54b98d0380bd463fe0
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0

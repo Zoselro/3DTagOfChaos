@@ -1,0 +1,78 @@
+{
+ "cradle_height": 1.2,
+ "objects": {
+  "CUR_Socket_SafetyBelt": {
+   "size": [
+    1.3,
+    1.25,
+    2.35
+   ],
+   "tris": 2740
+  },
+  "CUR_Socket_Battery": {
+   "size": [
+    1.77,
+    1.06,
+    2.22
+   ],
+   "tris": 2548
+  },
+  "CUR_Socket_RepairKit": {
+   "size": [
+    1.43,
+    0.92,
+    2.26
+   ],
+   "tris": 2632
+  },
+  "CUR_Socket_RedButton": {
+   "size": [
+    1.22,
+    1.03,
+    1.93
+   ],
+   "tris": 2480
+  },
+  "MO_Bunting": {
+   "size": [
+    8.64,
+    0.64,
+    4.84
+   ],
+   "tris": 1060
+  },
+  "MO_Planter": {
+   "size": [
+    2.58,
+    2.58,
+    1.51
+   ],
+   "tris": 8012
+  },
+  "MO_Signpost": {
+   "size": [
+    2.41,
+    2.1,
+    3.74
+   ],
+   "tris": 1602
+  },
+  "MO_BalloonCart": {
+   "size": [
+    2.34,
+    1.51,
+    4.67
+   ],
+   "tris": 3456
+  },
+  "MO_TicketBooth": {
+   "size": [
+    3.1,
+    3.1,
+    5.2
+   ],
+   "tris": 2316
+  }
+ },
+ "note": "Sockets: origin = floor under the item, front -Y (Unity +Z) faces the room centre; child Socket_<key> = tinted plate."
+}

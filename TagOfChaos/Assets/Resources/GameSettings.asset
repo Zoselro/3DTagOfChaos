@@ -30,7 +30,7 @@ MonoBehaviour:
   - CandyForest
   - Test_GingerbreadVillage
   - Test_ChocolateFactory
-  - Test_CursedCandyCarnival
+  - CursedCandyCarnival
   - Test_HauntedBakery
   minTimeAttackMinutes: 1
   maxTimeAttackMinutes: 10

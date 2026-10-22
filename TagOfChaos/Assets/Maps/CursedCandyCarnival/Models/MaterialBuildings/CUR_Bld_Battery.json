@@ -1,0 +1,98 @@
+{
+ "name": "CUR_Bld_Battery",
+ "kind": "building",
+ "source": "Battery",
+ "scale_vs_candyforest": 1.7,
+ "min": [
+  -19.21,
+  -0.587,
+  -19.789
+ ],
+ "max": [
+  18.19,
+  26.45,
+  15.13
+ ],
+ "tris": {
+  "Exterior": 419349,
+  "Interior": 8901,
+  "COL_Exterior": 8000
+ },
+ "outer_radii": [
+  16.43,
+  15.12,
+  15.04,
+  17.33,
+  16.37,
+  13.81,
+  11.69,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  10.81,
+  13.41,
+  16.27,
+  16.93,
+  15.51,
+  15.73,
+  17.21,
+  16.28,
+  16.64,
+  17.08,
+  17.89,
+  19.73,
+  19.63,
+  18.08,
+  18.16,
+  0.0,
+  0.0,
+  17.94,
+  18.03,
+  19.35,
+  20.01,
+  17.27,
+  16.62,
+  17.6,
+  15.93
+ ],
+ "inner_half": [
+  8.21,
+  8.69
+ ],
+ "room": {
+  "width": 16.42,
+  "depth": 17.38
+ },
+ "pedestal": [
+  -4.3,
+  -0.0,
+  2.69,
+  1.25
+ ],
+ "door": [
+  8.16,
+  8.59
+ ],
+ "doors": {
+  "front": {
+   "width": 8.84,
+   "height": 8.76
+  },
+  "back": {
+   "width": 8.16,
+   "height": 8.59
+  }
+ },
+ "ceiling": {
+  "centre": 15.15,
+  "edge_min": 5.97
+ },
+ "interior_floor": 0.0,
+ "faces_cut": 31717,
+ "texel_density_px_per_m": {
+  "meshy_albedo_at_33m": 21,
+  "upscaled_albedo": 42,
+  "detail_layer": 1365
+ }
+}

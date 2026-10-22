@@ -1,6 +1,25 @@
 {
  "materials": [
   {
+   "name": "MO_BoltGlow",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.6000000238418579,
+    1.0,
+    0.30000001192092896
+   ],
+   "metallic": 0.0,
+   "rough": 0.30000001192092896,
+   "emission": [
+    0.44999998807907104,
+    1.0,
+    0.20000000298023224
+   ],
+   "strength": 6.0
+  },
+  {
    "name": "MO_Bone",
    "tex": "VK_Bone.png",
    "normal": "",
@@ -343,6 +362,25 @@
    "strength": 0.0
   },
   {
+   "name": "MO_RedPaint",
+   "tex": "GD_RedSeat.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
    "name": "MO_RedWhiteStripes",
    "tex": "MO_RedWhiteStripes.png",
    "normal": "",
@@ -430,6 +468,44 @@
    ],
    "metallic": 0.0,
    "rough": 0.5,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "MO_SocketPlate",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.11999999731779099,
+    0.10000000149011612,
+    0.11999999731779099
+   ],
+   "metallic": 0.0,
+   "rough": 0.3499999940395355,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "MO_Soil",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.09000000357627869,
+    0.05000000074505806,
+    0.05999999865889549
+   ],
+   "metallic": 0.0,
+   "rough": 0.949999988079071,
    "emission": [
     1.0,
     1.0,

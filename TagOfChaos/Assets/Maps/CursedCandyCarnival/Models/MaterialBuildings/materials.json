@@ -1,0 +1,361 @@
+{
+ "materials": [
+  {
+   "name": "CUR_Bld_Battery",
+   "tex": "CUR_Bld_Battery_albedo.png",
+   "normal": "CUR_Bld_Battery_normal.png",
+   "metalSmooth": "CUR_Bld_Battery_metalSmooth.png",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "CUR_Bld_Detail_albedo.png",
+   "detailNormal": "CUR_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CUR_Bld_RedButton",
+   "tex": "CUR_Bld_RedButton_albedo.png",
+   "normal": "CUR_Bld_RedButton_normal.png",
+   "metalSmooth": "CUR_Bld_RedButton_metalSmooth.png",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "CUR_Bld_Detail_albedo.png",
+   "detailNormal": "CUR_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CUR_Bld_RepairKit",
+   "tex": "CUR_Bld_RepairKit_albedo.png",
+   "normal": "CUR_Bld_RepairKit_normal.png",
+   "metalSmooth": "CUR_Bld_RepairKit_metalSmooth.png",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "CUR_Bld_Detail_albedo.png",
+   "detailNormal": "CUR_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CUR_Bld_SafetyBelt",
+   "tex": "CUR_Bld_SafetyBelt_albedo.png",
+   "normal": "CUR_Bld_SafetyBelt_normal.png",
+   "metalSmooth": "CUR_Bld_SafetyBelt_metalSmooth.png",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "CUR_Bld_Detail_albedo.png",
+   "detailNormal": "CUR_Bld_Detail_normal.png"
+  },
+  {
+   "name": "MB_BlueGlow",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.30000001192092896,
+    0.6000000238418579,
+    1.0
+   ],
+   "metallic": 0.0,
+   "rough": 0.30000001192092896,
+   "emission": [
+    0.25,
+    0.550000011920929,
+    1.0
+   ],
+   "strength": 8.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_Canvas",
+   "tex": "MO_TentStripes.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.8500000238418579,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_FloorTiles",
+   "tex": "FL_Basic_albedo.png",
+   "normal": "FL_Basic_normal.png",
+   "metalSmooth": "FL_Basic_metalSmooth.png",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.75,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_Glow",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    1.0,
+    0.25,
+    0.20000000298023224
+   ],
+   "metallic": 0.0,
+   "rough": 0.30000001192092896,
+   "emission": [
+    1.0,
+    0.20000000298023224,
+    0.15000000596046448
+   ],
+   "strength": 8.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_Gold",
+   "tex": "GD_Gold.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.8999999761581421,
+   "rough": 0.30000001192092896,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_Iron",
+   "tex": "MO_Iron.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.6000000238418579,
+   "rough": 0.44999998807907104,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_PurpleMetal",
+   "tex": "GD_PurpleMetal.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.30000001192092896,
+   "rough": 0.44999998807907104,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_PurpleStone",
+   "tex": "GD_PurpleStone.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.8500000238418579,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_RedButton",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.8999999761581421,
+    0.05000000074505806,
+    0.05999999865889549
+   ],
+   "metallic": 0.0,
+   "rough": 0.25,
+   "emission": [
+    0.800000011920929,
+    0.019999999552965164,
+    0.029999999329447746
+   ],
+   "strength": 2.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_RedMetal",
+   "tex": "GD_RedMetal.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.30000001192092896,
+   "rough": 0.4000000059604645,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_Shadow",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.029999999329447746,
+    0.019999999552965164,
+    0.03999999910593033
+   ],
+   "metallic": 0.0,
+   "rough": 0.8999999761581421,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_WallWood",
+   "tex": "VK_HullWood.png",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    0.800000011920929,
+    0.800000011920929,
+    0.800000011920929
+   ],
+   "metallic": 0.0,
+   "rough": 0.699999988079071,
+   "emission": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "strength": 0.0,
+   "detail": "",
+   "detailNormal": ""
+  },
+  {
+   "name": "MB_YellowGlow",
+   "tex": "",
+   "normal": "",
+   "metalSmooth": "",
+   "color": [
+    1.0,
+    0.800000011920929,
+    0.20000000298023224
+   ],
+   "metallic": 0.0,
+   "rough": 0.30000001192092896,
+   "emission": [
+    1.0,
+    0.75,
+    0.15000000596046448
+   ],
+   "strength": 8.0,
+   "detail": "",
+   "detailNormal": ""
+  }
+ ]
+}

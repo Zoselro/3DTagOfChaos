@@ -101,6 +101,10 @@ public enum SoundId
     OvenDoorRoll = 722,
     OvenFlash = 723,
     OvenBroken = 724, // 완성 전 고장 난 오븐 반복음(Request1009Plan.md §16.7)
+    VikingCreak = 725,  // 바이킹이 끝에서 돌아설 때 나무·쇠 삐걱(한 번, 변형 3 — Request1009Plan.md §36)
+    VikingWhoosh = 726, // 바이킹이 가장 아래를 지날 때 바람(한 번)
+    VikingHum = 727,    // 바이킹 축·모터 소리(반복, 흔들림 크기에 따라)
+    VikingBell = 728,   // 바이킹 출발 종(한 번)
     TrainPuff = 730,
     TrainWhistle = 731,
     TrainChug = 732,

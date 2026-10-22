@@ -1,0 +1,98 @@
+{
+ "name": "CUR_Bld_SafetyBelt",
+ "kind": "building",
+ "source": "SafetyBelt",
+ "scale_vs_candyforest": 1.7,
+ "min": [
+  -18.87,
+  -2.621,
+  -16.618
+ ],
+ "max": [
+  18.53,
+  24.36,
+  13.731
+ ],
+ "tris": {
+  "Exterior": 537974,
+  "Interior": 8710,
+  "COL_Exterior": 8000
+ },
+ "outer_radii": [
+  18.32,
+  18.22,
+  17.55,
+  16.88,
+  15.7,
+  13.37,
+  13.08,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  13.86,
+  16.85,
+  18.57,
+  18.44,
+  18.56,
+  18.69,
+  18.73,
+  18.74,
+  18.87,
+  19.96,
+  19.94,
+  14.19,
+  12.1,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  12.03,
+  13.99,
+  19.67,
+  19.67,
+  18.54,
+  18.38,
+  18.42
+ ],
+ "inner_half": [
+  8.84,
+  6.46
+ ],
+ "room": {
+  "width": 17.68,
+  "depth": 12.92
+ },
+ "pedestal": [
+  -4.42,
+  -0.0,
+  2.69,
+  1.25
+ ],
+ "door": [
+  10.2,
+  6.34
+ ],
+ "doors": {
+  "front": {
+   "width": 13.94,
+   "height": 6.85
+  },
+  "back": {
+   "width": 10.2,
+   "height": 6.34
+  }
+ },
+ "ceiling": {
+  "centre": 9.04,
+  "edge_min": 5.97
+ },
+ "interior_floor": 0.0,
+ "faces_cut": 156164,
+ "texel_density_px_per_m": {
+  "meshy_albedo_at_33m": 21,
+  "upscaled_albedo": 42,
+  "detail_layer": 1365
+ }
+}

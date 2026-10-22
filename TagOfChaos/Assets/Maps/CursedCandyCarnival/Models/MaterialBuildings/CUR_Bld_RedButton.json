@@ -1,0 +1,98 @@
+{
+ "name": "CUR_Bld_RedButton",
+ "kind": "building",
+ "source": "Control",
+ "scale_vs_candyforest": 1.7,
+ "min": [
+  -21.59,
+  -2.0,
+  -13.067
+ ],
+ "max": [
+  15.81,
+  20.063,
+  13.09
+ ],
+ "tris": {
+  "Exterior": 429337,
+  "Interior": 9398,
+  "COL_Exterior": 7999
+ },
+ "outer_radii": [
+  15.8,
+  15.75,
+  15.53,
+  14.8,
+  14.32,
+  13.81,
+  11.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  16.97,
+  17.78,
+  18.86,
+  20.21,
+  21.1,
+  21.58,
+  21.59,
+  21.16,
+  20.37,
+  19.13,
+  15.97,
+  14.82,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  12.79,
+  13.16,
+  14.08,
+  14.57,
+  14.97,
+  15.62,
+  15.78,
+  15.81
+ ],
+ "inner_half": [
+  12.13,
+  4.49
+ ],
+ "room": {
+  "width": 24.26,
+  "depth": 8.99
+ },
+ "pedestal": [
+  -6.82,
+  -0.0,
+  2.69,
+  1.25
+ ],
+ "door": [
+  10.2,
+  6.5
+ ],
+ "doors": {
+  "front": {
+   "width": 13.26,
+   "height": 6.5
+  },
+  "back": {
+   "width": 10.2,
+   "height": 7.18
+  }
+ },
+ "ceiling": {
+  "centre": 8.73,
+  "edge_min": 5.97
+ },
+ "interior_floor": 0.0,
+ "faces_cut": 95807,
+ "texel_density_px_per_m": {
+  "meshy_albedo_at_33m": 21,
+  "upscaled_albedo": 42,
+  "detail_layer": 1365
+ }
+}

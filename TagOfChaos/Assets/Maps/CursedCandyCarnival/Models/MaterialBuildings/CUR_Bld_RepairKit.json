@@ -1,0 +1,98 @@
+{
+ "name": "CUR_Bld_RepairKit",
+ "kind": "building",
+ "source": "Repair",
+ "scale_vs_candyforest": 1.7,
+ "min": [
+  -19.04,
+  -2.572,
+  -8.555
+ ],
+ "max": [
+  18.36,
+  19.252,
+  16.712
+ ],
+ "tris": {
+  "Exterior": 285097,
+  "Interior": 8864,
+  "COL_Exterior": 7999
+ },
+ "outer_radii": [
+  18.34,
+  17.85,
+  17.45,
+  10.35,
+  10.43,
+  10.17,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  13.8,
+  14.63,
+  19.36,
+  19.46,
+  18.54,
+  18.58,
+  18.6,
+  18.51,
+  13.66,
+  11.32,
+  10.69,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  8.26,
+  9.88,
+  10.41,
+  12.81,
+  15.6,
+  16.34
+ ],
+ "inner_half": [
+  12.41,
+  3.91
+ ],
+ "room": {
+  "width": 24.82,
+  "depth": 7.82
+ },
+ "pedestal": [
+  -6.2,
+  -0.0,
+  2.69,
+  1.25
+ ],
+ "door": [
+  10.2,
+  5.76
+ ],
+ "doors": {
+  "front": {
+   "width": 13.94,
+   "height": 5.76
+  },
+  "back": {
+   "width": 10.2,
+   "height": 6.23
+  }
+ },
+ "ceiling": {
+  "centre": 6.83,
+  "edge_min": 5.98
+ },
+ "interior_floor": 0.0,
+ "faces_cut": 111045,
+ "texel_density_px_per_m": {
+  "meshy_albedo_at_33m": 21,
+  "upscaled_albedo": 42,
+  "detail_layer": 1365
+ }
+}

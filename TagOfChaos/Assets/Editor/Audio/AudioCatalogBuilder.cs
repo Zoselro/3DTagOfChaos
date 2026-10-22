@@ -202,6 +202,15 @@ public static class SoundDefaults
                     e.importance = SoundImportance.Normal;
                 }
                 else if (id == SoundId.CoasterWhoosh) { e.volume = 0.6f; e.cooldown = 0.5f; e.importance = SoundImportance.Normal; }
+                else if (id == SoundId.VikingHum)
+                {
+                    e.pitchRange = Vector2.one; // 반복음 — 판 내내 흔들리므로 배경음보다 작게
+                    e.volume = 0.5f;
+                    e.cooldown = 0f;
+                    e.importance = SoundImportance.Normal;
+                }
+                else if (id == SoundId.VikingCreak || id == SoundId.VikingWhoosh) { e.volume = 0.65f; e.cooldown = 0.8f; e.importance = SoundImportance.Normal; }
+                else if (id == SoundId.VikingBell) { e.volume = 0.6f; e.cooldown = 2f; e.importance = SoundImportance.Normal; }
                 else if (id == SoundId.LanternFlicker)
                 {
                     e.volume = 0.5f;          // 등불 여러 개가 따로 깜빡인다 — 작게, 가까이서만
@@ -273,6 +282,9 @@ public static class SoundDefaults
             case SoundId.CoasterChain: falloff = SoundFalloff.Landmark; min = 4f; max = 30f; return;
             case SoundId.CoasterWhoosh: falloff = SoundFalloff.Landmark; min = 5f; max = 40f; return;
             case SoundId.LanternFlicker: falloff = SoundFalloff.Action; min = 1.5f; max = 10f; return;
+            case SoundId.VikingHum: falloff = SoundFalloff.Landmark; min = 6f; max = 40f; return;      // 바이킹 — 가까이 가야 또렷
+            case SoundId.VikingCreak: case SoundId.VikingWhoosh: falloff = SoundFalloff.Landmark; min = 6f; max = 50f; return;
+            case SoundId.VikingBell: falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return;
         }
         int group = (int)id / 100;
         if (group == 7) { falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return; }  // 맵 연출

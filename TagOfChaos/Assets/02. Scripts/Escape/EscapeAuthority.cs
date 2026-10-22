@@ -72,10 +72,10 @@ public sealed class EscapeAuthority
         int spies = RoomState.TryGetIntArray(NetKeys.SpyActorNumbers, out int[] spyActors) ? spyActors.Length : 0;
         int cookies = Mathf.Max(1, players - monsters - spies);
 
-        // 건물: 재료 4종을 판마다 섞어 4곳에 하나씩, 활성 = 쿠키 수 + 1(최대 4, §25.3 Q3)
+        // 건물: 재료 4종을 판마다 섞어 4곳에 하나씩(레시피가 고정이면 순서대로), 활성 = 쿠키 수 + 1(최대 4, §25.3 Q3)
         var materials = new List<ItemSO>();
         foreach (ItemSO m in recipe.BuildingMaterials) if (m != null) materials.Add(m);
-        Shuffle(materials);
+        if (!recipe.FixedBuildingOrder) Shuffle(materials); // 간판이 재료를 말하는 건물(놀이공원)은 순서 그대로(§36)
         int activeCount = ActiveBuildingsFor(cookies, Mathf.Min(EscapeState.BuildingCount, materials.Count));
         var activeOrder = new List<int>();
         for (int i = 0; i < materials.Count && i < EscapeState.BuildingCount; i++) activeOrder.Add(i);
