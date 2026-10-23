@@ -40,7 +40,6 @@ public class InputBindingsSO : ScriptableObject
 
     [Header("Mouse")]
     [Tooltip("0=왼쪽, 1=오른쪽, 2=가운데")]
-    [SerializeField, Range(0, 2)] private int paintButton = 0;
     [SerializeField, Range(0, 2)] private int cameraRotateButton = 1;
     [SerializeField] private string mouseXAxis = "Mouse X";
     [SerializeField] private string mouseYAxis = "Mouse Y";
@@ -61,7 +60,6 @@ public class InputBindingsSO : ScriptableObject
     public KeyCode SkillKey => skillKey;
     public KeyCode SpectateNextKey => spectateNextKey;
     public KeyCode ChatSubmitKey => chatSubmitKey;
-    public int PaintButton => paintButton;
     public int CameraRotateButton => cameraRotateButton;
     public string MouseXAxis => mouseXAxis;
     public string MouseYAxis => mouseYAxis;

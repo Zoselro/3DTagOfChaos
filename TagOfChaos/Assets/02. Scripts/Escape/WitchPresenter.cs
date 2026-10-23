@@ -4,8 +4,8 @@ using UnityEngine;
 // 마녀 연출(EscapePlan.md §1.2, §5.7, D38 → Request1009Plan.md §23). 맵 밖 멀리서 나타나 걸어와 맵을 내리친다. 시각은 모두 WitchTimeline.
 // - 나타나는 시각(WitchAppearAt)부터 3초 동안 알파 0 → 1로 서서히 나타나며 숙인 자세에서 일어선다(Rise).
 //   나타나는 곳 = 맵 중심에서 WITCH_Anchor 방향으로 450 m(WitchPath). 그동안 맵 안개를 옅게 해 멀리서도 보이게 한다(§23.4 Q5).
-// - 타임어택: 맵을 등진 채 나타나 2초 동안 뒤돌아선다(TurnBack, §23.4 Q1). 처단: 처음부터 맵을 본다.
-// - 걷기: 타임어택은 시작 연출이 끝난 뒤 타임어택 끝까지, 처단은 10초. 내리칠 자리는 발끝이 맵 "Ground" 사각형에 닿는 곳(Q6).
+// - 맵을 등진 채 나타나 2초 동안 뒤돌아선다(TurnBack, §23.4 Q1).
+// - 걷기: 시작 연출이 끝난 뒤 타임어택 끝까지. 내리칠 자리는 발끝이 맵 "Ground" 사각형에 닿는 곳(Q6).
 //   걷는 속도는 따로 없다 — 걷는 시간이 바뀌면 속도가 바뀌고, Walk 동작 재생 속도와 발걸음(소리·흔들림)도 그에 맞춘다.
 // - 위치·방향·동작은 공통 시계로 계산하므로 모든 화면이 같고, 늦게 들어온 사람도 바로 맞는 자리에 있다.
 // - 도착하면(걷기 끝) 3테이크(Request1009Plan.md §24.10): Idle 자세로 고개를 숙여 발아래를 보다가(테이크 1), 왼발을 들어 밑창이
@@ -62,7 +62,7 @@ public class WitchPresenter : MonoBehaviour
 
     // 길(씬이 열릴 때 한 번 — 모든 화면이 같은 씬이라 같은 값)
     private Vector3 mapCenter, outward, startPoint, strikePoint, groundContact;
-    private Quaternion faceMap, faceAway;
+    private Quaternion faceAway;
     private float originalFog;
     private bool fogChanged;
 
@@ -83,7 +83,6 @@ public class WitchPresenter : MonoBehaviour
     public Vector3 StompTarget => EnsureStage() + TowardMap * StompInset; // 왼발이 밟는 곳(땅)
     public Vector3 ImpactPoint => StompTarget;                     // 박살이 시작되는 곳
     public bool InFinale => !double.IsNaN(finaleSince);
-    public double FinaleSince => finaleSince;
 
     private void Awake()
     {
@@ -124,7 +123,6 @@ public class WitchPresenter : MonoBehaviour
             strikePoint = mapCenter + outward * WitchPath.FallbackStrikeDistance;
             groundContact = strikePoint - outward * foot;
         }
-        faceMap = Quaternion.LookRotation(-outward);
         faceAway = Quaternion.LookRotation(outward);
     }
 
@@ -149,7 +147,7 @@ public class WitchPresenter : MonoBehaviour
 
     private void Update()
     {
-        // 마녀가 오는 판(타임어택 또는 쿠키 탈출 뒤 처단)에서 나타날 시각이 되었을 때만(남은 쿠키가 없으면 로켓만 떠나고 마녀는 없다, D10)
+        // 마녀가 오는 판(타임어택)에서 나타날 시각이 되었을 때만(남은 쿠키가 없으면 로켓만 떠나고 마녀는 없다, D10)
         WitchMode mode = WitchTimeline.Mode;
         double now = PhotonNetwork.Time;
         if (mode == WitchMode.None || !WitchTimeline.TryGetAppearAt(out double appearAt) || now < appearAt)
@@ -186,11 +184,11 @@ public class WitchPresenter : MonoBehaviour
         ApplyFog(Mathf.Clamp01(elapsed / fadeInSeconds));
 
         // 위치(걷기)·방향(돌아섬)·동작 — 모두 공통 시계로
-        double walkStart = WitchTimeline.WalkStart(mode, appearAt);
-        double walkEnd = WitchTimeline.WalkEnd(mode, appearAt);
+        double walkStart = WitchTimeline.WalkStart(appearAt);
+        double walkEnd = WitchTimeline.WalkEnd(appearAt);
         float progress = WitchTimeline.WalkProgress(now, walkStart, walkEnd);
         model.position = Vector3.Lerp(startPoint, strikePoint, progress);
-        model.rotation = Facing(mode, now, appearAt);
+        model.rotation = Facing(now, appearAt);
         bool resultDecided = RoomState.TryGetInt(NetKeys.GameResult, out _);
         finaleSince = WitchTimeline.InFinale(now, walkEnd, resultDecided) ? now - walkEnd : double.NaN;
         UpdateTurn(mode, now, appearAt);
@@ -253,10 +251,9 @@ public class WitchPresenter : MonoBehaviour
     // 몸을 밟을 곳으로 옮기는 비율(0~1): 발을 드는 동안 서서히, 그 뒤로는 끝까지.
     public static float StompShiftWeight(float t) => t <= 0f ? 0f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / StompLiftSeconds));
 
-    // 타임어택: 돌아서기 전에는 맵을 등지고, 2초 동안 돌아선 뒤 맵을 본다. 처단: 늘 맵을 본다.
-    private Quaternion Facing(WitchMode mode, double now, double appearAt)
+    // 돌아서기 전에는 맵을 등지고, 2초 동안 돌아선 뒤 맵을 본다.
+    private Quaternion Facing(double now, double appearAt)
     {
-        if (mode == WitchMode.Purge) return faceMap;
         float k = TurnAmount(now, WitchTimeline.TurnStart(appearAt));
         return faceAway * Quaternion.Euler(0f, TurnYawSign * 180f * k, 0f);
     }

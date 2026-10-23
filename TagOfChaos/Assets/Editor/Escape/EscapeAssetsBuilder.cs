@@ -26,15 +26,15 @@ public static class EscapeAssetsBuilder
         ToolSO balloonTool = Tool("Tool_WaterBalloon", ToolKind.WaterBalloon, 3, 12f, 1.5f, 1f, 0.8f, 3f, true);
 
         var items = new List<ItemSO>();
-        ItemSO Mat(string id, string name, Color c, bool anyRocket = false)
+        ItemSO Mat(string id, string name, Color c)
         {
-            ItemSO it = Item("Item_" + id, id, name, c, HoldType.TwoHanded, ItemCategory.Material, null, anyRocket);
+            ItemSO it = Item("Item_" + id, id, name, c, HoldType.TwoHanded, ItemCategory.Material, null);
             items.Add(it);
             return it;
         }
         ItemSO ToolItem(string id, string name, Color c, ToolSO t)
         {
-            ItemSO it = Item("Item_" + id, id, name, c, HoldType.OneHanded, ItemCategory.Tool, t, false);
+            ItemSO it = Item("Item_" + id, id, name, c, HoldType.OneHanded, ItemCategory.Tool, t);
             items.Add(it);
             return it;
         }
@@ -67,7 +67,7 @@ public static class EscapeAssetsBuilder
 
         // Request1009Plan.md §25 — 새 아이템(모델이 오기 전에는 색 도형).
         // 수리키트는 공구상자와 다른 아이템(§26 H4) — 스파이 로켓 칸을 50%씩 채운다. 모델·아이콘은 공구상자 것을 같이 쓴다.
-        ItemSO repairKit = Item("Item_RepairKit", "RepairKit", "Repair Kit", new Color(0.85f, 0.35f, 0.15f), HoldType.OneHanded, ItemCategory.Material, null, false);
+        ItemSO repairKit = Item("Item_RepairKit", "RepairKit", "Repair Kit", new Color(0.85f, 0.35f, 0.15f), HoldType.OneHanded, ItemCategory.Material, null);
         items.Add(repairKit);
         if (repairKit.ModelPrefab == null && toolbox.ModelPrefab != null) repairKit.EditorSetVisuals(toolbox.Icon, toolbox.ModelPrefab);
         ItemSO dismantle = ToolItem("Dismantle", "Dismantle Tool", new Color(0.55f, 0.55f, 0.6f), Tool("Tool_Dismantle", ToolKind.Dismantle, 1, 2f, 0.5f, 0f, 0f, 1f, false));
@@ -103,7 +103,7 @@ public static class EscapeAssetsBuilder
         SetBuildingMaterials(recipes, "CandyForest", cells);
 
         var catalog = LoadOrCreate<EscapeCatalogSO>(ResourcesRoot + "/EscapeCatalog.asset");
-        catalog.EditorSetup(items.ToArray(), recipes.ToArray(), hammer, new[] { stunGun, balloon });
+        catalog.EditorSetup(items.ToArray(), recipes.ToArray(), hammer);
         catalog.EditorSetupReform(repairKit, dismantle, new[] { stunGun, hammer, balloon, jail }, new[] { skates, pumpkin, recorder }, new[] { 5, 3, 5 }, heliHat, noiseBomb);
         BuildXRayMaterial();
         EditorUtility.SetDirty(catalog);
@@ -142,12 +142,12 @@ public static class EscapeAssetsBuilder
     private static EscapeRecipeSO.RocketSlot R(params ItemSO[] accepts) =>
         new EscapeRecipeSO.RocketSlot { label = accepts[0].DisplayName, accepts = accepts };
 
-    private static ItemSO Item(string file, string id, string name, Color color, HoldType hold, ItemCategory category, ToolSO tool, bool anyRocket)
+    private static ItemSO Item(string file, string id, string name, Color color, HoldType hold, ItemCategory category, ToolSO tool)
     {
         var item = LoadOrCreate<ItemSO>($"{SoRoot}/Items/{file}.asset");
         // 이미 입력한 표시 이름(한글 등)은 덮어쓰지 않는다.
         string keepName = string.IsNullOrEmpty(item.DisplayName) ? name : item.DisplayName;
-        item.EditorSetup(id, keepName, color, hold, category, tool, anyRocket);
+        item.EditorSetup(id, keepName, color, hold, category, tool);
         EditorUtility.SetDirty(item);
         return item;
     }

@@ -23,5 +23,4 @@ public class SkinCatalogSO : ScriptableObject
     public int ClampIndex(int index) => Count == 0 ? 0 : Mathf.Clamp(index, 0, Count - 1);
     public Material GetMaterial(int index) => Count == 0 ? null : skins[ClampIndex(index)].material;
     public string GetLabel(int index) => Count == 0 ? string.Empty : skins[ClampIndex(index)].label;
-    public GameObject GetModel(int index) => Count == 0 ? null : skins[ClampIndex(index)].modelPrefab;
 }

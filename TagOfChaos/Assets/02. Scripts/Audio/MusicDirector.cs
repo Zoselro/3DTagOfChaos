@@ -34,7 +34,6 @@ public class MusicDirector
         {
             Scene = MusicRules.SceneFromName(sceneName),
             Phase = RoomState.IsInRoom() ? GamePhaseState.Current : GamePhase.Lobby,
-            LocalMonsterWaiting = false, // 괴물도 모두와 함께 맵으로 간다(Request1009Plan.md §25.5 C)
             LocalIsMonster = RoomState.IsInRoom() && RoomState.IsLocalMonster(),
         };
 

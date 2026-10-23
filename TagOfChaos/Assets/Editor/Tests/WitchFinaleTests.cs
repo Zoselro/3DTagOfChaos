@@ -197,19 +197,17 @@ public class WitchFinaleTests
     [Test]
     public void FinaleStage_ChoosesAndArrangesStandIns()
     {
-        var people = new List<(int, bool, bool, bool, bool)>
+        var people = new List<(int, bool, bool, bool)>
         {
-            (4, false, false, false, false), // 쿠키
-            (2, true, false, false, false),  // 괴물
-            (3, false, false, true, false),  // 탈출한 쿠키
-            (5, false, false, false, true),  // 부서진 쿠키
-            (6, false, true, false, false),  // 스파이
-            (1, false, false, false, false), // 쿠키
+            (4, false, false, false), // 쿠키
+            (2, true, false, false),  // 괴물
+            (3, false, true, false),  // 탈출한 쿠키
+            (5, false, false, true),  // 부서진 쿠키
+            (6, false, false, false),  // 스파이
+            (1, false, false, false), // 쿠키
         };
-        var ta = WitchFinaleStage.Choose(people, (int)WitchMode.TimeAttack);
+        var ta = WitchFinaleStage.Choose(people);
         CollectionAssert.AreEqual(new[] { 1, 2, 4, 6 }, ta.Select(m => m.Actor).ToArray(), "time attack: monsters + remaining cookies and spies, by actor");
-        var purge = WitchFinaleStage.Choose(people, (int)WitchMode.Purge);
-        CollectionAssert.AreEqual(new[] { 2, 6 }, purge.Select(m => m.Actor).ToArray(), "purge: monsters + spies only");
         Assert.AreEqual(1, ta.First(m => m.Actor == 2).Index, "keeps which character it was");
 
         Vector3 stage = new Vector3(10f, 0f, 20f), inward = Vector3.back;
@@ -226,7 +224,7 @@ public class WitchFinaleTests
 
         var two = WitchFinaleStage.Arrange(new List<WitchFinaleStage.Member> { new WitchFinaleStage.Member { Actor = 1, IsMonster = true }, new WitchFinaleStage.Member { Actor = 2, IsMonster = true } }, stage, inward);
         // 같은 사람의 쿠키·괴물(오프라인 시험)도 둘 다 선다
-        var same = WitchFinaleStage.Choose(new List<(int, bool, bool, bool, bool)> { (1, false, false, false, false), (1, true, false, false, false) }, (int)WitchMode.TimeAttack);
+        var same = WitchFinaleStage.Choose(new List<(int, bool, bool, bool)> { (1, false, false, false), (1, true, false, false) });
         Assert.AreEqual(2, same.Count);
         Assert.IsTrue(same[0].IsMonster, "monster first on a tie");
         Assert.AreEqual(WitchFinaleStage.MonsterSpacing, Vector3.Distance(two[0].Position, two[1].Position), 1e-3f);

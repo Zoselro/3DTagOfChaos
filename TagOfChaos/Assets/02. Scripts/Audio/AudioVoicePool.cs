@@ -79,12 +79,6 @@ public class AudioVoicePool
         return n;
     }
 
-    public int CountBusy()
-    {
-        int n = 0;
-        for (int i = 0; i < busy.Length; i++) if (busy[i]) n++;
-        return n;
-    }
 }
 
 // 같은 소리의 쿨다운 기록(SoundPlan.md §2.5 — UI 0.05초 등). 순수 계산.

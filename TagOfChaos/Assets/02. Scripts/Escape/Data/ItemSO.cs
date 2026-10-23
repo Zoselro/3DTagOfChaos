@@ -30,8 +30,6 @@ public class ItemSO : ScriptableObject
     [SerializeField] private ItemCategory category = ItemCategory.Material;
     [Tooltip("도구일 때만: 도구 수치.")]
     [SerializeField] private ToolSO tool;
-    [Tooltip("스파이 로켓의 어느 칸이든 대신할 수 있는 아이템(공구상자, D18).")]
-    [SerializeField] private bool fitsAnyRocketSlot;
     [Tooltip("손에 들었을 때 몸 방향 기준 추가 위치·각도(미세 조정, Request1009Plan.md §16.4). 한 손 = 오른손, 두 손 = 두 손 가운데 기준.")]
     [SerializeField] private Vector3 holdOffset;
     [SerializeField] private Vector3 holdEuler;
@@ -44,7 +42,6 @@ public class ItemSO : ScriptableObject
     public HoldType HoldType => holdType;
     public ItemCategory Category => category;
     public ToolSO Tool => tool;
-    public bool FitsAnyRocketSlot => fitsAnyRocketSlot;
     public Vector3 HoldOffset => holdOffset;
     public Vector3 HoldEuler => holdEuler;
     public bool LocksSlotSwitch => holdType == HoldType.TwoHanded;
@@ -52,7 +49,7 @@ public class ItemSO : ScriptableObject
 
 #if UNITY_EDITOR
     // 에셋 빌더 전용(EscapeAssetsBuilder).
-    public void EditorSetup(string id, string name, Color color, HoldType hold, ItemCategory cat, ToolSO toolData, bool anyRocketSlot)
+    public void EditorSetup(string id, string name, Color color, HoldType hold, ItemCategory cat, ToolSO toolData)
     {
         itemId = id;
         displayName = name;
@@ -60,7 +57,6 @@ public class ItemSO : ScriptableObject
         holdType = hold;
         category = cat;
         tool = toolData;
-        fitsAnyRocketSlot = anyRocketSlot;
     }
 
     public void EditorSetVisuals(Sprite iconSprite, GameObject model)

@@ -95,7 +95,7 @@ public class GameManager : MonoBehaviour
             BroadcastingChat();
     }
 
-    // 억제는 정적 값이라 씬이 바뀌어도 남는다. 채팅을 연 채 비활성화(괴물 대기실 대기 — MonsterLobbyWaitController)되거나
+    // 억제는 정적 값이라 씬이 바뀌어도 남는다. 채팅을 연 채 비활성화되거나
     // 씬 전환으로 파괴되면 반드시 되돌린다 — 그러지 않으면 다음 씬에서 캐릭터가 움직이지 않는다.
     private void OnDisable()
     {

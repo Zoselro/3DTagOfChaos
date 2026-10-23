@@ -127,9 +127,7 @@ public static class PlayerInput
     // 대기실 음성 채팅 "누르면서 말하기"(§26 H11). 채팅 입력 중에는 말하지 않는다.
     public static bool PushToTalkHeld => !chatSuppressed && Held(KeyAction.PushToTalk);
 
-    public static Vector2 PointerPosition => Input.mousePosition;
-    public static bool PaintHeld => Input.GetMouseButton(Bindings.PaintButton);
-    public static float BrushSizeDelta => Input.mouseScrollDelta.y;
+    public static float SlotWheelDelta => Input.mouseScrollDelta.y; // 마우스 휠 — 인벤토리 칸 고르기
 
     public static bool CameraRotateHeld => Held(KeyAction.CameraRotate);
     public static bool CameraRotatePressed => !IsMenuOpen && Down(KeyAction.CameraRotate);

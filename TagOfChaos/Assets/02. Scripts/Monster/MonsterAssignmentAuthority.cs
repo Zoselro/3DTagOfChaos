@@ -7,8 +7,7 @@ using UnityEngine;
 
 // 마스터 전용 — 가마솥 선착순 신청 확정(GameRule.md §2.1). 괴물은 가마솥에 들어간 사람만 된다(인원표상 괴물이 2명이면
 // 두 사람이 각각 들어가야 한다).
-// (2026-10-03 사용자 요청: 정원이 찬 뒤 30초가 지나면 무작위로 괴물을 뽑던 기능은 삭제 — 예전 기한 Room Prop
-//  MonsterSelectDeadline이 남아 있으면 지우기만 한다.)
+// (2026-10-03 사용자 요청: 정원이 찬 뒤 30초가 지나면 무작위로 괴물을 뽑던 기능은 삭제.)
 //
 // 뽑는 괴물 수는 인원표(GameSettings.MonsterCountFor)를 따른다. MonsterActorNumbers 배열을 채우는 방식이라
 // 인원이 늘어 괴물이 여럿이어도 같은 코드로 동작한다(Bug-fix-plan.md §27 확장성).
@@ -18,7 +17,6 @@ public class MonsterAssignmentAuthority : MonoBehaviourPunCallbacks, IOnEventCal
     // BroadcastPropsChangeToAll=true). 그래서 목록은 캐시가 아니라 방장이 마지막으로 보낸 목록(MonsterRoster.Current)에서
     // 이어 계산한다 — 예전에는 응답 전에 온 두 번째 지원을 버려(confirmRequested) 동시에 들어간 사람이 괴물이 되지 못했다(F-03).
     private bool resetRequested;
-    private bool deadlineClearRequested; // 남은 기한 삭제를 응답 전 매 프레임 다시 보내지 않도록(Bug-fix-plan.md §41 ㊹)
 
     public void OnEvent(EventData photonEvent)
     {
@@ -73,17 +71,7 @@ public class MonsterAssignmentAuthority : MonoBehaviourPunCallbacks, IOnEventCal
     private void Update()
     {
         if (!PhotonNetwork.IsMasterClient || !RoomState.IsInRoom()) return;
-        if (ResetSelectionIfRoomNotFull()) return;
-        ClearLegacyDeadline();
-    }
-
-    // 예전 버전이 남긴 무작위 선정 기한(MonsterSelectDeadline)이 있으면 한 번 지운다 — 대기실 문구가 남은 초를 세지 않게.
-    private void ClearLegacyDeadline()
-    {
-        if (!RoomState.TryGetDouble(NetKeys.MonsterSelectDeadline, out _)) { deadlineClearRequested = false; return; }
-        if (deadlineClearRequested) return;
-        deadlineClearRequested = true;
-        AuthorityProps.SetRoom(new Hashtable { { NetKeys.MonsterSelectDeadline, null } });
+        ResetSelectionIfRoomNotFull();
     }
 
     // 대기실에서 괴물이 나가면 그 사람만 목록에서 빼고, 모자란 자리는 가마솥으로 다시 뽑는다(Bug-fix-plan.md
@@ -101,8 +89,6 @@ public class MonsterAssignmentAuthority : MonoBehaviourPunCallbacks, IOnEventCal
         AuthorityProps.SetRoom(new Hashtable
         {
             { NetKeys.MonsterActorNumbers, remaining.Length > 0 ? remaining : null },
-            { NetKeys.MonsterRevealTime, remaining.Length > 0 ? (object)PhotonNetwork.Time : null },
-            { NetKeys.MonsterSelectDeadline, null },
         });
     }
 
@@ -125,8 +111,6 @@ public class MonsterAssignmentAuthority : MonoBehaviourPunCallbacks, IOnEventCal
         AuthorityProps.SetRoom(new Hashtable
         {
             { NetKeys.MonsterActorNumbers, null },
-            { NetKeys.MonsterRevealTime, null },
-            { NetKeys.MonsterSelectDeadline, null },
         });
         Debug.Log("[MonsterAssignment] Room is no longer full. Monster selection reset.");
         return true;
@@ -139,7 +123,6 @@ public class MonsterAssignmentAuthority : MonoBehaviourPunCallbacks, IOnEventCal
         var props = new Hashtable
         {
             { NetKeys.MonsterActorNumbers, monsterActorNumbers },
-            { NetKeys.MonsterRevealTime, PhotonNetwork.Time },
         };
 
         AuthorityProps.SetRoom(props);

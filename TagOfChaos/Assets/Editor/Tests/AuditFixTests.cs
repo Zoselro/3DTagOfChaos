@@ -63,11 +63,11 @@ public class AuditFixTests
     {
         foreach (string k in new[] { NetKeys.HitCount, NetKeys.DeathCause, NetKeys.CatchCount })
             Assert.IsTrue(NetKeys.IsMasterKey(k, NetKeys.Target.Player), k + " is written by the master");
-        foreach (string k in new[] { NetKeys.RegisteredSlotCount, NetKeys.SkinIndex, NetKeys.SelectedSlot })
+        foreach (string k in new[] { NetKeys.SkinIndex, NetKeys.SelectedSlot })
             Assert.IsTrue(NetKeys.IsSelfKey(k), k + " is written by the player");
         foreach (NetKeys.Scope s in NetKeys.Scopes)
             if (s.Target == NetKeys.Target.Room) Assert.AreEqual(NetKeys.Writer.Master, s.Writer, s.Key + " (room keys are master-only)");
-        CollectionAssert.AreEquivalent(new[] { NetKeys.RegisteredSlotCount, NetKeys.SelectedSlot }, NetKeys.RoundSelfPlayerKeys);
+        CollectionAssert.AreEquivalent(new[] { NetKeys.SelectedSlot }, NetKeys.RoundSelfPlayerKeys);
         CollectionAssert.AreEquivalent(new[] { NetKeys.HitCount, NetKeys.DeathCause, NetKeys.CatchCount }, NetKeys.RoundMasterPlayerKeys);
         Assert.IsFalse(NetKeys.IsMasterKey("curScn", NetKeys.Target.Room), "PUN internal keys are not in the table");
     }
@@ -172,13 +172,12 @@ public class AuditFixTests
 
     // ---------------- Request1009Plan.md §21 ----------------
 
-    [TestCase(false, false, false, true)]  // 사냥 중(로켓 전) 괴물이 모두 나감 → 5초 뒤 대기실
-    [TestCase(true, false, false, false)]  // 스파이 로켓이 떠나 마녀 타이머가 켜진 뒤 → 판 계속
-    [TestCase(false, true, false, false)]  // 쿠키가 모두 탈출하고 마녀가 처단하러 오는 중 → 판 계속
-    [TestCase(false, false, true, false)]  // 결과가 이미 났다 → 결과 화면이 처리
-    [TestCase(true, true, true, false)]
-    public void MonsterRoster_ReturnWhenMonstersGone(bool rocket, bool purge, bool result, bool expected) =>
-        Assert.AreEqual(expected, MonsterRoster.ReturnWhenMonstersGone(rocket, purge, result));
+    [TestCase(false, false, true)]  // 사냥 중(첫 탈출 전) 괴물이 모두 나감 → 5초 뒤 대기실
+    [TestCase(true, false, false)]  // 첫 탈출로 마녀 타이머가 켜진 뒤 → 판 계속
+    [TestCase(false, true, false)]  // 결과가 이미 났다 → 결과 화면이 처리
+    [TestCase(true, true, false)]
+    public void MonsterRoster_ReturnWhenMonstersGone(bool rocket, bool result, bool expected) =>
+        Assert.AreEqual(expected, MonsterRoster.ReturnWhenMonstersGone(rocket, result));
 
     [Test]
     public void EscapeState_RevisionSurvivesEncoding()

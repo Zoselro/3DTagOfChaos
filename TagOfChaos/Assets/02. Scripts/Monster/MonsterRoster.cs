@@ -23,9 +23,9 @@ public static class MonsterRoster
     }
 
     // 괴물이 모두 나갔을 때 대기실로 돌려보낼지(2026-10-12 요청, Request1009Plan.md §21). 결과가 났으면 결과 화면이 처리하고,
-    // 스파이 로켓이 떠난 뒤(마녀 타이머)나 마녀 처단 중이면 괴물 없이도 판을 끝까지 진행한다. 로켓 전(사냥 중)이면 돌려보낸다.
-    public static bool ReturnWhenMonstersGone(bool spyRocketLaunched, bool witchPurging, bool resultDecided) =>
-        !resultDecided && !spyRocketLaunched && !witchPurging;
+    // 첫 탈출로 마녀 타이머가 켜진 뒤면 괴물 없이도 판을 끝까지 진행한다. 그 전(사냥 중)이면 돌려보낸다.
+    public static bool ReturnWhenMonstersGone(bool spyRocketLaunched, bool resultDecided) =>
+        !resultDecided && !spyRocketLaunched;
 
     // 지원자를 덧붙인 목록. 이미 괴물이거나 자리가 없으면 null.
     public static int[] TryAppend(int[] monsters, int claimant, int capacity)

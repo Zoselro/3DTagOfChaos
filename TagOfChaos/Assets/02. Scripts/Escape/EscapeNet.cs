@@ -3,7 +3,6 @@
 public static class EscapeNet
 {
     public static int EncodeSlot(int slot) => slot + 1;
-    public static int DecodeSlot(int value) => value - 1;
 }
 
 // 5·6·11(예전 장치 설치·훔치기)은 Request1009Plan.md §25에서 없앴다 — 옛 빌드와 섞이지 않게 번호를 다시 쓰지 않는다.
@@ -34,7 +33,7 @@ public enum EscapeOp : byte
 public enum EscapeNoticeKind : byte
 {
     SpyCaught = 1,
-    StolenToRocket = 2, // 쓰지 않음(2026-10-03 — 로켓에 끼울 때 알림 → StolenFromDevice로 바뀜). 값 보존
+    // 2(StolenToRocket)는 2026-10-03에 StolenFromDevice로 바뀌어 지웠다 — 번호를 비워 둔다.
     DeviceComplete = 3,
     StolenFromDevice = 4, // 내용: 아이템 ID, 아이템 번호, 보여 줄 시각(PhotonNetwork.Time) — 괴물 제외 대상에게만
     Respawned = 5,        // 로켓에 넣은 재료가 다른 상자(또는 장치 옆 바닥)에 다시 생김. 내용: 위 셋 + 바닥이면 true(Request1009Plan.md §22.6 M4)

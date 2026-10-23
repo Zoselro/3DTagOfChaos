@@ -1,11 +1,9 @@
 // RaiseEvent 코드. 여러 도메인이 공유하므로 Core/에 둔다(research.md §7).
 public static class NetEventCodes
 {
-    public const byte PaintStroke = 1;  // 붓 스탬프 묶음(PlayerPaintCanvas.FlushStrokes)을 다른 클라이언트에 전파
+    public const byte PaintStroke = 1;  // 물풍선 전신 칠하기(PlayerPaintCanvas.ForceFillColor)를 다른 클라이언트에 전파
     public const byte ClaimMonster = 2; // GameRule.md §2.1 — 가마솥 진입, 괴물 자원 신청
-    public const byte ClearColor = 3;   // GameRule.md §3.4 — 리셋(캔버스 전체 지우기)
-    // 4(FillAll)는 쓰이지 않아 제거 — 강제 도포는 PaintStroke의 ForceFill 종류로 전달된다(research.md §8.21).
-    // 옛 빌드와 혼동하지 않도록 4는 비워 둔다.
+    // 3(ClearColor, 손 색칠 지우기)·4(FillAll)는 없앴다(Request1009Plan.md §38). 옛 빌드와 혼동하지 않도록 비워 둔다.
     public const byte StartGameRequest = 5; // Bug-fix-plan.md §33 — 호스트가 진행 권한을 가진 방장에게 판 시작을 요청
     public const byte DoorStateRequest = 6; // GameLobbyScene.md §14 — 상호작용한 클라이언트가 방장에게 문 상태 변경을 요청
     public const byte EscapeRequest = 7; // EscapePlan.md §5.2 — 상자·줍기·떨어뜨리기·설치·훔치기·로켓·탈출·도구 요청(EscapeOp)
@@ -15,5 +13,5 @@ public static class NetEventCodes
     public const byte KickRequest = 11; // Request1009Plan.md §19.6 — 호스트가 방장에게 대기실 강퇴를 요청(내용: 대상 액터 번호)
     public const byte Kicked = 12;      // 방장이 강퇴 대상에게만 보낸다(내용: 대상 액터 번호) — 받은 사람은 방을 나간다
     public const byte VoiceClip = 14; // Request1009Plan.md §25.3 Q6 — 대기실에서 녹음한 목소리 조각(판 시작 때 한 번, 보낸 사람 본인 것)
-    public const byte LobbyDoorState = 13; // Request1009Plan.md §22.6 M1 — 판 도중 대기실에서 기다리는 괴물끼리 문 상태를 나눈다(문 ID, 상태)
+    // 13(LobbyDoorState, 괴물 대기실 대기 중 문 공유)은 대기를 없애며 지웠다(§38). 비워 둔다.
 }

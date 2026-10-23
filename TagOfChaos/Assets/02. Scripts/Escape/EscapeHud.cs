@@ -255,7 +255,7 @@ public class EscapeHud : MonoBehaviour
 
         // 마녀 타이머는 등장 연출이 끝난 뒤부터 보인다 — 그 순간 정확히 타이머 값부터 센다(§25 결정 1)
         bool timeAttack = RoomState.TryGetDouble(NetKeys.TimeAttackEndTime, out double end) && GamePhaseState.Current == GamePhase.TimeAttack
-                          && WitchTimeline.TryGetAppearAt(out double appearAt) && PhotonNetwork.Time >= WitchTimeline.WalkStart(WitchMode.TimeAttack, appearAt);
+                          && WitchTimeline.TryGetAppearAt(out double appearAt) && PhotonNetwork.Time >= WitchTimeline.WalkStart(appearAt);
         if (timeAttackText.gameObject.activeSelf != timeAttack) timeAttackText.gameObject.SetActive(timeAttack);
         if (timeAttack)
         {

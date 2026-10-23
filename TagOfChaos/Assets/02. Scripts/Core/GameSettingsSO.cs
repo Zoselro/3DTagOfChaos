@@ -47,12 +47,6 @@ public class GameSettingsSO : ScriptableObject
     [Tooltip("판 안전 상한(분, §25.3 Q4): 준비가 끝난 뒤 이만큼 지나도 아무도 탈출하지 못했으면 마녀 타이머를 강제로 시작한다.")]
     [SerializeField, Min(1f)] private float safetyCapMinutes = 30f;
 
-    [Header("Paint (색칠 단계는 없앴다 — 색깔 물풍선이 몸을 칠할 때만 쓴다)")]
-    [Tooltip("쿠키 한 명이 등록할 수 있는 최대 색 슬롯 수.")]
-    [SerializeField, Min(1)] private int maxColorSlots = 4;
-    [Tooltip("색칠 중 몸 콜라이더를 현재 포즈로 다시 굽는 최소 간격(초). 짧을수록 정확하지만 비용이 크다(Bug-fix-plan.md §30.5).")]
-    [SerializeField, Min(0.02f)] private float paintColliderRefreshInterval = 0.2f;
-
     [Header("Characters (Request1009Plan.md §25.5 B)")]
     [Tooltip("캐릭터 4종 목록 — 대기실 선택 버튼·캐릭터 겉모습과 같은 에셋. 판 시작 때 캐릭터 배정이 수를 센다.")]
     [SerializeField] private SkinCatalogSO characterCatalog;
@@ -95,12 +89,6 @@ public class GameSettingsSO : ScriptableObject
     [Header("Network Load (research.md §12.4)")]
     [Tooltip("캐릭터 위치 동기화 횟수(초당, PhotonNetwork.SerializationRate). PUN 기본 10.")]
     [SerializeField, Range(1, 30)] private int characterSyncRate = 10;
-    [Tooltip("색칠 스탬프 묶음 전송 횟수(초당) — 기준 인원일 때의 값.")]
-    [SerializeField, Min(1f)] private float paintStrokeSendRate = 15f;
-    [Tooltip("이 인원까지는 위 전송 횟수를 그대로 쓰고, 넘으면 받는 사람 수에 반비례해 줄여 방 전체 메시지 수를 비슷하게 유지한다.")]
-    [SerializeField, Min(2)] private int paintStrokeReferencePlayers = 4;
-    [Tooltip("인원이 많아도 이 값 아래로는 줄이지 않는다(색칠이 너무 뚝뚝 끊겨 보이지 않도록).")]
-    [SerializeField, Min(1f)] private float minPaintStrokeSendRate = 5f;
 
     [Header("Spawn")]
     [Tooltip("쿠키 스폰·리스폰 시 스폰 지점 기준 흩뿌림 범위(m).")]
@@ -123,8 +111,6 @@ public class GameSettingsSO : ScriptableObject
     public float PrepareSeconds => prepareSeconds;
     public float SceneLoadGrace => sceneLoadGrace;
     public float SafetyCapSeconds => safetyCapMinutes * 60f;
-    public int MaxColorSlots => maxColorSlots;
-    public float PaintColliderRefreshInterval => paintColliderRefreshInterval;
     public float MonsterDepartureReturnDelay => monsterDepartureReturnDelay;
     public float TentacleDashDistance => tentacleDashDistance;
     public float TentacleDashDuration => tentacleDashDuration;
@@ -139,16 +125,6 @@ public class GameSettingsSO : ScriptableObject
     public float CookieSpawnRange => cookieSpawnRange;
     public float MonsterSpawnRange => monsterSpawnRange;
     public float FallRespawnHeight => fallRespawnHeight;
-
-    // 색칠 스탬프 묶음 전송 간격(초). 받는 사람 수(인원-1)가 기준보다 많으면 비례해서 늘린다 — 4명 이하에서는
-    // 예전과 같은 1/15초, 8명이면 약 1/6.4초(방 전체 색칠 메시지 수가 인원 제곱으로 늘지 않게, research.md §12.4).
-    public float PaintStrokeSendIntervalFor(int playerCount)
-    {
-        int receivers = Mathf.Max(1, playerCount - 1);
-        int referenceReceivers = Mathf.Max(1, paintStrokeReferencePlayers - 1);
-        float rate = paintStrokeSendRate * Mathf.Min(1f, (float)referenceReceivers / receivers);
-        return 1f / Mathf.Max(minPaintStrokeSendRate, rate);
-    }
 
     public System.Collections.Generic.IReadOnlyList<string> GameMapScenes => gameMapScenes;
 

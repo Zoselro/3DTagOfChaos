@@ -12,9 +12,7 @@ public class EscapeTextsSO : ScriptableObject
     public string locked = "Locked";
 
     [Header("Interaction labels")]
-    public string escapeDevice = "Escape";
     public string spyRocket = "Rocket";
-    public string cannotEnter = "Cannot enter";
 
     [Header("Toasts (§1.10, §1.11)")]
     public string spyCaught = "The spy was caught";
@@ -38,7 +36,6 @@ public class EscapeTextsSO : ScriptableObject
     [Header("Request1009Plan.md §25")]
     public string unknownMaterial = "?";              // 스파이 화면의 재료 이름
     public string wrongMaterial = "Wrong material";   // 스파이가 맞지 않는 재료로 건물을 누름
-    public string repairing = "Repairing";            // 다른 사람이 수리 중인 건물
     public string buildingRepaired = "A building is running!";
     public string exitsOpened = "Two exits are open!";
     public string rainbowAppeared = "A rainbow chest appeared!";
@@ -46,17 +43,12 @@ public class EscapeTextsSO : ScriptableObject
     public string rainbowBroken = "The rainbow chest was destroyed";
     public string breakChest = "Break";
     public string noiseBombAlarm = "ALARM! A building was disturbed";
-    public string noiseBombLabel = "Noise Bomb";
     [Tooltip("{0} = 남은 칸, {1} = 최대")]
     public string noiseBombCharges = "Bomb {0}/{1}";
     public string removeBomb = "Remove";
-    public string decoyCatch = "Catch";
-    public string exitLabel = "Exit";
     public string recordVoice = "Record voice (5s)";
     public string recording = "Recording...";
-    public string recorded = "Voice recorded";
     public string noMicrophone = "No microphone";
-    public string witchTimerFormat = "{0:00}:{1:00}";
     // Request1009Plan.md §26
     public string materialRestored = "{0} appeared again in a chest"; // D 안전장치({0} = 재료 이름)
     public string allDecoysGone = "All AIs are gone!";
@@ -78,9 +70,6 @@ public class EscapeTextsSO : ScriptableObject
 
     [Header("Timers")]
     public string timeAttackFormat = "{0:00}:{1:00}";
-    [Tooltip("{0} = 탄 쿠키 수, {1} = 살아 있는 쿠키 수(스파이 제외)")]
-    public string boardingFormat = "Boarded {0} / {1}";
-    public string departing = "Departing!";
 
     private static EscapeTextsSO cached;
 

@@ -96,7 +96,6 @@ public class EscapeTests
         Assert.AreEqual(GamePhase.Hunt, GamePhaseState.Evaluate(true, 15, false, 15));
         Assert.AreEqual(GamePhase.TimeAttack, GamePhaseState.Evaluate(true, 15, false, 300, witchTimer: true));
         Assert.AreEqual(GamePhase.Result, GamePhaseState.Evaluate(true, 15, true, 300, witchTimer: true));
-        Assert.IsFalse(GamePhaseState.IsPaintActive, "no paint phase");
     }
 
     // §25.5 E: 수리할 건물 수 = min(4, 쿠키 + 1)
@@ -310,9 +309,9 @@ public class EscapeTests
         EscapeTextsSO t = EscapeTextsSO.Current;
         string[] all =
         {
-            t.wrongMaterial, t.repairing, t.buildingRepaired, t.exitsOpened, t.rainbowAppeared, t.rainbowChest,
-            t.rainbowBroken, t.breakChest, t.noiseBombAlarm, t.noiseBombLabel, t.removeBomb, t.decoyCatch, t.exitLabel,
-            t.recordVoice, t.recording, t.recorded, t.noMicrophone,
+            t.wrongMaterial, t.buildingRepaired, t.exitsOpened, t.rainbowAppeared, t.rainbowChest,
+            t.rainbowBroken, t.breakChest, t.noiseBombAlarm, t.removeBomb,
+            t.recordVoice, t.recording, t.noMicrophone,
         };
         foreach (string s in all)
         {

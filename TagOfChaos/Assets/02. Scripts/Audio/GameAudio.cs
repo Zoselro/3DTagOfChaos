@@ -60,23 +60,12 @@ public static class GameAudio
         if (runtime != null) runtime.Music.ZoneGain = Mathf.Clamp01(gain);
     }
 
-    public static MusicId CurrentMusic
-    {
-        get
-        {
-            AudioRuntime runtime = Runtime();
-            return runtime != null ? runtime.Music.Current : MusicId.None;
-        }
-    }
-
     // 같은 곡이면 그대로 둔다. 다른 곡이면 fadeSeconds에 걸쳐 교차 전환.
     public static void PlayMusic(MusicId id, float fadeSeconds = 2f)
     {
         AudioRuntime runtime = Runtime();
         if (runtime != null) runtime.Music.Play(id, fadeSeconds);
     }
-
-    public static void StopMusic(float fadeSeconds = 2f) => PlayMusic(MusicId.None, fadeSeconds);
 
     // 스팅어·징글: 한 번 재생하고 그동안 배경음을 낮춘다.
     public static void Stinger(MusicId id)

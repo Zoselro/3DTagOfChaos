@@ -10,14 +10,9 @@ public static class NetKeys
 {
     // 괴물 선정(GameRule.md §2)
     public const string MonsterActorNumbers = "MonsterActorNumbers"; // int[]
-    public const string MonsterRevealTime = "MonsterRevealTime";
-    public const string MonsterSelectDeadline = "MonsterSelectDeadline"; // double — 정원이 찬 시각 + 타임아웃(Bug-fix-plan.md §24.3 B1)
 
     // 판 시작 신호 겸 준비 끝 시각(Request1009Plan.md §25.5 C — 예전 색칠 끝 PaintPhaseEndTime·괴물 합류 MonsterJoined를 대신한다)
     public const string PrepareEndTime = "PrepareEndTime";
-    // 예전 색칠 강제 도포(GameRule.md §3.6) — 색칠 단계는 없앴지만 PlayerPaintCanvas가 아직 읽는다
-    public const string ForcedPaintActorNumbers = "ForcedPaintActorNumbers"; // int[]
-    public const string ForcedPaintColors = "ForcedPaintColors"; // int[] — ForcedPaintActorNumbers와 인덱스로 1:1 대응
 
     // 이탈/방장 위임(GameRule.md §7)
     public const string MonsterDepartedAt = "MonsterDepartedAt";
@@ -56,7 +51,6 @@ public static class NetKeys
 
     // Player CustomProperties (GameRule.md §4.4 — hitCount는 0 또는 2만 실제로 쓰임, v3.6). HitCount·DeathCause는 방장이 처형·마녀를 확정할 때 쓴다.
     public const string HitCount = "HitCount";
-    public const string RegisteredSlotCount = "RegisteredSlotCount"; // GameRule.md §3.2
     public const string SkinIndex = "SkinIndex"; // int — SkinCatalogSO 인덱스, GameRule.md §1.5 (판이 바뀌어도 유지)
     public const string SelectedSlot = "SelectedSlot"; // int — 인벤토리에서 고른 칸(본인만 쓴다, EscapePlan.md §1.9)
     public const string CatchCount = "CatchCount";     // int — 괴물이 잡은 횟수(방장이 처형을 확정할 때 쓴다)
@@ -96,11 +90,7 @@ public static class NetKeys
     public static readonly Scope[] Scopes =
     {
         new Scope(MonsterActorNumbers, Target.Room, Lifetime.Round),
-        new Scope(MonsterRevealTime, Target.Room, Lifetime.Round),
-        new Scope(MonsterSelectDeadline, Target.Room, Lifetime.Round),
         new Scope(PrepareEndTime, Target.Room, Lifetime.Round),
-        new Scope(ForcedPaintActorNumbers, Target.Room, Lifetime.Round),
-        new Scope(ForcedPaintColors, Target.Room, Lifetime.Round),
         new Scope(MonsterDepartedAt, Target.Room, Lifetime.Round),
         new Scope(GameResult, Target.Room, Lifetime.Round),
         new Scope(DoorStates, Target.Room, Lifetime.Round),
@@ -123,7 +113,6 @@ public static class NetKeys
         new Scope(FirstEscapePoint, Target.Room, Lifetime.Round),
         new Scope(CharacterAssignments, Target.Room, Lifetime.Round),
         new Scope(HitCount, Target.Player, Lifetime.Round),
-        new Scope(RegisteredSlotCount, Target.Player, Lifetime.Round, Writer.Self),
         new Scope(SkinIndex, Target.Player, Lifetime.Session, Writer.Self),
         new Scope(SelectedSlot, Target.Player, Lifetime.Round, Writer.Self),
         new Scope(CatchCount, Target.Player, Lifetime.Round),

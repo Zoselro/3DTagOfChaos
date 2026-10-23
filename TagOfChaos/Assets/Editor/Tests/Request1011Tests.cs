@@ -240,7 +240,7 @@ public class Request1011Tests
 
     // ---- §18.4 마녀 등장 카메라 ----
 
-    // §23.3 A·B → §24.10: 시각표 장면(타임어택: 로켓 3 → 등장 3 → 돌아섬 2 → 얼굴 2 → 복귀 3 … 도착 3테이크 / 처단: 탈출구 3 → 얼굴 3 → 다가옴 → 도착 3테이크)
+    // §23.3 A·B → §24.10: 시각표 장면(타임어택: 로켓 3 → 등장 3 → 돌아섬 2 → 얼굴 2 → 복귀 3 … 도착 3테이크 )
     [Test]
     public void WitchTimeline_ShotsFollowTheScript()
     {
@@ -260,16 +260,6 @@ public class Request1011Tests
         Assert.AreEqual(WitchShot.FinaleStomp, At(end + 7.0));
         Assert.AreEqual(WitchShot.FinaleEnd, At(end + 11.0));
         Assert.AreEqual(WitchShot.None, At(end + 4.0, result: true), "result screen");
-
-        const double departed = 50.0;
-        double pAppear = WitchTimeline.PurgeAppearAt(departed);
-        double pEnd = WitchTimeline.WalkEnd(WitchMode.Purge, pAppear, 0);
-        WitchShot P(double now) => WitchTimeline.ShotAt(WitchMode.Purge, now, true, departed, pAppear, pEnd, false);
-        Assert.AreEqual(WitchShot.Lead, P(52.0));
-        Assert.AreEqual(WitchShot.Reveal, P(54.0));
-        Assert.AreEqual(WitchShot.Approach, P(57.0));
-        Assert.AreEqual(WitchShot.Approach, P(pEnd - 0.1));
-        Assert.AreEqual(WitchShot.FinaleLowAngle, P(pEnd + 0.5));
     }
 
     [Test]
@@ -394,38 +384,15 @@ public class Request1011Tests
         Assert.AreEqual(103.0, WitchTimeline.RocketAppearAt(100.0), 1e-6, "rocket shot 3 s");
         // 타임어택 = 마녀 등장 + 시작 연출 10초 + 방 설정 시간(연출 동안 잃는 시간 없음)
         Assert.AreEqual(103.0 + 10.0 + 180.0, WitchTimeline.TimeAttackEnd(103.0, 180), 1e-6);
-        Assert.AreEqual(53.0, WitchTimeline.PurgeAppearAt(50.0), 1e-6, "exit shot 3 s");
-        Assert.AreEqual(53.0 + 3.0 + 10.0, WitchTimeline.PurgeStrikeAt(53.0), 1e-6, "face 3 s + walk 10 s");
-        Assert.AreEqual(113.0, WitchTimeline.WalkStart(WitchMode.TimeAttack, 103.0), 1e-6);
-        Assert.AreEqual(56.0, WitchTimeline.WalkStart(WitchMode.Purge, 53.0), 1e-6);
+        Assert.AreEqual(113.0, WitchTimeline.WalkStart(103.0), 1e-6);
     }
 
-    [Test]
-    public void WitchTimeline_PurgeOnlyWithSpiesLeft()
-    {
-        Assert.IsTrue(WitchTimeline.ShouldStartPurge(1, WitchMode.None));
-        Assert.IsFalse(WitchTimeline.ShouldStartPurge(0, WitchMode.None), "no spy -> game simply ends");
-        Assert.IsFalse(WitchTimeline.ShouldStartPurge(2, WitchMode.TimeAttack), "rocket time attack already running");
-        Assert.IsFalse(WitchTimeline.ShouldStartPurge(1, WitchMode.Purge));
-    }
-
-    // §23.1 B: 처단도 모두(탈출한 쿠키 포함)가 본다.
+    // §23.1 B: 마녀가 오면 모두(탈출한 쿠키 포함)가 본다.
     [TestCase(WitchMode.TimeAttack, true)]
-    [TestCase(WitchMode.Purge, true)]
     [TestCase(WitchMode.None, false)]
     public void WitchTimeline_WhoWatchesCutscene(WitchMode mode, bool watches)
     {
         Assert.AreEqual(watches, WitchTimeline.Watches(mode));
-    }
-
-    [Test]
-    public void WitchStrike_PurgeKillsOnlySpiesAmongCookies()
-    {
-        Assert.IsTrue(WitchTimeline.CookieDiesInStrike((int)WitchMode.TimeAttack, false));
-        Assert.IsTrue(WitchTimeline.CookieDiesInStrike((int)WitchMode.TimeAttack, true));
-        Assert.IsFalse(WitchTimeline.CookieDiesInStrike((int)WitchMode.Purge, false));
-        Assert.IsTrue(WitchTimeline.CookieDiesInStrike((int)WitchMode.Purge, true));
-        Assert.IsTrue(WitchTimeline.CookieDiesInStrike(1, false), "old value 1 = time attack");
     }
 
     private static System.Collections.Generic.List<EscapeRules.PlayerInfo> MonsterAndSpyLeft() => new System.Collections.Generic.List<EscapeRules.PlayerInfo>
@@ -491,17 +458,6 @@ public class Request1011Tests
             }
         }
         finally { Object.DestroyImmediate(cam.gameObject); }
-    }
-
-    // §23.4 Q3: 다가옴 장면은 Ground 경계 안쪽 낮은 곳에서 마녀 얼굴을 올려다본다.
-    [Test]
-    public void ApproachShot_LooksUpFromInsideTheMap()
-    {
-        Vector3 contact = new Vector3(0f, 0f, 71f), center = Vector3.zero, face = new Vector3(0f, 70f, 300f);
-        WitchRevealCamera.ApproachPose(contact, center, face, out Vector3 pos, out Quaternion rot);
-        Assert.Less(pos.z, contact.z, "inside the Ground");
-        Assert.Less(pos.y, 4f, "low");
-        Assert.Greater(Vector3.Dot(rot * Vector3.forward, (face - pos).normalized), 0.999f);
     }
 
     [Test]

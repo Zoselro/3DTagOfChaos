@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 
 // 쿠키·스파이 공용 4칸 인벤토리(EscapePlan.md §1.9, D26·D30~D32). 아이템이 어디 있는지는 방장의 EscapeState가 정하고,
 // 이 컴포넌트는 내 칸을 읽어 고른 칸(SelectedSlot, 본인만 쓰는 Player Prop)을 관리한다.
-// - 숫자키 1~4·마우스 휠(색칠 시간 제외)로 칸을 고른다. 두 손 아이템을 든 동안에는 바꿀 수 없다.
+// - 숫자키 1~4·마우스 휠로 칸을 고른다. 두 손 아이템을 든 동안에는 바꿀 수 없다.
 // - G키: 손에 든 아이템을 떨어뜨린다. 손에 든 것이 없어지면 다음 번호 칸부터 찾아 바로 든다.
 // - 마우스 왼쪽: 손에 든 도구를 쓴다(ToolUser).
 // 쿠키 캐릭터(HideOrSeekPlayer, 본인)가 탈출 모드 맵에서 붙인다.
@@ -99,7 +99,7 @@ public class PlayerInventory : MonoBehaviour
         int wanted = PlayerInput.SlotKeyPressed;
         if (wanted < 0)
         {
-            float wheel = PlayerInput.BrushSizeDelta; // 휠은 칸 고르기(색칠 단계는 없앴다, Request1009Plan.md §25)
+            float wheel = PlayerInput.SlotWheelDelta;
             if (wheel > 0.01f) wanted = (Selected + SlotCount - 1) % SlotCount;
             else if (wheel < -0.01f) wanted = (Selected + 1) % SlotCount;
         }
@@ -125,9 +125,6 @@ public class PlayerInventory : MonoBehaviour
         Changed?.Invoke();
         return true;
     }
-
-    // 잡혔을 때·탈출할 때 모두 떨어뜨린다(D11, D28).
-    public void RequestDropAll() => manager.Request(EscapeOp.DropAll, 0, 0, owner.transform.position);
 
     public void RequestDropHeld()
     {

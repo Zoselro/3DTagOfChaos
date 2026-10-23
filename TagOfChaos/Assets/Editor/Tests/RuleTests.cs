@@ -62,17 +62,6 @@ public class RuleTests
         Object.DestroyImmediate(settings);
     }
 
-    [Test]
-    public void PaintStrokeSendInterval_UnchangedUpToReference_ScalesBeyond()
-    {
-        GameSettingsSO settings = CreateSettings(8, 1); // 기본: 15Hz, 기준 4명, 최소 5Hz
-        Assert.AreEqual(1f / 15f, settings.PaintStrokeSendIntervalFor(2), 1e-5f);
-        Assert.AreEqual(1f / 15f, settings.PaintStrokeSendIntervalFor(4), 1e-5f);
-        Assert.AreEqual(1f / (15f * 3f / 7f), settings.PaintStrokeSendIntervalFor(8), 1e-5f);
-        Assert.AreEqual(1f / 5f, settings.PaintStrokeSendIntervalFor(20), 1e-5f); // 최소 전송 횟수 하한
-        Object.DestroyImmediate(settings);
-    }
-
     // ---- Props 키 수명 분류(research.md §12 E8) ----
 
     [Test]
@@ -101,7 +90,7 @@ public class RuleTests
         CollectionAssert.Contains(NetKeys.RoundRoomKeys, NetKeys.PrepareEndTime);
         CollectionAssert.Contains(NetKeys.RoundRoomKeys, NetKeys.GameResult);
         CollectionAssert.Contains(NetKeys.RoundPlayerKeys, NetKeys.HitCount);
-        CollectionAssert.Contains(NetKeys.RoundPlayerKeys, NetKeys.RegisteredSlotCount);
+        CollectionAssert.Contains(NetKeys.RoundPlayerKeys, NetKeys.SelectedSlot);
         CollectionAssert.DoesNotContain(NetKeys.RoundPlayerKeys, NetKeys.SkinIndex); // 스킨은 판이 바뀌어도 유지
         CollectionAssert.Contains(NetKeys.RoundRoomKeys, NetKeys.DoorStates);
         CollectionAssert.Contains(NetKeys.RoundRoomKeys, NetKeys.GameMapScene); // 이번 판 맵은 판이 끝나면 지운다

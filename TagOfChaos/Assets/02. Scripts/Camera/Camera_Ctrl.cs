@@ -13,11 +13,11 @@ public class Camera_Ctrl : MonoBehaviour
     float vMinLimit = -7.0f;
     float vMaxLimit = 80.0f;
     // --- 카메라 회전 관련 설정 ---
-    // (줌 관련 필드 zoomSpeed/minDist/maxDist 삭제 — 마우스 휠은 이제 붓 크기 조절 전용)
+    // (줌은 없앴다 — 마우스 휠은 인벤토리 칸 고르기)
 
     float m_DefaultRotH = 0.0f;
     float m_DefaultRotV = 25.0f;
-    [SerializeField] float m_DefaultDist = 3.2f; // 이제 유일한 카메라 거리 고정값 (더 이상 휠로 바뀌지 않음)
+    [SerializeField] float m_DefaultDist = 3.2f; // 카메라 거리 고정값(대상별 거리가 없을 때)
 
     Quaternion m_CurrentRotation;
     Quaternion m_TargetRotation;
@@ -122,10 +122,6 @@ public class Camera_Ctrl : MonoBehaviour
         m_CurrentRotation = Quaternion.Slerp(m_CurrentRotation, m_TargetRotation,
                              Mathf.Clamp(Time.deltaTime / rotationSmoothTime, 0.0f, 1.0f));
 
-        // 마우스 휠 줌 입력 처리 블록 전체 삭제
-        // (Input.GetAxis("Mouse ScrollWheel") 읽기 + m_TargetDistance 갱신 + SmoothDamp 보간)
-        // → 휠 입력은 색상 라운드 중 PlayerPaintCanvas.HandleBrushSizeInput()이 전담 (GameScenePlan.md 5.2)
-
         m_BasicPos.z = -CurrentDistance; // 고정 거리, 더 이상 보간 불필요
 
         m_BuffPos = m_TargetPos + (m_CurrentRotation * m_BasicPos);
@@ -137,7 +133,7 @@ public class Camera_Ctrl : MonoBehaviour
     }
 
     // 우클릭으로 시점을 돌리는 동안에만 커서를 잠근다(research.md §8.8). 잠그지 않으면 드래그 중 커서가 창
-    // 가장자리에 걸려 회전이 멈추거나 창 밖을 클릭하게 된다. 평소에는 풀어 둬EEAAAAAAAA야 색칠·UI 조작이 가능하다.
+    // 가장자리에 걸려 회전이 멈추거나 창 밖을 클릭하게 된다. 평소에는 풀어 둬야 UI를 조작할 수 있다.
     void UpdateCursorLock()
     {
         if (PlayerInput.CameraRotatePressed) Cursor.lockState = CursorLockMode.Locked;

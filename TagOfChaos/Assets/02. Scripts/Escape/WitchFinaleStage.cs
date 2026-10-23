@@ -6,7 +6,7 @@ using UnityEngine;
 // - 도착하는 순간 각 화면이 한 번, 지금 살아 있는 실제 캐릭터를 "보이는 부분만" 복제한다: 꺼진 부모 아래에서 Instantiate해
 //   스크립트가 깨어나지 않게 하고(Awake·OnEnable 없음 — PhotonView 등록·입력·카메라를 건드리지 않음) Transform·Animator·렌더러·MeshFilter만 남긴다.
 //   칠한 색·스킨은 렌더러 재질을 그대로 쓰므로 함께 따라온다. 이름표는 지운다(Q4).
-// - 누구를: 괴물 모두 + 쿠키(타임어택은 탈출·파괴되지 않은 쿠키, 처단은 남은 스파이 — WitchTimeline.CookieDiesInStrike). 액터 번호 순(Q2).
+// - 누구를: 괴물 모두 + 쿠키(탈출·파괴되지 않은 쿠키·스파이). 액터 번호 순(Q2).
 // - 어디에: 마녀 발끝이 닿는 Ground 경계에서 맵 안쪽(WitchPresenter.StagePoint, Q6). 괴물은 마녀를 등지고 가로로 서고 괴물 k가 쿠키 k를
 //   촉수로 들어 올린 채(GrabKill 들어 올린 순간에서 멈춤, Q3 a), 남는 쿠키는 그 앞 반원에서 마녀를 올려다본다. 모든 화면이 같은 규칙이라 같은 장면.
 // - 연출 동안 실제 쿠키·괴물은 매 프레임 숨긴다(카메라 앵글에 걸리지 않게 — 사용자 추가 결정). 마녀가 밟는 순간(Impacted) 대역이 부서진다.
@@ -113,13 +113,13 @@ public class WitchFinaleStage : MonoBehaviour
     // ---------------- 고르기·배치(순수 계산) ----------------
 
     // 세울 사람(Q2): 괴물 모두와, 이번 내리침에 죽는 쿠키(탈출·파괴되지 않은). 액터 번호 순(같으면 괴물 먼저).
-    public static List<Member> Choose(IList<(int actor, bool monster, bool spy, bool escaped, bool broken)> people, int strikeMode)
+    public static List<Member> Choose(IList<(int actor, bool monster, bool escaped, bool broken)> people)
     {
         var list = new List<Member>();
         for (int i = 0; i < people.Count; i++)
         {
             var p = people[i];
-            if (!p.monster && (p.escaped || p.broken || !WitchTimeline.CookieDiesInStrike(strikeMode, p.spy))) continue;
+            if (!p.monster && (p.escaped || p.broken)) continue;
             list.Add(new Member { Actor = p.actor, IsMonster = p.monster, Index = i });
         }
         list.Sort((a, b) => a.Actor != b.Actor ? a.Actor.CompareTo(b.Actor) : b.IsMonster.CompareTo(a.IsMonster));
@@ -180,18 +180,17 @@ public class WitchFinaleStage : MonoBehaviour
         root.SetParent(transform, false);
 
         EscapeState state = EscapeManager.Instance != null ? EscapeManager.Instance.State : null;
-        int strikeMode = RoomState.TryGetInt(NetKeys.WitchStrike, out int s) ? s : (int)WitchTimeline.Mode;
         var characters = new List<IGameCharacter>();
-        var people = new List<(int, bool, bool, bool, bool)>();
+        var people = new List<(int, bool, bool, bool)>();
         foreach (IGameCharacter c in CharacterRegistry.All)
         {
             if (!CharacterRegistry.IsAlive(c) || c.View == null || c.View.Owner == null) continue;
             int actor = c.View.Owner.ActorNumber;
             characters.Add(c);
             bool monster = c.Role == CharacterRole.Monster;
-            people.Add((actor, monster, RoomState.IsSpy(actor), state != null && state.HasEscaped(actor), !monster && RoomState.IsBroken(c.View.Owner)));
+            people.Add((actor, monster, state != null && state.HasEscaped(actor), !monster && RoomState.IsBroken(c.View.Owner)));
         }
-        List<Placement> places = Arrange(Choose(people, strikeMode), witch.StagePoint, witch.TowardMap);
+        List<Placement> places = Arrange(Choose(people), witch.StagePoint, witch.TowardMap);
 
         var monsterStands = new List<Stand>();
         foreach (Placement p in places)

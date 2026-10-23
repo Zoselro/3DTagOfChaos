@@ -20,14 +20,12 @@ public sealed class CoasterPathSO : ScriptableObject
     public int Count => points.Length;
     public float Length => length;
     public float LapTime => lapTime;
-    public float Gauge => gauge;
     public float RailTop => railTop;
     public float SecondTrainOffset => secondTrainOffset;
     public bool IsValid => points.Length >= 4 && length > 0f && lapTime > 0f;
 
     public Vector3 Point(int i) => points[i];
     public Vector3 Up(int i) => ups[i];
-    public float DistanceAt(int i) => distances[i];
     public float TimeAt(int i) => times[i];
 
     // s(m, 한 바퀴로 감음)에서의 자리·진행 방향·위쪽(로컬). 점 사이는 Hermite(접선 = 이웃 점 차), 위쪽은 Slerp 후 진행 방향에 직교화.

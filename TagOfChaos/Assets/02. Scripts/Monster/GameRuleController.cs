@@ -52,7 +52,7 @@ public class GameRuleController : MonoBehaviourPunCallbacks
             });
         }
 
-        bool struck = RoomState.TryGetInt(NetKeys.WitchStrike, out int strikeMode);
+        bool struck = RoomState.TryGetInt(NetKeys.WitchStrike, out _);
         // 내리친 뒤 지난 시간: 방장이 함께 쓴 시각(WitchStrikeAt) 기준이라 방장이 바뀌어도 이어진다(F-20). 없으면(옛 방) 이 방장의 시계로.
         float sinceStrike = -1f;
         if (!struck) { witchStruckAt = -1f; witchDeathsWritten = false; }
@@ -66,7 +66,7 @@ public class GameRuleController : MonoBehaviourPunCallbacks
         if (struck && !witchDeathsWritten && sinceStrike >= WitchTimeline.FinaleImpactSeconds)
         {
             witchDeathsWritten = true;
-            WriteWitchDeaths(strikeMode, state, monsters);
+            WriteWitchDeaths(state, monsters);
         }
         RoomState.TryGetDouble(NetKeys.TimeAttackEndTime, out double timeAttackEnd);
 
@@ -91,7 +91,7 @@ public class GameRuleController : MonoBehaviourPunCallbacks
     }
 
     // 마녀에게 죽는 사람: 괴물은 모두, 쿠키·스파이는 탈출하지 않았고 살아 있으며 이번 내리침에 죽는 쪽(처단이면 스파이만, WitchTimeline).
-    private static void WriteWitchDeaths(int strikeMode, EscapeState state, int[] monsters)
+    private static void WriteWitchDeaths(EscapeState state, int[] monsters)
     {
         foreach (Player p in RoomState.Players)
         {
@@ -102,7 +102,6 @@ public class GameRuleController : MonoBehaviourPunCallbacks
                 continue;
             }
             if (RoomState.IsBroken(p) || (state != null && state.HasEscaped(actor))) continue;
-            if (!WitchTimeline.CookieDiesInStrike(strikeMode, RoomState.IsSpy(actor))) continue;
             AuthorityProps.SetPlayer(p, new Hashtable { { NetKeys.HitCount, 2 }, { NetKeys.DeathCause, (int)DeathCause.Witch } });
         }
     }

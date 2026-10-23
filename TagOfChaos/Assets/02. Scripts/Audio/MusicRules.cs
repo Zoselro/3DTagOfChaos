@@ -6,7 +6,6 @@ public struct MusicContext
 {
     public MusicScene Scene;
     public GamePhase Phase;
-    public bool LocalMonsterWaiting; // 예전 괴물 대기실 대기(Request1009Plan.md §25에서 없앰 — 늘 false, 시험 표 호환용)
     public bool LocalIsMonster;
 }
 
@@ -54,7 +53,7 @@ public static class MusicRules
 
     // 괴물 본인이 대기실에 남아 있는 판 진행 중 — 대기가 끝나 맵으로 넘어가는 동안에도 대기 곡을 이어 간다(대기실 곡으로 잠깐 돌아가지 않게).
     private static bool IsMonsterWaiting(MusicContext c) =>
-        c.LocalMonsterWaiting || (c.LocalIsMonster && c.Phase != GamePhase.Lobby && c.Phase != GamePhase.Result);
+        c.LocalIsMonster && c.Phase != GamePhase.Lobby && c.Phase != GamePhase.Result;
 
     // 같은 씬 안에서 단계가 바뀐 순간 한 번 내는 스팅어. 없으면 None. 결과는 JingleFor가 따로 고른다.
     public static MusicId StingerFor(GamePhase from, GamePhase to)

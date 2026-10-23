@@ -208,20 +208,19 @@ public class AudioTests
         };
         foreach (MusicScene scene in (MusicScene[])Enum.GetValues(typeof(MusicScene)))
         foreach (GamePhase phase in (GamePhase[])Enum.GetValues(typeof(GamePhase)))
-        foreach (bool waiting in new[] { false, true })
         foreach (bool monster in new[] { false, true })
         {
             MusicId expected;
             bool monsterInGame = monster && phase != GamePhase.Lobby && phase != GamePhase.Result;
             if (scene == MusicScene.Other) expected = MusicId.None;
             else if (scene == MusicScene.Lobby) expected = MusicId.Lobby;
-            else if (scene == MusicScene.GameLobby) expected = waiting || monsterInGame ? MusicId.MonsterWait : MusicId.GameLobby;
+            else if (scene == MusicScene.GameLobby) expected = monsterInGame ? MusicId.MonsterWait : MusicId.GameLobby;
             else if (phase == GamePhase.Result) expected = MusicId.Result;
             else if (monster) expected = MusicId.None;                         // 괴물은 맵 곡 없음
             else if (phase == GamePhase.Lobby || phase == GamePhase.Prepare) expected = mapPaint[scene];
             else expected = MusicId.None;                                       // 변장이 끝나면 끈다
-            var c = new MusicContext { Scene = scene, Phase = phase, LocalMonsterWaiting = waiting, LocalIsMonster = monster };
-            Assert.AreEqual(expected, MusicRules.Select(c), $"{scene} {phase} waiting={waiting} monster={monster}");
+            var c = new MusicContext { Scene = scene, Phase = phase, LocalIsMonster = monster };
+            Assert.AreEqual(expected, MusicRules.Select(c), $"{scene} {phase} monster={monster}");
         }
     }
 

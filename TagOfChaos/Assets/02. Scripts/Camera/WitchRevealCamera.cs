@@ -5,7 +5,6 @@ using UnityEngine;
 // 마녀 연출 카메라(Request1009Plan.md §18.4, §19.2 → §23.5 X5). 장면은 시각표가 정한다(WitchTimeline.ShotAt) — 모두가 같은 순간 같은 장면.
 //   타임어택: 로켓(3초) → 등진 마녀 전신으로(3초) → 전신을 본 채 뒤돌아섬(2초) → 얼굴 클로즈업(2초) → 내 시점으로(3초)
 //             … 타임어택 동안 각자 플레이 … 타임어택 끝(마녀 도착) → 도착 3테이크
-//   처단:     떠나는 탈출구(3초) → 얼굴(3초) → 맵 가장자리에서 다가오는 마녀를 올려다봄(10초) → 도착 3테이크
 //   도착 3테이크(§24.10): 검은 화면 → 땅 높이에서 쿠키·괴물 대역 → 로우 앵글로 뒤로 빠지며 마녀 얼굴(6초) → 대역 뒤 땅에서 올려다보는
 //             밑창(4초, 끝에 검게) → 검은 화면 → 정면 위 박살(결과까지). 화각도 장면마다 정하고 끝나면 되돌린다.
 // Main Camera에 붙고, 다른 카메라 스크립트(3인칭 Camera_Ctrl·괴물 1인칭·관전)가 이번 프레임 위치를 정한 뒤에 실행해(DefaultExecutionOrder)
@@ -20,9 +19,6 @@ public class WitchRevealCamera : MonoBehaviour
     public const float LeadHeight = 4f;            // 앞 샷: 대상 바닥보다 높이(m)
     public const float LeadFollowUp = 0.35f;       // 앞 샷: 대상이 떠오르면 카메라도 그 비율만큼 따라 오른다(로켓)
     public const float FullBodyDistanceRatio = 1.25f, FullBodyHeightRatio = 0.25f, FullBodyLookRatio = 0.5f; // 전신: 맵 쪽에서 몸 전체가 화면에
-    public const float ApproachInset = 14f;        // 다가옴: Ground 경계에서 맵 안쪽으로(m)
-    public const float ApproachEyeHeight = 2.2f;   //   쿠키 눈높이쯤에서 올려다본다
-    public const float ApproachMoveSeconds = 1.5f; //   얼굴에서 그 자리로 옮겨 가는 시간
     private const float StrikeShakeScale = 4f;     // 멀리서 보는 장면이라 충격 흔들림을 크게(CameraShake, 키 90 m 기준 — 키에 비례)
     // 도착 3테이크(§24.10, 스토리보드 v10)
     public const float LowStartDistance = 12f;     // 테이크 1: 대역 앞 거리(m)에서 시작
@@ -44,8 +40,6 @@ public class WitchRevealCamera : MonoBehaviour
     private Quaternion appliedRot, ownRot;
     private double leadKey = double.NaN;    // 앞 샷 기준(시작 시각) — 바뀌면 자리를 다시 잡는다
     private Vector3 leadAnchor, leadDir;
-    private double approachKey = double.NaN; // 다가옴 장면 높이를 정한 판(등장 시각)
-    private float approachHeight = ApproachEyeHeight;
     private Camera cam;
     private float ownFov = -1f;              // 도착 연출이 화각을 바꾸기 전 값(연출이 끝나면 되돌린다)
     private List<Renderer> occluderCandidates;                     // 맵 안 부서질 물체(가릴 수 있는 것)
@@ -161,51 +155,6 @@ public class WitchRevealCamera : MonoBehaviour
 
     private static float GroundAt(Vector3 p) => WitchFinaleStage.GroundHeight(p, p.y);
 
-    // 다가옴 장면(§23.4 Q3): 마녀가 닿을 Ground 경계에서 맵 안쪽 낮은 자리에서, 다가오는 마녀 얼굴을 올려다본다.
-    // eyeHeight: 맵 가장자리 벽·구조물이 마녀를 가리면 더 높인다(ApproachEyeHeightFor).
-    public static void ApproachPose(Vector3 groundContact, Vector3 mapCenter, Vector3 face, out Vector3 position, out Quaternion rotation,
-        float eyeHeight = ApproachEyeHeight)
-    {
-        Vector3 inward = Flat(mapCenter - groundContact);
-        position = groundContact + inward * ApproachInset + Vector3.up * eyeHeight;
-        rotation = Quaternion.LookRotation(face - position, Vector3.up);
-    }
-
-    private static readonly float[] ApproachHeights = { ApproachEyeHeight, 8f, 15f, 25f, 35f, 50f, 70f };
-
-    // 다가옴 장면 높이: 걸어오는 동안(먼 곳 ~ 도착) 마녀 얼굴까지 시야가 트이는 가장 낮은 높이. 맵마다 가장자리 구조가 달라(공장은 높은 벽)
-    // 씬 충돌체로 확인하되, 보이지 않는 Ground 경계벽(쿠키를 막는 벽)은 뺀다.
-    public static float ApproachEyeHeightFor(Vector3 groundContact, Vector3 mapCenter, IList<Vector3> faces, Transform ignoreRoot)
-    {
-        foreach (float h in ApproachHeights)
-        {
-            bool clear = true;
-            foreach (Vector3 face in faces)
-            {
-                ApproachPose(groundContact, mapCenter, face, out Vector3 pos, out _, h);
-                if (LineBlocked(pos, face, ignoreRoot)) { clear = false; break; }
-            }
-            if (clear) return h;
-        }
-        return ApproachHeights[ApproachHeights.Length - 1];
-    }
-
-    private static readonly RaycastHit[] occlusionHits = new RaycastHit[32];
-
-    public static bool LineBlocked(Vector3 from, Vector3 to, Transform ignoreRoot)
-    {
-        Vector3 d = to - from;
-        int n = Physics.RaycastNonAlloc(from, d.normalized, occlusionHits, d.magnitude - 1f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-        for (int i = 0; i < n; i++)
-        {
-            Transform t = occlusionHits[i].collider.transform;
-            if (ignoreRoot != null && t.IsChildOf(ignoreRoot)) continue;
-            if (t.GetComponentInParent<IGameCharacter>() != null) continue;
-            return true;
-        }
-        return false;
-    }
-
     private static Vector3 Flat(Vector3 v)
     {
         v = Vector3.ProjectOnPlane(v, Vector3.up);
@@ -221,7 +170,7 @@ public class WitchRevealCamera : MonoBehaviour
         leadStart = 0; walkEnd = 0; hasLead = false;
         if (mode == WitchMode.None || !WitchTimeline.TryGetAppearAt(out appearAt)) { appearAt = 0; return WitchShot.None; }
         hasLead = WitchTimeline.TryGetLeadInStart(mode, out leadStart);
-        walkEnd = WitchTimeline.WalkEnd(mode, appearAt);
+        walkEnd = WitchTimeline.WalkEnd(appearAt);
         return WitchTimeline.ShotAt(mode, PhotonNetwork.Time, hasLead, leadStart, appearAt, walkEnd, RoomState.TryGetInt(NetKeys.GameResult, out _));
     }
 
@@ -271,12 +220,8 @@ public class WitchRevealCamera : MonoBehaviour
             {
                 float w = Smooth(t, WitchTimeline.RevealSeconds);
                 Vector3 fromPos = focus != null ? leadPos : basePos; Quaternion fromRot = focus != null ? leadRot : baseRot;
-                if (mode == WitchMode.Purge) BlendPose(fromPos, fromRot, witch.FacePoint, witch.FaceForward, witch.Height, w, out pos, out rot);
-                else
-                {
-                    FullBodyPose(witch.FeetPosition, witch.TowardMap, witch.Height, out Vector3 bodyPos, out Quaternion bodyRot);
-                    pos = Vector3.Lerp(fromPos, bodyPos, w); rot = Quaternion.Slerp(fromRot, bodyRot, w);
-                }
+                FullBodyPose(witch.FeetPosition, witch.TowardMap, witch.Height, out Vector3 bodyPos, out Quaternion bodyRot);
+                pos = Vector3.Lerp(fromPos, bodyPos, w); rot = Quaternion.Slerp(fromRot, bodyRot, w);
                 break;
             }
             case WitchShot.Turn:
@@ -294,14 +239,6 @@ public class WitchRevealCamera : MonoBehaviour
             {
                 double since = t - WitchTimeline.RevealSeconds - WitchTimeline.TurnSeconds - WitchTimeline.FaceSeconds;
                 BlendPose(basePos, baseRot, witch.FacePoint, witch.FaceForward, witch.Height, 1f - Smooth(since, WitchTimeline.ReturnSeconds), out pos, out rot);
-                break;
-            }
-            case WitchShot.Approach:
-            {
-                CloseUpPose(witch.FacePoint, witch.FaceForward, witch.Height, out Vector3 facePos, out Quaternion faceRot);
-                ApproachPose(witch.GroundContact, witch.MapCenter, witch.FacePoint, out Vector3 apPos, out Quaternion apRot, ApproachHeight(witch, appearAt));
-                float k = Smooth(t - WitchTimeline.RevealSeconds, ApproachMoveSeconds);
-                pos = Vector3.Lerp(facePos, apPos, k); rot = Quaternion.Slerp(faceRot, apRot, k);
                 break;
             }
             default: // 도착 3테이크
@@ -412,17 +349,6 @@ public class WitchRevealCamera : MonoBehaviour
         if (cam != null) cam.fieldOfView = ownFov;
         ownFov = -1f;
         CutsceneFade.Set(0f);
-    }
-
-    private float ApproachHeight(WitchPresenter witch, double appearAt)
-    {
-        if (approachKey == appearAt) return approachHeight;
-        approachKey = appearAt;
-        var faces = new List<Vector3>();
-        for (int i = 0; i <= 3; i++)
-            faces.Add(Vector3.Lerp(witch.StartPoint, witch.StrikePoint, i / 3f) + Vector3.up * (witch.Height * 0.8f));
-        approachHeight = ApproachEyeHeightFor(witch.GroundContact, witch.MapCenter, faces, WitchPath.FindGround(witch.gameObject.scene));
-        return approachHeight;
     }
 
     // 앞 샷 대상: 첫 탈출 지점(탈출구·로켓, Request1009Plan.md §25.5 G). 기록이 없으면(옛 방) 스파이 로켓.

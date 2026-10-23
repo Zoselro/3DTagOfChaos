@@ -157,7 +157,13 @@ public static class CarnivalMapBuilder
         if (asset == null) { Debug.LogWarning($"[CarnivalMap] prefab {prefab} missing"); return null; }
         var go = (GameObject)PrefabUtility.InstantiatePrefab(asset, parent);
         go.transform.SetPositionAndRotation(pos, rot);
-        if (!colliders) foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+        if (!colliders)
+        {
+            foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+            // 충돌체만 담던 자식(COL_*)은 빈 껍데기가 되므로 함께 지운다(Request1009Plan.md §38 B2)
+            foreach (Transform t in go.GetComponentsInChildren<Transform>(true))
+                if (t != go.transform && t.name.StartsWith("COL") && t.childCount == 0 && t.GetComponents<Component>().Length == 1) Object.DestroyImmediate(t.gameObject);
+        }
         return go;
     }
 

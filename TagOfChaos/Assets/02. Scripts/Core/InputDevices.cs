@@ -13,8 +13,6 @@ public static class InputDevices
 
     public static string[] Available() => Microphone.devices ?? new string[0];
 
-    public static bool HasAny => Available().Length > 0;
-
     // 실제로 쓸 장치 이름(없으면 null).
     public static string Selected => Resolve(SavedName, Available());
 

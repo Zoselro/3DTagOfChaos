@@ -123,19 +123,6 @@ public static class GameStartAuthority
         return spies.ToArray();
     }
 
-    // 이번 판 맵 씬 — 대기실에 남은 괴물이 이 씬으로 간다. 값이 없으면 설정의 첫 맵, 그것도 없으면 null(Bug-fix-plan.md §41 ㊷ —
-    // 예전 대체값 GameScene은 빌드 목록에서 빠졌다).
-    public static string CurrentMapScene()
-    {
-        if (RoomState.IsInRoom() && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(NetKeys.GameMapScene, out object value)
-            && value is string map && !string.IsNullOrEmpty(map))
-            return map;
-
-        string fallback = GameSettings.Current.FirstGameMap;
-        Debug.LogWarning($"[GameStart] Room has no {NetKeys.GameMapScene}. Falling back to '{fallback}'.");
-        return fallback;
-    }
-
     // 지금 Photon 방장이고, 방장 정책상 진행 권한을 가져야 하는 사람(괴물이 아닌 최선 입장자)도 나인지.
     private static bool IsIntendedMaster() =>
         PhotonNetwork.IsMasterClient && RoomState.DesiredMasterActor() == PhotonNetwork.LocalPlayer.ActorNumber;

@@ -31,7 +31,6 @@ public sealed class VikingRide : MonoBehaviour
     private bool near, wasMoving;
 
     public float Cycle => restSeconds + rampUpSeconds + fullSeconds + rampDownSeconds;
-    public float CurrentAngle => angle;
 
     // 한 바퀴 안 시각 → 진폭(0~maxAngle). 쉼 → 커짐(부드럽게) → 가장 크게 → 작아짐.
     public float AmplitudeAt(double t)

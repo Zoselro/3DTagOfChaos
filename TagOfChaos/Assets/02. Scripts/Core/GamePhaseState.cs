@@ -27,9 +27,6 @@ public static class GamePhaseState
         }
     }
 
-    // 색칠 단계는 없앴다(§25) — 색칠 UI·입력은 늘 꺼져 있다. 색깔 물풍선의 강제 도포만 남는다.
-    public static bool IsPaintActive => false;
-
     // 네트워크 상태와 분리한 순수 해석(테스트용).
     public static GamePhase Evaluate(bool hasPrepareEnd, double prepareEndTime, bool hasResult, double now, bool witchTimer = false)
     {

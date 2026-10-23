@@ -11,10 +11,6 @@ public class EscapeCatalogSO : ScriptableObject
     [SerializeField] private EscapeRecipeSO[] recipes = new EscapeRecipeSO[0];
     [Tooltip("일반 상자에 넣는 뿅망치.")]
     [SerializeField] private ItemSO hammer;
-    [Tooltip("스파이 1명당 스파이 상자 한 쌍에 넣는 도구(스턴건, 물풍선).")]
-    [SerializeField] private ItemSO[] spyChestTools = new ItemSO[0];
-    [Tooltip("일반 상자에 넣는 뿅망치 수 = 쿠키 수 × 이 비율(올림). 개편 뒤 뿅망치는 스파이 상자로 옮겨 쓰지 않는다.")]
-    [SerializeField, Range(0f, 1f)] private float hammersPerCookie = 0.5f;
 
     [Header("Request1009Plan.md §25")]
     [Tooltip("수리키트(스파이 만능 재료, 공구함과 같은 아이템).")]
@@ -51,8 +47,6 @@ public class EscapeCatalogSO : ScriptableObject
     public ItemSO HeliHat => heliHat;
     public ItemSO NoiseBomb => noiseBomb;
     public ItemSO Hammer => hammer;
-    public IReadOnlyList<ItemSO> SpyChestTools => spyChestTools;
-    public float HammersPerCookie => hammersPerCookie;
     public GameObject PassengerModel => passengerModel;
     public GameObject JarModel => jarModel;
     public GameObject JarCookieModel => jarCookieModel;
@@ -98,12 +92,11 @@ public class EscapeCatalogSO : ScriptableObject
         noiseBomb = bomb;
     }
 
-    public void EditorSetup(ItemSO[] allItems, EscapeRecipeSO[] allRecipes, ItemSO hammerItem, ItemSO[] spyTools)
+    public void EditorSetup(ItemSO[] allItems, EscapeRecipeSO[] allRecipes, ItemSO hammerItem)
     {
         items = allItems;
         recipes = allRecipes;
         hammer = hammerItem;
-        spyChestTools = spyTools;
         byId = null;
     }
 #endif

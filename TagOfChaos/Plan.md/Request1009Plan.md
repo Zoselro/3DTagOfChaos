@@ -4183,3 +4183,115 @@ v1 §S1~S8 그대로:
 
 **남은 것**
 - 실제 PC에서 프레임 확인. 점광원 139개(그림자 없음)라 Deferred에서 부담은 크지 않을 것으로 본다. 다만 아직 재 보지 않았다.
+
+
+## 38. 2026-10-23 죽은 코드·씬 정리·미사용 에셋 정리 (research.md 8차 → A·B·D)
+
+**요청**: research.md 8차의 권장 조치 중 A(죽은 코드) → B(빌드 씬의 쓸모없는 오브젝트) → D(고아 에셋)를 순서대로 진행한다. C(옛 `Game_`·`Original/` 씬 삭제)는 이번 범위가 아니다(결정 대기).
+
+**원칙**
+- 게임 동작은 바꾸지 않는다. 지우는 것은 "실행되지 않음"을 확인한 것만.
+- 네트워크 번호(`NetEventCodes`, `GameResult`, `SoundId`·`MusicId` 정수)는 다른 값으로 재사용하지 않는다. 지운 코드 자리는 주석으로 "비워 둠"을 남긴다.
+- 파일·에셋은 지우지 않고 **프로젝트 밖 `_CleanupBackup/2026-10-23/<원래 경로>`로 옮긴다**(.meta 포함 — 되돌리기 쉽게). 확인이 끝나면 사용자가 폴더를 지운다.
+- 빌더가 원본으로 쓰는 씬(`Test_CandyForest`·`Test_CursedCandyCarnival`)과 빌더 입력 에셋은 지우지 않는다.
+- 단계마다: 컴파일 오류 0 → Console Exception·Warning 확인 → EditMode 시험. 끝에 Play Mode로 실제 동작 확인.
+
+### 38.1 A — 죽은 코드
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| A0 | 기준선: 컴파일·Console·EditMode 전체 결과 기록 | ✅ |
+| A1 | **괴물 대기실 대기(NetHold) 제거** — `NetHold`·`HeldSyncRecorder` 삭제(PrefabPool 감싸기 제거), `InteractableDoor`의 보관·`LobbyDoorState`·큐 정지 분기, `HideOrSeekPlayer`·`PlayerPaintCanvas`의 보관 분기, `MusicRules/MusicDirector.LocalMonsterWaiting`, `GameManager`·`PlayerSpawner`·`RoomExitController`의 낡은 대기 주석 | ✅ |
+| A2 | **손 색칠 제거** — `PlayerPaintCanvas`는 물풍선 전신 칠하기(`ForceFillColor`)·받기·가루 색 샘플·스킨 합성만 남긴다. `PaintColliderUpdater` 삭제, `GamePhaseState.IsPaintActive`, `CookieAudio.TickPaint`, `PlayerInput.PaintHeld/PaintButton`(+`InputBindingsSO.paintButton`), `BrushSizeDelta`→`SlotWheelDelta`, `NetKeys` 색칠 키 3개(`ForcedPaint*`·`RegisteredSlotCount`), `NetEventCodes.ClearColor`, `GameSettingsSO` 색칠 필드 5개, 시험·`NetTamperMenu` 정리 | ✅ |
+| A3 | **마녀 처단(Purge) 제거** — `WitchMode.Purge`, `WitchTimeline`의 Purge 함수·분기, `WitchShot.Approach`·`WitchRevealCamera.ApproachPose/ApproachEyeHeightFor`, `WitchPresenter.Facing` 분기, `RoomLifecycleWatcher`·`MonsterRoster`의 `witchPurging`, 관련 시험 | ✅ |
+| A4 | **작은 죽은 멤버** — research.md 6.2 표의 나머지(`MonsterRevealTime`·`MonsterSelectDeadline`·`ClearLegacyDeadline`, `CanSelectMonster`, `CurrentMapScene`, `MapRect`·`BuildingView`·`ExitView`, `DecodeSlot`, `RequestDropAll`, `StopMusic`·`CurrentMusic`, `CountBusy`, `IsTransmitting`·`SpeakerCount`, `HasAny`, `Gauge`·`DistanceAt`, `CurrentAngle`, `IsConfirmingReset`, `CurrentTab`, `StepBy`, `GetModel`, `FinaleSince`, `colorName`, `EscapeNoticeKind.StolenToRocket`), 쓰지 않는 SO 필드·문구, `Dev/MonsterTestSpawner`, `Legacy~` 폴더 4개, `Camera_Ctrl` 낡은 주석·깨진 글자 | ✅ |
+| A5 | 검증 — 컴파일·Console·EditMode 전체, Play Mode(물풍선 색칠·가루 색, 대기실 문, 마녀 타임어택 연출·결과, 음악) | ✅ |
+
+**남기는 것(이유)**
+- `GameRuleController`의 비탈출 판정(`MonsterWins`/`CookiesWin`): 탈출 장치가 없는 맵을 열었을 때의 안전장치이고, `GameResult` 값은 방 속성 정수라 그대로 둔다.
+- `SoundId`·`MusicId` 값: 소리 카탈로그가 정수로 연결돼 있어 번호를 지킨다(쓰지 않는 소리 정리는 별도).
+
+### 38.2 B — 빌드 씬 안의 쓸모없는 오브젝트
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| B1 | 맵 씬의 꺼진 `MapLighting/PointLights` 묶음 삭제 — 빌드 맵 5개(`CandyForest`·`CursedCandyCarnival`·`Test_GingerbreadVillage`·`Test_ChocolateFactory`·`Test_HauntedBakery`) + 실제 맵의 원본 틀 2개(`Test_CandyForest`·`Test_CursedCandyCarnival`). 빌더는 이 묶음이 없으면 그냥 넘어간다 | ✅ |
+| B2 | `CursedCandyCarnival` — 겉모습 울타리(`MO_Fence`) 아래 빈 `COL` 오브젝트(충돌체를 지운 껍데기) 삭제 + 빌더(`CarnivalMapBuilder.Spawn`)가 다시 만들지 않게 수정, 지운 물 위의 꺼진 반사 프로브 2개 삭제 | ✅ |
+| B3 | `GameLobbyScene` — 옛 대기 화면 `MonsterWaitPanel` 삭제 | ✅ |
+| B4 | 검증 — 씬별 오브젝트 수 전후 비교, Missing 0, 통행 검사(놀이공원), EditMode, Play Mode(대기실·맵 걷기·조명 모습) | ✅ |
+
+### 38.3 D — 고아 에셋(빌드·빌더 어디서도 참조하지 않는 것)
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| D1 | 대상 확정 — 빌드 의존성 그래프 + 씬·프리팹 역참조 + **에디터 코드의 경로 문자열**을 다시 검사해, 셋 다 0인 것만 | ✅ |
+| D2 | `_CleanupBackup/2026-10-23/`로 옮기기(.meta 포함) → 에셋 새로 고침 | ✅ |
+| D3 | 검증 — 빌드 씬 의존성 수 비교(옮긴 것 말고는 그대로), Missing 0, 컴파일·EditMode·Play Mode | ✅ |
+| D4 | 문서 — research.md 8차에 "처리 결과" 표, README 행 갱신 | ✅ |
+
+**대상 후보(D1에서 다시 확인)**: 쿠키 애니메이션 FBX 3개(`Cookie_Dodge/Idle/StandUp.fbx`)와 백업 `.anim` 2개, 맵별 `*_Effects.fbx` 5개, 받은 선체로 바뀐 `VK_Viking.fbx`, `CF_Tile_Grass`·`Ground_Floor_Tile` 프리팹+FBX, 쓰지 않는 재질 6개(`Lobby_*` 4·`TestGround`·`ColorReplaceMaterial`), `Scenes/SampleScene/NavMesh.asset`, `Monster_Rigged_textures`의 중복 텍스처 3장, `Assets/Screenshots/` 57장, `02. Scripts/Player.md`(→ `Plan.md/archive/`).
+**이번에 손대지 않는 것**: 빌더 입력(`Maps/Common/Models` 97개, `FL_*`, `GD_GyroDrop`, `ITEM_CandyCell_*`, `ESC_CursedCandyCarnival`, `CandyForestLayout`, `CF_Lollipop_*`), 옛 `Game_`·`Original/` 씬과 그 씬만 쓰는 에셋(C 결정 대기), `07. Expression` 표정 그림·`LobbySceneBackGround.png`(만든 그림 — 쓸 계획이 있는지 사용자 확인 필요), `SoundSettingsPanel.prefab`(설치 도구가 경로로 씀), `~` 원본 폴더.
+
+### 38.4 결과 기록
+
+**A — 죽은 코드 ✅ (2026-10-23)**
+- 바꾼 파일 약 50개, 백업으로 옮긴 파일: `NetHold.cs`·`HeldSyncRecorder.cs`·`PaintColliderUpdater.cs`·`Dev/MonsterTestSpawner.cs`, `Legacy~` 폴더 4개(`_CleanupBackup/2026-10-23/`).
+- A1 NetHold: PrefabPool 감싸기가 사라졌다. 문은 방 밖일 때만 로컬로 바꾸고, 대기 괴물끼리 나누던 `LobbyDoorState`(13)·큐 정지 분기를 지웠다. `MusicContext.LocalMonsterWaiting` 삭제.
+- A2 손 색칠: `PlayerPaintCanvas` 649 → 약 200줄(물풍선 전신 칠하기·받기·가루 색 샘플·스킨 합성만). 칠하기 전송은 `{viewId, 팔레트 번호}` 하나로 단순해졌다(받는 쪽 주인 검증·팔레트 범위 검사 유지). `GamePhaseState.IsPaintActive`, 입력 `PaintHeld`·`PaintButton`·`PointerPosition`, 키 `ForcedPaint*`·`RegisteredSlotCount`, 이벤트 `ClearColor`(3, 비워 둠), 설정 색칠 필드 5개 삭제. 휠 입력 이름 `BrushSizeDelta` → `SlotWheelDelta`.
+- A3 처단(Purge): `WitchMode.Purge`(2, 비워 둠)·`WitchShot.Approach` 삭제, `WitchTimeline.WalkStart/WalkEnd`는 모드 인자 없이. 다가옴 카메라·`LineBlocked`, 마녀 `faceMap`, 대역 고르기의 스파이 구분, `MonsterRoster`의 `witchPurging` 인자 삭제.
+- A4: 계획 표의 작은 멤버 모두 삭제(`EscapeNoticeKind` 2는 비워 둠), `EscapeCatalogSO.spyChestTools/hammersPerCookie`, `ItemSO.fitsAnyRocketSlot`, `EscapeTextsSO` 안 쓰는 문구 10개, `Camera_Ctrl` 낡은 주석·깨진 글자 고침. `MonsterAssignmentAuthority`의 옛 키(`MonsterRevealTime`·`MonsterSelectDeadline`) 쓰기·지우기 제거.
+- **남긴 것**: `ColorEntry.colorName`(팔레트 인스펙터에서 색 이름표로 쓰임), `EscapeRecipeSO`의 옛 칸·개수 필드(에셋 만드는 도구 `EscapeAssetsBuilder`가 아직 채움 — 도구와 함께 정리해야 해서 다음으로), `GameRuleController`의 비탈출 판정(안전장치), `SoundId`·`MusicId` 값.
+- 검증: 컴파일 오류 0, Console 0건. EditMode **320/320**(기준 326 − 지운 Purge·색칠 시험 6개).
+- Play Mode(놀이공원, 4명 오프라인):
+  - 물풍선 전신 칠하기: 직접 `ForceFillColor`, 원격 `ApplyRemote`, 도구 명중 `ToolHitReceiver` 모두 캔버스 색이 바뀐다. 남의 viewId·범위 밖 색은 무시. 가루 색 샘플 64개 정상.
+  - 마녀 타임어택: 첫 탈출 → `Reveal → Turn → Return → None → FinaleLowAngle → FinaleStomp → FinaleEnd` → 결과(`EscapeEnded`, 이유 3 마녀). 남은 쿠키·스파이·괴물 모두 `DeathCause = Witch`, 탈출한 쿠키는 그대로. 결과 곡 `Result`.
+  - 대기실 문: 오프라인 방장 경로로 `Closed → OpenInward`, 방 속성 기록 정상. 녹음 패널 생성 정상.
+  - `[NetGuard]` 경고는 오프라인에서 쿠키·괴물이 같은 사람(Actor 1)이라 나오는 기존 현상.
+
+**B — 빌드 씬 정리 ✅ (2026-10-23)** — 고치기 전 씬 8개는 `_CleanupBackup/2026-10-23/scenes_before_B/`에 복사해 두었다.
+
+| 씬 | 오브젝트 수(전 → 후) | 지운 것 |
+|---|---|---|
+| `CandyForest` | 7,430 → 7,036 | 꺼진 `PointLights` |
+| `CursedCandyCarnival` | 4,404 → 3,948 | 꺼진 `PointLights` 112, 꺼진 물 위 반사 프로브 2, 울타리 아래 빈 `COL_0` 342 |
+| `Test_GingerbreadVillage` | 1,237 → 846 | 꺼진 `PointLights` |
+| `Test_ChocolateFactory` | 937 → 865 | 〃 |
+| `Test_HauntedBakery` | 961 → 881 | 〃 |
+| `Test_CandyForest`(실제 맵 원본 틀) | 1,207 → 813 | 〃 |
+| `Test_CursedCandyCarnival`(원본 틀) | 1,105 → 993 | 〃 |
+| `GameLobbyScene` | 2,420 → 2,418 | 옛 대기 화면 `MonsterWaitPanel` |
+
+- 빈 `COL_0`은 울타리 프리팹의 충돌체 자식이다. 빌더가 겉모습 울타리에서 충돌체만 지워 빈 껍데기가 남았다. 프리팹 인스턴스의 "지운 자식" 덮어쓰기로 지웠고, `CarnivalMapBuilder.Spawn`이 다시 만들 때도 함께 지우게 고쳤다.
+- 검증:
+  - 씬 재검사: 지운 묶음 0, 누락 스크립트 0. 남은 비활성은 실행 중 켜지는 UI(결과 화면·ESC 메뉴·채팅 입력)뿐이다.
+  - 놀이공원 통행 검사 **5/5 clean**.
+  - EditMode **320/320**.
+  - Play Mode: 대기실(빛 21), 캔디숲(빛 49, 50 m 걷기), 놀이공원(빛 192, 41 m 걷기) 모두 Console 오류·경고 0.
+
+**D — 고아 에셋 ✅ (2026-10-23)**
+- D1 대상 확정: 후보 80개를 세 가지로 다시 검사했다.
+  - 빌드 의존성
+  - 모든 씬·프리팹·재질·SO·애니메이터의 역참조
+  - 에디터 코드의 경로 문자열
+- 결과:
+  - `Monster_Rigged_textures`의 3개(`Image_0_BaseColor`·`Image_2_Normal`·`M_Monster`)는 실제로 쓰여 뺐다.
+  - `*_Effects.fbx` 5개는 `MapSceneBuilder`가 분류 이름으로 읽는 빌더 입력이라 뺐다.
+- D2 이동 77개(약 54 MB) → `_CleanupBackup/2026-10-23/`:
+  - `Animation/Cookie/Cookie_Dodge.fbx`·`Cookie_Idle.fbx`·`Cookie_StandUp.fbx`
+  - `Cookie_Dodge_Original.anim`·`Cookie_Dodge_Retimed_Backup_PreRootFix.anim`
+  - `Viking/VK_Viking.fbx`
+  - `CF_Tile_Grass`(프리팹+FBX), `Ground_Floor_Tile`(프리팹+FBX)
+  - 재질 6개(`Lobby_Crate/Fence/Grass/Parasol`·`TestGround`·`ColorReplaceMaterial`)
+  - `Monster_Rigged_textures`의 중복 텍스처 3장(` 1` 붙은 것·ORM)
+  - `Scenes/SampleScene/`(NavMesh.asset만 있던 폴더)
+  - `Screenshots/` 57장
+- `02. Scripts/Player.md`는 `Plan.md/archive/Player.md`로 옮겼다.
+- D3 검증:
+  - 빌드 의존성 1,776개로 정리 전과 같다(옮긴 것은 하나도 포함되지 않음).
+  - 빌드 씬·Resources에서 풀리지 않는 GUID 참조: 게임 에셋 0. 15개는 Photon 패키지 데모 안의 기존 문제다.
+  - 컴파일 오류 0, EditMode **320/320**.
+  - Play Mode(놀이공원): 쿠키 걷기 애니메이션 `Cookie_Walking`, 쿠키·괴물 애니메이터의 빠진 클립 0, 괴물 재질 누락 0, Console 0건.
+- D4 문서: research.md 앞에 「0. 처리 결과」 표를 넣었고, README의 research·Request1009Plan 행을 갱신했다.
+- **사용자에게 남긴 일**:
+  - 확인이 끝나면 프로젝트 루트의 `_CleanupBackup/` 폴더를 지운다(되돌리려면 같은 경로로 다시 옮기면 된다).
+  - C(옛 `Game_`·`Original/` 씬), 표정 그림 20장, `LobbySceneBackGround.png`를 남길지 결정한다.

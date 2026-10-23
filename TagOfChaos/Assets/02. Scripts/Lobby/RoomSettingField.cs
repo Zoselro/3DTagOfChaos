@@ -69,13 +69,6 @@ public class RoomSettingField : MonoBehaviour
         return outcome;
     }
 
-    public RoomSettingStepper.Outcome StepBy(int delta)
-    {
-        RoomSettingStepper.Outcome outcome = Stepper.Step(delta);
-        Apply(outcome, byUser: false);
-        return outcome;
-    }
-
     // byUser: 버튼·입력으로 바꾼 경우에만 경고음을 낸다(창을 열며 코드가 값을 채울 때는 문구만).
     private void Apply(RoomSettingStepper.Outcome outcome, bool byUser)
     {

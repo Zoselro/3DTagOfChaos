@@ -23,8 +23,6 @@ public class VoiceChat : MonoBehaviour
     // 이 클라이언트가 지금 마이크를 쓰고 있는지(설정 창 소리 막대가 이 값을 쓴다).
     public static bool IsCapturing => instance != null && instance.recorder != null && instance.recorder.RecordingEnabled;
     public static float InputLevel => IsCapturing && instance.recorder.LevelMeter != null ? instance.recorder.LevelMeter.CurrentPeakAmp : 0f;
-    public static bool IsTransmitting => instance != null && instance.recorder != null && instance.recorder.IsCurrentlyTransmitting;
-    public static int SpeakerCount => instance != null ? instance.speakers.Count : 0;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()

@@ -43,7 +43,6 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public EscapeRecipeSO Recipe => recipe;
     public SpyRocket Rocket => rocket;
     public WitchPresenter Witch => witch;
-    public Rect MapRect => area.Rect;
     public MapArea Area => area;
     public event System.Action StateChanged;
 
@@ -75,8 +74,6 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public int ExitCount => exits.Length;
     public int RocketAnchorCount => rocketAnchors.Length;
     public int RainbowAnchorCount => rainbowAnchors.Length;
-    public QuadrantBuilding BuildingView(int b) => b >= 0 && b < buildings.Length ? buildings[b] : null;
-    public EscapeGate ExitView(int k) => k >= 0 && k < exits.Length ? exits[k] : null;
 
     public Vector3 ChestPosition(int anchor) => anchor >= 0 && anchor < chestAnchors.Length ? chestAnchors[anchor].position : transform.position;
     public Vector3 ChestFront(int anchor) =>

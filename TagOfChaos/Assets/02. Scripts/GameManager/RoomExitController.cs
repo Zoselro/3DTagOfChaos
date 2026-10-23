@@ -28,8 +28,7 @@ public class RoomExitController : MonoBehaviourPunCallbacks
 
     public void OnClickBackBtn()
     {
-        // 술래가 대기실에서 기다리는 동안에는 메시지 큐가 멈춰 있어(MonsterLobbyWaitController) 퇴장 완료(OnLeftRoom)를
-        // 받지 못하고, 맵으로 넘어갈 때에야 나가졌다. 나가기로 했으면 큐를 다시 돌린다(쌓인 판 이벤트는 로비로 가며 버려진다).
+        // 씬을 불러오는 중(PUN이 큐를 멈춤)에 나가기를 눌러도 퇴장 완료(OnLeftRoom)를 받도록 큐를 다시 돌린다.
         if (!PhotonNetwork.IsMessageQueueRunning) PhotonNetwork.IsMessageQueueRunning = true;
 
         // 방 CustomProperties는 마지막 사람이 나가면 방과 함께 사라지므로 따로 지우지 않는다(예전의
@@ -47,7 +46,7 @@ public class RoomExitController : MonoBehaviourPunCallbacks
 
     public override void OnLeftRoom()
     {
-        // 괴물 대기(MonsterLobbyWaitController)나 GameScene 도착 전 이탈 등으로 바뀐 전역 네트워크 설정을 되돌린다.
+        // 씬 불러오기 도중 이탈 등으로 바뀐 전역 네트워크 설정을 되돌린다.
         PhotonNetwork.IsMessageQueueRunning = true;
         PhotonNetwork.KeepAliveInBackground = NetworkDefaults.KeepAliveInBackgroundSeconds;
 

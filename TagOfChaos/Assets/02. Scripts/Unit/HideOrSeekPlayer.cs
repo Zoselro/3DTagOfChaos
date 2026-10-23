@@ -150,7 +150,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     [PunRPC]
     private void OnGrabbedByOwner(int newCarrierViewId, PhotonMessageInfo info)
     {
-        if (pv == null || !pv.IsMine) return; // pv == null: 대기 괴물이 보관 중인(아직 깨어나지 않은) 캐릭터(NetHold)
+        if (pv == null || !pv.IsMine) return;
         PhotonView carrierView = PhotonView.Find(newCarrierViewId);
         bool senderOwnsCarrier = carrierView != null && carrierView != pv && info.Sender != null && carrierView.Owner == info.Sender
                                  && carrierView.GetComponent<HideOrSeekPlayer>() != null;
@@ -207,7 +207,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     [PunRPC]
     private void RequestGrabKill(int monsterViewId, PhotonMessageInfo info)
     {
-        if (pv == null) return; // 대기 괴물이 보관 중인(아직 깨어나지 않은) 캐릭터(NetHold) — PUN은 꺼진 컴포넌트에도 RPC를 부른다
+        if (pv == null) return;
         // 보낸 사람이 그 괴물 캐릭터의 주인인지 확인한다 — 아무 클라이언트나 쿠키를 파괴할 수 없게(research.md R4.10-2).
         PhotonView monsterView = PhotonView.Find(monsterViewId);
         MonsterController monster = monsterView != null ? monsterView.GetComponent<MonsterController>() : null;

@@ -303,7 +303,7 @@ public sealed class EscapeAuthority
     // 마녀 타이머가 흐르기 시작했는지(등장 연출이 끝난 뒤, §25 결정 1).
     private static bool WitchTimerFlowing(double now) =>
         WitchTimeline.Mode == WitchMode.TimeAttack && WitchTimeline.TryGetAppearAt(out double appearAt)
-        && now >= WitchTimeline.WalkStart(WitchMode.TimeAttack, appearAt);
+        && now >= WitchTimeline.WalkStart(appearAt);
 
     // ---------------- D: 재료 안전장치(§26 R1·§26.3.3) ----------------
 

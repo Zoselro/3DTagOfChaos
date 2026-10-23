@@ -33,7 +33,6 @@ public class KeyBindingsPage : MonoBehaviour
 
     // 키 입력을 기다리는 중이거나 초기화 확인창이 떠 있으면 ESC는 그것을 취소하는 데 쓰인다 — ESC 메뉴·설정 창이 닫히지 않게 확인한다.
     public static bool ConsumesEscape => listening != null || confirming != null || escapeFrame == Time.frameCount;
-    public bool IsConfirmingReset => resetConfirm != null && resetConfirm.activeSelf;
 
     private void Awake()
     {

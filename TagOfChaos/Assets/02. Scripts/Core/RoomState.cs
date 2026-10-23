@@ -100,10 +100,6 @@ public static class RoomState
         return room.MaxPlayers > 0 && room.PlayerCount >= room.MaxPlayers;
     }
 
-    // 괴물 선정(가마솥·타임아웃)을 받을 수 있는 상태인지 — 정원이 찼고 아직 자리가 남았을 때만(GameRule.md §2.1).
-    // 정원이 차기 전에는 가마솥에 들어가도 아무 반응이 없어야 한다(사용자 요구, §30.2).
-    public static bool CanSelectMonster() => IsRoomFull() && !IsMonsterSelectionComplete();
-
     // 호스트 = 시작 버튼을 가진 사람(Bug-fix-plan.md §33 A안): 방에 남아 있는 사람 중 가장 먼저 들어온 사람.
     // 괴물 여부와 무관하다 — 방을 만든 사람이 괴물이 돼도 시작 버튼은 그대로 두고, 나가면 다음 입장자에게 간다.
     // 게임 진행 권한(Photon 방장)은 괴물이 아니어야 하므로 아래 DesiredMasterActor로 따로 정한다.

@@ -10,7 +10,7 @@ using UnityEngine;
 // 컴포넌트의 Awake가 전부 끝난 뒤에야 비로소 아무 컴포넌트의 Start가 시작된다는 것을 보장한다 —
 // HideOrSeekPlayer.Awake()가 networkSync를 IsMine 여부와 무관하게 최우선 생성하는 것과 정확히
 // 같은 근거(research.md §5.7). 여기서 sharedMaterial을 미리 바꿔두면, 나중에 실행되는
-// PlayerPaintCanvas.Start()의 InitPaintCanvas()가 bodyRenderer.sharedMaterial의 _MainTex를
+// PlayerPaintCanvas.Start()(ApplyPaintedSkinMaterial)가 bodyRenderer.sharedMaterial의 _MainTex를
 // 읽어 합성 머티리얼을 만드는 시점에는 이미 올바른 스킨이 반영돼 있다.
 public class PlayerSkinApplier : MonoBehaviourPunCallbacks
 {

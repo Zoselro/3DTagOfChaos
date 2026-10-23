@@ -23,13 +23,12 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
         int[] remaining = MonsterRoster.Remaining(monsters, PhotonNetwork.CurrentRoom.Players.Keys);
         var props = new Hashtable { { NetKeys.MonsterActorNumbers, remaining } };
 
-        // 괴물 없이도 판을 이어 가는 경우(Request1009Plan.md §19.4·§21): 마녀 처단 중, 또는 스파이 로켓이 떠나 마녀 타이머가 켜진 뒤.
+        // 괴물 없이도 판을 이어 가는 경우(Request1009Plan.md §21): 첫 탈출로 마녀 타이머가 켜진 뒤.
         // 이때도 목록은 갱신한다(빈 배열) — 마녀 사망·결과 화면·추격 음악이 "괴물 없음"을 본다. 결과가 이미 났으면 결과 화면이 처리한다.
-        bool witchPurging = WitchTimeline.Mode == WitchMode.Purge;
         bool spyRocketLaunched = RoomState.TryGetDouble(NetKeys.TimeAttackEndTime, out _); // 첫 탈출로 마녀 타이머가 켜진 뒤(§25.5 G)
         bool resultDecided = RoomState.TryGetInt(NetKeys.GameResult, out _);
-        if (remaining.Length == 0 && !MonsterRoster.ReturnWhenMonstersGone(spyRocketLaunched, witchPurging, resultDecided))
-            Debug.Log($"[RoomLifecycle] All monsters left (last: actor {otherPlayer.ActorNumber}) — the round continues (rocket launched: {spyRocketLaunched}, purge: {witchPurging}, result: {resultDecided}).");
+        if (remaining.Length == 0 && !MonsterRoster.ReturnWhenMonstersGone(spyRocketLaunched, resultDecided))
+            Debug.Log($"[RoomLifecycle] All monsters left (last: actor {otherPlayer.ActorNumber}) — the round continues (rocket launched: {spyRocketLaunched}, result: {resultDecided}).");
         else if (remaining.Length == 0)
         {
             monstersGoneAt = PhotonNetwork.Time;

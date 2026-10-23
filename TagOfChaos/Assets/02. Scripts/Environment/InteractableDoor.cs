@@ -127,22 +127,10 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
 
     private void RequestState(DoorState target)
     {
-        // 동기화할 상대가 없으면 로컬에서만 바꾼다: 방 밖(오프라인 테스트 씬 등), 또는 메시지 큐가 멈춘 동안 — 색칠 시간에 괴물이
-        // 대기실에 혼자 남아 큐를 멈추면 PUN은 아무것도 보내지 않는다. 그동안 다른 사람은 문이 없는 GameScene에 있고, 판이 끝나면
-        // DoorStates가 초기화돼 모두 Room Prop 기준으로 다시 맞추므로 어긋남이 남지 않는다(Bug-fix-plan.md §36).
-        if (!RoomState.IsInRoom() || !PhotonNetwork.IsMessageQueueRunning)
+        // 동기화할 상대가 없으면(방 밖 — 오프라인 테스트 씬 등) 로컬에서만 바꾼다.
+        if (!RoomState.IsInRoom())
         {
             ApplyState(target, instant: false);
-            return;
-        }
-
-        // 판 도중 대기실에서 기다리는 괴물(NetHold 보관 중): 방장은 맵에 있어 이 문이 없다 — 요청이 처리되지 않았다(§22.1).
-        // 내 화면에서 바로 바꾸고, 함께 기다리는 괴물에게만 알린다. 판이 끝나면 DoorStates 초기화로 모두 다시 맞춰진다.
-        if (NetHold.IsHolding)
-        {
-            ApplyState(target, instant: false);
-            var others = new RaiseEventOptions { Receivers = ReceiverGroup.Others };
-            PhotonNetwork.RaiseEvent(NetEventCodes.LobbyDoorState, new object[] { DoorId, (byte)target }, others, SendOptions.SendReliable);
             return;
         }
 
@@ -159,11 +147,6 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
 
     public void OnEvent(EventData photonEvent)
     {
-        if (photonEvent.Code == NetEventCodes.LobbyDoorState)
-        {
-            ApplyLobbyDoorState(photonEvent);
-            return;
-        }
         if (photonEvent.Code != NetEventCodes.DoorStateRequest || !PhotonNetwork.IsMasterClient) return;
         if (!(photonEvent.CustomData is object[] data) || data.Length < 2) return;
         if (!(data[0] is string id) || id != DoorId) return;
@@ -176,16 +159,6 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
             return;
         }
         WriteState(id, (DoorState)raw);
-    }
-
-    // 함께 기다리는 괴물이 바꾼 대기실 문. 나도 기다리는 중이고, 보낸 사람이 괴물일 때만(맵의 쿠키가 보낸 것은 무시).
-    private void ApplyLobbyDoorState(EventData photonEvent)
-    {
-        if (!NetHold.IsHolding || !RoomState.IsMonster(photonEvent.Sender)) return;
-        if (!(photonEvent.CustomData is object[] data) || data.Length < 2) return;
-        if (!(data[0] is string id) || id != DoorId) return;
-        if (!(data[1] is byte raw) || raw > (byte)DoorState.OpenOutward) return;
-        ApplyState((DoorState)raw, instant: false);
     }
 
     // 방장 전용. 다른 문의 값은 그대로 두고 이 문의 값만 바꾼 전체 표를 쓴다.
@@ -204,10 +177,6 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
     public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
     {
         if (!propertiesThatChanged.ContainsKey(NetKeys.DoorStates)) return;
-        // 기다리는 동안 맵의 방장이 쓴 문 표로 대기실 문을 맞추면, 괴물이 연 문이 '표에 없음 = 닫힘'으로 도로 닫힌다(§22.5 문제 4).
-        // 대기실로 다시 돌아오면 Start(SyncFromRoom)가 맞춘다.
-        if (NetHold.IsHolding) return;
-
         var doors = propertiesThatChanged[NetKeys.DoorStates] as Hashtable;
         if (doors == null) masterPendingWrites.Clear(); // 판 초기화(RoundStateResetter)로 지워짐 — 모두 닫힘
         else if (masterPendingWrites.TryGetValue(DoorId, out object pending) && doors.TryGetValue(DoorId, out object confirmed)

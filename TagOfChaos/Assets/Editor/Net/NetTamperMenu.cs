@@ -32,7 +32,6 @@ public static class NetTamperMenu
     [MenuItem(Root + "3 Write RegionMove", true)]
     [MenuItem(Root + "4 Take master client", true)]
     [MenuItem(Root + "5 Paint other cookie", true)]
-    [MenuItem(Root + "6 Clear other cookie paint", true)]
     [MenuItem(Root + "7 Grab other cookie from afar", true)]
     [MenuItem(Root + "8 Monster - grab-kill other cookie from afar", true)]
     [MenuItem(Root + "9 Revive myself (clear my HitCount)", true)]
@@ -73,18 +72,9 @@ public static class NetTamperMenu
     {
         HideOrSeekPlayer cookie = CookieOf(FirstOther());
         if (cookie == null) { Debug.Log("[NetTamper] No other cookie."); return; }
-        object[] content = { cookie.View.ViewID, new[] { 0.5f }, new[] { 0.5f }, new[] { 0.5f }, new[] { unchecked((int)0xFF0000FF) }, new byte[] { 0 } };
+        object[] content = { cookie.View.ViewID, 0 }; // { viewId, 팔레트 번호 } — 물풍선 전신 칠하기와 같은 모양
         PhotonNetwork.RaiseEvent(NetEventCodes.PaintStroke, content, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
-        Debug.Log($"[NetTamper] Sent a paint stroke for view {cookie.View.ViewID}. Expected: ignored on every screen.");
-    }
-
-    [MenuItem(Root + "6 Clear other cookie paint")]
-    private static void ClearOther()
-    {
-        HideOrSeekPlayer cookie = CookieOf(FirstOther());
-        if (cookie == null) { Debug.Log("[NetTamper] No other cookie."); return; }
-        PhotonNetwork.RaiseEvent(NetEventCodes.ClearColor, new object[] { cookie.View.ViewID }, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
-        Debug.Log($"[NetTamper] Sent a clear for view {cookie.View.ViewID}. Expected: ignored on every screen.");
+        Debug.Log($"[NetTamper] Sent a paint fill for view {cookie.View.ViewID}. Expected: ignored on every screen.");
     }
 
     [MenuItem(Root + "7 Grab other cookie from afar")]

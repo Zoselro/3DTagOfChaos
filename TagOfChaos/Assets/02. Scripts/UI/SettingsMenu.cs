@@ -24,7 +24,6 @@ public class SettingsMenu : MonoBehaviour
 
     public event Action Closed;
     public bool IsOpen => gameObject.activeSelf;
-    public int CurrentTab => current;
 
     private void Awake()
     {
