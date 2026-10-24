@@ -4295,3 +4295,76 @@ v1 §S1~S8 그대로:
 - **사용자에게 남긴 일**:
   - 확인이 끝나면 프로젝트 루트의 `_CleanupBackup/` 폴더를 지운다(되돌리려면 같은 경로로 다시 옮기면 된다).
   - C(옛 `Game_`·`Original/` 씬), 표정 그림 20장, `LobbySceneBackGround.png`를 남길지 결정한다.
+
+
+## 39. 2026-10-24 놀이공원 분수 물줄기·롤러코스터 입구 열기·열차 1편성
+
+**요청**: ① `MO_Fountain`의 물줄기가 자연스럽게 나오게, ② 늘 닫혀 있던 롤러코스터 입구를 열어 두기, ③ 롤러코스터 열차(Car) 2편성 → 1편성.
+**사용자 결정**: 입구는 "통로까지 지나가게" — 앞 계단 → 입 안 통로 → 뒤 계단으로 지나간다. 괴물도 지나갈 수 있는지 Play Mode에서 확인하고, 못 오르면 오르게 맞춘다(쿠키만의 피난처 금지, 처음에 문을 닫아 둔 이유).
+
+**원칙**
+- 빌더(`CarnivalRidesBuilder`·`CarnivalMapAssets`)와 씬을 같이 고친다 — 빌더를 다시 돌려도 같은 결과가 나오게.
+- 씬은 전체 재생성 대신 바뀌는 부분만 고치는 도구로 적용한다(`Test_CursedCandyCarnival` → 원본 틀, `CursedCandyCarnival` → 실제 맵).
+- 단계마다 컴파일 오류 0 → Console 확인 → EditMode 시험. 끝에 Play Mode로 실제 모습·통행 확인.
+
+### 39.1 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| F1 | 분수 모델: 고정된 물줄기 막대 6개(물 재질의 세로 조각)를 Blender에서 빼고 같은 설정으로 다시 내보내기(나머지 형태·재질 3칸·축은 원본과 같게) | ✅ |
+| F2 | 물줄기 효과: 위 그릇 밑 6곳에서 포물선으로 떨어지는 물줄기(파티클, 늘린 빌보드) + 떨어지는 자리 물보라·물결 고리 + 위·아래 물 표면이 흔들리게(물 재질 칸만 MaterialPropertyBlock) — `FountainWater`(Environment) + `FountainWaterBuilder`(Editor)가 `MO_Fountain` 프리팹에 붙임, `CarnivalMapAssets.BuildProp`도 같은 것을 붙임 | ✅ |
+| F3 | 물소리: `SoundId.FountainWater`(807, 환경음 묶음) 시험음 합성(이음매 없는 반복) + 카탈로그 + 분수마다 `AmbientEmitter`(가까이서만) | ✅ |
+| G1 | 입구 열기: 창살 문 `Gate_Front`·`Gate_Back` 삭제, 건물 충돌 `COL_Body`를 통로만 비운 `COL_BodyLeft/Right`·`COL_PassRoof`·`COL_PassFloor`로(탈출구 판 `CoasterExitBuilder`와 같은 모양), 빌더 주석·시험 갱신 | ✅ |
+| G2 | 통행 확인: 쿠키·괴물이 앞 계단 → 통로 → 뒤 계단을 지나가는지(Play Mode), 뒤 계단 아래 마당이 막힌 곳(갇히는 곳)이 아닌지, 괴물이 못 오르면 계단 충돌 조정 | ✅ |
+| T1 | 열차 1편성: `CarnivalRidesBuilder.BuildCoaster` 편성 수 1, 씬의 `Train_B` 삭제·`CoasterRide.trains` 1개, `CoasterRide`·빌더 주석, `Request1021Tests` 갱신 | ✅ |
+| V1 | 검증: 컴파일·Console·EditMode 전체, 놀이공원 통행 검사, Play Mode(분수 물줄기·소리, 입구 통과, 열차 1편성 주행) | ✅ |
+| V2 | 문서: 결과 기록, README 행 갱신 | ✅ |
+
+### 39.2 결과 기록
+
+- F1 분수 모델: 물 재질의 세로 조각 6개(위 그릇 밑 반지름 0.33·높이 2.02 → 아래 물 반지름 1.18·높이 0.53)를 지우고 같은 설정으로 다시 내보냈다(Blender 4.5, 변형 적용 후 내보내 축이 원본과 같음). Unity에서 재질 칸 3개·전체 크기 그대로, 물 칸 범위만 높이 0.46~2.12로 줄었다. 원본은 `_CleanupBackup/2026-10-24/`.
+- G1 입구: `CarnivalRidesBuilder.BuildEntranceColliders` — 문 2개·`COL_Body` 삭제, `COL_BodyLeft/Right`·`COL_PassRoof`·`COL_PassFloor`·`COL_MouthFloor`. 이미 만든 두 씬에는 `UpdateRides`(메뉴 Update Coaster Entrance & Train)로 적용.
+- T1 열차: `CarnivalRidesBuilder.TrainCount = 1`, 두 씬의 `Train_B` 삭제·`CoasterRide.trains` 1개.
+- 시험: `Request1021Tests` 8/8(열차 1편성·입구 통로가 비고 바닥이 있음 `AssertEntranceOpen`), `CarnivalMapTests` 6/6(실제 맵도 같은 검사).
+
+- G2 통행(Play Mode, 실제 맵, 매 프레임 조종 + 0.1초 기록):
+  - 쿠키: 입구 앞 → 앞 계단 → 통로(높이 5.0~6.1 m, 통로 바닥 3.97 m) → 뒤 계단 아래까지 1.7초 만에 지나감.
+  - 괴물: 같은 길을 3.7초에 지나감(통로 안 높이 4.0~5.2 m). 32° 계단을 오르므로 쿠키만의 피난처가 되지 않는다.
+  - 처음 시험에서 쿠키가 앞 계단 끝에서 멈췄다 — 입 앞에 둔 바닥 상자(`COL_MouthFloor`)가 계단 위에 0.7 m 턱을 만들었다. 계단 쐐기가 입까지 올라가므로 그 상자를 뺐다.
+  - 통행 검사 5/5 깨끗(막힌 주머니 0). 격자 검사의 괴물(반경 1.8 m 구)은 32° 계단에 설 수 없어 계단을 "쿠키 전용"으로 보고했다. 실제 괴물이 지나감을 확인했으므로 `MapPassabilityCheck.Options.MonsterVerified`(새 항목)에 입구 길(`CarnivalRidesBuilder.EntranceRoute`, 계단 폭 × 앞·뒤 계단 발치 사이)을 넣어 그 칸만 판정에서 뺐다.
+
+- F2 물줄기 효과(`FountainWaterBuilder` → `MO_Fountain` 프리팹의 `Water`, 맵의 분수 4곳이 프리팹을 따라 함께 바뀜):
+  - Jets: 위 그릇 밑(반지름 0.33, 높이 1.97)에서 60°마다 6줄기, 수평 1.57 m/s로 나와 포물선으로 아래 물(반지름 1.18~1.20, 높이 0.46~0.54)에 떨어짐 — Play Mode 측정 228개, 각도 6곳.
+  - Spill(위 그릇 가장자리에서 가늘게 넘침)·Splash(떨어지는 6곳 물방울, 물 표면 근처에서 사라짐)·Mist(옅은 물안개)·Ripples(퍼지는 물결 고리).
+  - 물 표면: `FountainWater`가 물 재질 칸에만 `MaterialPropertyBlock`으로 텍스처 위치를 흘리며 흔듦(공유 재질은 그대로, 보일 때만 갱신).
+  - 재질 `M_FX_FountainDrop/Ring`(Particles/Standard Unlit, Fade — 재질 에셋이라 빌드에 셰이더 변형 포함), 텍스처는 코드로 만든 64×64 PNG. 화면 밖이면 파티클 멈춤.
+  - 사진으로 확인한 뒤 물줄기를 조금 굵고 진하게(크기 0.09~0.13, 알파 0.65), 물방울 수명을 짧게(0.18~0.3초) 고쳤다.
+- F3 물소리: `SoundId.FountainWater = 807`(환경음 묶음, 최소 3 m·최대 18 m, 음량 0.7, 동시 2개), 12초 이음매 없는 시험음(떨어지는 물 쏴아 + 물방울 + 낮은 물소리) `Assets/10. Audio/SFX/Ambience/FountainWater.wav`, 분수마다 `AMB_Fountain`(AmbientEmitter) — Play Mode에서 가까이 가면 재생 확인.
+- V1 검증:
+  - 컴파일 오류 0, EditMode **320/320**(15개 클래스).
+  - 통행 검사 5/5 CLEAN.
+  - Play Mode(실제 맵): 분수 4곳 모두 물줄기·소리 동작, 열차 1편성(`Train_B` 없음)이 레일을 따라 이동, 입구 통과(G2), Console 오류·경고 0.
+  - 시험 중 Unity 시험 실행기가 "실행 중" 상태로 멈춘 일이 한 번 있었다(스크립트 다시 불러오기로 풀림) — 게임 코드와 무관.
+- 끝 상태: 에디터는 Edit Mode, `CursedCandyCarnival` 열림, 저장 안 된 변경 없음. 원본 분수 FBX는 `_CleanupBackup/2026-10-24/`.
+
+
+## 40. 2026-10-24 초콜릿 공장 맵 꾸미기 오브젝트 10종·바닥 타일 5종(Blender, 텍스처)
+
+**요청**: 오브젝트 안내 그림을 토대로 꾸미기 오브젝트(가로등·깃발·배너·의자/벤치·상자/나무상자·파이프·카카오 열매·운반용 카트·펜스·원료 자루)와 바닥 타일(기본·초콜릿 조각·젤리·분쇄기·격자)을 Blender로 직접 만들고 텍스처까지 입힌다. 크기는 우리 캐릭터 기준. 바닥은 캔디숲처럼 크게(5.8×10 m 판) 만들지 말고 촘촘하게. 끝나면 스크린샷으로 보여준다.
+
+**크기 기준**: 쿠키 키 2.0 m(캡슐 반경 0.46 m), 괴물 키 약 3 m. 소품은 쿠키 옆에서 자연스러운 실제 비율(벤치 앉는 높이 0.5 m, 상자 1 m, 가로등 3.4 m 등).
+**바닥**: 1 m 정사각 타일(0.5 m 조각 2×2), 1 m당 1024 px(1 px ≈ 1 mm) — 쿠키 발 하나 크기의 조각이 보이도록. 기본·초콜릿·젤리는 평평한 판 + 법선 맵, 분쇄기·격자는 실제 구멍이 뚫린 판(윗면 높이 0 — 걸을 때 걸리지 않게) + 아래 바닥.
+**이름**: `CHO_`(초콜릿 공장) — 소품 `CHO_StreetLamp` 등, 바닥 `CHO_FL_*`. 기존 도우미(`ride_common`)와 텍스처 방식(`make_floor` 타일 클래스, PBR albedo·normal·metalSmooth)을 그대로 쓴다.
+**범위**: Blender 모델·텍스처·FBX·사진까지. Unity 반영(프리팹·배치)은 맵 작업 때(사용자 결정 후).
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| O1 | 소품 텍스처: 배너(백합 문장)·깃발(바퀴 문장)·자루 천·붉은 나무·상자 나무·초콜릿 판 등(1024 px, 코드 생성) | ⬜ |
+| O2 | 소품 10종 모델(캐릭터 기준 크기, 원점 = 바닥 가운데) + FBX | ⬜ |
+| F1 | 바닥 타일 텍스처 5종(1 m, 1024 px, albedo·normal·metalSmooth, 테두리 이음매 없음) | ⬜ |
+| F2 | 바닥 타일 모델 5종(평판 3 + 구멍 판 2) + FBX | ⬜ |
+| S1 | 사진: 소품 줄 세우기(2 m 마네킹·3 m 괴물 키 막대), 소품별 사진, 타일 위에서 본 모습, 타일을 섞어 깐 광장 + 소품 + 마네킹(높은 각도·눈높이) | ⬜ |
+| S2 | 문서: 결과 기록, README 행 갱신, 사진 전달 | ⬜ |
+
+### 40.1 결과 기록
+(진행하며 채운다)
