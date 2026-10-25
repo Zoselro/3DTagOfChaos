@@ -77,9 +77,12 @@ public static class CarnivalRideModelsImporter
         return string.Join(", ", report);
     }
 
-    public static string ImportSet(string set)
+    public static string ImportSet(string set) => ImportFolder($"{Root}/{set}", GlossScale.TryGetValue(set, out float g) ? g : 1f);
+
+    // 한 묶음 폴더(materials.json + Textures/ + *.fbx)를 정리한다. 초콜릿 공장 건물(ChocolateFactoryAssets, §41)도 쓴다.
+    public static string ImportFolder(string folder, float glossScale = 1f)
     {
-        string folder = $"{Root}/{set}";
+        string set = Path.GetFileName(folder);
         string json = $"{folder}/materials.json";
         if (!File.Exists(json)) return $"{set}: no materials.json";
         MaterialSpec[] specs = JsonUtility.FromJson<MaterialList>(File.ReadAllText(json)).materials ?? new MaterialSpec[0];
@@ -97,7 +100,6 @@ public static class CarnivalRideModelsImporter
 
         string matFolder = $"{folder}/Materials";
         if (!AssetDatabase.IsValidFolder(matFolder)) AssetDatabase.CreateFolder(folder, "Materials");
-        float glossScale = GlossScale.TryGetValue(set, out float g) ? g : 1f;
         var materials = specs.ToDictionary(s => s.name, s => WriteMaterial(s, folder, matFolder, glossScale));
         AssetDatabase.SaveAssets();
 

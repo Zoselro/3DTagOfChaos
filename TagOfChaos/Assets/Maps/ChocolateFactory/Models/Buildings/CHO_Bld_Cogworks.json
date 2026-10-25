@@ -1,0 +1,264 @@
+{
+ "name": "CHO_Bld_Cogworks",
+ "kind": "building",
+ "source": "Cogworks",
+ "width": 37.0,
+ "min": [
+  -18.5,
+  -1.85,
+  -12.975
+ ],
+ "max": [
+  18.5,
+  24.598,
+  12.975
+ ],
+ "sunk": 1.85,
+ "tris": {
+  "Exterior": 589528,
+  "Interior": 33892,
+  "COL_Exterior": 11999,
+  "COL_Interior": 432
+ },
+ "outer_radii": [
+  17.44,
+  18.02,
+  19.57,
+  16.61,
+  15.85,
+  13.24,
+  11.56,
+  0.0,
+  0.0,
+  10.46,
+  9.86,
+  11.95,
+  13.26,
+  16.86,
+  20.47,
+  19.11,
+  19.09,
+  0.0,
+  10.66,
+  18.29,
+  19.85,
+  18.79,
+  18.79,
+  13.5,
+  11.06,
+  10.22,
+  7.49,
+  0.0,
+  0.0,
+  9.46,
+  13.69,
+  16.0,
+  19.85,
+  19.67,
+  19.04,
+  17.62
+ ],
+ "room": {
+  "min": [
+   -7,
+   0,
+   -7
+  ],
+  "max": [
+   7,
+   6.8,
+   6
+  ],
+  "ceiling": 6.8
+ },
+ "doors": [
+  {
+   "side": "Front",
+   "root": [
+    4.2,
+    0,
+    9.257
+   ],
+   "yaw": 180.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Front_L",
+    "Door_Front_R"
+   ],
+   "centre": [
+    2.2,
+    0,
+    9.257
+   ]
+  },
+  {
+   "side": "Back",
+   "root": [
+    -0.5,
+    0,
+    -9.375
+   ],
+   "yaw": 0.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Back_L",
+    "Door_Back_R"
+   ],
+   "centre": [
+    1.5,
+    0,
+    -9.375
+   ]
+  }
+ ],
+ "material": null,
+ "socket": null,
+ "spin": [
+  {
+   "name": "Spin_Main",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": 16.0
+  },
+  {
+   "name": "Spin_Small",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": -47.0
+  },
+  {
+   "name": "Spin_Back",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": -16.0
+  },
+  {
+   "name": "Spin_Grinder0",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": 90.0
+  },
+  {
+   "name": "Spin_Grinder1",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": -90.0
+  },
+  {
+   "name": "Spin_Wall0",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": 30.0
+  },
+  {
+   "name": "Spin_Wall1",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": -48.75
+  },
+  {
+   "name": "Spin_Wall2",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": 39.0
+  },
+  {
+   "name": "Spin_BeltRoller0",
+   "axis": [
+    -0.615,
+    -0.0,
+    -0.788
+   ],
+   "speed": -140.0
+  },
+  {
+   "name": "Spin_BeltRoller1",
+   "axis": [
+    -0.615,
+    -0.0,
+    -0.788
+   ],
+   "speed": -140.0
+  }
+ ],
+ "flows": [
+  {
+   "name": "Flow_Spout",
+   "speed": [
+    0.0,
+    1.4
+   ]
+  },
+  {
+   "name": "Flow_SpoutPool",
+   "speed": [
+    0.05,
+    0.08
+   ]
+  }
+ ],
+ "fx": [
+  {
+   "name": "FX_Grind",
+   "kind": "crumbs",
+   "radius": 1.0
+  },
+  {
+   "name": "FX_Splash_Spout",
+   "kind": "splash",
+   "radius": 0.6
+  },
+  {
+   "name": "FX_Drip_Spout",
+   "kind": "drip",
+   "radius": 0.3
+  }
+ ],
+ "paths": [
+  {
+   "name": "Belt",
+   "points": [
+    "Path_Belt_0",
+    "Path_Belt_1"
+   ],
+   "count": 7,
+   "speed": 1.2,
+   "item": "Item_ChocoChunk"
+  }
+ ],
+ "items": [
+  "Item_ChocoChunk"
+ ],
+ "faces_cut": 88570,
+ "texel_density_px_per_m": {
+  "meshy_albedo": 55,
+  "upscaled_albedo": 111,
+  "detail_layer": 1365
+ }
+}

@@ -1,7 +1,7 @@
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using static ParticleFxKit;
 
 // 놀이공원 분수(MO_Fountain)의 움직이는 물(Request1009Plan.md §39 F2·F3). 모델의 고정된 물줄기 막대는 Blender에서 뺐고(F1), 대신
 // 프리팹 아래 "Water"에 파티클을 둔다. 여러 번 실행해도 같은 결과(이전 Water를 지우고 다시 만든다).
@@ -174,112 +174,8 @@ public static class FountainWaterBuilder
         ps.GetComponent<ParticleSystemRenderer>().renderMode = ParticleSystemRenderMode.HorizontalBillboard;
     }
 
-    // ---------------- helpers ----------------
-
-    private static ParticleSystem NewSystem(Transform parent, string name, Vector3 localPos, Material mat, int maxParticles)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        go.transform.localPosition = localPos;
-        var ps = go.AddComponent<ParticleSystem>();
-        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        var main = ps.main;
-        main.loop = true;
-        main.prewarm = true;            // 씬이 열릴 때 이미 흐르고 있게
-        main.playOnAwake = true;
-        main.duration = 5f;
-        main.simulationSpace = ParticleSystemSimulationSpace.Local;
-        main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-        main.maxParticles = maxParticles;
-        main.cullingMode = ParticleSystemCullingMode.Pause; // 화면 밖이면 멈춘다
-        var shape = ps.shape;
-        shape.enabled = false;
-        var r = go.GetComponent<ParticleSystemRenderer>();
-        r.sharedMaterial = mat;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        r.receiveShadows = false;
-        r.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-        r.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-        r.sortingFudge = 0f;
-        return ps;
-    }
-
-    // 수평 고리(가장자리). spread > 0이면 그 비율 간격의 각도에서만 나온다(1/6 = 60°마다 6곳). 원은 바깥 방향으로 쏜다.
-    private static void RingShape(ParticleSystem ps, float radius, float spread)
-    {
-        var shape = ps.shape;
-        shape.enabled = true;
-        shape.shapeType = ParticleSystemShapeType.Circle;
-        shape.radius = radius;
-        shape.radiusThickness = 0f;
-        shape.arc = 360f;
-        shape.arcMode = ParticleSystemShapeMultiModeValue.Random;
-        shape.arcSpread = spread;
-        shape.rotation = new Vector3(90f, 0f, 0f); // 원(XY 평면)을 땅과 나란히(XZ)
-        shape.randomDirectionAmount = 0f;
-    }
-
-    // 처음에 밝게 나타나 끝에서 사라진다(peak = 가장 진한 알파 배율, end = 사라지기 시작하는 시점 비율)
-    private static void FadeOut(ParticleSystem ps, float peak, float end)
-    {
-        var col = ps.colorOverLifetime;
-        col.enabled = true;
-        var g = new Gradient();
-        g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-            new[] { new GradientAlphaKey(peak * 0.6f, 0f), new GradientAlphaKey(peak, 0.15f), new GradientAlphaKey(peak, Mathf.Min(end, 0.95f)), new GradientAlphaKey(0f, 1f) });
-        col.color = new ParticleSystem.MinMaxGradient(g);
-    }
-
     // ---------------- assets ----------------
 
-    private static Material DropMaterial() => FadeMaterial(DropMaterialPath, Texture(DropTexturePath, ring: false));
-    private static Material RingMaterial() => FadeMaterial(RingMaterialPath, Texture(RingTexturePath, ring: true));
-
-    // Particles/Standard Unlit, Fade. 재질 에셋으로 두어 빌드에 셰이더 변형(_ALPHABLEND_ON)이 들어간다(EscapeVisuals 참고).
-    private static Material FadeMaterial(string path, Texture2D tex)
-    {
-        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (m == null)
-        {
-            m = new Material(Shader.Find("Particles/Standard Unlit"));
-            AssetDatabase.CreateAsset(m, path);
-        }
-        m.mainTexture = tex;
-        m.SetFloat("_Mode", 2f);
-        m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        m.SetInt("_ZWrite", 0);
-        m.EnableKeyword("_ALPHABLEND_ON");
-        m.renderQueue = 3000;
-        EditorUtility.SetDirty(m);
-        return m;
-    }
-
-    // 물방울: 가운데가 진한 둥근 점. 물결: 가장자리가 진한 얇은 고리.
-    private static Texture2D Texture(string path, bool ring)
-    {
-        var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-        if (existing != null) return existing;
-        const int size = 64;
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        var pixels = new Color32[size * size];
-        for (int y = 0; y < size; y++)
-        for (int x = 0; x < size; x++)
-        {
-            float dx = (x + 0.5f) / size * 2f - 1f, dy = (y + 0.5f) / size * 2f - 1f, d = Mathf.Sqrt(dx * dx + dy * dy);
-            float a = ring ? Mathf.Clamp01(1f - Mathf.Abs(d - 0.82f) / 0.12f) * (d < 1f ? 1f : 0f) : Mathf.Clamp01(1f - d);
-            pixels[y * size + x] = new Color32(255, 255, 255, (byte)(a * a * 255f));
-        }
-        tex.SetPixels32(pixels);
-        File.WriteAllBytes(path, tex.EncodeToPNG());
-        Object.DestroyImmediate(tex);
-        AssetDatabase.ImportAsset(path);
-        var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-        importer.alphaIsTransparency = true;
-        importer.wrapMode = TextureWrapMode.Clamp;
-        importer.mipmapEnabled = true;
-        importer.textureCompression = TextureImporterCompression.Uncompressed;
-        importer.SaveAndReimport();
-        return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-    }
+    private static Material DropMaterial() => FadeMaterial(DropMaterialPath, RadialTexture(DropTexturePath, ParticleFxKit.Dot));
+    private static Material RingMaterial() => FadeMaterial(RingMaterialPath, RadialTexture(RingTexturePath, ParticleFxKit.Ring));
 }

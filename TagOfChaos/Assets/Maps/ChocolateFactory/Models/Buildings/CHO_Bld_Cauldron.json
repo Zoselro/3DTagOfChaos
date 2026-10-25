@@ -1,0 +1,167 @@
+{
+ "name": "CHO_Bld_Cauldron",
+ "kind": "building",
+ "source": "Cauldron",
+ "width": 37.0,
+ "min": [
+  -18.5,
+  -0.613,
+  -16.801
+ ],
+ "max": [
+  18.5,
+  26.676,
+  16.801
+ ],
+ "sunk": 0.613,
+ "tris": {
+  "Exterior": 553612,
+  "Interior": 47264,
+  "COL_Exterior": 11999,
+  "COL_Interior": 432
+ },
+ "outer_radii": [
+  16.21,
+  18.18,
+  18.03,
+  15.49,
+  16.64,
+  13.93,
+  13.49,
+  14.47,
+  0.0,
+  0.0,
+  14.44,
+  18.34,
+  19.93,
+  19.51,
+  10.21,
+  14.43,
+  16.85,
+  18.61,
+  18.28,
+  19.16,
+  19.24,
+  19.7,
+  19.73,
+  17.77,
+  9.51,
+  16.41,
+  16.57,
+  0.0,
+  12.88,
+  16.64,
+  19.14,
+  20.93,
+  20.13,
+  19.72,
+  19.6,
+  17.5
+ ],
+ "room": {
+  "min": [
+   -6.5,
+   0,
+   -7.5
+  ],
+  "max": [
+   6.5,
+   11.0,
+   5.5
+  ],
+  "ceiling": 11.0
+ },
+ "doors": [
+  {
+   "side": "Front",
+   "root": [
+    2.0,
+    0,
+    11.572
+   ],
+   "yaw": 180.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Front_L",
+    "Door_Front_R"
+   ],
+   "centre": [
+    -0.0,
+    0,
+    11.572
+   ]
+  },
+  {
+   "side": "Back",
+   "root": [
+    -2.0,
+    0,
+    -15.331
+   ],
+   "yaw": 0.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Back_L",
+    "Door_Back_R"
+   ],
+   "centre": [
+    -0.0,
+    0,
+    -15.331
+   ]
+  }
+ ],
+ "material": null,
+ "socket": null,
+ "spin": [],
+ "flows": [
+  {
+   "name": "Flow_Boiler",
+   "speed": [
+    0.03,
+    0.02
+   ]
+  },
+  {
+   "name": "Flow_Drain",
+   "speed": [
+    0.0,
+    1.4
+   ]
+  },
+  {
+   "name": "Flow_DrainPool",
+   "speed": [
+    0.05,
+    0.08
+   ]
+  }
+ ],
+ "fx": [
+  {
+   "name": "FX_Bubble_Boiler",
+   "kind": "bubble",
+   "radius": 1.6
+  },
+  {
+   "name": "FX_Splash_Drain",
+   "kind": "splash",
+   "radius": 0.6
+  },
+  {
+   "name": "FX_Drip_Drain",
+   "kind": "drip",
+   "radius": 0.3
+  }
+ ],
+ "paths": [],
+ "items": [],
+ "faces_cut": 37826,
+ "texel_density_px_per_m": {
+  "meshy_albedo": 55,
+  "upscaled_albedo": 111,
+  "detail_layer": 1365
+ }
+}

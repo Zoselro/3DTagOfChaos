@@ -160,16 +160,10 @@ public static class CarnivalMapAssets
     }
 
     public const string GeneratedFolder = "Assets/Maps/CursedCandyCarnival/Generated";
-    private const float WallHeight = 9f;      // 오를 수 없는 높이(쿠키 점프 1.8 m) — 지붕·차양 위로 못 간다
-    private const float FillCell = 0.5f;
+    private const float WallHeight = BuildingFill.WallHeight;
     private const float FillReach = 26f;
-    private const int OuterWindow = 8;
-    private const int OpenRadius = 2;          // 열기 창 5 × 5칸(2.5 m)
-    private static readonly float[] OuterRayHeights = { 0.3f, 1.2f, 2.2f }; // 사람 높이 아래 겉 건물 끝(차양은 빼고)
 
-    // 겉 건물(받은 모델)은 계단·통·차양이 많아 메시 충돌로 두면 쿠키가 타고 올라가 건물 속 빈 곳·지붕에 숨는다(통행 검사 §36 CM7).
-    // 캔디숲 재료 건물(§28.4)처럼 방과 문 통로를 뺀 건물 바닥 자리를 높은 상자로 채운다(0.5 m 격자, 줄마다 이어 붙임):
-    //   건물 자리 = 바깥에서 안으로 쏜 겉 건물(COL_Exterior)까지의 거리 안(사람 높이 아래, 1°마다)
+    // 겉 건물(받은 모델)을 메시 충돌로 두지 않고 방과 문 통로를 뺀 건물 바닥 자리를 높은 상자로 채운다(BuildingFill, §36 CM7):
     //   방 = 위에서 쏜 광선이 방 바닥(Interior, 0.3 m 아래)에 닿는 곳, 문 통로 = 앞(+Z)·뒤(−Z) 문 폭 그대로 방 벽에서 바깥까지.
     // 겉 충돌 메시는 지운다(재는 데만 쓴다).
     // 문 띠(Unity 축, 앞 +Z / 뒤 −Z): mb_build.py OPENINGS(22 m 틀 가운데 x, 폭) × 1.7, Blender x → Unity −x. 폭은 json doors와 같다.
@@ -186,80 +180,10 @@ public static class CarnivalMapAssets
         MeshCollider interior = model.GetComponentsInChildren<MeshCollider>(true).FirstOrDefault(c => c.name.StartsWith("Interior"));
         MeshCollider exterior = model.GetComponentsInChildren<MeshCollider>(true).FirstOrDefault(c => c.name.StartsWith("COL_"));
         if (interior == null || exterior == null) return "fill: missing colliders";
-        Physics.SyncTransforms();
-        var outer = new float[360];
-        for (int d = 0; d < 360; d++)
-        {
-            var dir = new Vector3(Mathf.Sin(d * Mathf.Deg2Rad), 0f, Mathf.Cos(d * Mathf.Deg2Rad));
-            foreach (float h in OuterRayHeights)
-                if (exterior.Raycast(new Ray(dir * 45f + Vector3.up * h, -dir), out RaycastHit hit, 45f)) outer[d] = Mathf.Max(outer[d], 45f - hit.distance);
-        }
-        // 오목한 곳(앞 장식 사이 틈)도 채운다: 양옆 ±8°의 가장 바깥까지(쿠키만 들어가는 좁은 틈이 생기지 않게)
-        var smooth = new float[360];
-        for (int d = 0; d < 360; d++)
-            for (int k = -OuterWindow; k <= OuterWindow; k++) smooth[d] = Mathf.Max(smooth[d], outer[(d + k + 360) % 360]);
-        outer = smooth;
         bool RoomFloor(float x, float z) => interior.Raycast(new Ray(new Vector3(x, 4f, z), Vector3.down), out RaycastHit hit, 5f) && hit.point.y < 0.3f;
-        // 문 통로: 앞(+Z)·뒤(−Z) 문 폭 띠에서 방 바닥이 아닌 곳(방 벽 ~ 건물 바깥)
         (float cx, float half)[] door = DoorBands[key];
         bool Corridor(float x, float z) => z > 0f ? Mathf.Abs(x - door[0].cx) < door[0].half : Mathf.Abs(x - door[1].cx) < door[1].half;
-
-        int n = Mathf.RoundToInt(FillReach * 2f / FillCell);
-        var solid = new bool[n, n];
-        for (int iz = 0; iz < n; iz++)
-            for (int ix = 0; ix < n; ix++)
-            {
-                float x = -FillReach + (ix + 0.5f) * FillCell, z = -FillReach + (iz + 0.5f) * FillCell;
-                int deg = (Mathf.RoundToInt(Mathf.Atan2(x, z) * Mathf.Rad2Deg) + 360) % 360;
-                solid[ix, iz] = new Vector2(x, z).magnitude < outer[deg] && !RoomFloor(x, z) && !Corridor(x, z);
-            }
-        // 열기(깎고 다시 키우기): 2.5 m보다 좁은 빈 띠(방 모서리 비스듬한 틈 등 — 괴물 통로보다 좁다)는 막는다 — 넓은 방·통로는 그대로
-        bool Open(int x, int z) => x < 0 || z < 0 || x >= n || z >= n || !solid[x, z];
-        var eroded = new bool[n, n];
-        for (int iz = 0; iz < n; iz++)
-            for (int ix = 0; ix < n; ix++)
-            {
-                bool all = true;
-                for (int dz = -OpenRadius; dz <= OpenRadius && all; dz++) for (int dx = -OpenRadius; dx <= OpenRadius && all; dx++) all = Open(ix + dx, iz + dz);
-                eroded[ix, iz] = all;
-            }
-        for (int iz = 0; iz < n; iz++)
-            for (int ix = 0; ix < n; ix++)
-            {
-                if (!Open(ix, iz)) continue;
-                bool keep = false;
-                for (int dz = -OpenRadius; dz <= OpenRadius && !keep; dz++)
-                    for (int dx = -OpenRadius; dx <= OpenRadius && !keep; dx++)
-                    {
-                        int x = ix + dx, z = iz + dz;
-                        keep = x < 0 || z < 0 || x >= n || z >= n || eroded[x, z];
-                    }
-                if (!keep) solid[ix, iz] = true;
-            }
-
-        Transform parent = new GameObject("COL_Fill").transform;
-        parent.SetParent(root, false);
-        int boxes = 0;
-        for (int iz = 0; iz < n; iz++)
-        {
-            float z = -FillReach + (iz + 0.5f) * FillCell;
-            int runStart = -1;
-            for (int ix = 0; ix <= n; ix++)
-            {
-                bool cell = ix < n && solid[ix, iz];
-                if (cell && runStart < 0) runStart = ix;
-                if (!cell && runStart >= 0)
-                {
-                    float x0 = -FillReach + runStart * FillCell, x1 = -FillReach + ix * FillCell;
-                    var t = new GameObject($"COL_Fill_{boxes:000}").transform;
-                    t.SetParent(parent, false);
-                    t.localPosition = new Vector3((x0 + x1) / 2f, WallHeight / 2f, z);
-                    t.gameObject.AddComponent<BoxCollider>().size = new Vector3(x1 - x0, WallHeight, FillCell);
-                    boxes++;
-                    runStart = -1;
-                }
-            }
-        }
+        int boxes = BuildingFill.Build(root, exterior, (x, z) => RoomFloor(x, z) || Corridor(x, z), FillReach);
         Object.DestroyImmediate(exterior);
         return $"fill {boxes} boxes";
     }
@@ -267,7 +191,9 @@ public static class CarnivalMapAssets
 
     // 받은 건물 모델은 바닥 받침판(땅 높이의 위를 보는 넓은 면, 건물 둘레 ±19 m)을 들고 있어 맵 바닥 타일을 덮는다(연보라 맨바닥으로 보임).
     // 땅 높이(0.15 m 아래)에 다 들어가는 면을 뺀 사본을 Generated/에 저장해 쓴다 — 그 위 벽·계단은 그대로.
-    private static Mesh TrimGroundPlate(Mesh source, string name)
+    public static Mesh TrimGroundPlate(Mesh source, string name) => TrimGroundPlate(source, name, GeneratedFolder);
+
+    public static Mesh TrimGroundPlate(Mesh source, string name, string folder)
     {
         Vector3[] v = source.vertices;
         var mesh = Object.Instantiate(source);
@@ -287,8 +213,8 @@ public static class CarnivalMapAssets
             mesh.SetTriangles(kept, sub);
         }
         mesh.RecalculateBounds();
-        TwistedPropBuilder.EnsureFolder(GeneratedFolder);
-        string path = $"{GeneratedFolder}/{mesh.name}.asset";
+        TwistedPropBuilder.EnsureFolder(folder);
+        string path = $"{folder}/{mesh.name}.asset";
         var saved = AssetDatabase.LoadAssetAtPath<Mesh>(path);
         if (saved == null) AssetDatabase.CreateAsset(mesh, path);
         else
@@ -297,7 +223,7 @@ public static class CarnivalMapAssets
             Object.DestroyImmediate(mesh);
             mesh = saved;
         }
-        Debug.Log($"[CarnivalMapAssets] {name}: removed {removed} ground-plate faces");
+        Debug.Log($"[TrimGroundPlate] {name}: removed {removed} ground-plate faces");
         return mesh;
     }
 

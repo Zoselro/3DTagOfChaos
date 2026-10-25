@@ -1,0 +1,129 @@
+{
+ "name": "CHO_Bld_MacaronWheel",
+ "kind": "material_building",
+ "source": "MacaronWheel",
+ "width": 37.0,
+ "min": [
+  -18.5,
+  -0.65,
+  -18.544
+ ],
+ "max": [
+  18.5,
+  30.804,
+  18.545
+ ],
+ "sunk": 0.65,
+ "tris": {
+  "Exterior": 909306,
+  "Interior": 18596,
+  "COL_Exterior": 11999,
+  "COL_Interior": 336
+ },
+ "outer_radii": [
+  17.74,
+  17.35,
+  16.76,
+  11.85,
+  11.55,
+  11.62,
+  10.93,
+  10.53,
+  9.84,
+  0.0,
+  15.3,
+  12.46,
+  12.28,
+  11.93,
+  14.06,
+  16.82,
+  16.92,
+  17.86,
+  17.19,
+  16.49,
+  18.17,
+  15.82,
+  15.85,
+  15.86,
+  16.26,
+  16.27,
+  0.0,
+  16.03,
+  15.21,
+  13.96,
+  13.5,
+  16.15,
+  16.72,
+  17.15,
+  14.34,
+  17.86
+ ],
+ "room": {
+  "min": [
+   -5,
+   0,
+   -4.5
+  ],
+  "max": [
+   2,
+   6.8,
+   7.5
+  ],
+  "ceiling": 6.8
+ },
+ "doors": [
+  {
+   "side": "Front",
+   "root": [
+    0.5,
+    0,
+    10.151
+   ],
+   "yaw": 180.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Front_L",
+    "Door_Front_R"
+   ],
+   "centre": [
+    -1.5,
+    0,
+    10.151
+   ]
+  },
+  {
+   "side": "Back",
+   "root": [
+    -4.0,
+    0,
+    -16.697
+   ],
+   "yaw": 0.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Back_L",
+    "Door_Back_R"
+   ],
+   "centre": [
+    -2.0,
+    0,
+    -16.697
+   ]
+  }
+ ],
+ "material": "MacaronWheel",
+ "socket": "Socket_MacaronWheel",
+ "spin": [],
+ "flows": [],
+ "fx": [],
+ "paths": [],
+ "items": [],
+ "faces_cut": 44438,
+ "texel_density_px_per_m": {
+  "meshy_albedo": 55,
+  "upscaled_albedo": 111,
+  "detail_layer": 1365
+ }
+}

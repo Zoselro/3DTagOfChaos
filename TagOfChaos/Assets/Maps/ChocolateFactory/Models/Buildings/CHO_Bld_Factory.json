@@ -1,0 +1,177 @@
+{
+ "name": "CHO_Bld_Factory",
+ "kind": "building",
+ "source": "Factory",
+ "width": 37.0,
+ "min": [
+  -17.947,
+  -0.156,
+  -13.918
+ ],
+ "max": [
+  18.5,
+  29.545,
+  13.918
+ ],
+ "sunk": 0.156,
+ "tris": {
+  "Exterior": 491279,
+  "Interior": 18400,
+  "COL_Exterior": 11999,
+  "COL_Interior": 408
+ },
+ "outer_radii": [
+  17.53,
+  17.59,
+  16.18,
+  16.17,
+  14.68,
+  15.28,
+  12.19,
+  0.0,
+  0.0,
+  13.24,
+  11.31,
+  14.36,
+  12.98,
+  14.75,
+  13.5,
+  13.35,
+  17.0,
+  17.18,
+  17.16,
+  18.25,
+  18.24,
+  13.97,
+  9.22,
+  12.7,
+  12.69,
+  12.79,
+  10.33,
+  10.24,
+  0.0,
+  12.85,
+  13.89,
+  15.16,
+  18.58,
+  19.31,
+  18.3,
+  17.51
+ ],
+ "room": {
+  "min": [
+   -3,
+   0,
+   -8
+  ],
+  "max": [
+   10,
+   6.8,
+   7
+  ],
+  "ceiling": 6.8
+ },
+ "doors": [
+  {
+   "side": "Front",
+   "root": [
+    4.2,
+    0,
+    10.241
+   ],
+   "yaw": 180.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Front_L",
+    "Door_Front_R"
+   ],
+   "centre": [
+    2.2,
+    0,
+    10.241
+   ]
+  },
+  {
+   "side": "Back",
+   "root": [
+    1.0,
+    0,
+    -9.158
+   ],
+   "yaw": 0.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Back_L",
+    "Door_Back_R"
+   ],
+   "centre": [
+    3.0,
+    0,
+    -9.158
+   ]
+  }
+ ],
+ "material": null,
+ "socket": null,
+ "spin": [
+  {
+   "name": "Spin_InnerRoller0",
+   "axis": [
+    -1.0,
+    0.0,
+    -0.0
+   ],
+   "speed": -140.0
+  },
+  {
+   "name": "Spin_InnerRoller1",
+   "axis": [
+    -1.0,
+    0.0,
+    -0.0
+   ],
+   "speed": -140.0
+  }
+ ],
+ "flows": [],
+ "fx": [
+  {
+   "name": "FX_Smoke_A",
+   "kind": "smoke",
+   "radius": 1.4
+  },
+  {
+   "name": "FX_Smoke_B",
+   "kind": "smoke",
+   "radius": 1.45
+  },
+  {
+   "name": "FX_Smoke_C",
+   "kind": "smoke",
+   "radius": 1.3
+  }
+ ],
+ "paths": [
+  {
+   "name": "Inner",
+   "points": [
+    "Path_Inner_0",
+    "Path_Inner_1"
+   ],
+   "count": 6,
+   "speed": 1.2,
+   "item": "Item_ChocoChunk"
+  }
+ ],
+ "items": [
+  "Item_ChocoChunk"
+ ],
+ "faces_cut": 58487,
+ "texel_density_px_per_m": {
+  "meshy_albedo": 55,
+  "upscaled_albedo": 111,
+  "detail_layer": 1365
+ }
+}

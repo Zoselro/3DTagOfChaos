@@ -1,0 +1,139 @@
+{
+ "name": "CHO_Bld_CookieWheel",
+ "kind": "material_building",
+ "source": "CookieWheel",
+ "width": 37.0,
+ "min": [
+  -18.5,
+  -2.219,
+  -18.507
+ ],
+ "max": [
+  18.5,
+  27.261,
+  18.507
+ ],
+ "sunk": 2.219,
+ "tris": {
+  "Exterior": 482760,
+  "Interior": 25184,
+  "COL_Exterior": 12000,
+  "COL_Interior": 444
+ },
+ "outer_radii": [
+  16.6,
+  12.04,
+  11.12,
+  14.76,
+  14.79,
+  12.66,
+  12.6,
+  10.41,
+  9.85,
+  0.0,
+  0.0,
+  9.9,
+  9.75,
+  14.1,
+  15.63,
+  15.98,
+  16.99,
+  14.29,
+  9.57,
+  10.2,
+  10.87,
+  12.57,
+  12.77,
+  12.68,
+  12.56,
+  10.42,
+  9.99,
+  9.83,
+  0.0,
+  11.11,
+  12.52,
+  15.52,
+  15.66,
+  16.17,
+  16.0,
+  16.61
+ ],
+ "room": {
+  "min": [
+   -8.5,
+   0,
+   -8.5
+  ],
+  "max": [
+   8.5,
+   6.8,
+   5.5
+  ],
+  "ceiling": 6.8
+ },
+ "doors": [
+  {
+   "side": "Front",
+   "root": [
+    -0.0,
+    0,
+    8.167
+   ],
+   "yaw": 180.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Front_L",
+    "Door_Front_R"
+   ],
+   "centre": [
+    -2.0,
+    0,
+    8.167
+   ]
+  },
+  {
+   "side": "Back",
+   "root": [
+    1.0,
+    0,
+    -9.256
+   ],
+   "yaw": 0.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Back_L",
+    "Door_Back_R"
+   ],
+   "centre": [
+    3.0,
+    0,
+    -9.256
+   ]
+  }
+ ],
+ "material": "CookieWheel",
+ "socket": "Socket_CookieWheel",
+ "spin": [
+  {
+   "name": "Spin_Main",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": 20.0
+  }
+ ],
+ "flows": [],
+ "fx": [],
+ "paths": [],
+ "items": [],
+ "faces_cut": 32422,
+ "texel_density_px_per_m": {
+  "meshy_albedo": 55,
+  "upscaled_albedo": 111,
+  "detail_layer": 1365
+ }
+}

@@ -1,0 +1,588 @@
+{
+ "materials": [
+  {
+   "name": "CHO_Gold",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.9,
+   "rough": 0.3,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "GD_Gold.png"
+  },
+  {
+   "name": "CHO_Iron",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.6,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "MO_Iron.png"
+  },
+  {
+   "name": "CHO_RedMetal",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.3,
+   "rough": 0.4,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "GD_RedMetal.png"
+  },
+  {
+   "name": "CHO_ChocoTile",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.35,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Chocolate.png"
+  },
+  {
+   "name": "CHO_Wood",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.7,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_CrateWood.png"
+  },
+  {
+   "name": "CHO_RedWoodPanel",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_RedWood.png"
+  },
+  {
+   "name": "CHO_BurlapCloth",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.9,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Burlap.png"
+  },
+  {
+   "name": "CHO_RoomWall",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Chocolate.png"
+  },
+  {
+   "name": "CHO_Shadow",
+   "color": [
+    0.035,
+    0.018,
+    0.012
+   ],
+   "metallic": 0.0,
+   "rough": 0.9,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Cream",
+   "color": [
+    0.95,
+    0.86,
+    0.72
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Pink",
+   "color": [
+    0.92,
+    0.42,
+    0.58
+   ],
+   "metallic": 0.0,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Mint",
+   "color": [
+    0.55,
+    0.88,
+    0.72
+   ],
+   "metallic": 0.0,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Lemon",
+   "color": [
+    0.98,
+    0.86,
+    0.4
+   ],
+   "metallic": 0.0,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Lilac",
+   "color": [
+    0.72,
+    0.6,
+    0.92
+   ],
+   "metallic": 0.0,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Biscuit",
+   "color": [
+    0.82,
+    0.56,
+    0.3
+   ],
+   "metallic": 0.0,
+   "rough": 0.7,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_MilkChoco",
+   "color": [
+    0.17,
+    0.075,
+    0.03
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_LampGlow",
+   "color": [
+    1.0,
+    0.8,
+    0.45
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    1.0,
+    0.72,
+    0.35
+   ],
+   "strength": 8.0
+  },
+  {
+   "name": "CHO_FireGlow",
+   "color": [
+    1.0,
+    0.45,
+    0.1
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    1.0,
+    0.38,
+    0.06
+   ],
+   "strength": 10.0
+  },
+  {
+   "name": "CHO_Socket",
+   "color": [
+    0.92,
+    0.92,
+    0.92
+   ],
+   "metallic": 0.2,
+   "rough": 0.35,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_FlowChoco",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.12,
+   "emission": [
+    0.3,
+    0.3,
+    0.3
+   ],
+   "strength": 1.0,
+   "tex": "CHO_Flow.png"
+  },
+  {
+   "name": "CHO_FloorBasic",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_Basic_albedo.png",
+   "normal": "CHO_FL_Basic_normal.png",
+   "metalSmooth": "CHO_FL_Basic_metalSmooth.png"
+  },
+  {
+   "name": "CHO_Sign_Gear",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.35,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Sign_Gear.png"
+  },
+  {
+   "name": "CHO_Sign_MacaronWheel",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.35,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Sign_MacaronWheel.png"
+  },
+  {
+   "name": "CHO_Sign_ChocolateOil",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.35,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Sign_ChocolateOil.png"
+  },
+  {
+   "name": "CHO_Sign_CookieWheel",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.35,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Sign_CookieWheel.png"
+  },
+  {
+   "name": "CHO_Bld_Gear",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_Gear_albedo.png",
+   "normal": "CHO_Bld_Gear_normal.png",
+   "metalSmooth": "CHO_Bld_Gear_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CHO_Bld_MacaronWheel",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_MacaronWheel_albedo.png",
+   "normal": "CHO_Bld_MacaronWheel_normal.png",
+   "metalSmooth": "CHO_Bld_MacaronWheel_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CHO_Bld_ChocolateOil",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_ChocolateOil_albedo.png",
+   "normal": "CHO_Bld_ChocolateOil_normal.png",
+   "metalSmooth": "CHO_Bld_ChocolateOil_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CHO_Bld_CookieWheel",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_CookieWheel_albedo.png",
+   "normal": "CHO_Bld_CookieWheel_normal.png",
+   "metalSmooth": "CHO_Bld_CookieWheel_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CHO_Bld_Cauldron",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_Cauldron_albedo.png",
+   "normal": "CHO_Bld_Cauldron_normal.png",
+   "metalSmooth": "CHO_Bld_Cauldron_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CHO_Bld_Factory",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_Factory_albedo.png",
+   "normal": "CHO_Bld_Factory_normal.png",
+   "metalSmooth": "CHO_Bld_Factory_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CHO_Bld_ChocoBar",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_ChocoBar_albedo.png",
+   "normal": "CHO_Bld_ChocoBar_normal.png",
+   "metalSmooth": "CHO_Bld_ChocoBar_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  },
+  {
+   "name": "CHO_Bld_Cogworks",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Bld_Cogworks_albedo.png",
+   "normal": "CHO_Bld_Cogworks_normal.png",
+   "metalSmooth": "CHO_Bld_Cogworks_metalSmooth.png",
+   "detail": "CHO_Bld_Detail_albedo.png",
+   "detailNormal": "CHO_Bld_Detail_normal.png"
+  }
+ ]
+}

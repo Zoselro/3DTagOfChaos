@@ -1,0 +1,129 @@
+{
+ "name": "CHO_Bld_ChocoBar",
+ "kind": "building",
+ "source": "ChocoBar",
+ "width": 37.0,
+ "min": [
+  -18.5,
+  -1.857,
+  -13.114
+ ],
+ "max": [
+  18.5,
+  23.384,
+  13.114
+ ],
+ "sunk": 1.857,
+ "tris": {
+  "Exterior": 453462,
+  "Interior": 31132,
+  "COL_Exterior": 12000,
+  "COL_Interior": 432
+ },
+ "outer_radii": [
+  16.34,
+  16.18,
+  18.48,
+  18.45,
+  16.03,
+  0.0,
+  0.0,
+  8.69,
+  7.31,
+  10.08,
+  7.54,
+  9.92,
+  10.15,
+  14.72,
+  17.91,
+  19.92,
+  18.97,
+  14.06,
+  18.49,
+  19.28,
+  20.97,
+  21.0,
+  16.44,
+  13.81,
+  11.45,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  9.4,
+  10.51,
+  16.51,
+  20.76,
+  20.84,
+  19.27,
+  16.8
+ ],
+ "room": {
+  "min": [
+   -9,
+   0,
+   -8
+  ],
+  "max": [
+   10,
+   6.8,
+   6
+  ],
+  "ceiling": 6.8
+ },
+ "doors": [
+  {
+   "side": "Front",
+   "root": [
+    7.0,
+    0,
+    8.111
+   ],
+   "yaw": 180.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Front_L",
+    "Door_Front_R"
+   ],
+   "centre": [
+    5.0,
+    0,
+    8.111
+   ]
+  },
+  {
+   "side": "Back",
+   "root": [
+    -1.0,
+    0,
+    -8.019
+   ],
+   "yaw": 0.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Back_L",
+    "Door_Back_R"
+   ],
+   "centre": [
+    1.0,
+    0,
+    -8.019
+   ]
+  }
+ ],
+ "material": null,
+ "socket": null,
+ "spin": [],
+ "flows": [],
+ "fx": [],
+ "paths": [],
+ "items": [],
+ "faces_cut": 45644,
+ "texel_density_px_per_m": {
+  "meshy_albedo": 55,
+  "upscaled_albedo": 111,
+  "detail_layer": 1365
+ }
+}

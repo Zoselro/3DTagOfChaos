@@ -1,0 +1,166 @@
+{
+ "name": "CHO_Bld_Gear",
+ "kind": "material_building",
+ "source": "Gear",
+ "width": 37.0,
+ "min": [
+  -18.5,
+  -1.173,
+  -18.505
+ ],
+ "max": [
+  18.5,
+  26.81,
+  18.505
+ ],
+ "sunk": 1.173,
+ "tris": {
+  "Exterior": 779006,
+  "Interior": 39768,
+  "COL_Exterior": 11999,
+  "COL_Interior": 396
+ },
+ "outer_radii": [
+  14.72,
+  15.71,
+  17.14,
+  17.3,
+  16.73,
+  15.8,
+  16.17,
+  5.5,
+  15.31,
+  14.88,
+  13.09,
+  16.52,
+  16.9,
+  16.42,
+  16.74,
+  16.71,
+  16.7,
+  16.43,
+  13.08,
+  16.59,
+  18.09,
+  17.26,
+  16.88,
+  16.7,
+  16.2,
+  17.07,
+  17.17,
+  0.0,
+  11.94,
+  16.32,
+  16.6,
+  15.92,
+  16.61,
+  17.29,
+  15.96,
+  14.44
+ ],
+ "room": {
+  "min": [
+   -7,
+   0,
+   -9
+  ],
+  "max": [
+   7,
+   6.8,
+   3
+  ],
+  "ceiling": 6.8
+ },
+ "doors": [
+  {
+   "side": "Front",
+   "root": [
+    5.5,
+    0,
+    14.376
+   ],
+   "yaw": 180.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Front_L",
+    "Door_Front_R"
+   ],
+   "centre": [
+    3.5,
+    0,
+    14.376
+   ]
+  },
+  {
+   "side": "Back",
+   "root": [
+    -2.0,
+    0,
+    -15.551
+   ],
+   "yaw": 0.0,
+   "leaf_width": 2.0,
+   "height": 5.4,
+   "leaves": [
+    "Door_Back_L",
+    "Door_Back_R"
+   ],
+   "centre": [
+    -0.0,
+    0,
+    -15.551
+   ]
+  }
+ ],
+ "material": "Gear",
+ "socket": "Socket_Gear",
+ "spin": [
+  {
+   "name": "Spin_Main",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": 18.0
+  },
+  {
+   "name": "Spin_Small",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": -56.0
+  },
+  {
+   "name": "Spin_Back",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": -18.0
+  },
+  {
+   "name": "Spin_Bench",
+   "axis": [
+    0,
+    0,
+    -1
+   ],
+   "speed": 45.0
+  }
+ ],
+ "flows": [],
+ "fx": [],
+ "paths": [],
+ "items": [],
+ "faces_cut": 58432,
+ "texel_density_px_per_m": {
+  "meshy_albedo": 55,
+  "upscaled_albedo": 111,
+  "detail_layer": 1365
+ }
+}
