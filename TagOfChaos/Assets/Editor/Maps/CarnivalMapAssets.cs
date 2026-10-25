@@ -371,6 +371,7 @@ public static class CarnivalMapAssets
             }
             foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
                 GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+            if (name == FountainWaterBuilder.PrefabName) FountainWaterBuilder.Attach(root); // 움직이는 물(파티클·물 표면·물소리, §39)
             return PrefabUtility.SaveAsPrefabAsset(root, PrefabPath(name));
         }
         finally { Object.DestroyImmediate(root); }

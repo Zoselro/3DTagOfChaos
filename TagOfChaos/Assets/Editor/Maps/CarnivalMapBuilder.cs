@@ -1010,7 +1010,8 @@ public static class CarnivalMapBuilder
 
     // 몸 크기 5가지로 통행 검사(캔디숲과 같은 기준). 술래방은 괴물 전용, 울타리 밖(탈출구 받침 제외)은 놀이 공간이 아님.
     // 괴물 출발점: 술래방 문 바깥 + 텐트·건물 방 가운데(실제 괴물 몸(반경 0.31 m)은 텐트 문 2.8 m를 지나간다 — §34.1·§35.2 Play Mode,
-    // 격자 기준 괴물(반경 1.8 m)은 못 지나가므로 안에서 출발시킨다).
+    // 격자 기준 괴물(반경 1.8 m)은 못 지나가므로 안에서 출발시킨다). 열린 롤러코스터 입구의 계단·통로는 실제 괴물이 지나감을 Play Mode로
+    // 확인했다(§39 G2) — 격자 괴물은 32° 계단에 설 수 없어 그 자리는 쿠키 전용 판정에서 뺀다.
     public static string CheckPassability()
     {
         Scene scene = SceneManager.GetActiveScene();
@@ -1022,12 +1023,14 @@ public static class CarnivalMapBuilder
             if (PrefabUtility.IsAnyPrefabInstanceRoot(t.gameObject) && PrefabUtility.GetCorrespondingObjectFromSource(t.gameObject)?.name == "MO_Tent")
                 seeds.Add(t.position + Vector3.up * 0.1f);
         }
+        Transform entrance = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == CarnivalRidesBuilder.EntranceName);
         var options = new MapPassabilityCheck.Options
         {
             Half = MapRadius + 12f,
             Bodies = MapPassabilityCheck.DesignRange,
             CookieForbidden = p => new Vector2(p.x, p.z).magnitude < RoomRadius,
             IgnorePocket = p => new Vector2(p.x, p.z).magnitude > MapRadius + 0.5f,
+            MonsterVerified = entrance != null ? CarnivalRidesBuilder.EntranceRoute(entrance) : null,
             Targets = Targets(scene).ToArray(),
             MonsterSeeds = seeds.ToArray(),
             MapImage = "Temp/CursedCandyCarnival_PassabilityMap.png",

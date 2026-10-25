@@ -10,10 +10,11 @@ using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 // Test_CursedCandyCarnival에 움직이는 놀이기구 두 개를 놓는다(Request1009Plan.md §31, 단계 Q4). 여러 번 실행해도 같은 결과.
-// - 롤러코스터(남서 Q3 구석): 트랙(레일 + 지지대)을 서쪽 벽 띠에 세로로, 열차 2편성(CoasterRide·CoasterTrain·CoasterTrainAudio)이 판 내내 돈다.
+// - 롤러코스터(남서 Q3 구석): 트랙(레일 + 지지대)을 서쪽 벽 띠에 세로로, 열차 1편성(CoasterRide·CoasterTrain·CoasterTrainAudio)이 판 내내 돈다
+//   (처음 2편성 → 1편성, Request1009Plan.md §39 T1).
 //   트랙 둘레는 쇠창살 울타리(나머지 두 변은 맵 벽)로 막아 달리는 열차·낮은 레일 밑으로 들어가지 못하게 한다.
-//   입구(괴물 입 성)는 남쪽 띠에 앞(계단)이 동쪽을 보게 — 탈출구가 아니라 장식이라 두 계단 아래 창살 문은 늘 닫혀 있다
-//   (괴물은 32° 계단을 못 올라 통로 위가 쿠키만의 피난처가 되지 않게). 계단 밑은 속이 찬 쐐기, 계단 옆은 난간 벽.
+//   입구(괴물 입 성)는 남쪽 띠에 앞(계단)이 동쪽을 보게. 탈출구가 아닌 장식이지만 열려 있어 앞 계단 → 입 안 통로 → 뒤 계단으로 지나간다
+//   (§39 G1 — 예전에는 두 계단 아래 창살 문이 늘 닫혀 있었다). 계단 밑은 속이 찬 쐐기, 계단 옆은 난간 벽.
 // - 회전목마(북동 Q2, 건물과 북쪽 칸막이 사이): 배율 0.65, Game_ 씬과 같은 회전(Animator Carousel_Top_Spin)·키네마틱 Rigidbody·볼록 충돌.
 //   회전목마 소리 AMB_Carousel·조명 LGT_Carousel_Top을 그 자리로.
 // - 걸리는 상자·장식·표시(무지개·로켓·쿠키 출발)는 가까운 빈 곳으로 옮긴다(출발 자리·술래방 둘레는 비움).
@@ -40,7 +41,8 @@ public static class CarnivalRidesBuilder
     public const float CarouselScale = 0.65f;
     public const float CarouselRadius = 14.8f * CarouselScale; // 받침 반지름(carousel.json 지름 29.6)
 
-    private const float BodyHeight = 14f, FacadeDepth = 2.4f, StairWallHeight = 7f, GateHeight = 3.6f;
+    private const float BodyHeight = 14f, FacadeDepth = 2.4f, StairWallHeight = 7f;
+    public const int TrainCount = 1;
     private const float SpawnClearance = 4f, MonsterRoomHalf = 15f, MapLimit = 66f;
     private const float PassWidth = 4f;
     private const float SearchRadius = 45f;   // 옮긴 것과 놀이기구·다른 장애물 사이를 괴물(몸 지름 3.6 m)이 지나갈 수 있게
@@ -126,10 +128,10 @@ public static class CarnivalRidesBuilder
 
         Material trainMat = TrainMaterial();
         var meshes = trainModel.GetComponentsInChildren<MeshFilter>(true).ToDictionary(m => m.name, m => m.sharedMesh);
-        var trains = new CoasterTrain[2];
+        var trains = new CoasterTrain[TrainCount];
         for (int t = 0; t < trains.Length; t++)
         {
-            var train = new GameObject(t == 0 ? "Train_A" : "Train_B").transform;
+            var train = new GameObject("Train_" + (char)('A' + t)).transform;
             train.SetParent(coaster, false);
             var cars = new CoasterTrain.Car[meta.cars.Length];
             Transform head = null;
@@ -158,7 +160,7 @@ public static class CarnivalRidesBuilder
         var ride = coaster.gameObject.AddComponent<CoasterRide>();
         ride.EditorSetup(path, trains);
         ride.EditorPlaceAt(0d);
-        report.Add($"coaster: 2 trains x {meta.cars.Length} cars");
+        report.Add($"coaster: {TrainCount} train(s) x {meta.cars.Length} cars");
         return coaster;
     }
 
@@ -200,11 +202,26 @@ public static class CarnivalRidesBuilder
         visual.transform.localRotation = Quaternion.identity;
         foreach (MeshRenderer r in visual.GetComponentsInChildren<MeshRenderer>(true))
             r.sharedMaterials = r.sharedMaterials.Select((m, i) => i == 0 ? CoasterExitBuilder.EntranceMaterial() : CoasterExitBuilder.TunnelMaterial()).ToArray();
+        BuildEntranceColliders(entrance, e);
+    }
 
+    // 걷는 충돌(입구 로컬). 이미 있으면 지우고 다시 만든다 — 옛 닫힌 문(Gate_Front·Gate_Back)과 통로까지 막던 COL_Body도 지운다.
+    // 건물 덩어리는 통로(폭 pass_half×2, 높이 pass_height)만 비우고, 통로 바닥은 계단 꼭대기 높이(floor)다(CoasterExitBuilder와 같은 모양).
+    private static void BuildEntranceColliders(Transform entrance, EntranceMeta e)
+    {
+        foreach (string old in new[] { "Colliders", "Gate_Front", "Gate_Back" })
+        {
+            Transform t = entrance.Find(old);
+            if (t != null) Object.DestroyImmediate(t.gameObject);
+        }
         Transform cols = Group(entrance, "Colliders");
-        float facade = -FacadeDepth, back = e.back_wall;
-        // 건물 덩어리(통로 포함 — 두 문이 늘 닫혀 통로에 들어갈 수 없다)
-        Box(cols, "COL_Body", new Vector3(0f, BodyHeight / 2f, (facade + back) / 2f), new Vector3(e.half_x * 2f, BodyHeight, back - facade));
+        float facade = -FacadeDepth, mouth = e.mouth, back = e.back_wall, half = e.pass_half, top = e.floor + e.pass_height;
+        float depth = back - facade, midZ = (facade + back) / 2f;
+        Box(cols, "COL_BodyLeft", new Vector3(-(e.half_x + half) / 2f, BodyHeight / 2f, midZ), new Vector3(e.half_x - half, BodyHeight, depth));
+        Box(cols, "COL_BodyRight", new Vector3((e.half_x + half) / 2f, BodyHeight / 2f, midZ), new Vector3(e.half_x - half, BodyHeight, depth));
+        Box(cols, "COL_PassRoof", new Vector3(0f, (top + BodyHeight) / 2f, midZ), new Vector3(half * 2f, BodyHeight - top, depth));
+        Box(cols, "COL_PassFloor", new Vector3(0f, e.floor / 2f, (mouth + back) / 2f), new Vector3(half * 2f, e.floor, back - mouth));
+        // 앞 계단 쐐기는 입(mouth)까지 올라가 통로 바닥과 바로 이어진다 — 그 사이에 바닥 상자를 더 두면 계단 위에 턱이 생긴다
         Ramp(cols, "COL_StairsFront", new Vector3(0f, 0f, e.front_foot), 0f, e.stair_half * 2f, e.floor, e.mouth - e.front_foot);
         Ramp(cols, "COL_StairsBack", new Vector3(0f, 0f, e.back_foot), 180f, e.stair_half * 2f, e.floor, e.back_foot - e.back_wall);
         foreach (float side in new[] { -1f, 1f })
@@ -213,25 +230,57 @@ public static class CarnivalRidesBuilder
             Box(cols, side < 0 ? "COL_StairRailFrontL" : "COL_StairRailFrontR", new Vector3(x, StairWallHeight / 2f, (e.front_foot + facade) / 2f), new Vector3(0.3f, StairWallHeight, facade - e.front_foot));
             Box(cols, side < 0 ? "COL_StairRailBackL" : "COL_StairRailBackR", new Vector3(x, StairWallHeight / 2f, (back + e.back_foot) / 2f), new Vector3(0.3f, StairWallHeight, e.back_foot - back));
         }
-        Material iron = CoasterExitBuilder.PlainMaterial("M_CUR_CoasterGate", new Color(0.12f, 0.08f, 0.14f), Color.black, 0.6f);
-        Gate(entrance, "Gate_Front", e.front_foot - 0.4f, e.stair_half * 2f + 0.6f, iron);
-        Gate(entrance, "Gate_Back", e.back_foot + 0.4f, e.stair_half * 2f + 0.6f, iron);
     }
 
-    // 늘 닫힌 창살 문(쿠키 점프 1.8 m로 넘지 못하는 높이)
-    private static void Gate(Transform entrance, string name, float z, float width, Material iron)
+    // 입구를 지나가는 길(앞 계단 발치 ~ 뒤 계단 발치, 계단 폭) 위의 점인지. 통행 검사가 "실제 괴물이 지나가는 곳"으로 쓴다 —
+    // 격자 검사의 괴물(반경 1.8 m 구)은 32° 계단 위에 설 수 없지만 실제 괴물(반경 0.31 m)은 오르내린다(§39 G2 Play Mode).
+    public static Func<Vector3, bool> EntranceRoute(Transform entrance)
     {
-        var gate = new GameObject(name).transform;
-        gate.SetParent(entrance, false);
-        gate.localPosition = new Vector3(0f, 0f, z);
-        var col = gate.gameObject.AddComponent<BoxCollider>();
-        col.center = new Vector3(0f, GateHeight / 2f, 0f);
-        col.size = new Vector3(width, GateHeight, 0.4f);
-        const int Bars = 13;
-        for (int i = 0; i < Bars; i++)
-            Bar(gate, $"Bar_{i}", new Vector3(-width / 2f + 0.2f + i * (width - 0.4f) / (Bars - 1), GateHeight / 2f, 0f), new Vector3(0.14f, GateHeight, 0.14f), iron);
-        Bar(gate, "Rail_Top", new Vector3(0f, GateHeight - 0.25f, 0f), new Vector3(width, 0.16f, 0.18f), iron);
-        Bar(gate, "Rail_Mid", new Vector3(0f, GateHeight * 0.45f, 0f), new Vector3(width, 0.16f, 0.18f), iron);
+        var e = JsonUtility.FromJson<Meta>(File.ReadAllText(MetaPath)).entrance;
+        Matrix4x4 toLocal = entrance.worldToLocalMatrix;
+        return p =>
+        {
+            Vector3 l = toLocal.MultiplyPoint3x4(p);
+            return Mathf.Abs(l.x) <= e.stair_half && l.z >= e.front_foot - 0.5f && l.z <= e.back_foot + 0.5f;
+        };
+    }
+
+    // 이미 만든 씬(원본 틀 Test_CursedCandyCarnival, 실제 맵 CursedCandyCarnival)에 §39의 입구 열기·열차 1편성만 적용한다.
+    // 전체 다시 만들기(Apply → CarnivalMapBuilder)와 같은 결과 — 입구 충돌은 입구 로컬이라 실제 맵으로 옮긴 입구에도 그대로 맞는다.
+    [MenuItem(MenuRoot + "Update Coaster Entrance & Train (Carnival scenes)")]
+    public static void UpdateMenu()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+        foreach (string path in new[] { ScenePath, CarnivalMapBuilder.ScenePath })
+        {
+            Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            Debug.Log($"[CarnivalRidesBuilder] {path}: {UpdateRides(scene)}");
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+        }
+    }
+
+    public static string UpdateRides(Scene scene)
+    {
+        var e = JsonUtility.FromJson<Meta>(File.ReadAllText(MetaPath)).entrance;
+        var all = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).ToList();
+        Transform entrance = all.FirstOrDefault(t => t.name == EntranceName);
+        CoasterRide ride = all.Select(t => t.GetComponent<CoasterRide>()).FirstOrDefault(r => r != null);
+        if (entrance == null || ride == null) return "entrance or coaster missing";
+
+        BuildEntranceColliders(entrance, e);
+        var keep = new List<CoasterTrain>();
+        for (int i = 0; i < ride.TrainCount; i++)
+        {
+            CoasterTrain train = ride.Train(i);
+            if (train == null) continue;
+            if (keep.Count < TrainCount) keep.Add(train);
+            else Object.DestroyImmediate(train.gameObject);
+        }
+        ride.EditorSetup(ride.Path, keep.ToArray());
+        EditorUtility.SetDirty(ride);
+        ride.EditorPlaceAt(0d);
+        return $"entrance opened, trains {keep.Count}";
     }
 
     // ---------------- carousel ----------------

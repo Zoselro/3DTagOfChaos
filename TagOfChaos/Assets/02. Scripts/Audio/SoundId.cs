@@ -124,6 +124,7 @@ public enum SoundId
     AmbBakery = 804,
     CarouselSpin = 805,   // 저주받은 놀이공원 회전목마(오르간 왈츠 + 도는 기계)
     AmbCave = 806,        // 진저브레드 지하 유적: 바람 + 가끔 떨어지는 물방울(AmbientZone, 2D)
+    FountainWater = 807,  // 놀이공원 분수: 떨어지는 물줄기 + 물 튀는 소리(분수마다 AmbientEmitter, 가까이서만, §39 F3)
 }
 
 // 배경음·스팅어·징글 ID(SoundPlan.md §3.1). 규칙은 SoundId와 같다.

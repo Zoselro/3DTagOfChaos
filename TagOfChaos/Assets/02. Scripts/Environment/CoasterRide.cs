@@ -4,7 +4,7 @@ using UnityEngine;
 // 판 내내 도는 롤러코스터(Request1009Plan.md §31). 트랙 루트에 붙이고, 편성(CoasterTrain)마다 공통 시계로 레일 위 거리를 정해 준다.
 // 시계 = 방 안이면 PhotonNetwork.Time, 아니면 Time.timeAsDouble — 모든 화면이 같은 자리를 계산하므로 네트워크 메시지가 없다.
 // 네트워크 시각은 조금씩 튀므로 화면 시계는 프레임 시간으로 흐르다 차이를 천천히 따라잡는다(0.5초 넘게 벌어지면 바로 맞춤).
-// 두 번째 편성은 경로의 SecondTrainOffset(한 바퀴 비율)만큼 앞서 간다(공용 구간에서 겹치지 않는 값, CoasterPathBaker가 구함).
+// 지금은 1편성(Request1009Plan.md §39 T1). 편성이 여럿이면 i번째는 경로의 SecondTrainOffset(한 바퀴 비율)×i만큼 앞서 간다(CoasterPathBaker가 구함).
 public sealed class CoasterRide : MonoBehaviour
 {
     private const double SnapSeconds = 0.5;

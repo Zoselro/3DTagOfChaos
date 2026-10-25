@@ -196,7 +196,7 @@ public static class SoundDefaults
                 else if (id == SoundId.OvenBroken) { e.pitchRange = Vector2.one; e.volume = 0.75f; } // 반복음 — 음원이 톱니보다 4dB 작아(피크 제한) 조금 크게
                 else if (id == SoundId.CoasterRoll || id == SoundId.CoasterChain)
                 {
-                    e.pitchRange = Vector2.one; // 반복음 — 열차 2편성이 판 내내 돌므로 배경음보다 작게
+                    e.pitchRange = Vector2.one; // 반복음 — 열차가 판 내내 돌므로 배경음보다 작게
                     e.volume = id == SoundId.CoasterRoll ? 0.6f : 0.5f;
                     e.cooldown = 0f;
                     e.importance = SoundImportance.Normal;
@@ -241,6 +241,11 @@ public static class SoundDefaults
                     e.volume = 0.5f;
                     e.maxInstances = 1;
                 }
+                else if (id == SoundId.FountainWater)
+                {
+                    e.volume = 0.7f;
+                    e.maxInstances = 2; // 분수 4곳 — 가까운 곳만(서로 100 m 넘게 떨어져 둘이 겹칠 일은 드물다)
+                }
                 break;
         }
         if (e.space == SoundSpace.World3D) ApplySpatial(e);
@@ -278,7 +283,8 @@ public static class SoundDefaults
                 falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return;
             case SoundId.AmbFactory: falloff = SoundFalloff.Landmark; min = 6f; max = 28f; return;
             case SoundId.CarouselSpin: falloff = SoundFalloff.Landmark; min = 8f; max = 40f; return;
-            case SoundId.CoasterRoll: falloff = SoundFalloff.Landmark; min = 6f; max = 45f; return;  // 열차(2편성) — 가까이 가야 또렷
+            case SoundId.FountainWater: falloff = SoundFalloff.Landmark; min = 3f; max = 18f; return;    // 분수 — 광장 안에서만
+            case SoundId.CoasterRoll: falloff = SoundFalloff.Landmark; min = 6f; max = 45f; return;  // 열차 — 가까이 가야 또렷
             case SoundId.CoasterChain: falloff = SoundFalloff.Landmark; min = 4f; max = 30f; return;
             case SoundId.CoasterWhoosh: falloff = SoundFalloff.Landmark; min = 5f; max = 40f; return;
             case SoundId.LanternFlicker: falloff = SoundFalloff.Action; min = 1.5f; max = 10f; return;

@@ -56080,8 +56080,15 @@ MonoBehaviour:
   - {fileID: 470073016}
   - {fileID: 1761330731}
   - {fileID: 2058769940}
-  device: {fileID: 776773643}
+  buildings: []
+  exits: []
   rocket: {fileID: 343674607}
+  rocketAnchors: []
+  rainbowAnchors: []
+  rainbowChest: {fileID: 0}
+  monsterRoom: {fileID: 0}
+  monsterRoomHalfSize: 13
+  mapRadius: 0
   witch: {fileID: 202233146}
   recipeOverride: {fileID: 11400000, guid: a8db6f100030b0b4792cbcdaaf9d21f8, type: 2}
 --- !u!4 &2122644578

@@ -84,7 +84,10 @@ public class CarnivalMapTests
         foreach (string exit in CarnivalMapBuilder.ExitNames)
             Assert.NotNull(map.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == exit), exit);
         Assert.NotNull(Object.FindFirstObjectByType<VikingRide>(), "viking swings");
-        Assert.NotNull(Object.FindFirstObjectByType<CoasterRide>(), "coaster");
+        var coaster = Object.FindFirstObjectByType<CoasterRide>();
+        Assert.NotNull(coaster, "coaster");
+        Assert.AreEqual(CarnivalRidesBuilder.TrainCount, coaster.TrainCount, "one coaster train (§39 T1)");
+        Request1021Tests.AssertEntranceOpen(map.GetComponentsInChildren<Transform>(true)); // §39 G1
         Assert.AreEqual(4, map.GetComponentsInChildren<MonsterRoomDoor>(true).Length, "monster room doors");
         var manager = new SerializedObject(Object.FindFirstObjectByType<EscapeManager>());
         Assert.AreEqual(CarnivalMapBuilder.MapRadius, manager.FindProperty("mapRadius").floatValue, 1e-3f);

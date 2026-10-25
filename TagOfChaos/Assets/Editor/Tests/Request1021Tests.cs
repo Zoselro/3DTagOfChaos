@@ -255,8 +255,8 @@ public class Request1021Tests
         Assert.AreEqual(path.DistanceAtTime(1.5), path.DistanceAtTime(1.5 + path.LapTime), 1e-2f, "wraps every lap");
     }
 
-    // §31 Test 씬 놀이기구: 열차 2편성(칸마다 키네마틱 Rigidbody + 상자 충돌)·레일/지지대 고정 충돌·울타리·회전목마 회전·
-    // 두 열차가 한 바퀴 동안 서로 떨어져 있고 칸이 레일 위에 있음·옮긴 상자/표시가 놀이기구 자리에 없음
+    // §31 Test 씬 놀이기구: 열차 1편성(§39 T1, 칸마다 키네마틱 Rigidbody + 상자 충돌)·레일/지지대 고정 충돌·울타리·회전목마 회전·
+    // 한 바퀴 동안 칸이 레일 위에 있음·입구 문 없이 통로가 열림(§39 G1)·옮긴 상자/표시가 놀이기구 자리에 없음
     [Test]
     public void TestCarnivalRides_CoasterAndCarousel()
     {
@@ -267,8 +267,9 @@ public class Request1021Tests
         {
             var all = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).ToList();
             var ride = all.Select(t => t.GetComponent<CoasterRide>()).First(r => r != null);
-            Assert.AreEqual(2, ride.TrainCount);
-            for (int t = 0; t < 2; t++)
+            Assert.AreEqual(CarnivalRidesBuilder.TrainCount, ride.TrainCount);
+            Assert.IsFalse(all.Any(x => x.name == "Train_B"), "one train only");
+            for (int t = 0; t < ride.TrainCount; t++)
             {
                 CoasterTrain train = ride.Train(t);
                 Assert.AreEqual(7, train.CarCount);
@@ -287,18 +288,15 @@ public class Request1021Tests
             }
             Assert.NotNull(all.First(x => x.name == "Fence_E").GetComponent<BoxCollider>());
             Assert.NotNull(all.First(x => x.name == "Fence_N").GetComponent<BoxCollider>());
-            foreach (string gate in new[] { "Gate_Front", "Gate_Back" }) Assert.NotNull(all.First(x => x.name == gate).GetComponent<BoxCollider>(), gate);
+            AssertEntranceOpen(all);
 
             CoasterPathSO path = ride.Path;
             Transform track = ride.transform;
-            float minGap = float.MaxValue;
             for (int k = 0; k < 120; k++)
             {
                 double time = path.LapTime * k / 120;
                 ride.EditorPlaceAt(time);
                 var a = Enumerable.Range(0, 7).Select(c => ride.Train(0).CarBody(c).transform.position).ToList();
-                var b = Enumerable.Range(0, 7).Select(c => ride.Train(1).CarBody(c).transform.position).ToList();
-                foreach (Vector3 p in a) foreach (Vector3 q in b) minGap = Mathf.Min(minGap, (p - q).magnitude);
                 // 칸 기준점(바퀴 사이)은 레일 윗면 가운데 선에서 가깝다
                 foreach (Vector3 p in a)
                 {
@@ -308,7 +306,6 @@ public class Request1021Tests
                     Assert.Less(best, 0.6f, $"car on the rail at t {time:F1}");
                 }
             }
-            Assert.Greater(minGap, 3f, "two trains never meet");
             ride.EditorPlaceAt(0d);
 
             Transform top = all.First(x => x.name == CarouselModelSwap.TopName);
@@ -326,5 +323,25 @@ public class Request1021Tests
             }
         }
         finally { if (opened) EditorSceneManager.CloseScene(scene, true); }
+    }
+
+    // §39 G1: 롤러코스터 입구가 열려 있다 — 닫힌 문·통로를 막던 덩어리가 없고, 앞 계단 꼭대기 → 입 안 통로 → 뒤 계단 꼭대기를
+    // 쿠키 가슴 높이로 가로지르는 선이 입구 충돌에 걸리지 않으며, 그 아래에는 통로 바닥이 있다.
+    public static void AssertEntranceOpen(System.Collections.Generic.IList<Transform> all)
+    {
+        Transform entrance = all.First(x => x.name == CarnivalRidesBuilder.EntranceName);
+        foreach (string closed in new[] { "Gate_Front", "Gate_Back", "COL_Body" })
+            Assert.IsFalse(entrance.GetComponentsInChildren<Transform>(true).Any(x => x.name == closed), closed);
+        Collider[] cols = entrance.GetComponentsInChildren<Collider>(true);
+        Physics.SyncTransforms();
+        const float floor = 3.965f, mouth = -1.233f, backWall = 7.148f;
+        Vector3 a = entrance.TransformPoint(new Vector3(0f, floor + 1f, mouth - 0.5f)), b = entrance.TransformPoint(new Vector3(0f, floor + 1f, backWall + 0.5f));
+        foreach (Collider c in cols)
+            Assert.IsFalse(c.Raycast(new Ray(a, b - a), out _, (b - a).magnitude), "passage blocked by " + c.name);
+        for (float z = mouth; z <= backWall; z += 1f)
+        {
+            Vector3 p = entrance.TransformPoint(new Vector3(0f, floor + 0.5f, z));
+            Assert.IsTrue(cols.Any(c => c.Raycast(new Ray(p, Vector3.down), out _, 1f)), $"passage floor at z {z:F1}");
+        }
     }
 }

@@ -44,6 +44,8 @@ public static class MapPassabilityCheck
         public (string name, Vector3 pos)[] Targets;       // 쿠키·괴물이 모두 TargetReach m 안까지 와야 하는 자리(상자·수리 자리·탈출구 …)
         // 괴물 출발점을 더한다 — 술래방 문(폭 3 m)은 실제 괴물 충돌체(반경 0.31 m)는 지나가지만 4 m 통로 기준 격자로는 막힌다
         public Vector3[] MonsterSeeds;
+        // 실제 괴물이 지나가는 것을 Play Mode로 확인한 곳 — 격자 괴물(반경 1.8 m 구)이 못 서는 가파른 계단 등. 쿠키 전용 판정에서 뺀다.
+        public System.Func<Vector3, bool> MonsterVerified;
         public string MapImage; // 첫 몸 기준 위에서 본 통행 지도 PNG(초록 = 괴물·쿠키 모두, 노랑 = 괴물 손 닿는 쿠키 자리, 빨강 = 쿠키 전용, 보라 = 주머니)
     }
 
@@ -196,7 +198,8 @@ public static class MapPassabilityCheck
                             else if ((options.IgnorePocket == null || !options.IgnorePocket(CellPos(ix, iz, half))) && !InExitZone(CellPos(ix, iz, half))) { pocket[ix, iz] = true; result.PocketCells++; }
                         }
 
-                        for (int k = 0; k < list.Length && !InExitZone(CellPos(ix, iz, half)); k++)
+                        bool verified = options.MonsterVerified != null && options.MonsterVerified(CellPos(ix, iz, half));
+                        for (int k = 0; k < list.Length && !verified && !InExitZone(CellPos(ix, iz, half)); k++)
                         {
                             if (!cookie[ix, iz][k]) continue;
                             if (!MonsterNear(nodes, monster, n, ix, iz, list[k].Y, reach)) { cookieOnly[ix, iz] = true; result.CookieOnlyCells++; break; }
