@@ -12,44 +12,29 @@ EditorBuildSettings:
     path: Assets/Scenes/GameLobbyScene.unity
     guid: 65e6d029e4f25ed47bcc06f1ce0fb6d1
   - enabled: 0
-    path: Assets/Scenes/Maps/Game_CandyForest.unity
-    guid: 8868c6aa6fc72484394791c0fae681a5
-  - enabled: 0
-    path: Assets/Scenes/Maps/Game_GingerbreadVillage.unity
-    guid: 8a16ed6730abd3949bf45d76bc751e72
-  - enabled: 0
-    path: Assets/Scenes/Maps/Game_ChocolateFactory.unity
-    guid: 15d09843d45515147992e711aafa733b
-  - enabled: 0
-    path: Assets/Scenes/Maps/Game_CursedCandyCarnival.unity
-    guid: 99e6c183305e4334a8f36fc7b04c16ea
-  - enabled: 0
-    path: Assets/Scenes/Maps/Game_HauntedBakery.unity
-    guid: 19f19a5a817a0c84da6fa95d57be8004
-  - enabled: 0
     path: Assets/Scenes/Maps/Test/Test_CandyForest.unity
-    guid: 2da44bee43447904681042bcd6f6d8cb
+    guid: e289d731d0dfe274ab7d5a2a9b1f2415
   - enabled: 1
     path: Assets/Scenes/Maps/Test/Test_GingerbreadVillage.unity
-    guid: 5d25b82403c080240956ca542f06444b
+    guid: 09b5c9c657ca1de4caa61c7647d58e79
   - enabled: 0
     path: Assets/Scenes/Maps/Test/Test_ChocolateFactory.unity
-    guid: fea4dba1cc176cf4fb34ccbdef0a155d
+    guid: d4351d24aff9ed241906ea70b129e7a1
   - enabled: 0
     path: Assets/Scenes/Maps/Test/Test_CursedCandyCarnival.unity
-    guid: bf303a3226d1b554191e328f906f4d41
+    guid: 390aab2c5281a7d4993d7efdfcf85196
   - enabled: 1
     path: Assets/Scenes/Maps/Test/Test_HauntedBakery.unity
-    guid: b47ba8faefd5d4146a39771f70d6bcbf
+    guid: 7e9f2590d5e2d4649a972588c337d2f3
   - enabled: 1
     path: Assets/Scenes/Maps/CandyForest.unity
-    guid: f70c2cdd5ad69ae4d9470b45805ce514
+    guid: 077c63344b6e5714b9956727b33977bb
   - enabled: 1
     path: Assets/Scenes/Maps/CursedCandyCarnival.unity
-    guid: aa663cb4a16eae54b98d0380bd463fe0
+    guid: fefdfe0ce4968574982df814f96c7573
   - enabled: 1
     path: Assets/Scenes/Maps/ChocolateFactory.unity
-    guid: 65daa08d0ad7ae048836fd4103a33665
+    guid: fa06edceb4a44b142ab3e39d229641c9
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0
