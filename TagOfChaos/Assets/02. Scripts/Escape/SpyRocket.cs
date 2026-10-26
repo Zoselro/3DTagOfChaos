@@ -80,14 +80,15 @@ public class SpyRocket : MonoBehaviour, IHoldInteractable, IInteractionLabel
     }
 
     private XRayMarker xray;
+    private const float RocketXRayFill = 0.55f, RocketXRayHideWithin = 14f;
 
     public void Refresh(EscapeManager owner)
     {
         manager = owner;
         EscapeState s = owner.State;
         if (s == null) return;
-        // 스파이는 자기 로켓 위치를 투시로 본다(§25.5 J)
-        if (xray == null) { xray = gameObject.AddComponent<XRayMarker>(); xray.Init(new Color(1f, 0.55f, 0.2f)); }
+        // 스파이는 자기 로켓 위치를 투시로 본다(§25.5 J). 멀리서도 로켓 모양으로 보이게 안쪽을 진하게 채운다(§42).
+        if (xray == null) { xray = gameObject.AddComponent<XRayMarker>(); xray.Init(new Color(1f, 0.55f, 0.2f), RocketXRayFill); xray.HideWithin(RocketXRayHideWithin); }
         xray.SetVisible(RoomState.IsLocalSpy() && !RoomState.TryGetDouble(NetKeys.SpyEscapedAt, out _));
         if (s.Boarded.Count > seenBoarded) hatchOpenUntil = Time.time + HatchOpenSeconds; // 누군가 탔다 — 해치 열림
         seenBoarded = s.Boarded.Count;

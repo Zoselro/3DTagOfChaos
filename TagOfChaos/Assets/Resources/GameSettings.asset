@@ -23,13 +23,11 @@ MonoBehaviour:
   prepareSeconds: 15
   sceneLoadGrace: 3
   safetyCapMinutes: 30
-  maxColorSlots: 4
-  paintColliderRefreshInterval: 0.2
   characterCatalog: {fileID: 11400000, guid: 7f50eb2f81f0802428745357591b82ca, type: 2}
   gameMapScenes:
   - CandyForest
   - Test_GingerbreadVillage
-  - Test_ChocolateFactory
+  - ChocolateFactory
   - CursedCandyCarnival
   - Test_HauntedBakery
   minTimeAttackMinutes: 1
@@ -46,9 +44,6 @@ MonoBehaviour:
   maxGrabHeight: 6
   monsterDefaultView: 0
   characterSyncRate: 10
-  paintStrokeSendRate: 15
-  paintStrokeReferencePlayers: 4
-  minPaintStrokeSendRate: 5
   cookieSpawnRange: 5
   monsterSpawnRange: 4
   fallRespawnHeight: -100

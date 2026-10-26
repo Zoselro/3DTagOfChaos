@@ -55,12 +55,12 @@ public class ChocolateFactoryBuildingTests
                     Assert.IsNotNull(t, $"{key} {d.name}: {leaf}");
                     var box = t.GetComponent<BoxCollider>();
                     Assert.IsNotNull(box, $"{key} {d.name}: {leaf} blocks");
-                    Assert.GreaterOrEqual(box.size.x, 1.9f, "leaf 2 m wide (door 4 m ≥ 2.8 m rule)");
+                    Assert.GreaterOrEqual(box.size.x, 2.3f, "leaf 2.4 m wide (door 4.8 m ≥ 2.8 m rule, §42)");
                     Assert.GreaterOrEqual(box.size.y, 5f, "leaf taller than the monster");
                     Assert.IsNotNull(t.GetComponentInChildren<MeshRenderer>(), $"{key} {d.name}: {leaf} has its Blender mesh");
                 }
                 float gap = Vector3.Distance(d.transform.Find(ChocolateFactoryAssets.DoorLeafLeft).position, d.transform.Find(ChocolateFactoryAssets.DoorLeafRight).position);
-                Assert.AreEqual(4f, gap, 0.05f, key + ": hinges 4 m apart");
+                Assert.AreEqual(4.8f, gap, 0.05f, key + ": hinges 4.8 m apart — open leaves leave a 4.6 m corridor (§42 MP3)");
             }
         }
     }
@@ -109,6 +109,7 @@ public class ChocolateFactoryBuildingTests
     public void Prefabs_DoorsLeadIntoTheRoom_ForCookieAndMonster()
     {
         var bodies = new[] { (name: "cookie", r: 0.46f, h: 2f), (name: "monster", r: 0.9f, h: 3f) };
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single); // 열린 맵 씬(원점의 술래방 등)과 겹치지 않게 빈 씬에서 잰다
         foreach (string key in ChocolateFactoryAssets.AllBuildings)
         {
             ChocolateFactoryAssets.Meta meta = ChocolateFactoryAssets.LoadMeta(key);

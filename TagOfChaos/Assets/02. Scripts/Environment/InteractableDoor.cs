@@ -248,6 +248,15 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
             center = t.TransformPoint(local.center);
             normal = size.x <= size.z ? t.right : t.forward;
         }
+        else if (leafCollider is BoxCollider box)
+        {
+            // 상자 자기 축으로 잰다 — 건물째 돌려 놓은 문(초콜릿 공장 맵 45°, Request1009Plan.md §42)은 월드 범위가 정사각형에 가까워
+            // 두께 방향을 잘못 골라 옆에서 다가온 캐릭터 쪽으로 문이 열렸다.
+            Transform t = box.transform;
+            Vector3 size = Vector3.Scale(box.size, t.lossyScale);
+            center = t.TransformPoint(box.center);
+            normal = Mathf.Abs(size.x) <= Mathf.Abs(size.z) ? t.right : t.forward;
+        }
         else if (leafCollider != null)
         {
             Bounds world = leafCollider.bounds;

@@ -29,6 +29,7 @@ public static class CarnivalMapBuilder
     private const float WallHeight = 9f;
     private const float FenceHeight = 6f, FenceThickness = 0.8f;
     private const float ExitOpening = 5.6f, ExitPostWidth = 1.75f, ExitHeight = 5.6f, PadDepth = 10f;
+    private static readonly RoundMapKit.ExitSize Exit = new RoundMapKit.ExitSize { Opening = ExitOpening, PostWidth = ExitPostWidth, Height = ExitHeight, PadDepth = PadDepth };
     private const float FloorSize = 2f * (MapRadius + 80f);
     private const float TileChunk = 32f;
     private const float TileY = 0.06f;           // 재료 건물 방 바닥(0.02~0.05 m)보다 위 — 겹치면 바닥에 검은 조각이 깜빡인다
@@ -38,14 +39,12 @@ public static class CarnivalMapBuilder
     // 조명(§37): 가로등마다 점광원, 열린 탈출구 빛기둥(안개 무시), 술래방 둘레·문 빛. 주변광·안개는 테스트 씬 값보다 조금 밝게.
     private const float LampLightHeight = 4.7f, LampRange = 16f, LampIntensity = 2.6f;
     private const float LampGap = 3f;             // 새 가로등 둘레 빈 폭(괴물 지름 3.6 m 통로 — 가로등 기둥 0.4 m 포함)
-    private const float ExitBeamHeight = 120f;
     private const float RoomLampRadius = 16f;
     private static readonly Color LampColor = new Color(1f, 0.76f, 0.52f);
     private static readonly Color ExitColor = new Color(0.1f, 1f, 0.3f);
     private static readonly Color RoomColor = new Color(1f, 0.28f, 0.22f);
     private static readonly Color SceneAmbient = new Color(0.17f, 0.37f, 0.56f);
     private const float SceneFogDensity = 0.013f;
-    private const string BeaconShader = "TagOfChaos/Beacon";
 
     // 사분면(Q1 북서 안전벨트, Q2 북동 배터리, Q3 남서 수리 도구, Q4 남동 빨간 버튼) — 각도는 +x에서 +z 쪽으로
     public static readonly float[] QuadDeg = { 135f, 45f, 225f, 315f };
@@ -69,8 +68,7 @@ public static class CarnivalMapBuilder
     };
 
     // 놓은 것(수평 원) — 흩어 놓기·표시 자리 검사
-    private static readonly List<(Vector2 c, float r)> taken = new List<(Vector2, float)>();
-    private static readonly List<Vector3> monsterSeeds = new List<Vector3>();
+    private static readonly RoundMapKit.Placement placed = new RoundMapKit.Placement();
 
     [MenuItem(MenuRoot + "Build Cursed Candy Carnival Map Scene")]
     public static void BuildMenu() => Debug.Log(Build());
@@ -78,7 +76,7 @@ public static class CarnivalMapBuilder
     public static string Build()
     {
         if (CarnivalMapAssets.LoadPrefab("CUR_Bld_SafetyBelt") == null) return "[CarnivalMap] prefabs missing — run Build Carnival Map Prefabs first";
-        taken.Clear(); monsterSeeds.Clear(); reachCache.Clear();
+        placed.Clear(); reachCache.Clear();
         string source = TestMapBuilder.ScenePath(MapName);
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null) AssetDatabase.DeleteAsset(ScenePath);
         if (!AssetDatabase.CopyAsset(source, ScenePath)) return "[CarnivalMap] copy failed";
@@ -96,7 +94,7 @@ public static class CarnivalMapBuilder
 
         var rng = new System.Random(36);
         BuildForest(map, rng);
-        SpreadFarBackdrop(map);
+        RoundMapKit.SpreadFarBackdrop(map, MapRadius, FarBackdropClear);
         BuildGround(map);
         BuildMonsterRoom(map);
         BuildBuildings(map);
@@ -106,10 +104,10 @@ public static class CarnivalMapBuilder
         int deco = BuildRoads(map) + BuildQuadrants(map, rng) + BuildExtraLamps(map);
         int tiles = BuildTiles(map, rng);
         Physics.SyncTransforms();
-        int markers = BuildMarkers(map);
+        int markers = RoundMapKit.Markers(map, placed, RingRadius, RingHalf);
         int lights = BuildLights(scene, map);
 
-        string recipe = SetRecipe();
+        string recipe = RoundMapKit.FixRecipe("Assets/03. SO/Escape/Recipes/Recipe_CursedCandyCarnival.asset", new[] { "Item_Seatbelt", "Item_Battery", "Item_Toolbox", "Item_RedButton" });
         string escape = EscapeMapSetup.Apply(scene, MapName);
         Transform room = map.Find("MonsterRoom");
         var guard = room != null ? room.GetComponent<MonsterRoomGuard>() : null;
@@ -124,8 +122,8 @@ public static class CarnivalMapBuilder
             manager.EditorSetMapRadius(MapRadius);
             EditorUtility.SetDirty(manager);
         }
-        MoveSpawn(scene, SceneSpawnPoints.Cookie, map, "Spawn_Cookie_Q1");
-        MoveWitchAnchor(scene);
+        RoundMapKit.MoveSpawn(scene, SceneSpawnPoints.Cookie, map, "Spawn_Cookie_Q1");
+        RoundMapKit.MoveWitchAnchor(scene, MapRadius, WitchBeyondFence);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -135,82 +133,34 @@ public static class CarnivalMapBuilder
 
     // ---------------------------------------------------------------- helpers
 
-    public static Vector3 Polar(float radius, float deg) => new Vector3(Mathf.Cos(deg * Mathf.Deg2Rad), 0f, Mathf.Sin(deg * Mathf.Deg2Rad)) * radius;
-    private static Vector3 Polar(Vector2 radiusDeg, float baseDeg = 0f) => Polar(radiusDeg.x, baseDeg + radiusDeg.y);
-    // 로컬 +Z가 맵 가운데를 본다(재료 건물·탈출구 루트 — 건물 FBX는 앞이 +Z).
-    private static Quaternion FaceCenter(Vector3 p) => new Vector2(p.x, p.z).sqrMagnitude < 0.01f ? Quaternion.identity : Quaternion.LookRotation(new Vector3(-p.x, 0f, -p.z));
-    // 소품·놀이기구 FBX(ride_common 내보내기)는 앞(Blender −Y)이 Unity −Z — 앞이 맵 가운데를 보게 +Z를 바깥으로.
-    private static Quaternion FrontToCenter(Vector3 p) => new Vector2(p.x, p.z).sqrMagnitude < 0.01f ? Quaternion.identity : Quaternion.LookRotation(new Vector3(p.x, 0f, p.z));
-
-    private static Transform Group(Transform parent, string name)
-    {
-        Transform t = parent.Find(name);
-        if (t != null) return t;
-        t = new GameObject(name).transform;
-        t.SetParent(parent, false);
-        return t;
-    }
+    public static Vector3 Polar(float radius, float deg) => RoundMapKit.Polar(radius, deg);
+    private static Vector3 Polar(Vector2 radiusDeg, float baseDeg = 0f) => RoundMapKit.Polar(radiusDeg, baseDeg);
+    private static Quaternion FaceCenter(Vector3 p) => RoundMapKit.FaceCenter(p);
+    private static Quaternion FrontToCenter(Vector3 p) => RoundMapKit.FrontToCenter(p);
+    private static Transform Group(Transform parent, string name) => RoundMapKit.Group(parent, name);
 
     private static GameObject Spawn(string prefab, Transform parent, Vector3 pos, Quaternion rot, bool colliders = true)
     {
         GameObject asset = CarnivalMapAssets.LoadPrefab(prefab);
         if (asset == null) { Debug.LogWarning($"[CarnivalMap] prefab {prefab} missing"); return null; }
-        var go = (GameObject)PrefabUtility.InstantiatePrefab(asset, parent);
-        go.transform.SetPositionAndRotation(pos, rot);
-        if (!colliders)
-        {
-            foreach (Collider c in go.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
-            // 충돌체만 담던 자식(COL_*)은 빈 껍데기가 되므로 함께 지운다(Request1009Plan.md §38 B2)
-            foreach (Transform t in go.GetComponentsInChildren<Transform>(true))
-                if (t != go.transform && t.name.StartsWith("COL") && t.childCount == 0 && t.GetComponents<Component>().Length == 1) Object.DestroyImmediate(t.gameObject);
-        }
-        return go;
+        return RoundMapKit.Spawn(asset, parent, pos, rot, colliders);
     }
 
-    private static GameObject Model(string fbx, Transform parent, Vector3 localPos, Quaternion localRot, string name = null)
-    {
-        var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{CarnivalMapAssets.MapObjectFolder}/{fbx}.fbx");
-        if (asset == null) { Debug.LogWarning($"[CarnivalMap] model {fbx} missing"); return null; }
-        var go = (GameObject)PrefabUtility.InstantiatePrefab(asset, parent);
-        go.transform.localPosition = localPos;
-        go.transform.localRotation = localRot;
-        if (name != null) go.name = name;
-        return go;
-    }
+    private static GameObject Model(string fbx, Transform parent, Vector3 localPos, Quaternion localRot, string name = null) =>
+        RoundMapKit.Model($"{CarnivalMapAssets.MapObjectFolder}/{fbx}.fbx", parent, localPos, localRot, name);
 
-    private static void LocalBox(Transform parent, string name, Vector3 center, Vector3 size)
-    {
-        var t = new GameObject(name).transform;
-        t.SetParent(parent, false);
-        t.localPosition = center;
-        t.gameObject.AddComponent<BoxCollider>().size = size;
-    }
+    private static void LocalBox(Transform parent, string name, Vector3 center, Vector3 size) => RoundMapKit.LocalBox(parent, name, center, size);
 
     private static readonly Dictionary<string, float> reachCache = new Dictionary<string, float>();
 
-    // 프리팹 원점에서 겉모습 끝까지(수평). 프리팹 에셋의 bounds는 비어 있어 잠깐 꺼내 잰다.
     private static float Reach(string prefab)
     {
         if (reachCache.TryGetValue(prefab, out float cached)) return cached;
-        GameObject asset = CarnivalMapAssets.LoadPrefab(prefab);
-        if (asset == null) return 2f;
-        var go = (GameObject)PrefabUtility.InstantiatePrefab(asset);
-        float r = 0f;
-        try
-        {
-            go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-            foreach (Renderer x in go.GetComponentsInChildren<Renderer>(true))
-            {
-                Bounds b = x.bounds;
-                r = Mathf.Max(r, new Vector2(Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x)), Mathf.Max(Mathf.Abs(b.min.z), Mathf.Abs(b.max.z))).magnitude);
-            }
-        }
-        finally { Object.DestroyImmediate(go); }
-        return reachCache[prefab] = r;
+        return reachCache[prefab] = RoundMapKit.Reach(CarnivalMapAssets.LoadPrefab(prefab));
     }
 
-    private static void Take(Vector3 p, float r) => taken.Add((new Vector2(p.x, p.z), r));
-    private static bool IsFree(Vector3 p, float r) => taken.All(t => (t.c - new Vector2(p.x, p.z)).magnitude >= t.r + r);
+    private static void Take(Vector3 p, float r) => placed.Take(p, r);
+    private static bool IsFree(Vector3 p, float r) => placed.IsFree(p, r);
 
     // ---------------------------------------------------------------- background
 
@@ -242,23 +192,6 @@ public static class CarnivalMapBuilder
         if (terrain != null) Object.DestroyImmediate(terrain.gameObject);
     }
 
-    // 마녀가 걸어오는 먼 배경 중 넓어진 맵에 걸리는 것은 그만큼 바깥으로(캔디숲 §32와 같음).
-    private static void SpreadFarBackdrop(Transform map)
-    {
-        Transform far = map.Find(WitchPath.FarBackdropName);
-        if (far == null) return;
-        float push = MapRadius - 80f;
-        foreach (Transform t in far.Cast<Transform>().ToList())
-        {
-            Renderer r = t.GetComponentInChildren<Renderer>(true);
-            if (r == null || r.bounds.size.x > FarBackdropClear) continue;
-            var flat = new Vector2(r.bounds.center.x, r.bounds.center.z);
-            if (flat.magnitude >= FarBackdropClear || flat.sqrMagnitude < 1f) continue;
-            Vector2 move = flat.normalized * push;
-            t.position += new Vector3(move.x, 0f, move.y);
-        }
-    }
-
     // 걷는 면은 평평한 바닥판 하나(타일은 겉모습만). 사각 벽은 지운다(둥근 울타리).
     private static void BuildGround(Transform map)
     {
@@ -285,50 +218,14 @@ public static class CarnivalMapBuilder
         var room = new GameObject("MonsterRoom").transform;
         room.SetParent(map, false);
         Model("MO_MonsterRoom", room, Vector3.zero, Quaternion.identity, "Model");
-        Transform ring = Group(room, "RoomRings");
-        const int segments = 72;
-        float step = 360f / segments, doorHalfDeg = (RoomDoorWidth / 2f) / RoomInner * Mathf.Rad2Deg;
-        for (int i = 0; i < segments; i++)
-        {
-            float a = (i + 0.5f) * step;
-            if (RoadDeg.Any(d => Mathf.Abs(Mathf.DeltaAngle(a, d)) < doorHalfDeg + step / 2f)) continue;
-            Vector3 dir = Polar(1f, a);
-            var t = new GameObject($"RoomRing_{i:00}").transform;
-            t.SetParent(ring, false);
-            t.localPosition = dir * ((RoomInner + RoomRadius) / 2f) + Vector3.up * WallHeight / 2f;
-            t.localRotation = Quaternion.LookRotation(dir);
-            float chord = 2f * RoomRadius * Mathf.Sin(step * Mathf.Deg2Rad / 2f) + 0.2f;
-            t.gameObject.AddComponent<BoxCollider>().size = new Vector3(chord, WallHeight, RoomRadius - RoomInner + 0.1f);
-        }
-        // 문 옆 기둥: 문 폭 바깥 끝을 정확히 막는다(고리 조각 사이 틈 없음)
+        RoundMapKit.RoomRing(room, RoomInner, RoomRadius, WallHeight, RoomDoorWidth, RoadDeg);
         var doorMesh = AssetDatabase.LoadAssetAtPath<GameObject>($"{CarnivalMapAssets.MapObjectFolder}/MO_MonsterRoomDoor.fbx");
         for (int i = 0; i < 4; i++)
         {
             Vector3 dir = Polar(1f, RoadDeg[i]);
-            Quaternion rot = Quaternion.LookRotation(dir);
-            foreach (int s in new[] { -1, 1 })
-            {
-                var post = new GameObject($"RoomRing_Post{i}{(s < 0 ? "L" : "R")}").transform;
-                post.SetParent(ring, false);
-                post.localPosition = dir * ((RoomInner + RoomRadius) / 2f) + rot * Vector3.right * (s * (RoomDoorWidth / 2f + 0.5f)) + Vector3.up * WallHeight / 2f;
-                post.localRotation = rot;
-                post.gameObject.AddComponent<BoxCollider>().size = new Vector3(1f, WallHeight, RoomRadius - RoomInner + 0.3f);
-            }
-            var door = new GameObject("MonsterDoor_" + i);
-            door.transform.SetParent(room, false);
-            door.transform.localPosition = dir * ((RoomInner + RoomRadius) / 2f);
-            door.transform.localRotation = rot;
-            MeshFilter source = doorMesh != null ? doorMesh.GetComponentInChildren<MeshFilter>() : null;
-            if (source != null)
-            {
-                door.AddComponent<MeshFilter>().sharedMesh = source.sharedMesh;
-                door.AddComponent<MeshRenderer>().sharedMaterials = source.GetComponent<MeshRenderer>().sharedMaterials;
-            }
-            var box = door.AddComponent<BoxCollider>();
-            box.center = new Vector3(0f, WallHeight / 2f, 0f);
-            box.size = new Vector3(RoomDoorWidth + 0.2f, WallHeight, RoomRadius - RoomInner + 0.3f);
+            RoundMapKit.RoomDoor(room, i, dir, RoomInner, RoomRadius, WallHeight, RoomDoorWidth, doorMesh);
             // 문 앞 붉은 바닥 빛(§37 L3, 겉모습만) — 문 자리가 멀리서 보이게
-            BeaconPart(room, "DoorGlow_" + i, Resources.GetBuiltinResource<Mesh>("Quad.fbx"), BeaconMaterial("CUR_RoomDoorGlow", RoomColor * 1.2f, 1f, 1.5f, 1f),
+            RoundMapKit.BeaconPart(room, "DoorGlow_" + i, Resources.GetBuiltinResource<Mesh>("Quad.fbx"), RoundMapKit.BeaconMaterial(GeneratedFolder, "CUR_RoomDoorGlow", RoomColor * 1.2f, 1f, 1.5f, 1f),
                 dir * RoomRadius + Vector3.up * 0.1f, Quaternion.Euler(90f, 0f, 0f), new Vector3(7f, 7f, 1f));
         }
         var spawn = new GameObject("Spawn_Monster").transform;
@@ -352,28 +249,11 @@ public static class CarnivalMapBuilder
             if (bld == null) continue;
             Bounds local = LocalBounds(bld.transform);
             Take(p, new Vector2(local.extents.x, local.extents.z).magnitude * 0.85f); // 바닥 타일은 건물 밑에도 깐다(방 바닥 0 m 위 2 cm — 겉 건물 밑은 가려진다)
-            monsterSeeds.Add(p + Vector3.up * 0.1f); // 방 가운데(문 폭이 넓어 실제로도 들어간다 — §35.2)
+            placed.MonsterSeeds.Add(p + Vector3.up * 0.1f); // 방 가운데(문 폭이 넓어 실제로도 들어간다 — §35.2)
         }
     }
 
-    // t 기준 범위: 메시 자기 범위의 꼭짓점을 옮겨 잰다(돌아간 물체의 월드 범위로 재면 부풀려진다).
-    private static Bounds LocalBounds(Transform t)
-    {
-        var b = new Bounds();
-        bool first = true;
-        foreach (MeshFilter mf in t.GetComponentsInChildren<MeshFilter>(true))
-        {
-            if (mf.name == "ESC_Glow" || mf.sharedMesh == null || mf.GetComponent<Renderer>() == null) continue;
-            Bounds w = mf.sharedMesh.bounds;
-            for (int i = 0; i < 8; i++)
-            {
-                Vector3 corner = t.InverseTransformPoint(mf.transform.TransformPoint(new Vector3(i % 2 == 0 ? w.min.x : w.max.x, i / 2 % 2 == 0 ? w.min.y : w.max.y, i / 4 == 0 ? w.min.z : w.max.z)));
-                if (first) { b = new Bounds(corner, Vector3.zero); first = false; }
-                else b.Encapsulate(corner);
-            }
-        }
-        return b;
-    }
+    private static Bounds LocalBounds(Transform t) => RoundMapKit.LocalBounds(t);
 
     // ---------------------------------------------------------------- exits & fence
 
@@ -389,34 +269,19 @@ public static class CarnivalMapBuilder
             root.SetParent(exits, false);
             root.SetPositionAndRotation(d * MapRadius, Quaternion.LookRotation(-d));
             Model("MO_ExitGate", root, Vector3.zero, Quaternion.Euler(0f, 180f, 0f), "Model"); // 문틀 앞(모델 −Z)이 맵 안쪽
-            var door = new GameObject("Door_" + key).transform;
-            door.SetParent(root, false);
-            var doorBox = door.gameObject.AddComponent<BoxCollider>();
-            doorBox.center = new Vector3(0f, ExitHeight / 2f, 0f);
-            doorBox.size = new Vector3(ExitOpening, ExitHeight, 0.8f);
-            Model("MO_ExitGateDoorL", door, new Vector3(-ExitOpening / 2f, 0f, 0f), Quaternion.identity);
-            Model("MO_ExitGateDoorR", door, new Vector3(ExitOpening / 2f, 0f, 0f), Quaternion.identity);
+            RoundMapKit.ExitDoor(root, key, Exit, $"{CarnivalMapAssets.MapObjectFolder}/MO_ExitGateDoorL.fbx", $"{CarnivalMapAssets.MapObjectFolder}/MO_ExitGateDoorR.fbx");
             // 레버(겉모습): 울타리 밖 받침 옆 — 안쪽에 두면 울타리와 사이에 좁은 틈이 생긴다
             GameObject lever = Model("MO_ExitLever", root, new Vector3(ExitOpening / 2f + ExitPostWidth + 1.4f, 0f, -2.6f), Quaternion.identity);
             if (lever != null) Model("MO_ExitLeverArm", lever.transform, new Vector3(0f, 1.15f, 0f), Quaternion.Euler(-35f, 0f, 0f));
 
-            float postX = ExitOpening / 2f + ExitPostWidth / 2f;
-            LocalBox(root, "COL_PostL", new Vector3(-postX, 5f, 0f), new Vector3(ExitPostWidth, 10f, 2.2f));
-            LocalBox(root, "COL_PostR", new Vector3(postX, 5f, 0f), new Vector3(ExitPostWidth, 10f, 2.2f));
-            LocalBox(root, "COL_Lintel", new Vector3(0f, (ExitHeight + 10f) / 2f, 0f), new Vector3(ExitOpening, 10f - ExitHeight, 2.2f));
-            float wallX = ExitOpening / 2f + ExitPostWidth + 0.4f;
-            LocalBox(root, "COL_PadL", new Vector3(-wallX, 3f, -PadDepth / 2f - 0.5f), new Vector3(0.8f, 6f, PadDepth));
-            LocalBox(root, "COL_PadR", new Vector3(wallX, 3f, -PadDepth / 2f - 0.5f), new Vector3(0.8f, 6f, PadDepth));
-            LocalBox(root, "COL_PadBack", new Vector3(0f, 3f, -PadDepth - 0.5f), new Vector3(wallX * 2f + 0.8f, 6f, 0.8f));
+            RoundMapKit.ExitColliders(root, key, Exit);
+            float wallX = Exit.WallX;
             for (int k = 0; k < 3; k++)   // 받침 양옆 울타리 겉모습
                 foreach (int s in new[] { -1, 1 })
                     Spawn("MO_Fence", root, root.TransformPoint(new Vector3(s * wallX, 0f, -1.9f - k * 3.36f)), root.rotation * Quaternion.Euler(0f, 90f, 0f), false);
             Spawn("MO_Fence", root, root.TransformPoint(new Vector3(-1.7f, 0f, -PadDepth - 0.5f)), root.rotation, false);
             Spawn("MO_Fence", root, root.TransformPoint(new Vector3(1.7f, 0f, -PadDepth - 0.5f)), root.rotation, false);
-            var trigger = new GameObject("ExitTrigger_" + key).transform;
-            trigger.SetParent(root, false);
-            trigger.localPosition = new Vector3(0f, 1f, -4f);
-            BuildExitOpenLook(root, key);
+            RoundMapKit.ExitOpenLook(root, key, Exit, ExitColor, GeneratedFolder, "CUR_");
             Take(d * MapRadius, 7f);
             // 닫혀 있어도 자리가 보이게 안쪽 양옆 가로등(탈출구 루트 밖 — 열린 탈출구 투시 테두리에 들지 않게)
             foreach (int s in new[] { -1, 1 })
@@ -425,69 +290,6 @@ public static class CarnivalMapBuilder
                 if (Spawn("MO_StreetLamp", Group(map, "Roads"), p, Quaternion.identity) != null) Take(p, 0.8f);
             }
         }
-    }
-
-    // 열린 탈출구 표시(ExitOpenLook_ — EscapeGate가 열릴 때 켠다, §37 L1): 받침 위 하늘까지 초록 빛기둥(안개 무시 — 맵 반대쪽에서도 보인다),
-    // 문틀 안쪽 빛 띠, 바닥 빛 원, 초록 점광원. 충돌 없음.
-    private static void BuildExitOpenLook(Transform root, string key)
-    {
-        var look = new GameObject("ExitOpenLook_" + key).transform;
-        look.SetParent(root, false);
-        Mesh cylinder = Resources.GetBuiltinResource<Mesh>("Cylinder.fbx"), quad = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
-        Material core = BeaconMaterial("CUR_ExitBeamCore", ExitColor * 1.6f, 0f, 1.2f, 1.2f);
-        Material haze = BeaconMaterial("CUR_ExitBeamHaze", ExitColor * 0.55f, 0f, 0.8f, 2.5f);
-        Material frame = BeaconMaterial("CUR_ExitFrame", ExitColor * 1.8f, 0f, 0.1f, 0.1f);
-        Material ground = BeaconMaterial("CUR_ExitGround", ExitColor * 1.1f, 1f, 1.5f, 1f);
-        BeaconPart(look, "Beam_Core", cylinder, core, new Vector3(0f, ExitBeamHeight / 2f, -4f), Quaternion.identity, new Vector3(1.8f, ExitBeamHeight / 2f, 1.8f));
-        BeaconPart(look, "Beam_Haze", cylinder, haze, new Vector3(0f, ExitBeamHeight / 2f, -4f), Quaternion.identity, new Vector3(6f, ExitBeamHeight / 2f, 6f));
-        BeaconPart(look, "Ground_Glow", quad, ground, new Vector3(0f, 0.1f, -1f), Quaternion.Euler(90f, 0f, 0f), new Vector3(14f, 14f, 1f));
-        foreach (int s in new[] { -1, 1 })
-            BeaconPart(look, s < 0 ? "Frame_L" : "Frame_R", quad, frame, new Vector3(s * (ExitOpening / 2f + 0.2f), ExitHeight / 2f, 1.2f), Quaternion.identity, new Vector3(0.4f, ExitHeight, 1f));
-        BeaconPart(look, "Frame_Top", quad, frame, new Vector3(0f, ExitHeight + 0.2f, 1.2f), Quaternion.identity, new Vector3(ExitOpening + 0.8f, 0.4f, 1f));
-        var light = new GameObject("Light_Exit").AddComponent<Light>();
-        light.transform.SetParent(look, false);
-        light.transform.localPosition = new Vector3(0f, 4f, 2.5f);
-        light.type = LightType.Point;
-        light.range = 26f;
-        light.intensity = 4.5f;
-        light.color = ExitColor;
-        light.shadows = LightShadows.None;
-        light.renderMode = LightRenderMode.ForcePixel;
-    }
-
-    private static void BeaconPart(Transform parent, string name, Mesh mesh, Material material, Vector3 localPos, Quaternion localRot, Vector3 scale)
-    {
-        var go = new GameObject(name);
-        go.transform.SetParent(parent, false);
-        go.transform.localPosition = localPos;
-        go.transform.localRotation = localRot;
-        go.transform.localScale = scale;
-        go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        var r = go.AddComponent<MeshRenderer>();
-        r.sharedMaterial = material;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        r.receiveShadows = false;
-        r.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-        r.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-    }
-
-    // Beacon 재질(Generated/에 두고 다시 만들 때 값만 고친다)
-    private static Material BeaconMaterial(string name, Color color, float radial, float fadePower, float edgePower)
-    {
-        string path = $"{GeneratedFolder}/{name}.mat";
-        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (m == null)
-        {
-            m = new Material(Shader.Find(BeaconShader));
-            AssetDatabase.CreateAsset(m, path);
-        }
-        m.shader = Shader.Find(BeaconShader);
-        m.SetColor("_Color", color);
-        m.SetFloat("_Radial", radial);
-        m.SetFloat("_FadePower", fadePower);
-        m.SetFloat("_EdgePower", edgePower);
-        EditorUtility.SetDirty(m);
-        return m;
     }
 
     // 둥근 울타리: 겉모습은 MO_Fence를 이어 세우고(충돌 없음), 충돌은 겹친 상자 고리(탈출구 자리만 비움 — 문 기둥이 막는다).
@@ -505,30 +307,7 @@ public static class CarnivalMapBuilder
             Vector3 p = Polar(r + 0.4f, a);
             Spawn("MO_Fence", fence, p, FaceCenter(p), false);
         }
-        int colSegments = 240;
-        float step = 360f / colSegments;
-        for (int i = 0; i < colSegments; i++)
-        {
-            float a0 = i * step, a1 = a0 + step;
-            float lo = a0, hi = a1;
-            bool skip = false;
-            foreach (float center in RoadDeg)
-            {
-                float half = exitHalf / r * Mathf.Rad2Deg;
-                float d0 = Mathf.DeltaAngle(center, a0), d1 = Mathf.DeltaAngle(center, a1);
-                if (d0 >= -half && d1 <= half) skip = true;
-                else if (d0 < -half && d1 > -half && d1 <= half) hi = a1 - (d1 + half);
-                else if (d0 >= -half && d0 < half && d1 > half) lo = a0 + (half - d0);
-            }
-            if (skip) continue;
-            float mid = (lo + hi) / 2f, span = Mathf.DeltaAngle(lo, hi);
-            Vector3 p = Polar(r + FenceThickness / 2f, mid);
-            var t = new GameObject($"COL_Fence_{i:000}").transform;
-            t.SetParent(cols, false);
-            t.SetPositionAndRotation(p + Vector3.up * FenceHeight / 2f, Quaternion.LookRotation(p));
-            float chord = 2f * r * Mathf.Sin(span * Mathf.Deg2Rad / 2f) + 0.2f;
-            t.gameObject.AddComponent<BoxCollider>().size = new Vector3(chord, FenceHeight, FenceThickness);
-        }
+        RoundMapKit.FenceColliders(cols, r, RoadDeg, exitHalf, FenceHeight, FenceThickness);
     }
 
     // ---------------------------------------------------------------- rides
@@ -661,7 +440,7 @@ public static class CarnivalMapBuilder
                 Vector3 p = Polar(t, b);
                 if (Spawn("MO_Tent", group, p, FaceCenter(p) * Quaternion.Euler(0f, 90f, 0f)) != null) n++;
                 Take(p, 5.4f);
-                monsterSeeds.Add(p + Vector3.up * 0.1f);
+                placed.MonsterSeeds.Add(p + Vector3.up * 0.1f);
             }
             // 분수 광장: 분수 + 벤치 3 + 가로등 2 + 화단 2
             Vector3 f = Polar(52f, b);
@@ -873,45 +652,7 @@ public static class CarnivalMapBuilder
 
     // ---------------------------------------------------------------- markers
 
-    private static int BuildMarkers(Transform map)
-    {
-        Transform markers = Group(map, "Markers");
-        bool Clear(Vector3 p, float radius)
-        {
-            if (!IsFree(p, radius)) return false;
-            if (Mathf.Abs(new Vector2(p.x, p.z).magnitude - RingRadius) < RingHalf) return false;
-            if (Physics.CheckCapsule(p + Vector3.up * (radius + 0.1f), p + Vector3.up * (radius + 2.4f), radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) return false;
-            return Physics.Raycast(p + Vector3.up * 3f, Vector3.down, out RaycastHit hit, 6f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) && hit.point.y < 0.3f;
-        }
-        int n = 0;
-        foreach ((string name, Vector3 pos) in CandyForestLayout.PlaceMarkers(Clear))
-        {
-            var t = new GameObject(name).transform;
-            t.SetParent(markers, false);
-            t.position = pos;
-            n++;
-        }
-        return n;
-    }
-
     private const float WitchBeyondFence = 75f;
-
-    private static void MoveWitchAnchor(Scene scene)
-    {
-        Transform anchor = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "WITCH_Anchor");
-        if (anchor == null) return;
-        var flat = new Vector2(anchor.position.x, anchor.position.z);
-        if (flat.sqrMagnitude < 1f) flat = new Vector2(-1f, -1f);
-        Vector2 at = flat.normalized * (MapRadius + WitchBeyondFence);
-        anchor.position = new Vector3(at.x, anchor.position.y, at.y);
-    }
-
-    private static void MoveSpawn(Scene scene, string spawnName, Transform map, string markerName)
-    {
-        GameObject spawn = scene.GetRootGameObjects().FirstOrDefault(g => g.name == spawnName);
-        Transform marker = map.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == markerName);
-        if (spawn != null && marker != null) spawn.transform.position = marker.position + Vector3.up * 0.5f;
-    }
 
     // ---------------------------------------------------------------- lights
 
@@ -953,53 +694,12 @@ public static class CarnivalMapBuilder
         return n;
     }
 
-    private static void Point(Transform parent, Vector3 pos, float range, float intensity, Color color)
-    {
-        var go = new GameObject("Light_" + parent.childCount.ToString("000"));
-        go.transform.SetParent(parent, false);
-        go.transform.position = pos;
-        var l = go.AddComponent<Light>();
-        l.type = LightType.Point;
-        l.range = range;
-        l.intensity = intensity;
-        l.color = color;
-        l.shadows = LightShadows.None;
-    }
+    private static void Point(Transform parent, Vector3 pos, float range, float intensity, Color color) => RoundMapKit.Point(parent, pos, range, intensity, color);
 
     // ---------------------------------------------------------------- recipe & build settings
 
-    // 건물 간판이 재료를 말하므로 Q1~Q4 재료를 고정한다(안전벨트·배터리·수리 도구·빨간 버튼).
-    private static string SetRecipe()
-    {
-        var recipe = AssetDatabase.LoadAssetAtPath<EscapeRecipeSO>("Assets/03. SO/Escape/Recipes/Recipe_CursedCandyCarnival.asset");
-        if (recipe == null) return "recipe missing";
-        string[] items = { "Item_Seatbelt", "Item_Battery", "Item_Toolbox", "Item_RedButton" };
-        ItemSO[] materials = items.Select(n => AssetDatabase.FindAssets(n + " t:ItemSO").Select(AssetDatabase.GUIDToAssetPath)
-            .Select(AssetDatabase.LoadAssetAtPath<ItemSO>).FirstOrDefault(i => i != null && i.name == n)).ToArray();
-        if (materials.Any(m => m == null)) return "recipe items missing";
-        recipe.EditorSetBuildingMaterials(materials, true);
-        EditorUtility.SetDirty(recipe);
-        AssetDatabase.SaveAssets();
-        return "recipe fixed " + string.Join(",", materials.Select(m => m.ItemId));
-    }
-
-    public static void AddToBuildSettings()
-    {
-        var scenes = EditorBuildSettings.scenes.ToList();
-        if (!scenes.Any(s => s.path == ScenePath)) scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
-        foreach (EditorBuildSettingsScene s in scenes)
-            if (s.path == TestMapBuilder.ScenePath(MapName)) s.enabled = false;
-        EditorBuildSettings.scenes = scenes.ToArray();
-
-        var settings = AssetDatabase.LoadAssetAtPath<GameSettingsSO>("Assets/Resources/GameSettings.asset");
-        if (settings == null) return;
-        var so = new SerializedObject(settings);
-        SerializedProperty list = so.FindProperty("gameMapScenes");
-        for (int i = 0; i < list.arraySize; i++)
-            if (list.GetArrayElementAtIndex(i).stringValue == TestMapBuilder.SceneName(MapName)) list.GetArrayElementAtIndex(i).stringValue = MapName;
-        so.ApplyModifiedPropertiesWithoutUndo();
-        AssetDatabase.SaveAssets();
-    }
+    // 건물 간판이 재료를 말하므로 Q1~Q4 재료를 고정한다(안전벨트·배터리·수리 도구·빨간 버튼) — Build()에서 RoundMapKit.FixRecipe.
+    public static void AddToBuildSettings() => RoundMapKit.AddToBuildSettings(ScenePath, MapName);
 
     // ---------------------------------------------------------------- passability (CM7)
 
@@ -1031,7 +731,7 @@ public static class CarnivalMapBuilder
             CookieForbidden = p => new Vector2(p.x, p.z).magnitude < RoomRadius,
             IgnorePocket = p => new Vector2(p.x, p.z).magnitude > MapRadius + 0.5f,
             MonsterVerified = entrance != null ? CarnivalRidesBuilder.EntranceRoute(entrance) : null,
-            Targets = Targets(scene).ToArray(),
+            Targets = RoundMapKit.PassTargets(scene).ToArray(),
             MonsterSeeds = seeds.ToArray(),
             MapImage = "Temp/CursedCandyCarnival_PassabilityMap.png",
         };
@@ -1041,17 +741,5 @@ public static class CarnivalMapBuilder
         System.IO.Directory.CreateDirectory("Temp");
         System.IO.File.WriteAllText(PassabilityReport, sb.ToString());
         return $"[CarnivalMap] passability: {results.Count(r => r.Clean)}/{results.Length} clean — {PassabilityReport}";
-    }
-
-    private static IEnumerable<(string, Vector3)> Targets(Scene scene)
-    {
-        foreach (GameObject root in scene.GetRootGameObjects())
-            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
-            {
-                string n = t.name;
-                if (n.StartsWith("CHEST_Slot_") || n.StartsWith("RocketSpawn_") || n.StartsWith("RainbowSpawn_") || n.StartsWith("Spawn_Cookie_")
-                    || n.StartsWith("Repair_Point") || n.StartsWith("ExitTrigger_") || n == "Zone_Inside")
-                    yield return (n + (n.StartsWith("Repair_Point") || n == "Zone_Inside" ? "@" + t.parent.parent.name + "/" + t.parent.name : ""), t.position);
-            }
     }
 }

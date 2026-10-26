@@ -18,6 +18,8 @@ public static class ChocolateFactoryAssets
 {
     public const string ModelFolder = "Assets/Maps/ChocolateFactory/Models/Buildings";
     public const string PropFolder = "Assets/Maps/ChocolateFactory/Models/Props";    // §40 꾸미기 소품 10종
+    public const string MapObjectFolder = "Assets/Maps/ChocolateFactory/Models/MapObjects"; // §42 술래방·출구 게이트·소품 7종·숨는 창고
+    public const string FloorFolder = "Assets/Maps/ChocolateFactory/Models/Floor";          // §40 바닥 타일 5종(맵용 — 창살 모서리 깎기 없음)
     public const string GeneratedFolder = "Assets/Maps/ChocolateFactory/Generated";
     public const string PrefabFolder = "Assets/04. Prefabs/ChocolateFactory";
     public const string DoorControllerPath = "Assets/Maps/Common/Doors/MapDoor.controller";
@@ -30,6 +32,9 @@ public static class ChocolateFactoryAssets
     public const string DoorLeafLeft = "Leaf_L", DoorLeafRight = "Leaf_R";
     public const float DoorOpenAngle = 90f;
     private const float LeafThickness = 0.2f;
+    // 문짝 두 장이 덮는 폭: 문 구멍(Blender CUT_W 5 m) − 0.2 m. 받은 문짝(2 m)을 2.4 m로 늘려 경첩을 복도 벽 쪽으로 옮긴다 —
+    // 열어 둔 문짝(90°) 사이 복도가 4.6 m(4 m 통로 규칙)로 남는다(2 m 문짝일 때 3.8 m, §42 MP3 통행 검사).
+    private const float DoorSpan = 4.8f;
     private const float CorridorHalf = 2.5f + 0.4f;   // 문 구멍 반폭 + 통로 벽 두께(Blender CUT_W / 2 + T)
     private const float FillReach = 26f;
     private const float GlowTop = 60f;
@@ -75,9 +80,9 @@ public static class ChocolateFactoryAssets
     {
         TwistedPropBuilder.EnsureFolder(PrefabFolder);
         TwistedPropBuilder.EnsureFolder(GeneratedFolder);
-        var report = new List<string> { CarnivalRideModelsImporter.ImportFolder(ModelFolder), CarnivalRideModelsImporter.ImportFolder(PropFolder) };
+        var report = new List<string> { CarnivalRideModelsImporter.ImportFolder(ModelFolder) };
         foreach (string key in AllBuildings) report.Add(BuildBuilding(key));
-        report.Add(BuildProps());
+        report.Add(BuildMapObjects());
         AssetDatabase.SaveAssets();
         return "[ChocolateFactoryAssets] " + string.Join(" | ", report);
     }
@@ -108,6 +113,7 @@ public static class ChocolateFactoryAssets
             string moving = BuildMoving(root.transform, m, meta);
             int sounds = AddSounds(m);
             int boxes = exterior != null ? BuildingFill.Build(root.transform, exterior, Opening(meta), FillReach) : 0;
+            int ledges = BlockOutsideLedges(root.transform, m, meta);
             if (exterior != null) Object.DestroyImmediate(exterior.gameObject);
             string socket = meta.kind == "material_building" ? SetupSocket(root.transform, m) : "general";
             AddLights(root.transform, meta);
@@ -115,7 +121,7 @@ public static class ChocolateFactoryAssets
             foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
                 if (IsStatic(t)) GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath(key));
-            return $"{name}: doors {doors}, {moving}, sounds {sounds}, fill {boxes}, {socket}";
+            return $"{name}: doors {doors}, {moving}, sounds {sounds}, fill {boxes}, ledges {ledges}, {socket}";
         }
         finally { Object.DestroyImmediate(root); }
     }
@@ -164,6 +170,59 @@ public static class ChocolateFactoryAssets
         };
     }
 
+    // 방·복도 밖 낮은 받침(분쇄기 정문 앞 초콜릿 바 받침 0.75 m 등): 쿠키가 올라가 건물 벽 틈에 숨지 못하게 받침 자리를 2.6 m 상자로 덮는다
+    // (소품 상자 규칙과 같다, §42 MP3 — 얇은 몸 통행 검사에서 찾았다). 0.25 m 격자로 윗면을 찾아 이어진 덩어리마다 상자 하나.
+    private const float LedgeCell = 0.25f, LedgeLow = 0.3f, LedgeHigh = 1.9f, LedgeBlockHeight = 2.6f;
+
+    private static int BlockOutsideLedges(Transform root, Transform model, Meta meta)
+    {
+        Collider interior = model.GetComponentsInChildren<Collider>(true).FirstOrDefault(c => c.name.StartsWith("COL_Interior"));
+        if (interior == null) return 0;
+        Physics.SyncTransforms();
+        Func<float, float, bool> opening = Opening(meta);
+        int n = Mathf.CeilToInt(FillReach * 2f / LedgeCell);
+        var top = new bool[n, n];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+            {
+                float x = -FillReach + (i + 0.5f) * LedgeCell, z = -FillReach + (j + 0.5f) * LedgeCell;
+                if (opening(x, z)) continue;
+                Vector3 w = root.TransformPoint(new Vector3(x, LedgeHigh + 1f, z));
+                top[i, j] = interior.Raycast(new Ray(w, Vector3.down), out RaycastHit hit, LedgeHigh + 1f) && hit.point.y - root.position.y > LedgeLow && hit.normal.y > 0.7f;
+            }
+        Transform parent = null;
+        int boxes = 0;
+        var seen = new bool[n, n];
+        var stack = new Stack<(int, int)>();
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+            {
+                if (!top[i, j] || seen[i, j]) continue;
+                int x0 = i, x1 = i, z0 = j, z1 = j;
+                stack.Push((i, j)); seen[i, j] = true;
+                while (stack.Count > 0)
+                {
+                    (int a, int b) = stack.Pop();
+                    x0 = Mathf.Min(x0, a); x1 = Mathf.Max(x1, a); z0 = Mathf.Min(z0, b); z1 = Mathf.Max(z1, b);
+                    foreach ((int da, int db) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                    {
+                        int u = a + da, v = b + db;
+                        if (u < 0 || v < 0 || u >= n || v >= n || seen[u, v] || !top[u, v]) continue;
+                        seen[u, v] = true;
+                        stack.Push((u, v));
+                    }
+                }
+                if (parent == null) { parent = new GameObject("COL_Ledges").transform; parent.SetParent(root, false); }
+                float cx = -FillReach + (x0 + x1 + 1) * LedgeCell / 2f, cz = -FillReach + (z0 + z1 + 1) * LedgeCell / 2f;
+                var box = new GameObject($"COL_Ledge_{boxes:00}").AddComponent<BoxCollider>();
+                box.transform.SetParent(parent, false);
+                box.transform.localPosition = new Vector3(cx, LedgeBlockHeight / 2f, cz);
+                box.size = new Vector3((x1 - x0 + 1) * LedgeCell, LedgeBlockHeight, (z1 - z0 + 1) * LedgeCell);
+                boxes++;
+            }
+        return boxes;
+    }
+
     // ---------------------------------------------------------------- doors
 
     // 문 루트(경첩 L 자리, +Z = 방 안쪽) 아래 Leaf_L(+X로 뻗음)·Leaf_R(2 m 옆, −X로 뻗음). 받은 문짝 메시는 월드 자세 그대로 문짝 아래에 둔다
@@ -179,9 +238,11 @@ public static class ChocolateFactoryAssets
             if (left == null || right == null) { Debug.LogError($"[ChocolateFactoryAssets] {name} {d.side}: leaf mesh missing"); continue; }
             var door = new GameObject($"Door_{d.side}");
             door.transform.SetParent(parent, false);
-            door.transform.SetPositionAndRotation(V(d.root), Quaternion.Euler(0f, d.yaw, 0f));
-            AddLeaf(door.transform, DoorLeafLeft, left, Vector3.zero, d, +1f);
-            AddLeaf(door.transform, DoorLeafRight, right, Vector3.right * (d.leaf_width * 2f), d, -1f);
+            Quaternion yaw = Quaternion.Euler(0f, d.yaw, 0f);
+            float leafWidth = DoorSpan / 2f;
+            door.transform.SetPositionAndRotation(V(d.centre) - yaw * Vector3.right * leafWidth, yaw); // 경첩 L(문짝 L은 +X로 뻗음)
+            AddLeaf(door.transform, DoorLeafLeft, left, Vector3.zero, d, +1f, leafWidth);
+            AddLeaf(door.transform, DoorLeafRight, right, Vector3.right * DoorSpan, d, -1f, leafWidth);
 
             var animator = door.AddComponent<Animator>();
             animator.runtimeAnimatorController = controller;
@@ -196,23 +257,29 @@ public static class ChocolateFactoryAssets
             so.FindProperty("doorId").stringValue = $"{name}_{d.side}";   // 건물마다 한 번씩 놓는다 — 씬 안에서 겹치지 않는다
             so.FindProperty("inwardOpenAngle").floatValue = -DoorOpenAngle; // Leaf_L(+X로 뻗음)이 −90°로 돌면 +Z(안쪽)로 간다
             so.FindProperty("leafCollider").objectReferenceValue = door.transform.Find(DoorLeafLeft).GetComponent<BoxCollider>();
-            so.FindProperty("interactionRange").floatValue = d.leaf_width + 1f;
+            so.FindProperty("interactionRange").floatValue = leafWidth + 1f;
             so.ApplyModifiedPropertiesWithoutUndo();
             built++;
         }
         return built;
     }
 
-    private static void AddLeaf(Transform door, string leafName, Transform mesh, Vector3 localPos, DoorMeta d, float extend)
+    // 받은 문짝 메시(원점 = 경첩)를 새 경첩 자리로 옮기고 문짝 방향(로컬 X)으로 width / 받은 폭만큼 늘린다.
+    private static void AddLeaf(Transform door, string leafName, Transform mesh, Vector3 localPos, DoorMeta d, float extend, float width)
     {
         var leaf = new GameObject(leafName).transform;
         leaf.SetParent(door, false);
         leaf.localPosition = localPos;
         mesh.SetParent(leaf, true);
+        mesh.localPosition = Vector3.zero;
+        Vector3 along = mesh.InverseTransformDirection(leaf.right);
+        float stretch = width / d.leaf_width;
+        Vector3 s = mesh.localScale;
+        mesh.localScale = new Vector3(s.x * Mathf.Lerp(1f, stretch, Mathf.Abs(along.x)), s.y * Mathf.Lerp(1f, stretch, Mathf.Abs(along.y)), s.z * Mathf.Lerp(1f, stretch, Mathf.Abs(along.z)));
         // 판 부분만 덮는 상자(손잡이·초콜릿 조각 돌출은 제외) — 규칙상 convex(상자)
         var box = leaf.gameObject.AddComponent<BoxCollider>();
-        box.center = new Vector3(extend * d.leaf_width / 2f, d.height / 2f, 0f);
-        box.size = new Vector3(d.leaf_width - 0.04f, d.height, LeafThickness);
+        box.center = new Vector3(extend * width / 2f, d.height / 2f, 0f);
+        box.size = new Vector3(width - 0.04f, d.height, LeafThickness);
     }
 
     // ---------------------------------------------------------------- moving parts
@@ -322,38 +389,75 @@ public static class ChocolateFactoryAssets
         light.shadows = LightShadows.None;
     }
 
-    // ---------------------------------------------------------------- §40 props
+    // ---------------------------------------------------------------- §40·§42 props, structures, shed, floor
 
-    // 기둥 모양(가로등·깃발·배너)은 기둥만 막는 캡슐, 나머지는 겉모습 범위 상자(최소 1 m — 쿠키가 올라서지 못할 만큼은 아니어도 걸리게).
-    private static readonly HashSet<string> PoleProps = new HashSet<string> { "CHO_StreetLamp", "CHO_FlagStand", "CHO_Banner" };
+    // 맵 구조물(술래방·출구 게이트·문짝·레버)은 프리팹 없이 맵 빌더가 FBX를 그대로 놓는다(충돌은 빌더가 상자로).
+    public static readonly HashSet<string> Structures = new HashSet<string>
+    {
+        "CHO_MonsterRoom", "CHO_MonsterRoomDoor", "CHO_ExitGate", "CHO_ExitGateDoorL", "CHO_ExitGateDoorR", "CHO_ExitLever", "CHO_ExitLeverArm",
+    };
+    public const string ShedName = "CHO_Shed";
+
+    // 소품 충돌체(놀이공원 CarnivalMapAssets와 같은 생각): 기둥 모양은 기둥만 막는 캡슐, 나머지는 겉모습 범위 상자.
+    // 상자 최소 높이 2.6 m — 쿠키가 올라서서 괴물 손이 닿지 않는 자리가 생기지 않게(벤치는 앉는 높이 그대로 1.1 m).
+    private readonly struct PropShape
+    {
+        public readonly bool Pole;
+        public readonly float Radius, MinHeight;
+        private PropShape(bool pole, float radius, float minHeight) { Pole = pole; Radius = radius; MinHeight = minHeight; }
+        public static PropShape Capsule(float radius, float minHeight) => new PropShape(true, radius, minHeight);
+        public static PropShape Box(float minHeight = 2.6f) => new PropShape(false, 0f, minHeight);
+    }
+    private static readonly Dictionary<string, PropShape> PropShapes = new Dictionary<string, PropShape>
+    {
+        { "CHO_StreetLamp", PropShape.Capsule(0.35f, 4.2f) }, { "CHO_FlagStand", PropShape.Capsule(0.3f, 3f) }, { "CHO_Banner", PropShape.Capsule(0.3f, 3.5f) },
+        { "CHO_CCTV", PropShape.Capsule(0.3f, 3.6f) }, { "CHO_Signboard", PropShape.Capsule(0.35f, 3.4f) }, { "CHO_CakeDeco", PropShape.Capsule(1.05f, 2.6f) },
+        { "CHO_Bench", PropShape.Box(1.1f) }, { "CHO_Fence", PropShape.Box(2.4f) },
+    };
 
     public static string PropPath(string name) => $"{PrefabFolder}/Props/{name}.prefab";
+    public static string ShedPath => $"{PrefabFolder}/{ShedName}.prefab";
+    public static GameObject LoadProp(string name) => AssetDatabase.LoadAssetAtPath<GameObject>(name == ShedName ? ShedPath : PropPath(name));
+
+    // §40 소품·§42 맵 오브젝트·바닥 타일을 가져오고(재질 다시 잇기) 소품 프리팹과 숨는 창고 프리팹을 만든다.
+    public static string BuildMapObjects()
+    {
+        var report = new List<string>
+        {
+            CarnivalRideModelsImporter.ImportFolder(PropFolder), CarnivalRideModelsImporter.ImportFolder(MapObjectFolder), CarnivalRideModelsImporter.ImportFolder(FloorFolder),
+        };
+        report.Add(BuildProps());
+        report.Add(BuildShed());
+        AssetDatabase.SaveAssets();
+        return string.Join(" | ", report);
+    }
 
     public static string BuildProps()
     {
         TwistedPropBuilder.EnsureFolder(PrefabFolder + "/Props");
         int n = 0;
-        foreach (string fbx in Directory.GetFiles(PropFolder, "*.fbx"))
+        foreach (string fbx in Directory.GetFiles(PropFolder, "*.fbx").Concat(Directory.GetFiles(MapObjectFolder, "*.fbx")))
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(fbx.Replace('\\', '/'));
-            if (model == null) continue;
+            if (model == null || Structures.Contains(model.name) || model.name == ShedName) continue;
             var root = new GameObject(model.name);
             try
             {
                 var instance = (GameObject)PrefabUtility.InstantiatePrefab(model, root.transform);
                 instance.name = "Model";
                 Bounds b = root.GetComponentsInChildren<Renderer>().Select(r => r.bounds).Aggregate((a, c) => { a.Encapsulate(c); return a; });
-                if (PoleProps.Contains(model.name))
+                PropShape shape = PropShapes.TryGetValue(model.name, out PropShape known) ? known : PropShape.Box();
+                float h = Mathf.Max(shape.MinHeight, b.size.y);
+                if (shape.Pole)
                 {
                     var cap = root.AddComponent<CapsuleCollider>();
-                    cap.radius = 0.3f;
-                    cap.height = b.size.y;
-                    cap.center = new Vector3(0f, b.size.y / 2f, 0f);
+                    cap.radius = shape.Radius;
+                    cap.height = h;
+                    cap.center = new Vector3(0f, h / 2f, 0f);
                 }
                 else
                 {
                     var box = root.AddComponent<BoxCollider>();
-                    float h = Mathf.Max(1f, b.size.y);
                     box.center = new Vector3(b.center.x, h / 2f, b.center.z);
                     box.size = new Vector3(b.size.x * 0.92f, h, b.size.z * 0.92f);
                 }
@@ -365,6 +469,29 @@ public static class ChocolateFactoryAssets
             finally { Object.DestroyImmediate(root); }
         }
         return $"props {n}";
+    }
+
+    // 숨는 창고(cho_shelter_build.py): 벽·지붕·쌓은 짐은 COL_ 상자만 막고, 안쪽·출구 빛, 실내 소리 상자(놀이공원 텐트와 같은 규칙).
+    public static string BuildShed()
+    {
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>($"{MapObjectFolder}/{ShedName}.fbx");
+        if (model == null) return "shed missing";
+        var root = (GameObject)PrefabUtility.InstantiatePrefab(model);
+        try
+        {
+            PrefabUtility.UnpackPrefabInstance(root, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            root.name = ShedName;
+            TwistedPropBuilder.AddColliders(root);
+            TwistedPropBuilder.AddShelterParts(root);
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+                if (t.GetComponent<Light>() == null)
+                    GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccluderStatic | StaticEditorFlags.OccludeeStatic);
+            int walls = root.GetComponentsInChildren<BoxCollider>(true).Length, lights = root.GetComponentsInChildren<Light>(true).Length;
+            bool zone = root.GetComponent<IndoorZone>() != null;
+            PrefabUtility.SaveAsPrefabAsset(root, ShedPath);
+            return $"{ShedName}: {walls} boxes, {lights} lights, zone {zone}";
+        }
+        finally { Object.DestroyImmediate(root); }
     }
 
     private static Transform Find(Transform model, string name) =>

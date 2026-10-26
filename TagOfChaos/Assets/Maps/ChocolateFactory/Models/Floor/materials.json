@@ -1,0 +1,169 @@
+{
+ "materials": [
+  {
+   "name": "CHO_FL_Basic",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_Basic_albedo.png",
+   "normal": "CHO_FL_Basic_normal.png",
+   "metalSmooth": "CHO_FL_Basic_metalSmooth.png"
+  },
+  {
+   "name": "CHO_FL_ChocoPiece",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_ChocoPiece_albedo.png",
+   "normal": "CHO_FL_ChocoPiece_normal.png",
+   "metalSmooth": "CHO_FL_ChocoPiece_metalSmooth.png"
+  },
+  {
+   "name": "CHO_FL_Jelly",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_Jelly_albedo.png",
+   "normal": "CHO_FL_Jelly_normal.png",
+   "metalSmooth": "CHO_FL_Jelly_metalSmooth.png"
+  },
+  {
+   "name": "CHO_FL_Grinder",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_Grinder_albedo.png",
+   "normal": "CHO_FL_Grinder_normal.png",
+   "metalSmooth": "CHO_FL_Grinder_metalSmooth.png"
+  },
+  {
+   "name": "CHO_FL_Grid",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_Grid_albedo.png",
+   "normal": "CHO_FL_Grid_normal.png",
+   "metalSmooth": "CHO_FL_Grid_metalSmooth.png"
+  },
+  {
+   "name": "CHO_FL_PitChoco",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_PitChoco_albedo.png",
+   "normal": "CHO_FL_PitChoco_normal.png",
+   "metalSmooth": "CHO_FL_PitChoco_metalSmooth.png"
+  },
+  {
+   "name": "CHO_FL_PitNibs",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_FL_PitNibs_albedo.png",
+   "normal": "CHO_FL_PitNibs_normal.png",
+   "metalSmooth": "CHO_FL_PitNibs_metalSmooth.png"
+  },
+  {
+   "name": "CHO_FL_Grinder_Wall",
+   "color": [
+    0.03,
+    0.02,
+    0.02
+   ],
+   "metallic": 0.0,
+   "rough": 0.8,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_FL_Grid_Wall",
+   "color": [
+    0.03,
+    0.02,
+    0.02
+   ],
+   "metallic": 0.0,
+   "rough": 0.8,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  }
+ ]
+}

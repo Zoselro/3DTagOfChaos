@@ -45,8 +45,9 @@ MonoBehaviour:
   spyToolbox: {fileID: 11400000, guid: ae546c479713bc942b6409ba871e24d8, type: 2}
   extraToolboxesPerSpy: 1
   buildingMaterials:
-  - {fileID: 11400000, guid: e7b22aea88b93ae4fb359955aac8d757, type: 2}
-  - {fileID: 11400000, guid: 6475a1301b7b8234e96c7ec856da57ec, type: 2}
-  - {fileID: 11400000, guid: 71523912ab7f1564fa5759d430a310b6, type: 2}
   - {fileID: 11400000, guid: 53eb80f0e73f0d04cafa17d69cf172e1, type: 2}
+  - {fileID: 11400000, guid: e7b22aea88b93ae4fb359955aac8d757, type: 2}
+  - {fileID: 11400000, guid: 71523912ab7f1564fa5759d430a310b6, type: 2}
+  - {fileID: 11400000, guid: 6475a1301b7b8234e96c7ec856da57ec, type: 2}
+  fixedBuildingOrder: 1
   repairKitCount: 0

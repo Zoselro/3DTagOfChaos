@@ -486,6 +486,51 @@ public class EscapeTests
         Assert.AreEqual("TagOfChaos/XRaySilhouette", mat.shader.name);
     }
 
+    // 투시는 재질이 여럿인 모델의 모든 부분 메시를 칠한다(덧붙인 재질은 마지막 부분 메시에만 그려졌다 — 초콜릿 공장 로켓, Request1009Plan.md §42)
+    [Test]
+    public void XRayMarker_CoversEverySubMesh()
+    {
+        var go = new GameObject("XRayTest");
+        var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right, Vector3.forward }, subMeshCount = 3 };
+        mesh.SetTriangles(new[] { 0, 1, 2 }, 0); mesh.SetTriangles(new[] { 0, 2, 3 }, 1); mesh.SetTriangles(new[] { 0, 3, 1 }, 2);
+        try
+        {
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var original = new Material(Shader.Find("Standard"));
+            go.AddComponent<MeshRenderer>().sharedMaterials = new[] { original, original, original };
+            var xray = go.AddComponent<XRayMarker>();
+            xray.Init(Color.red, 0.55f);
+            Transform copy = go.transform.Find("XRay");
+            Assert.NotNull(copy, "x-ray copy renderer");
+            Assert.IsFalse(copy.gameObject.activeSelf, "hidden until asked");
+            xray.SetVisible(true);
+            Assert.IsTrue(copy.gameObject.activeSelf);
+            Material[] mats = copy.GetComponent<MeshRenderer>().sharedMaterials;
+            Assert.AreEqual(3, mats.Length, "one x-ray material per sub-mesh");
+            Assert.IsTrue(mats.All(m => m != null && m.shader.name == "TagOfChaos/XRaySilhouette"));
+            Assert.AreEqual(0.55f, mats[0].GetFloat("_Fill"), 1e-4f);
+            Assert.AreEqual(3, go.GetComponent<MeshRenderer>().sharedMaterials.Length, "the original materials stay as they were");
+            xray.SetVisible(false);
+            Assert.IsFalse(copy.gameObject.activeSelf);
+            // 가까이 온 카메라에는 끈다(스파이 로켓 14 m)
+            xray.HideWithin(14f);
+            Camera cam = Camera.main;
+            GameObject temp = null;
+            if (cam == null) { temp = new GameObject("XRayTestCam") { tag = "MainCamera" }; cam = temp.AddComponent<Camera>(); }
+            Vector3 saved = cam.transform.position;
+            cam.transform.position = go.transform.position + Vector3.forward * 5f;
+            xray.SetVisible(true);
+            Assert.IsFalse(copy.gameObject.activeSelf, "hidden when the camera is close");
+            cam.transform.position = go.transform.position + Vector3.forward * 40f;
+            xray.SetVisible(true);
+            Assert.IsTrue(copy.gameObject.activeSelf, "shown from afar");
+            cam.transform.position = saved;
+            if (temp != null) Object.DestroyImmediate(temp);
+            Object.DestroyImmediate(original);
+        }
+        finally { Object.DestroyImmediate(go); Object.DestroyImmediate(mesh); }
+    }
+
     [Test]
     public void WitchMaterials_UseOnlyTemplateKeywords()
     {

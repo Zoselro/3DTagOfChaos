@@ -1,0 +1,302 @@
+{
+ "materials": [
+  {
+   "name": "CHO_Gold",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.9,
+   "rough": 0.3,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "GD_Gold.png"
+  },
+  {
+   "name": "CHO_RedMetal",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.35,
+   "rough": 0.4,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "GD_RedMetal.png"
+  },
+  {
+   "name": "CHO_PurpleMetal",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.3,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "GD_PurpleMetal.png"
+  },
+  {
+   "name": "CHO_Iron",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.6,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "MO_Iron.png"
+  },
+  {
+   "name": "CHO_RedWood",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.6,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_RedWood.png"
+  },
+  {
+   "name": "CHO_CrateWood",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.75,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_CrateWood.png"
+  },
+  {
+   "name": "CHO_Chocolate",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.35,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Chocolate.png"
+  },
+  {
+   "name": "CHO_ChocoBrick",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Chocolate.png"
+  },
+  {
+   "name": "CHO_Burlap",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.0,
+   "rough": 0.95,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Burlap.png"
+  },
+  {
+   "name": "CHO_Shield",
+   "color": [
+    1,
+    1,
+    1
+   ],
+   "metallic": 0.4,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0,
+   "tex": "CHO_Shield.png"
+  },
+  {
+   "name": "CHO_LampGlass",
+   "color": [
+    1.0,
+    0.7,
+    0.32
+   ],
+   "metallic": 0.0,
+   "rough": 0.2,
+   "emission": [
+    1.0,
+    0.58,
+    0.2
+   ],
+   "strength": 12.0
+  },
+  {
+   "name": "CHO_RedGlow",
+   "color": [
+    1.0,
+    0.15,
+    0.1
+   ],
+   "metallic": 0.0,
+   "rough": 0.2,
+   "emission": [
+    1.0,
+    0.08,
+    0.05
+   ],
+   "strength": 10.0
+  },
+  {
+   "name": "CHO_MilkChoco",
+   "color": [
+    0.3,
+    0.14,
+    0.06
+   ],
+   "metallic": 0.0,
+   "rough": 0.3,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_DarkChoco",
+   "color": [
+    0.1,
+    0.045,
+    0.02
+   ],
+   "metallic": 0.0,
+   "rough": 0.25,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Cream",
+   "color": [
+    0.95,
+    0.86,
+    0.72
+   ],
+   "metallic": 0.0,
+   "rough": 0.5,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Pink",
+   "color": [
+    0.92,
+    0.42,
+    0.58
+   ],
+   "metallic": 0.0,
+   "rough": 0.45,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Cherry",
+   "color": [
+    0.75,
+    0.04,
+    0.06
+   ],
+   "metallic": 0.0,
+   "rough": 0.15,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  },
+  {
+   "name": "CHO_Rubber",
+   "color": [
+    0.05,
+    0.05,
+    0.055
+   ],
+   "metallic": 0.0,
+   "rough": 0.85,
+   "emission": [
+    0,
+    0,
+    0
+   ],
+   "strength": 0.0
+  }
+ ]
+}

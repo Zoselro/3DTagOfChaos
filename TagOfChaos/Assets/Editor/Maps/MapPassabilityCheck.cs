@@ -46,13 +46,16 @@ public static class MapPassabilityCheck
         public Vector3[] MonsterSeeds;
         // 실제 괴물이 지나가는 것을 Play Mode로 확인한 곳 — 격자 괴물(반경 1.8 m 구)이 못 서는 가파른 계단 등. 쿠키 전용 판정에서 뺀다.
         public System.Func<Vector3, bool> MonsterVerified;
+        // 괴물 몸 반경(기본 1.8 m = 4 m 통로 규칙). 소품이 많은 방 안처럼 규칙 몸이 못 도는 곳은 더 작은 몸(실제 0.31 m보다 크게)으로 따로 잰다(§42).
+        public float MonsterRadius = MapPassabilityCheck.MonsterRadius;
         public string MapImage; // 첫 몸 기준 위에서 본 통행 지도 PNG(초록 = 괴물·쿠키 모두, 노랑 = 괴물 손 닿는 쿠키 자리, 빨강 = 쿠키 전용, 보라 = 주머니)
     }
 
     public const float TargetReach = 3f;
     private const string LogTag = "[Passability]";
     private const float Cell = 0.5f;   // 4 m 통로(규칙 R3)를 격자가 놓치지 않을 만큼 촘촘하게
-    private const float MonsterRadius = 1.8f, MonsterHeight = 3f, MonsterRise = 0.9f; // 통로 폭 3.6 m 이상(4 m 규칙 안에서 격자 오차 몫을 뺐다)
+    public const float MonsterRadius = 1.8f;
+    private const float MonsterHeight = 3f, MonsterRise = 0.9f; // 통로 폭 3.6 m 이상(4 m 규칙 안에서 격자 오차 몫을 뺐다)
     // 괴물은 Rigidbody 속도 이동이고 계단 처리가 없으며 캡슐이 작다(r 0.31 m) — 수직 턱은 이 높이까지만 넘는다. 이어진 경사는 MonsterRise까지.
     private const float MonsterStep = 0.15f;
     private const float MonsterReach = 2.5f;       // 괴물 잡기 거리(잡기 구 1.57 m + 여유)
@@ -130,6 +133,7 @@ public static class MapPassabilityCheck
         float half = options.Half;
         int n = Mathf.RoundToInt(half * 2f / options.Cell) + 1;
         gridCell = options.Cell;
+        monsterRadius = options.MonsterRadius;
         Body[] bodies = options.Bodies;
         var results = bodies.Select(b => new Result { Scene = scene.name, BodyName = b.ToString(), Cells = n * n }).ToArray();
 
@@ -281,6 +285,7 @@ public static class MapPassabilityCheck
     public static List<Vector3> FindPath(Vector3 from, Vector3 to, bool cookie, float half)
     {
         gridCell = Cell;
+        monsterRadius = MonsterRadius;
         int n = Mathf.RoundToInt(half * 2f / Cell) + 1;
         var disabled = new List<Collider>();
         foreach (InteractableDoor door in Object.FindObjectsByType<InteractableDoor>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
@@ -372,6 +377,8 @@ public static class MapPassabilityCheck
         }
     }
 
+    private static float monsterRadius = MonsterRadius;
+
     private static Vector3 CellPos(int ix, int iz, float half) => new Vector3(-half + ix * gridCell, 0f, -half + iz * gridCell);
 
     private static readonly Body[] CookieOnlyBody = { CookieBody };
@@ -393,7 +400,7 @@ public static class MapPassabilityCheck
                 list.RemoveAt(list.Count - 1);
             }
             Vector3 f = h.point;
-            var node = new Node { Y = f.y, Monster = Free(f, MonsterRadius, MonsterHeight) };
+            var node = new Node { Y = f.y, Monster = Free(f, monsterRadius, MonsterHeight) };
             for (int b = 0; b < bodies.Length; b++)
                 if (Free(f, bodies[b].Radius * 0.9f, bodies[b].Height)) node.Fits |= 1 << b;
             node.Ground = ground;
