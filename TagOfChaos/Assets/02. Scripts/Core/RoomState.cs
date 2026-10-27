@@ -81,13 +81,30 @@ public static class RoomState
 
     public static int MonsterCount() => TryGetIntArray(NetKeys.MonsterActorNumbers, out int[] monsters) ? monsters.Length : 0;
 
+    // 방에 실제로 남아 있는 괴물 수 — 이미 나간 번호가 목록에 남아 있어도 세지 않는다(Request1009Plan.md §43).
+    public static int PresentMonsterCount() =>
+        TryGetIntArray(NetKeys.MonsterActorNumbers, out int[] monsters) ? SceneSyncRules.PresentCount(monsters, PhotonNetwork.CurrentRoom.Players.Keys) : 0;
+
     // 이번 판에 필요한 괴물 수(GameSettings.MonsterCount, 인원에 맞게 제한)를 모두 뽑았는지.
     // 괴물 1명 규칙에서는 HasMonster()와 같고, 인원이 늘어 괴물 수를 늘리면 그 수만큼 채워져야 true가 된다.
     public static bool IsMonsterSelectionComplete()
     {
         if (!IsInRoom()) return false;
         int required = GameSettings.Current.MonsterCountFor(PhotonNetwork.CurrentRoom.PlayerCount);
-        return MonsterCount() >= required;
+        return PresentMonsterCount() >= required;
+    }
+
+    // 이 사람이 지금 들어와 있는 씬(RoomSceneFollower가 쓴다). 기록이 없으면 null.
+    public static string LoadedScene(Player player) =>
+        player != null && player.CustomProperties.TryGetValue(NetKeys.LoadedScene, out object raw) ? raw as string : null;
+
+    // 방 안 모든 사람이 그 씬에 들어와 있는지(시작 조건 — 막 재입장한 사람이 아직 대기실을 불러오는 중이면 false).
+    public static bool AllPlayersInScene(string scene)
+    {
+        if (!IsInRoom()) return false;
+        foreach (Player p in PhotonNetwork.CurrentRoom.Players.Values)
+            if (LoadedScene(p) != scene) return false;
+        return true;
     }
 
     // 정원이 모두 찼는지(시작 조건·괴물 선정 조건 공용, Bug-fix-plan.md §30.2). 오프라인 개발 방(MaxPlayers=0)은

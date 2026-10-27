@@ -21,6 +21,7 @@ public static class RoomSceneTransition
         // 같은 클라이언트가 보낸 명령은 서버에서 순서대로 처리된다: 캐시 삭제 → curScn 변경(LoadLevel).
         // 다른 사람들의 새 씬 Instantiate는 curScn을 받은 뒤에 일어나므로 새 씬의 캐시는 지워지지 않는다.
         PhotonNetwork.OpRemoveCompleteCache();
+        RoomSceneFollower.NoteOwnLoad(sceneName); // 새 씬에 먼저 들어간 뒤 curScn 캐시가 따라오기 전에 "옛 씬으로 따라가기"를 하지 않도록
         PhotonNetwork.LoadLevel(sceneName);
     }
 }

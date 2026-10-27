@@ -13,6 +13,11 @@ public static class NetSecurityRules
     public static bool ShouldReclaimMaster(int currentMaster, int desiredMaster, int localActor) =>
         desiredMaster > 0 && localActor == desiredMaster && currentMaster != desiredMaster;
 
+    // 방의 씬에 들어와 있지 않은 사람은 되찾지 않는다(Request1009Plan.md §43) — 씬에 없는 방장은 그 씬의 진행 로직을 돌릴 수 없고,
+    // PUN은 방장을 씬 동기화에서 빼므로 시작 직후 되찾으면 혼자 대기실에 남았다.
+    public static bool ShouldReclaimMaster(int currentMaster, int desiredMaster, int localActor, bool inRoomScene) =>
+        inRoomScene && ShouldReclaimMaster(currentMaster, desiredMaster, localActor);
+
     // ---------------- 속성 쓰기 ----------------
 
     // 플레이어 속성을 쓴 사람이 허용되는지. writer 0 = 알 수 없음(서버가 보낸 사람을 담지 않음) → 막지 않는다.

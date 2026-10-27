@@ -4575,3 +4575,205 @@ v1 §S1~S8 그대로:
   - 확인: EditMode `EscapeTests.XRayMarker_CoversEverySubMesh`(부분 메시 3개 모두 칠함·원래 재질 그대로·가까운 카메라에서 꺼짐) 포함 56/56. Play Mode 스파이: 창고 안·60 m 밖 벽 뒤에서 로켓 전체가 주황 실루엣으로 보임, 6 m에서 꺼지고 37·57 m에서 다시 켜짐. Console 오류 0.
 
 ![스파이 시점 로켓 투시 — 창고 안, 60 m 벽 뒤, 가까이](images/r43_spy_rocket.jpg)
+
+
+## 43. 2026-10-27 괴물 이탈·재입장을 반복하면 시작 때 호스트만 대기실에 남고 괴물 없는 판이 시작됨
+
+**요청**
+- 이 순서를 여러 번 반복하면 가끔 생긴다: 괴물이 게임 중간에 나감 → 대기실로 돌아옴 → 괴물이었던 사람이 다시 들어옴.
+  - 호스트가 시작 버튼을 눌러도 호스트만 GameScene으로 가지 않는다.
+  - GameScene에 간 사람들은 괴물이 없는데도 판이 진행된다.
+- 소스를 읽고 실제 코드에 맞춰 상세 계획을 쓴다(이번에는 계획만, 구현은 승인 뒤).
+
+### 43.1 지금 코드의 흐름(읽은 파일 기준)
+
+| 단계 | 코드 | 하는 일 |
+|---|---|---|
+| 시작 버튼 | `GameLobbyController.StartGame`(310~314) → `GameStartAuthority.RequestStart`(27~41) | 호스트가 실행 방장이면 바로 `TryStart`. 아니면 `StartGameRequest`를 `ReceiverGroup.MasterClient`로 보낸다 |
+| 방장 쪽 실행 | `GameLobbyController.OnEvent`(112~133) → `GameStartAuthority.TryStart`(44~81) | 아래 순서로 확인한다. 하나라도 걸리면 시작하지 않는다.<br>① `IsIntendedMaster`: 로컬 캐시로 지금 방장이고 정책상 자격자인지<br>② 요청자가 호스트인지<br>③ 이미 시작했는지(3초)<br>④ `IsReady` = 정원이 찼고 괴물 수(배열 길이)가 맞는지<br>통과하면 Room Props(PrepareEndTime·맵·스파이·캐릭터)를 쓰고, `IsOpen=false`, `LoadLevelForRoom(map)` |
+| 씬 이동 | `RoomSceneTransition.LoadLevelForRoom`(13~24) → PUN `LoadLevel`(PhotonNetwork.cs:3057) | 방장이 `curScn` Room Prop을 바꾸고 자기는 바로 로드한다. 로드 중에는 메시지 큐를 멈춘다 |
+| 따라가기 | PUN `PhotonHandler.OnRoomPropertiesUpdate`(271) → `LoadLevelIfSynced`(PhotonNetworkPart.cs:2093) | **이 순간 로컬에서 방장이면 아무것도 하지 않는다**(2095행 `PhotonNetwork.IsMasterClient` → return). 다시 확인하는 때는 다음 Room Props 변경과 방 입장 응답뿐이다 |
+| 호스트·방장 | `RoomState.HostActor`(106~113)<br>`DesiredMasterActor`(128~139) | 호스트 = 최소 ActorNumber(괴물 여부와 무관)<br>실행 방장 = 괴물이 아닌 사람 중 최소 ActorNumber<br>→ **호스트가 괴물이면 둘이 다른 사람이다** |
+| 방장 정책 | `MasterClientPolicy.EnforcePolicy`(77~90)<br>`ReclaimIfTaken`(43~58) | 방장이 자격자에게 `SetMasterClient`를 보낸다. `requestedActor`는 `OnMasterClientSwitched`가 와야만 풀린다<br>방장이 바뀔 때마다 모든 클라이언트가 자기 캐시로 "자격자 = 나"인지 보고 즉시 되찾는다(10초에 3번까지) |
+| 괴물 이탈(맵) | `RoomLifecycleWatcher.OnPlayerLeftRoom`(13~40) | 방에서 **나간** 괴물만 센다. 남은 괴물이 0명이면 5초 뒤 대기실로 돌아간다 |
+| 대기실 복귀 | `RoundStateResetter`(14~55) | 방장이 판 키(괴물 목록 포함)를 지우고 방을 다시 연다. 괴물 목록이 지워지면 자격 방장은 다시 최소 번호(대개 호스트)가 된다 |
+
+### 43.2 원인 분석
+
+**두 증상이 한 사람에게서 나온다**
+- "호스트만 못 감"과 "괴물 없는 판"이 함께 나오는 경우는 **호스트가 이번 판 괴물(가마솥에 들어간 사람)인 판**으로 좁혀진다.
+- 호스트가 실행 방장이면 `TryStart` 안의 `LoadLevel`로 자기가 가장 먼저 씬을 로드하므로 남을 수 없다(PhotonNetwork.cs:3069~3071).
+- 그러니 남은 호스트는 실행하지 않은 쪽이다. 실행 방장이 아닌 호스트는 정책상 괴물인 호스트뿐이다.
+- 괴물이 대기실에 남으면 맵에는 괴물이 없다. 그 괴물은 방을 나간 게 아니어서 맵의 이탈 감시도 반응하지 않는다.
+
+**코드에서 확인한 빈틈**
+
+| # | 빈틈 | 위치 | 결과 |
+|---|---|---|---|
+| H1 | PUN은 `curScn`이 바뀐 순간 **로컬 방장인 클라이언트는 따라가지 않는다**. 이후에는 다음 Room Props 변경이 있어야 다시 확인한다. 우리 코드에는 "내 씬이 방의 씬과 같은가"를 보는 곳이 없다 | PhotonNetworkPart.cs:2095 | 시작 직후 방장이 괴물 호스트에게 넘어가면(아래 R1·R2) 호스트가 대기실에 그대로 남는다. 방장이 대기실에 있으니 맵에는 방장이 없다. 맵의 방장 전용 로직(이탈 감시·`GamePhaseStarter`·권위 처리)이 돌지 않는다. 다만 PrepareEndTime은 이미 써졌으므로 각자 화면의 준비 카운트다운은 흘러간다 = "괴물 없이 진행" |
+| H2 | `TryStart`가 **방장 교체가 진행 중인지 모른다**. `IsIntendedMaster`는 로컬 캐시만 본다. `requestedActor`(보낸 교체 요청)는 `MasterClientPolicy` 안에 숨어 있다 | GameStartAuthority.cs:127, MasterClientPolicy.cs:18 | 교체 요청을 보낸 직후, 또는 남이 되찾기를 보낸 직후에도 시작이 실행된다. 서버는 교체를 먼저 처리하고 `curScn`을 나중에 처리할 수 있다 → H1 |
+| H3 | `requestedActor`에 시간 제한이 없다. `SetMasterClient`의 반환값을 보지 않는다. CAS 실패(서버의 방장이 이미 다른 사람)면 콜백이 없어 다시 시도하지 않는다 | MasterClientPolicy.cs:82·87·88 | 괴물이 방장으로 남거나, 자격자가 아닌 사람이 방장으로 남는 창이 생긴다 |
+| H4 | 되찾기가 **방장 교체 콜백 안에서 로컬 캐시로 즉시** 판단한다. 횟수 제한은 `static`이라 씬을 넘어 누적된다 | MasterClientPolicy.cs:24~25·43~58 | 사이클마다 교체가 몰린다(복귀 → 괴물 목록 초기화 → 재입장 → 가마솥 확정). 캐시가 늦은 사람의 되찾기와 정책 교체가 엇갈려 방장이 오간다(R2). 3번을 넘기면 10초 동안 되찾지 않아 잘못된 방장이 남는다 |
+| H5 | 맵에서 **도착하지 않은 괴물**을 감지하지 않는다. 방에 남아 있으면 `OnPlayerLeftRoom`이 오지 않는다 | RoomLifecycleWatcher.cs:13 | 괴물 없는 판이 끝까지 간다 |
+| H6 | 시작 조건이 "모두 대기실에 들어와 메시지를 받고 있음"을 보지 않는다. 괴물 수는 배열 길이만 센다(방에 있는지 교집합을 내지 않음) | GameStartAuthority.cs:24, RoomState.cs:82~91 | 막 재입장한 사람이 아직 대기실을 로드하는 중일 때도 시작된다. 이미 나간 번호가 목록에 남아 있어도 "괴물 완료"로 본다 |
+| H7 | 씬 로드가 끊기면 메시지 큐를 되살리는 장치가 PUN에만 있다. PUN은 새 로드를 시작할 때 진행 중이던 로드를 `allowSceneActivation=false`로 버린다 | PhotonNetworkPart.cs:2166~2175 | 드물지만 큐가 멈춘 채 남으면 그 클라이언트는 이후 씬 동기화를 아예 받지 못한다(안전망 수준) |
+
+**왜 반복하면 생기나**
+- 한 사이클 안에서 방장 교체가 짧게 여러 번 일어난다.
+  - 맵에서 괴물이 나감
+  - 복귀하면 `RoundStateResetter`가 괴물 목록을 지움 → 자격 방장이 호스트로 바뀜
+  - 재입장
+  - 가마솥 확정 → 호스트가 괴물이면 방장이 두 번째 입장자에게 넘어감
+- 이 교체가 시작 버튼과 1초 안팎으로 겹치는 판에서만 엇갈린다. 그래서 "가끔" 생긴다.
+
+**엇갈림 후보**(로그로 확정할 것 — SY0)
+- **R1 시작과 교체 요청이 엇갈림**
+  - 방장 A가 `TryStart`를 실행하는 순간, A가 보낸 교체 요청이나 다른 클라이언트의 되찾기 요청이 아직 서버에서 처리 중이다.
+  - 서버 처리 순서: "방장 = 호스트(괴물)" → A의 `curScn` 변경.
+  - 호스트는 `curScn`을 받는 순간 방장이다 → H1로 남는다.
+- **R2 되찾기 다툼**
+  - 호스트는 가마솥 확정 직후 자기 캐시로 "나는 자격자"라고 판단해 되찾는다. 캐시 응답 순서와 교체가 엇갈린 경우다.
+  - 동시에 A의 정책은 "호스트는 괴물"이라 넘겨준다.
+  - 이렇게 방장이 오가는 도중에 시작 요청이 A에 닿는다 → R1과 같은 결과.
+- **R3 교체 요청이 멈춤**
+  - H3 때문에 괴물 호스트가 방장으로 남는다.
+  - 시작 요청은 `ReceiverGroup.MasterClient`, 곧 호스트 자신에게 가서 `NotMaster`로 끝난다.
+  - 그 사이 다른 교체 때문에 A가 방장이 되고, 쌓인 요청이 처리되면 R1 상황이 된다.
+
+> 세 후보 모두 끝은 같다: **"`curScn`이 바뀔 때 씬에 없는 사람이 방장"**. 그래서 고칠 때는 어느 후보였든 스스로 복구되게 만들고(F1·F2), 엇갈림 자체도 줄이며(F3·F4), 로그로 실제 경로를 확인한다(F5).
+
+### 43.3 고치는 방법
+
+**F1 방 씬 따라가기 `RoomSceneFollower`**(`Assets/02. Scripts/Core/`, 씬 전환에도 남는 오브젝트 — `RoomPropertyGuard`와 같은 방식으로 만든다)
+- 0.5초마다 확인한다. 방 안에 있고, `curScn`이 있고, 활성 씬이 그와 다르고, PUN 로드 중(`PhotonNetwork.LevelLoadingProgress` 0~1)이 아닌 상태가 1초 넘게 이어지면 `PhotonNetwork.LoadLevel(curScn)`을 부른다.
+  - **방장이어도 부른다** — H1을 메운다.
+  - 방장이 부를 때 PUN의 `SetLevelInPropsIfSynced`는 값이 같으니 Props를 다시 쓰지 않는다(2144행). 그래서 다른 사람에게 영향이 없다.
+- 남아 있던 방장이 맵에 들어가면 맵의 `MasterClientPolicy`가 자격자에게 권한을 다시 넘긴다(괴물이면 쿠키에게). 맵에 방장이 없는 상태도 함께 풀린다.
+- 큐 안전망(H7): `IsMessageQueueRunning=false`이고 로드 중이 아닌 상태가 3초 넘게 이어지면 다시 켜고 경고 로그를 남긴다.
+- 씬이 로드될 때마다 Player Prop `LoadedScene`(본인이 씀, 판이 바뀌어도 유지)에 활성 씬 이름을 쓴다 — F2·F4가 쓴다.
+  - `NetKeys` Scope 표에 Writer.Self로 등록해 `RoomPropertyGuard`가 정상 쓰기로 본다.
+- 판단은 순수 함수 `SceneSyncRules.ShouldFollow(curScn, activeScene, isLoading, mismatchSeconds)`로 빼서 EditMode로 시험한다.
+- 대상: GameLobbyScene ↔ 맵 씬 전부. 방 밖의 LobbyScene은 `curScn`이 없으니 해당 없음.
+
+**F2 맵 도착 감시**(맵 씬, 방장 — `RoomLifecycleWatcher`에 추가)
+- 맵에 들어온 뒤 `SceneLoadGrace + MonsterArrivalTimeout`(새 `GameSettingsSO` 값, 기본 10초) 동안 괴물들의 `LoadedScene`을 본다(`MonsterRoster.Current()` ∩ 방에 있는 사람).
+  - 그동안은 F1이 늦은 괴물을 끌어온다.
+- 시간이 다 됐는데 도착한 괴물이 0명이면 기존 "괴물 모두 이탈" 흐름과 똑같이 처리한다.
+  - `MonsterDepartedAt` → 5초 경고(`MonsterDepartureBanner`) → 대기실 복귀. 지금 이 처리를 하는 부분은 `BeginMonstersGoneReturn(reason)` 메서드로 묶어 두 경로가 같이 쓴다.
+- 일부만 도착했으면 판을 계속한다(여러 괴물 중 일부 이탈과 같은 규칙). 늦게 들어온 괴물은 `PlayerSpawner`가 평소대로 술래방에 스폰한다.
+- 순수 함수 `MonsterArrival.Missing(monsters, loadedScenes, mapScene)`(EditMode 시험).
+
+**F3 방장 정책 보강**(`MasterClientPolicy`)
+- 교체 요청에 시간을 기록한다. 2초 안에 교체 콜백이 없으면 다시 보낼 수 있게 한다. `SetMasterClient`가 false를 돌려주면 바로 풀고 로그를 남긴다(H3).
+- 바깥에서 읽을 수 있게 `static bool SwitchPending`과 `static double LastSwitchTime`(마지막 교체 시각)을 둔다. F4가 쓴다.
+- 되찾기(H4):
+  - 콜백에서 바로 보내지 않고 0.5초 뒤 다시 판단한다. 그때도 "자격자 = 나, 방장 ≠ 나"일 때만 보낸다(캐시 응답이 따라올 시간을 준다).
+  - **내 활성 씬이 `curScn`과 다르면 되찾지 않는다** — 씬에 없는 사람은 방장이 되면 안 된다.
+  - 판단은 `NetSecurityRules.ShouldReclaimMaster`에 인자(`inRoomScene`)를 더해 순수 함수로 둔다.
+- 횟수 제한 값은 인스턴스(씬) 단위로 바꿔 사이클 사이에 누적되지 않게 한다.
+
+**F4 시작 조건 보강**(`GameStartAuthority`)
+- `IsReady()`(호스트 버튼 활성과 방장 실행이 같이 씀)에 조건을 더한다. 조건이 모자라면 버튼이 잠겨 있으니 엇갈린 클릭 자체가 줄어든다.
+  - 모든 사람의 `LoadedScene == GameLobby` — 재입장자가 아직 로드 중이면 시작하지 않는다.
+  - 괴물 수는 **방에 있는 괴물만** 센다(`MonsterRoster.Remaining`). `RoomState.IsMonsterSelectionComplete`도 같은 계산으로 고친다.
+- `TryStart`에서만 더 확인하는 것(새 결과 `Result.Settling`):
+  - 방장 교체 요청이 진행 중(`MasterClientPolicy.SwitchPending`)
+  - 마지막 방장 교체 뒤 1초가 지나지 않음
+  - 실행 방장 판단 `IsIntendedMaster`를 캐시 대신 방장이 마지막으로 보낸 괴물 목록(`MonsterRoster.Current()`) 기준으로 계산
+- `Settling`이면 호스트는 버튼 쿨다운(2초) 뒤 다시 누르면 된다.
+  - 호스트 화면에는 안내 문구를 짧게 보인다. 문구는 기존 상태 문구처럼 인스펙터 필드에 둔다 — 코드에는 한글을 넣지 않는다.
+- 판단은 순수 함수 `StartReadiness.Evaluate(...)`(교체 중·안정 시간·모두 대기실·방에 있는 괴물 수)로 빼서 EditMode로 시험한다.
+
+**F5 진단 로그 `RoomSyncLog`**(`Core/`, 정적)
+- 다음 순간마다 한 줄씩 남긴다:
+  - 방장 교체
+  - `curScn` 변경
+  - 시작 요청 보냄·받음과 `TryStart` 결과
+  - 정책의 교체·되찾기 요청
+  - F1의 따라가기·큐 복구
+  - F2의 도착 판정
+- 한 줄 내용:
+  - 나 / 방장 / 호스트 / 자격 방장
+  - 괴물 목록(캐시 / 방장이 보낸 값)
+  - `curScn` / 활성 씬
+  - 큐 / 로드 중 / 교체 요청 중
+- 접두어 `[RoomSync]`. 문제가 다시 생기면 각 클라이언트의 Player.log에서 이 줄만 모아 보면 R1~R3 중 어느 경로였는지 바로 보인다.
+
+### 43.4 확인 방법
+
+- **EditMode 시험**(새 시험 묶음 `RoomSyncTests`):
+  - `SceneSyncRules.ShouldFollow`: 방장도 따라감, 로드 중이면 기다림, 1초 미만은 기다림, 같은 씬이면 아무것도 안 함
+  - `StartReadiness.Evaluate`: 교체 중 → Settling, 교체 0.5초 뒤 → Settling, 한 명이 아직 맵/로비 씬 → NotReady, 나간 괴물 번호만 남음 → NotReady, 정상 → Ready
+  - `ShouldReclaimMaster`: 씬 밖이면 되찾지 않음, 기존 경우는 그대로
+  - 교체 요청 시간 제한: 2초 뒤 다시 보낼 수 있음
+  - `MonsterArrival.Missing`: 일부 도착 / 모두 도착 / 0명 도착
+  - 기존 시험 전부 통과
+- **Play Mode(오프라인 방, 한 사람)**:
+  - 대기실에서 방장인 채로 `curScn`만 다른 맵 이름으로 바꿔 → 1초 안팎에 그 맵으로 넘어가는지(F1, 방장 쪽 빈틈 재현)
+  - 큐를 일부러 끄고 3초 뒤 다시 켜지는지
+  - 맵에서 괴물 도착 판정이 정상 흐름에서 오작동하지 않는지
+  - Console 오류 0
+- **멀티(사용자 확인, 3명 이상)** — Player.log의 `[RoomSync]` 줄을 함께 보내 주면 경로를 확인한다:
+  1. 호스트가 가마솥에 들어가자마자 바로 시작 버튼 누르기(R1) × 5
+  2. 괴물이 판 중간에 나감 → 복귀 → 재입장 → 시작을 10번 반복. 반은 호스트가 괴물.
+  3. 확인할 것:
+     - 시작하면 매번 모두(괴물 호스트 포함) 맵으로 가는지
+     - 교체 중에 누르면 버튼이 잠깐 잠겼다가 다시 눌러서 시작되는지
+  4. 괴물 클라이언트를 일부러 멈춰(창 비활성·디버거 정지) 맵에 늦게 들어가게 하기 → 10초 안에 들어오면 판 계속, 못 들어오면 5초 경고 뒤 모두 대기실로 돌아오는지
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| SY0 | `RoomSyncLog` 진단 로그(F5) — 먼저 넣어 이후 단계와 멀티 확인에 쓴다 | ✅ |
+| SY1 | `RoomSceneFollower` 방 씬 따라가기·큐 안전망·`LoadedScene` Player Prop, `NetKeys` 등록(F1) | ✅ |
+| SY2 | `MasterClientPolicy` 교체 요청 시간 제한·반환값·지연 되찾기·씬 밖 되찾기 금지·`SwitchPending`(F3) | ✅ |
+| SY3 | `GameStartAuthority`·`RoomState` 시작 조건 보강·`Result.Settling`·호스트 안내 문구(F4) | ✅ |
+| SY4 | `RoomLifecycleWatcher` 맵 도착 감시·`BeginMonstersGoneReturn` 공용화, `GameSettingsSO.MonsterArrivalTimeout`(F2) | ✅ |
+| SY5 | EditMode `RoomSyncTests` + 기존 시험 전부 | ✅ |
+| SY6 | 컴파일·Console·Play Mode(오프라인 재현) 확인·문서 결과 기록 | ✅ |
+| SY7 | 멀티 3명 이상 반복 확인(사용자) — `[RoomSync]` 로그로 경로 확정 | ⬜ |
+
+### 43.5 결과 기록(2026-10-27)
+
+**바꾼 파일**
+
+| 파일 | 내용 |
+|---|---|
+| `Core/RoomSyncLog.cs` (새) | `[RoomSync]` 한 줄 진단 로그 — 나/방장/호스트/자격 방장, 괴물 목록(캐시·방장이 보낸 값), curScn/활성 씬, 큐, 로드 중, 교체 요청 중 |
+| `Core/RoomSceneFollower.cs` (새) | 씬이 바뀌어도 남는 오브젝트(스스로 생성). 0.25초마다 확인한다.<br>· 방 씬과 내 씬이 2초 넘게 다르면 **방장이어도** `LoadLevel`로 따라간다.<br>· 방장이 직접 옮긴 직후 10초 동안 캐시가 옛 값이어도 되돌아가지 않는다.<br>· 로드 없이 큐가 3초 멈추면 되살린다.<br>· `LoadedScene` Player Prop을 쓴다. |
+| `Core/SceneSyncRules.cs` (새) | 따라가기·큐 복구·직접 옮김 신뢰·방에 있는 괴물 수 판단(순수 함수) |
+| `Core/RoomSceneTransition.cs` | 방 전체를 옮길 때 `RoomSceneFollower.NoteOwnLoad` |
+| `Core/NetKeys.cs` | `LoadedScene`(Player, Session, Self) |
+| `Core/NetSecurityRules.cs` | `ShouldReclaimMaster(…, inRoomScene)` — 방 씬에 없는 사람은 되찾지 않음 |
+| `Core/RoomState.cs` | `PresentMonsterCount`(나간 번호 제외), `IsMonsterSelectionComplete`가 그것을 씀, `LoadedScene`, `AllPlayersInScene` |
+| `Core/GameSettingsSO.cs` | `monsterArrivalTimeout` 10초 |
+| `Monster/MasterClientPolicy.cs` | 교체 요청 2초 시간 제한, 1초마다 다시 적용, `SetMasterClient` 반환값 확인, 되찾기 0.5초 뒤 재판단·씬 밖 금지, 횟수 제한을 씬 단위로, `SwitchPending`·`LastSwitchAt` |
+| `Lobby/StartReadiness.cs` (새) | 시작 조건·교체 안정 판단(순수 함수) |
+| `Lobby/GameStartAuthority.cs` | 시작 조건에 "모두 대기실"을 더함.<br>`Result.Settling`: 교체 중이거나 교체 뒤 1초 안이면 시작하지 않고, 요청을 4초 동안 기억했다가 방장이 다시 시도(`TickPending`).<br>실행 방장 판단은 방장이 보낸 괴물 목록 기준. |
+| `Lobby/GameLobbyController.cs` | `TickPending` 호출, `LoadedScene` 변경 때 버튼 갱신, 상태 문구 `waitingArrivalFormat`(GameLobbyScene 인스펙터 값: "모두 대기실에 들어오기를 기다리는 중... ({0}명 남음)") |
+| `Monster/RoomLifecycleWatcher.cs` | 맵 도착 감시 `CheckMonsterArrival`(준비 유예 3초 + 10초). 기존 이탈 처리와 함께 쓰는 `BeginMonstersGoneReturn` |
+| `Editor/Tests/RoomSyncTests.cs` (새) | 18개 |
+
+**확인**
+- 컴파일 오류 0.
+- EditMode: 새 `RoomSyncTests` 18/18, 기존 시험 포함 **354/354** 통과.
+- Play Mode(오프라인 방, `AutomaticallySyncScene`을 실제 게임처럼 켬):
+  - **방장이 남는 경우 재현**: 대기실에서 방장인 채 curScn만 `ChocolateFactory`로 바꿈.
+    - PUN은 따라가지 않는다(버그 재현).
+    - `RoomSceneFollower`가 약 2초 뒤 맵으로 옮겼다(`Stranded in GameLobbyScene … Loading it (master: True)`). `LoadedScene`도 `ChocolateFactory`로 바뀌었다.
+    - `CandyForest`로 한 번 더 해도 같다.
+  - **방장이 직접 옮김**: `LoadLevelForRoom(GameLobby)`로 대기실에 돌아온 뒤 거짓 따라가기 0번.
+  - **큐**: 일부러 멈춘 큐가 약 3초 뒤 되살아났다.
+  - **나간 괴물 번호**: 괴물 목록이 `[99]`(방에 없음)면 괴물 수 0 → 시작 조건 false, `TryStart` = NotReady. 예전에는 배열 길이만 세어 시작됐다.
+  - **괴물이 시작 방장인 경우**: `NotMaster`로 실행되지 않는다(정상).
+  - **맵 도착 감시**: 괴물(나)이 대기실에 있는 것으로 꾸밈.
+    - 13초에 `Monster arrival check: 0/1` → `No monster arrived … Returning to lobby in 5s` → 대기실 복귀 → `RoundStateResetter`가 판 키를 지웠다.
+    - 결과가 이미 난 판(혼자라 바로 결과)에서는 결과 화면이 처리하므로 돌려보내지 않았다(기존 규칙 그대로).
+  - **대기실 문구**: 내 `LoadedScene`이 다르면 "모두 대기실에 들어오기를 기다리는 중... (1명 남음)"이 뜨고 시작 버튼이 꺼진다. 따라가기가 다시 쓰면 "술래: #1 — 게임을 시작할 수 있습니다"와 버튼이 돌아온다.
+  - Console: 경고 0.
+    - 오류 1개: `CreateRoom failed. In offline mode…`. 시험 스크립트가 Play 전에 열린 씬에 넣은 `__OfflineBoot`가 같은 씬을 다시 불러올 때 되살아나 나온 것이다. 실제 씬에는 부트스트랩이 0개다(빌드 씬 10개 확인).
+- 오프라인은 한 사람이라 방장 교체(`SetMasterClient`)와 교체가 엇갈리는 순서(R1~R3)는 재현할 수 없다. 이 부분은 EditMode 규칙 시험과 SY7 멀티 확인으로 본다.
+
+**남은 것 — SY7(사용자, 3명 이상 온라인)**: 43.4의 멀티 순서대로 확인한다.
+- 문제가 다시 생기면 각자 `Player.log`에서 `[RoomSync]` 줄을 모아 보내 주세요.
+- 특히 `Stranded … Loading it` 줄이 있으면 예전에는 그 사람이 남았을 경우다(이제 스스로 따라감).
+- `Start … waits for the master switch to settle` 줄은 R1 엇갈림을 미룬 경우다.

@@ -26,6 +26,8 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
     [SerializeField] private string selectingMonstersFormat = "Choosing {0} monsters ({1}/{0}) - {2} more must enter the cauldron";
     [SerializeField] private string readyForMasterFormat = "Monster: {0} - you can start the game";   // {0}=괴물 닉네임 목록
     [SerializeField] private string readyForOthersFormat = "Monster: {0} - waiting for host {1} to start"; // {1}=방장 닉네임
+    // 정원·괴물은 정해졌는데 아직 대기실을 불러오는 사람이 있을 때(Request1009Plan.md §43 — 막 재입장한 사람). {0} = 기다리는 사람 수
+    [SerializeField] private string waitingArrivalFormat = "Waiting for {0} player(s) to enter the lobby...";
     [Tooltip("강퇴 확인 문구. {0} = 대상 닉네임(Request1009Plan.md §19.6)")]
     [SerializeField] private string kickConfirmFormat = "Kick {0}?";
     [Tooltip("녹음하지 않은 사람이 있을 때 시작 확인 문구(§26 H11)")]
@@ -82,6 +84,7 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
             RefreshStartButton(); // 요청 대기가 끝나면 버튼을 다시 활성화
         }
 
+        GameStartAuthority.TickPending(); // 방장 교체가 가라앉기를 기다리던 시작 요청을 다시 시도(§43)
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
@@ -93,7 +96,9 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
     // 누가 목소리를 녹음하면 목록의 녹음 표시를 바꾼다.
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
     {
-        if (changedProps != null && changedProps.ContainsKey(NetKeys.HasVoice)) RefreshPlayerList();
+        if (changedProps == null) return;
+        if (changedProps.ContainsKey(NetKeys.HasVoice)) RefreshPlayerList();
+        if (changedProps.ContainsKey(NetKeys.LoadedScene)) RefreshStartButton(); // 누가 대기실에 들어오면 시작 조건이 바뀐다(§43)
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
@@ -248,10 +253,17 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
         {
             // 괴물은 가마솥에 들어간 사람만 된다(늘 1명, Request1009Plan.md §25). 여럿이 필요한 설정이면 몇 명이 더 들어가야 하는지 보여 준다.
             int required = GameSettings.Current.MonsterCountFor(room.PlayerCount);
-            int chosen = RoomState.MonsterCount();
+            int chosen = RoomState.PresentMonsterCount();
             statusText.text = required > 1
                 ? string.Format(selectingMonstersFormat, required, chosen, required - chosen)
                 : selectingMonsterNoTimerText;
+            return;
+        }
+
+        int arriving = PlayersNotInLobby();
+        if (arriving > 0)
+        {
+            statusText.text = string.Format(waitingArrivalFormat, arriving);
             return;
         }
 
@@ -264,6 +276,14 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
 
         // 시작할 사람 = 호스트(가장 먼저 들어온 사람).
         statusText.text = string.Format(readyForOthersFormat, monsterNames, DisplayName(room.GetPlayer(RoomState.HostActor())));
+    }
+
+    private static int PlayersNotInLobby()
+    {
+        int count = 0;
+        foreach (Player p in PhotonNetwork.CurrentRoom.Players.Values)
+            if (RoomState.LoadedScene(p) != SceneNames.GameLobby) count++;
+        return count;
     }
 
     // 닉네임이 비어 있으면(오프라인 테스트 등) 입장 번호로 대신 표시한다.

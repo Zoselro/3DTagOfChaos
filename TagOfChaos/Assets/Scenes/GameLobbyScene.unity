@@ -18436,6 +18436,11 @@ PrefabInstance:
       value: "{0}\uB2D8\uC744 \uAC15\uD1F4\uD560\uAE4C\uC694?"
       objectReference: {fileID: 0}
     - target: {fileID: 1331827098797998682, guid: c8e0fd40b4c64ce4b8f0b9eae85a4e70, type: 3}
+      propertyPath: waitingArrivalFormat
+      value: "\uBAA8\uB450 \uB300\uAE30\uC2E4\uC5D0 \uB4E4\uC5B4\uC624\uAE30\uB97C
+        \uAE30\uB2E4\uB9AC\uB294 \uC911... ({0}\uBA85 \uB0A8\uC74C)"
+      objectReference: {fileID: 0}
+    - target: {fileID: 1331827098797998682, guid: c8e0fd40b4c64ce4b8f0b9eae85a4e70, type: 3}
       propertyPath: selectingMonstersFormat
       value: "\uC220\uB798 {0}\uBA85 \uC120\uC815 \uC911 ({1}/{0}) \u2014 \uAC00\uB9C8\uC1A5\uC5D0
         {2}\uBA85 \uB354 \uB4E4\uC5B4\uAC00\uC138\uC694"

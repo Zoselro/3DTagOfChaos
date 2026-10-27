@@ -64,6 +64,9 @@ public class GameSettingsSO : ScriptableObject
     [Header("Monster Departure")]
     [Tooltip("괴물이 전원 나간 뒤 대기실로 돌아가기까지의 경고 시간(초).")]
     [SerializeField, Min(0f)] private float monsterDepartureReturnDelay = 5f;
+    // 맵에 들어온 뒤(준비 유예 시간 다음) 괴물이 한 명도 도착하지 않았다고 볼 때까지 기다리는 시간(초). 지나면 위 경고 후 대기실로 돌아간다(Request1009Plan.md §43).
+    [Tooltip("Seconds (after the scene load grace) to wait for at least one monster to arrive in the map before returning to the lobby.")]
+    [SerializeField, Min(1f)] private float monsterArrivalTimeout = 10f;
 
     [Header("Monster Tentacle Dash (GameRule.md §4.3)")]
     [SerializeField, Min(0f)] private float tentacleDashDistance = 20f;
@@ -112,6 +115,7 @@ public class GameSettingsSO : ScriptableObject
     public float SceneLoadGrace => sceneLoadGrace;
     public float SafetyCapSeconds => safetyCapMinutes * 60f;
     public float MonsterDepartureReturnDelay => monsterDepartureReturnDelay;
+    public float MonsterArrivalTimeout => monsterArrivalTimeout;
     public float TentacleDashDistance => tentacleDashDistance;
     public float TentacleDashDuration => tentacleDashDuration;
     public float TentacleDashCooldown => tentacleDashCooldown;

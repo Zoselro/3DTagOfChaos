@@ -12,16 +12,25 @@ using UnityEngine;
 // 없음) 시작 버튼까지 두 번째 입장자에게 넘어갔다(㉙).
 public static class GameStartAuthority
 {
-    public enum Result { Started, NotMaster, NotHost, NotReady, AlreadyStarted }
+    public enum Result { Started, NotMaster, NotHost, NotReady, AlreadyStarted, Settling }
 
     // 방장이 시작을 연달아 처리하지 않도록 막는 간격 — PrepareEndTime은 서버 응답 후에야 로컬에 보이므로
     // (Room Props 반영 지연) 그 사이 도착한 중복 요청을 이 시간으로 거른다.
     private const float DuplicateGuardSeconds = 3f;
     private static float lastStartTime = float.NegativeInfinity;
 
-    // 시작 조건: 정원이 모두 찼고(사용자 결정 D1), 이번 판에 필요한 괴물이 모두 정해졌다(괴물 선정은 GameLobbyScene에만
-    // 있으므로, 괴물 없이 시작하면 GameScene에서 괴물이 영영 정해지지 않는다).
-    public static bool IsReady() => RoomState.IsRoomFull() && RoomState.IsMonsterSelectionComplete();
+    // 방장 교체 직후 이 시간 동안은 시작하지 않는다(Request1009Plan.md §43 F4) — 교체와 씬 변경이 서버에서 엇갈리면
+    // 새 방장(대기실에 남은 괴물 호스트)이 씬 동기화에서 빠졌다. 그 사이 온 요청은 기억해 두었다가 방장이 다시 시도한다.
+    private const float SettleSeconds = 1f;
+    private const float PendingRetrySeconds = 4f;
+    private static int pendingRequester = -1;
+    private static float pendingUntil = float.NegativeInfinity;
+
+    // 시작 조건: 정원이 모두 찼고(사용자 결정 D1), 이번 판에 필요한 괴물이 모두 정해졌고(괴물 선정은 GameLobbyScene에만
+    // 있으므로, 괴물 없이 시작하면 GameScene에서 괴물이 영영 정해지지 않는다), 모두 대기실에 들어와 있다(§43 — 막 재입장해
+    // 대기실을 불러오는 중인 사람이 있으면 기다린다).
+    public static bool IsReady() =>
+        StartReadiness.IsReady(RoomState.IsRoomFull(), RoomState.IsMonsterSelectionComplete(), RoomState.AllPlayersInScene(SceneNames.GameLobby));
 
     // 호스트 화면에서 호출: 내가 진행 권한을 가진 방장이면 바로 실행하고, 아니면 방장에게 요청을 보낸다.
     public static void RequestStart()
@@ -31,13 +40,13 @@ public static class GameStartAuthority
         if (IsIntendedMaster())
         {
             Result result = TryStart(PhotonNetwork.LocalPlayer.ActorNumber);
-            Debug.Log($"[GameStart] Local start: {result}");
+            RoomSyncLog.Note($"Local start: {result}");
             return;
         }
 
         var options = new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient };
         PhotonNetwork.RaiseEvent(NetEventCodes.StartGameRequest, null, options, SendOptions.SendReliable);
-        Debug.Log($"[GameStart] Start requested to master (actor {PhotonNetwork.CurrentRoom.MasterClientId}).");
+        RoomSyncLog.Note($"Start requested to master (actor {PhotonNetwork.CurrentRoom.MasterClientId})");
     }
 
     // 방장 쪽 실행. 요청자가 호스트인지, 조건을 만족하는지 다시 확인한다.
@@ -49,6 +58,11 @@ public static class GameStartAuthority
         if (requesterActor != RoomState.HostActor()) return Result.NotHost;
         if (RoomState.TryGetDouble(NetKeys.PrepareEndTime, out _) || Time.unscaledTime - lastStartTime < DuplicateGuardSeconds)
             return Result.AlreadyStarted;
+        if (StartReadiness.IsSettling(MasterClientPolicy.SwitchPending, Time.realtimeSinceStartup - MasterClientPolicy.LastSwitchAt, SettleSeconds))
+        {
+            RememberPending(requesterActor);
+            return Result.Settling;
+        }
         if (!IsReady()) return Result.NotReady;
 
         GameSettingsSO settings = GameSettings.Current;
@@ -60,6 +74,7 @@ public static class GameStartAuthority
         }
 
         lastStartTime = Time.unscaledTime;
+        pendingRequester = -1;
 
         // 준비 끝 시각(시작 신호)을 맵이 아니라 여기서 먼저 기록한다 — 아래 LoadLevel(= curScn 변경)보다 먼저 보내야 한다
         // (같은 클라이언트의 Props 변경은 보낸 순서대로 도착). 괴물도 이제 모두와 함께 맵으로 가서 술래방에서 시작한다(Request1009Plan.md §25.5 C).
@@ -76,8 +91,33 @@ public static class GameStartAuthority
 
         PhotonNetwork.CurrentRoom.IsOpen = false; // 씬 전환 도중 새로 입장하는 걸 방지(대기실 복귀 시 RoundStateResetter가 다시 연다)
         RoomSceneTransition.LoadLevelForRoom(map); // 방장만 호출, 나머지는 AutomaticallySyncScene으로 함께 이동
-        Debug.Log($"[GameStart] Map: {map}");
+        RoomSyncLog.Note($"Start by actor {requesterActor}. Map: {map}");
         return Result.Started;
+    }
+
+    // 방장 교체가 가라앉기를 기다리는 시작 요청(같은 요청자는 처음 마감을 유지한다).
+    private static void RememberPending(int requesterActor)
+    {
+        if (pendingRequester == requesterActor && Time.unscaledTime < pendingUntil) return;
+        pendingRequester = requesterActor;
+        pendingUntil = Time.unscaledTime + PendingRetrySeconds;
+        RoomSyncLog.Note($"Start by actor {requesterActor} waits for the master switch to settle");
+    }
+
+    // 대기실(GameLobbyController.Update)에서 매 프레임: 기다리던 요청을 방장이 다시 시도한다. 방장이 바뀌었거나 마감이 지나면 버린다.
+    public static void TickPending()
+    {
+        if (pendingRequester < 0) return;
+        if (!PhotonNetwork.IsMasterClient || Time.unscaledTime >= pendingUntil)
+        {
+            pendingRequester = -1;
+            return;
+        }
+        int requester = pendingRequester;
+        Result result = TryStart(requester);
+        if (result == Result.Settling) return;
+        pendingRequester = -1;
+        RoomSyncLog.Note($"Pending start by actor {requester}: {result}");
     }
 
     // 직전 판 맵(이 클라이언트가 방장으로 시작한 판). 판이 끝나면 Room의 맵 키는 지워지므로 여기서 기억한다.
@@ -124,6 +164,13 @@ public static class GameStartAuthority
     }
 
     // 지금 Photon 방장이고, 방장 정책상 진행 권한을 가져야 하는 사람(괴물이 아닌 최선 입장자)도 나인지.
-    private static bool IsIntendedMaster() =>
-        PhotonNetwork.IsMasterClient && RoomState.DesiredMasterActor() == PhotonNetwork.LocalPlayer.ActorNumber;
+    // 괴물 목록은 캐시가 아니라 방장이 마지막으로 보낸 목록으로 본다(§43 — 방금 확정한 괴물이 캐시에 아직 없을 때 시작하지 않도록).
+    private static bool IsIntendedMaster()
+    {
+        if (!PhotonNetwork.IsMasterClient || !RoomState.IsInRoom()) return false;
+        var actors = PhotonNetwork.CurrentRoom.Players.Keys;
+        int[] present = new int[actors.Count];
+        actors.CopyTo(present, 0);
+        return RoomState.DesiredMasterActor(present, MonsterRoster.Current()) == PhotonNetwork.LocalPlayer.ActorNumber;
+    }
 }

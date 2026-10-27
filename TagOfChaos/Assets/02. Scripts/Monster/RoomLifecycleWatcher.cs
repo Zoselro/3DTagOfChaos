@@ -1,14 +1,20 @@
+using System.Collections.Generic;
 using System.Linq;
 using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 // GameScene 배치 — 다중 괴물 이탈 감지 + 경고(GameRule.md §7.1). 남은 괴물이 0명일 때만 경고(GameSettings, 기본 5초) 후
 // GameLobbyScene으로 복귀한다. (대기실에서의 괴물 이탈은 MonsterAssignmentAuthority가 처리한다.)
+// 맵 도착 감시(Request1009Plan.md §43 F2): 괴물이 방에는 남아 있는데 맵에 들어오지 않으면(시작 때 대기실에 남음) 나간 것과
+// 같게 본다 — 준비 유예 + MonsterArrivalTimeout 뒤에도 괴물이 한 명도 도착하지 않았으면 같은 경고 후 대기실로 돌아간다.
 public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
 {
     private double? monstersGoneAt;
+    private bool arrivalChecked;
+    private readonly Dictionary<int, string> loadedScenes = new Dictionary<int, string>();
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
@@ -30,12 +36,40 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
         if (remaining.Length == 0 && !MonsterRoster.ReturnWhenMonstersGone(spyRocketLaunched, resultDecided))
             Debug.Log($"[RoomLifecycle] All monsters left (last: actor {otherPlayer.ActorNumber}) — the round continues (rocket launched: {spyRocketLaunched}, result: {resultDecided}).");
         else if (remaining.Length == 0)
-        {
-            monstersGoneAt = PhotonNetwork.Time;
-            props[NetKeys.MonsterDepartedAt] = monstersGoneAt.Value; // 목록 갱신과 한 번에 보낸다
-            Debug.Log($"[RoomLifecycle] All monsters left (last: actor {otherPlayer.ActorNumber}). Returning to lobby in {GameSettings.Current.MonsterDepartureReturnDelay}s.");
-        }
+            BeginMonstersGoneReturn(props, $"All monsters left (last: actor {otherPlayer.ActorNumber})"); // 목록 갱신과 한 번에 보낸다
 
+        AuthorityProps.SetRoom(props);
+    }
+
+    // 괴물이 모두 떠났다: 떠난 시각을 기록해 경고 배너(MonsterDepartureBanner)를 띄우고 정해진 시간 뒤 대기실로 돌아간다.
+    // props는 호출한 쪽이 보낸다(괴물 목록 갱신과 한 번에 보내기 위해).
+    private void BeginMonstersGoneReturn(Hashtable props, string reason)
+    {
+        monstersGoneAt = PhotonNetwork.Time;
+        props[NetKeys.MonsterDepartedAt] = monstersGoneAt.Value;
+        Debug.Log($"[RoomLifecycle] {reason}. Returning to lobby in {GameSettings.Current.MonsterDepartureReturnDelay}s.");
+    }
+
+    // 준비 유예 + 도착 대기 시간이 지나면 한 번 확인한다. 그 사이 늦은 괴물은 RoomSceneFollower가 맵으로 끌어온다.
+    private void CheckMonsterArrival()
+    {
+        arrivalChecked = true;
+        int[] monsters = MonsterRoster.Remaining(MonsterRoster.Current(), PhotonNetwork.CurrentRoom.Players.Keys);
+        if (monsters.Length == 0) return; // 괴물 없는 시험 방·이미 모두 나감(OnPlayerLeftRoom 경로)
+
+        loadedScenes.Clear();
+        foreach (Player p in PhotonNetwork.CurrentRoom.Players.Values) loadedScenes[p.ActorNumber] = RoomState.LoadedScene(p);
+        string map = SceneManager.GetActiveScene().name;
+        int arrived = MonsterArrival.Arrived(monsters, loadedScenes, map);
+        RoomSyncLog.Note($"Monster arrival check: {arrived}/{monsters.Length} in {map}");
+        if (!MonsterArrival.ShouldReturn(monsters.Length, arrived)) return;
+
+        bool spyRocketLaunched = RoomState.TryGetDouble(NetKeys.TimeAttackEndTime, out _);
+        bool resultDecided = RoomState.TryGetInt(NetKeys.GameResult, out _);
+        if (!MonsterRoster.ReturnWhenMonstersGone(spyRocketLaunched, resultDecided)) return;
+
+        var props = new Hashtable();
+        BeginMonstersGoneReturn(props, $"No monster arrived in {map} (monsters: {string.Join(",", monsters)})");
         AuthorityProps.SetRoom(props);
     }
 
@@ -49,6 +83,9 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
     private void Update()
     {
         if (!PhotonNetwork.IsMasterClient) return;
+        if (!arrivalChecked && !monstersGoneAt.HasValue && RoomState.IsInRoom()
+            && Time.timeSinceLevelLoad >= GameSettings.Current.SceneLoadGrace + GameSettings.Current.MonsterArrivalTimeout)
+            CheckMonsterArrival();
         if (!monstersGoneAt.HasValue) return;
         if (PhotonNetwork.Time < monstersGoneAt.Value + GameSettings.Current.MonsterDepartureReturnDelay) return;
 
