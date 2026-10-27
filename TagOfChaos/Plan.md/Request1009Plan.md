@@ -4777,3 +4777,174 @@ v1 §S1~S8 그대로:
 - 문제가 다시 생기면 각자 `Player.log`에서 `[RoomSync]` 줄을 모아 보내 주세요.
 - 특히 `Stranded … Loading it` 줄이 있으면 예전에는 그 사람이 남았을 경우다(이제 스스로 따라감).
 - `Start … waits for the master switch to settle` 줄은 R1 엇갈림을 미룬 경우다.
+
+
+## 44. 2026-10-27 AI(미끼)가 진짜 플레이어처럼 움직이기 — 걷기·뛰기·재료 건물 들어가기·숨기·술래 접근 시 도망
+
+**요청**
+- 지금은 판이 시작돼도 AI가 제자리에 서 있기만 한다.
+- 일반 플레이어처럼 움직이게 한다.
+  - 걷고 뛴다.
+  - 재료 넣는 건물로 들어간다.
+  - 숨을 곳(창고·텐트)에 숨는다.
+  - 술래가 다가와 추격 BGM이 들릴 거리가 되면 도망간다.
+- 캐릭터 FBX 리깅은 나중에 한다. 지금 쿠키 모델과 애니메이션을 그대로 쓴다.
+- 소스를 읽고 실제 코드에 맞춰 상세 계획을 쓴다(이번에는 계획만).
+
+### 44.1 지금 코드
+
+| 부분 | 코드 | 지금 하는 일 |
+|---|---|---|
+| AI 데이터 | `EscapeState.Decoy`(EscapeState.cs 133~146) | Id·주인·**위치 1개·방향**·목소리 시각·씨앗·잡힘. 움직임 정보가 없다 |
+| 동기화 | `EscapeAuthority.Commit`(1216~) | 판 상태 전체를 `NetKeys.EscapeState` byte[] 한 덩어리로 다시 쓴다 → 바뀔 때마다 전체 전송. AI에는 PhotonView가 없다 |
+| 만들기 | `EscapeAuthority` 초기화(166~176) | 쿠키·스파이 1명당 `DecoysPerPlayer = 10`마리를 `EscapeManager.TryRandomMapPoint`로 흩어 놓는다(4~5명이면 30~50마리) |
+| 모습 | `DecoyPresenter` → `DecoyView` | 쿠키 프리팹을 `WitchFinaleStage.StripToVisuals`로 겉모습만 남겨 복제한다(Transform·**Animator**·Renderer는 남음).<br>`Apply`(DecoyView.cs 48)는 위치·방향만 `SnapToGround`로 맞춘다. 애니메이션은 늘 Idle |
+| 잡기 | `MonsterGrabKillTrigger`(AimDecoy) → `EscapeOp.DecoyCatch` → `EscapeAuthority.DecoyCatch`(860) | 방장이 `IsNear(actor, d.Pos)`로 거리를 확인한다 — **저장된 위치** 기준 |
+| 사라짐 | 마녀 시간 시작(753~757)·주인이 부서짐(`RemoveDecoysOf` 1021)·잡힘 후 2.63초(291) | 그대로 둔다 |
+| 추격 BGM | `ChaseDirector`·`ChaseIntensity` | 내 쿠키와 가장 가까운 술래의 거리로 세기를 정한다. 들리기 시작하는 거리 = `ChaseAudioSettingsSO.audibleRadius`(기본 20 m). 사냥(Hunt)·마녀 시간(TimeAttack)에만 |
+| 쿠키 이동·애니 | `HideOrSeekPlayer.Move`(540~)·`PlayerAnimationDriver.ChangeState` | 걷기 `speed`, 달리기 ×1.3(Shift), 상태 Idle/Walk/Run/Jump/Dodge … — AI도 같은 Animator 상태로 맞출 수 있다 |
+| 재료 건물 | `QuadrantBuilding.RepairPoint`·`Index` | 사분면 건물 4곳, 방 안 수리 자리 |
+| 숨을 곳 | 맵 빌더가 만든 오브젝트 이름 | `CHO_Shed`(초콜릿 공장 16)·`MO_Tent`(놀이공원 16)·`CF_Tent`(캔디숲). 실행 중에 찾을 표시(컴포넌트)는 없다 |
+| 문 | `InteractableDoor` | 상태는 `NetKeys.DoorStates`, 방장만 쓴다. 누른 사람이 방장에게 요청한다 |
+| 길 찾기 | — | **NavMesh가 없다**. AI Navigation 패키지 2.0.14는 설치돼 있다. 통행 검사(`MapPassabilityCheck`)는 에디터 전용 격자 |
+
+### 44.2 설계 방향(결정)
+
+1. **판단은 방장만, 화면은 모두 같은 계산으로**
+   - 방장의 `DecoyBrain`이 AI마다 할 일과 경로를 정한다.
+   - 각 화면은 경로와 시작 시각을 받아 `PhotonNetwork.Time`으로 같은 위치를 계산한다.
+   - 위치를 계속 보내지 않는다. AI 목소리(`DecoyVoice`)와 같은 방식이다.
+2. **경로는 판 상태와 따로 보낸다**
+   - `EscapeState`는 바뀔 때마다 전체를 보내므로, 50마리 경로를 넣으면 몇 초마다 수 KB를 보내게 된다.
+   - AI마다 Room Prop 키 하나(`DR_<id>`, byte[] 약 60 B)를 두고, 바뀐 AI만 보낸다.
+   - 방장이 쓴다. 판이 끝나면 지운다.
+3. **길은 NavMesh**: 맵마다 에디터에서 쿠키 크기로 굽는다. 경로 계산(`NavMesh.CalculatePath`)은 방장만 한다.
+4. **물리 없음**: AI는 지금처럼 Rigidbody 없이 경로를 따라 놓인다(가볍다). 괴물 조준용 캡슐 충돌체는 그대로 둔다.
+5. **진짜 쿠키와 구별되지 않게**: 같은 걷기·달리기 속도, 같은 Animator 상태, 발소리를 쓴다. AI는 아이템을 줍거나 수리 게이지를 채우지 않는다. 겉으로만 한다.
+
+### 44.3 경로 데이터 `DecoyRoute`(새, Escape/)
+
+| 항목 | 형식 | 뜻 |
+|---|---|---|
+| StartAt | double | 출발 시각(PhotonNetwork.Time) |
+| Gait | byte | Idle / Walk / Run / Hide / Repair(건물 방 안에서 수리하는 척) |
+| Speed | half(ushort) | m/s(걷기 = 쿠키 `speed`, 달리기 ×1.3) |
+| HoldUntil | float(StartAt 기준 초) | 끝에 도착한 뒤 멈춰 있는 시간 — 그 뒤에는 방장이 다음 경로를 보낸다 |
+| Points | ≤ 12개, 각 (x, y, z) short 1 cm 단위 | 길 모퉁이(NavMesh 경로), 첫 점 = 출발 위치 |
+| DoorMask | ushort | 이 점 앞에 문이 있다(방장이 지나가기 직전에 연다) |
+
+- 순수 함수:
+  - `DecoyRoute.Sample(route, now) → (위치, 방향, 이동 중인지)`
+  - `Encode`·`Decode`
+  - `Length`
+- EditMode로 시험한다.
+- 끝에 도착하면 마지막 점에서 멈추고, 방향은 마지막 구간 방향을 유지한다.
+
+### 44.4 행동(방장 `DecoyBrain`, Escape/, 사냥 시작부터)
+
+- **AI마다 성격**(`Decoy.Seed`로 정함):
+  - 겁(도망 시작 거리 배율 0.8~1.2)
+  - 활동 범위(자기 사분면 위주 / 맵 전체)
+  - 행동 가중치(배회 · 건물 · 숨기 · 쉬기)
+- **상태**
+
+| 상태 | 들어가는 조건 | 하는 일 | 끝 |
+|---|---|---|---|
+| 배회 Wander | 기본 | 맵 안의 무작위 지점이나 관심 지점(상자 자리·큰길·광장)까지 걷는다. 가끔(20%) 뛴다 | 도착 → 2~6초 쉼(Idle) → 다음 행동 |
+| 재료 건물 Visit | 가중치 | 사분면 건물 문 → 방 안 `RepairPoint` 옆으로 걸어 들어가 5~12초 수리하는 척(Repair 자세 = Idle + 건물 쪽 바라보기) | 끝나면 밖으로 나가 배회 |
+| 숨기 Hide | 가중치, 또는 도망 끝에 가까운 숨을 곳이 있으면 | 가까운 창고·텐트 안 자리로 가서 10~30초 가만히 | 술래가 가까우면 도망, 아니면 배회 |
+| 도망 Flee | 술래와의 거리 < `audibleRadius`(20 m) × 겁, 같은 층 | 술래 반대쪽 15~25 m 지점을 NavMesh에서 골라(점수 = 술래와의 거리↑, 막다른 곳↓, 다른 AI가 몰린 곳↓) **뛴다**. 6 m 안이면 1~2초마다 방향을 조금씩 튼다(지그재그) | 술래가 `audibleRadius` + 5 m 밖에 3초 있으면 → 숨기(50%) 또는 배회 |
+| 쉬기 Idle | 가중치 | 제자리 3~8초, 가끔 몸 돌리기 | 다음 행동 |
+
+- **부하 줄이기**:
+  - 한 프레임에 AI 몇 마리만 판단한다(0.3초 간격으로 돌아가며).
+  - 경로 계산은 프레임당 최대 4개.
+  - 술래 거리 검사는 위치만 비교한다(`CharacterRegistry`의 괴물).
+- **자리 나눠 쓰기**: 건물 방·숨을 곳은 동시에 최대 2~3마리. 같은 곳으로 몰리지 않는다.
+- **문**: 경로의 문 직전 2 m에서 방장이 그 문을 연다. 방장 쪽 새 메서드 `InteractableDoor.OpenByAuthority()`를 만들고, 사람이 여는 것과 같은 `DoorStates` 경로를 쓴다.
+- **멈춤**: 결과 화면·마녀 시간(AI가 사라짐)·잡힘 → 그 AI 경로를 지운다.
+- **준비 시간(Prepare)**: 진짜 쿠키도 흩어지는 때이므로 배회만 한다(도망 없음).
+
+### 44.5 화면(`DecoyView`·`DecoyPresenter`)
+
+- `Apply`는 위치를 직접 놓지 않는다. 매 프레임 `Tick`에서 `DecoyRoute.Sample`로 위치·방향을 구한다.
+- 높이:
+  - NavMesh 점 높이를 선형 보간한다.
+  - 0.2초마다 아래로 한 번 쏘아(`Physics.Raycast`) 바닥에 맞춘다.
+  - 지금 쓰는 `SnapToGround`(RaycastAll)는 50마리 매 프레임에는 무겁다.
+- 애니메이션: 남아 있는 Animator로 `PlayerAnimationDriver`를 만들어, 움직이면 Walk/Run, 멈추면 Idle로 바꾼다. 진짜 쿠키와 같은 상태 이름과 전환을 쓴다.
+- 방향: 진행 방향으로 부드럽게 돌린다(초당 540°).
+- 발소리: 진짜 쿠키 발소리(`CookieAudio`가 쓰는 소리 칸)를 걸음 주기에 맞춰 `GameAudio.PlayAt`으로 낸다.
+  - 25 m 밖이면 내지 않는다.
+  - 괴물이 발소리로 AI와 진짜를 구별할 수 없게 하기 위해서다.
+- 경로가 바뀌면 이어서 계산한다. 방장은 새 경로의 첫 점을 지금 위치로 보내므로 순간이동이 없다.
+- 늦게 도착한 경로(받은 시점이 이미 지남)도 시각으로 계산하므로 모든 화면이 같은 자리에 있다.
+
+### 44.6 방장 판정 맞추기
+
+- `EscapeAuthority.DecoyCatch`의 거리 검사는 `d.Pos`가 아니라 `DecoyBrain.PositionOf(id, now)`(경로 위치)로 한다.
+- `ToolHitReceiver` 등 AI 위치를 쓰는 곳도 같은 함수를 쓴다.
+- `EscapeState.Decoy.Pos`는 "마지막으로 확정한 자리"로 남긴다. 방장이 바뀔 때 시작점 역할이다.
+- **방장 교체**: 새 방장의 `DecoyBrain`이 `DR_*` 키들을 읽어 각 AI의 현재 경로를 이어받는다. 경로가 끝나면 새로 판단한다.
+- `NetKeys`:
+  - 접두어 키 `DecoyRoutePrefix = "DR_"`를 둔다(Writer Master, Round).
+  - `NetKeys.IsMasterKey`·`RoundStateResetter`·`RoomPropertyGuard`가 접두어로도 알아보게 한다.
+  - 판이 끝나 대기실로 돌아오면 모두 지운다.
+- 보안:
+  - 방장이 아닌 사람이 `DR_*`를 바꾸면 기존 권위 속성 감시가 되돌린다.
+  - 경로 점은 맵 안·술래방 밖인지 받는 쪽에서 확인한다(`IsOutsideMap`·`InMonsterRoom`). 벗어나면 그 점에서 멈춘다.
+
+### 44.7 NavMesh 굽기(에디터 도구, 맵 씬 수정)
+
+- 새 메뉴 `Tools/Maps/Bake Decoy NavMesh`(`Assets/Editor/Maps/DecoyNavMeshBaker.cs`).
+  - 대상 씬: `CandyForest`·`CursedCandyCarnival`·`ChocolateFactory`·`Test_GingerbreadVillage`·`Test_HauntedBakery`.
+  - 맵 루트에 `NavMeshSurface`를 붙이고 굽는다.
+    - 에이전트: 쿠키 반경 0.46·높이 2·오르막 계단 0.45·경사 40°.
+    - 문 잎은 `NavMeshModifier`(굽기 제외)로 열린 것처럼 둔다.
+    - 술래방은 굽기 제외(AI가 들어가지 않음).
+  - 씬을 저장한다.
+- 숨을 곳 표시를 붙인다. 이름이 `CHO_Shed`·`MO_Tent`·`CF_Tent`인 오브젝트에 `DecoyHideSpot`(안쪽 자리 1~3개, 바닥에 맞춤)을 붙인다.
+  - 사분면 건물은 이미 있는 `QuadrantBuilding`을 쓴다.
+- 굽기 결과 확인:
+  - 맵마다 NavMesh 면적이 걷는 바닥의 90% 이상인지
+  - 숨을 곳·건물 방·상자 자리가 모두 NavMesh 위에 있는지
+  - 두 가지를 로그와 EditMode 시험으로 본다.
+- `MapSceneBuilder`·`MapCompactor`는 쓰지 않는다(§42 이후 사용자 결정). 위 도구만 씬에 NavMesh와 표시를 더한다.
+- 용량: NavMesh 데이터는 맵마다 수 MB 이하로 예상한다. 굽기 후 확인한다.
+
+### 44.8 확인 방법
+
+- **EditMode**(새 시험 묶음 `DecoyAiTests`):
+  - `DecoyRoute` Sample(시작 전·중간·끝·모퉁이·멈춤), Encode/Decode 왕복·크기
+  - 도망 지점 점수(술래 반대쪽·막다른 곳 감점)
+  - 도망 시작/끝 히스테리시스(20 m 진입, 25 m + 3초 해제)
+  - 자리 나눠 쓰기(최대 인원)
+  - 성격 씨앗의 결정성
+  - `NetKeys` 접두어 키가 판 초기화 목록에 들어감
+  - 굽힌 맵마다 숨을 곳·건물 방·상자 자리가 NavMesh 위에 있음
+- **Play Mode**(오프라인 방, 실제 맵):
+  1. 사냥 시작 → AI 30마리 이상이 걷고 뛰는지(Animator 상태 Walk/Run 비율, 서 있기만 하는 AI 0), 벽·건물을 뚫지 않는지
+  2. 재료 건물 4곳에 AI가 들어가 수리하는 척을 하고 나오는지
+  3. 창고·텐트 안에 숨었다 나오는지
+  4. 괴물로 시작해 AI에게 다가가면 → 20 m 안에서 뛰어 도망가는지, 문을 열고 지나가는지, 멀어지면 숨거나 배회로 돌아오는지
+  5. 괴물로 AI를 조준 + E로 잡기 — 움직이는 AI도 잡히는지(방장 거리 검사가 경로 위치 기준)
+  6. 마녀 시간 시작 → AI가 모두 사라지고 경로 키가 지워지는지, 대기실로 돌아오면 `DR_*`가 남지 않는지
+  7. 프레임: AI 50마리에서 방장 판단 + 화면 계산이 프레임당 1 ms 안팎인지(Profiler)
+  8. Console 오류·경고 0
+- **멀티(사용자, 2명 이상)**: 두 화면에서 같은 AI가 같은 자리·같은 동작인지, 방장이 나가도 AI가 계속 움직이는지. `[RoomSync]` 같은 진단 로그 `[DecoyBrain]`을 남긴다.
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| AI0 | NavMesh 굽기 도구·숨을 곳 표시 `DecoyHideSpot`, 5개 맵 굽기·확인(§44.7) | ⬜ |
+| AI1 | `DecoyRoute`(경로·Sample·Encode/Decode)·`NetKeys` 접두어 키·판 초기화·권위 감시 연동 | ⬜ |
+| AI2 | `DecoyView`·`DecoyPresenter` 경로 따라가기·높이·방향·애니메이션(Walk/Run/Idle)·발소리(§44.5) | ⬜ |
+| AI3 | 방장 `DecoyBrain` — 배회·쉬기·재료 건물·숨기 상태, 성격, 자리 나눠 쓰기, 부하 분산, 문 열기(§44.4) | ⬜ |
+| AI4 | 도망 — 술래 거리(추격 BGM 거리 20 m 기준)·도망 지점 고르기·뛰기·지그재그·해제 후 숨기(§44.4) | ⬜ |
+| AI5 | 방장 판정 맞추기(잡기 거리·도구), 방장 교체 이어받기, 마녀 시간·주인 부서짐·결과 화면 정리(§44.6) | ⬜ |
+| AI6 | EditMode `DecoyAiTests` + 기존 시험 전부 | ⬜ |
+| AI7 | 컴파일·Console·Play Mode 확인(§44.8 1~8)·문서 결과 기록 | ⬜ |
+| AI8 | 멀티 2명 이상 확인(사용자) | ⬜ |
+
+**정할 것(기본값으로 진행 가능)**
+- AI가 실제로 재료를 넣거나 수리 게이지를 채우지는 **않는다**(겉모습만). 바꾸려면 판 규칙이 달라지므로 따로 결정한다.
+- AI 수는 지금처럼 1인당 10마리. 성능 확인(AI7-7) 뒤 필요하면 맵 크기에 맞게 조정한다.
