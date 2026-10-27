@@ -57,8 +57,8 @@ public static class ChocolateFactoryMapBuilder
     public static readonly float[] RoadDeg = { 90f, 0f, 270f, 180f };          // N, E, S, W
     public static readonly string[] ExitNames = { "Exit_N", "Exit_E", "Exit_S", "Exit_W" };
     public static readonly string[] RecipeItems = { "Item_Gear", "Item_MacaronWheel", "Item_ChocolateOil", "Item_CookieWheel" };
-    // 일반 건물(사분면 가장자리, 큰길에서 20° — 건물 모서리와 큰길 줄 사이 18 m 넘게)
-    public static readonly (string key, float deg)[] Landmarks = { ("Cauldron", 110f), ("Factory", 20f), ("Cogworks", 200f), ("ChocoBar", 290f) };
+    // 일반 건물(사분면 가장자리, 시계 방향 10·1·7·4시 — 2026-10-27 사용자 요청. 각도는 +x에서 +z 쪽, 12시 = 90°, 한 시간 = 30°)
+    public static readonly (string key, float deg)[] Landmarks = { ("Cauldron", 150f), ("Factory", 60f), ("Cogworks", 240f), ("ChocoBar", 330f) };
     private static readonly string[] KeepInMap = { "Background", WitchPath.FarBackdropName, "Ground" };   // GroundUnder는 다시 만든다
 
     // 숨는 창고(사분면마다 4): (반지름, 사분면 방향에서 각도 차이) — 놀이공원 텐트 자리
@@ -190,6 +190,7 @@ public static class ChocolateFactoryMapBuilder
             if (flat.magnitude - new Vector2(r.bounds.extents.x, r.bounds.extents.z).magnitude < MapRadius + 20f) Object.DestroyImmediate(t.gameObject);
         }
         Transform ring = Group(background, "CHO_Backdrop");
+        if (ring.GetComponent<WitchBackdropToggle>() == null) ring.gameObject.AddComponent<WitchBackdropToggle>(); // 마녀 연출 때만 보인다
         (string name, float scale)[] pieces = { ("CHO_FactoryMachine", 3.2f), ("CHO_Pipe", 3.5f), ("CHO_PackingMachine", 2.6f), ("CHO_CacaoCrate", 3f), ("CHO_IngredientSack", 3f), ("CHO_Crate", 3.4f) };
         int n = 0;
         for (int i = 0; i < 60; i++)
