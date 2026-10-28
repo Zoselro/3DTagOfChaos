@@ -17188,6 +17188,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1807172407280655314, guid: 8433434e684c5a1499a06a871236e320, type: 3}
   m_PrefabInstance: {fileID: 236648986}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &236754453 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8588182976492133741, guid: 30a6afc114e8c9341be67de1a33b1d54, type: 3}
+  m_PrefabInstance: {fileID: 417342851}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &237364743
 GameObject:
   m_ObjectHideFlags: 0
@@ -28731,11 +28736,11 @@ PrefabInstance:
     - target: {fileID: 73820676803097291, guid: 30a6afc114e8c9341be67de1a33b1d54, type: 3}
       propertyPath: end
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 430572238}
     - target: {fileID: 73820676803097291, guid: 30a6afc114e8c9341be67de1a33b1d54, type: 3}
       propertyPath: start
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 236754453}
     - target: {fileID: 1101753326514417310, guid: 30a6afc114e8c9341be67de1a33b1d54, type: 3}
       propertyPath: m_Name
       value: CHO_Bld_Cogworks
@@ -29747,6 +29752,11 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 5574757006341057041, guid: b6a5e3a96c789c644b60738509dab07f, type: 3}
   m_PrefabInstance: {fileID: 428132163}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &430572238 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2613724244002706630, guid: 30a6afc114e8c9341be67de1a33b1d54, type: 3}
+  m_PrefabInstance: {fileID: 417342851}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &431186554
 PrefabInstance:

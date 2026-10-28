@@ -89,9 +89,8 @@ public class ChocolateFactoryBuildingTests
     {
         int Spins(string key) => Load(key).GetComponentsInChildren<SpinPart>(true).Length;
         Assert.GreaterOrEqual(Spins("Gear"), 3, "Gear building: big + small front wheels + back wheel");
-        Assert.GreaterOrEqual(Spins("Cogworks"), 6, "Cogworks: wheels + grinder rollers turn");
-        // 2026-10-28: 덧붙였던 검은 벨트(롤러·조각·경로)가 받은 모델의 초콜릿 활송로와 겹쳐 지웠다 — 활송로만 남는다
-        Assert.AreEqual(0, Load("Cogworks").GetComponentsInChildren<ConveyorItems>(true).Length, "no extra belt over the received chocolate chute");
+        Assert.GreaterOrEqual(Spins("Cogworks"), 6, "Cogworks: wheels + belt rollers + grinder rollers turn");
+        Assert.GreaterOrEqual(Load("Cogworks").GetComponentsInChildren<ConveyorItems>(true).Length, 1, "chocolate runs up the belt");
         Assert.GreaterOrEqual(Load("Cogworks").GetComponentsInChildren<TextureScroll>(true).Length, 1, "chocolate pours out");
         Assert.GreaterOrEqual(Load("Cauldron").GetComponentsInChildren<TextureScroll>(true).Length, 2, "cauldron drain stream + pool");
         Assert.IsTrue(Load("Cauldron").GetComponentsInChildren<ParticleSystem>(true).Any(p => p.name == "Splash"), "cauldron splash");
