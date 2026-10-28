@@ -64,6 +64,11 @@ public static class ChocolateFactoryMapBuilder
     // 숨는 창고(사분면마다 4): (반지름, 사분면 방향에서 각도 차이) — 놀이공원 텐트 자리
     public static readonly Vector2[] Sheds = { new Vector2(46f, -22f), new Vector2(46f, 22f), new Vector2(68f, -28f), new Vector2(68f, 28f) };
     public const float ShedReach = 6.2f;       // 창고 지붕 끝까지(9.7 m 정사각 반 대각선 + 여유)
+    // 건물 옆 창고(2026-10-28 요청, 사용자 그림 기준): 사분면마다 두 구역에 4개씩. 각도는 사분면 방향(QuadDeg)에서의 차이, 반지름은 맵 가운데에서.
+    // A = 재료 건물 바깥쪽(일반 건물 반대편, 큰길 쪽으로 건물을 감싸는 띠), B = 일반 건물 바깥쪽(재료 건물 반대편, 반대쪽 큰길 쪽).
+    // 일반 건물은 재료 건물에서 +15°에 있으므로(Landmarks) 네 사분면 모두 같은 규칙으로 놓인다.
+    private static readonly (Vector2 deg, Vector2 radius)[] ShedZones = { (new Vector2(-26f, -8f), new Vector2(92f, 135f)), (new Vector2(24f, 38f), new Vector2(100f, 136f)) };
+    public const int ShedsPerZone = 4;
     // 작업장(놀이공원 노점 자리)
     private static readonly Vector2[] Works = { new Vector2(30f, -18f), new Vector2(36f, -10f), new Vector2(30f, 18f), new Vector2(36f, 10f) };
     private static readonly string[] WorkNames = { "CHO_FactoryMachine", "CHO_PackingMachine", "CHO_ChocoShelf", "CHO_Forklift" };
@@ -116,6 +121,7 @@ public static class ChocolateFactoryMapBuilder
         BuildMonsterRoom(map);
         BuildBuildings(map);
         int landmarks = BuildLandmarks(map);
+        int buildingSheds = BuildBuildingSheds(map);
         BuildExits(map);
         BuildFence(map);
         int deco = BuildRoads(map) + BuildQuadrants(map, rng) + BuildExtraLamps(map);
@@ -145,7 +151,7 @@ public static class ChocolateFactoryMapBuilder
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         RoundMapKit.AddToBuildSettings(ScenePath, MapName);
-        return $"[ChocolateFactoryMap] {ScenePath}: landmarks {landmarks}, decoration {deco}, backdrop {backdrop}, tiles {tiles}, markers {markers}, lights {lights} | {recipe} | {escape}";
+        return $"[ChocolateFactoryMap] {ScenePath}: landmarks {landmarks}, decoration {deco}, backdrop {backdrop}, sheds beside buildings {buildingSheds}, tiles {tiles}, markers {markers}, lights {lights} | {recipe} | {escape}";
     }
 
     // ---------------------------------------------------------------- helpers
@@ -306,6 +312,54 @@ public static class ChocolateFactoryMapBuilder
             root.SetPositionAndRotation(p, FaceCenter(p));
             PlaceBuilding(key, root, p);
         }
+    }
+
+    // 건물 옆 창고: 사분면마다 ShedZones 두 구역에 ShedsPerZone개씩. 구역 안 후보(3° × 4 m 격자) 중 큰길·산책길·울타리·다른 오브젝트와 겹치지 않는 자리에서
+    // 이미 고른 창고와 가장 먼 곳부터 고른다(구역 안에 고루 퍼진다). 재료 건물·일반 건물을 놓은 뒤, 꾸미기보다 먼저 자리를 잡아 소품이 피해 간다.
+    private static int BuildBuildingSheds(Transform map)
+    {
+        int n = 0;
+        for (int q = 0; q < 4; q++)
+        {
+            Transform group = Group(map, $"Quadrant_Q{q + 1}");
+            for (int z = 0; z < ShedZones.Length; z++)
+            {
+                (Vector2 deg, Vector2 radius) = ShedZones[z];
+                var candidates = new List<Vector3>();
+                for (float d = deg.x; d <= deg.y + 0.01f; d += 3f)
+                    for (float r = radius.x; r <= radius.y + 0.01f; r += 4f)
+                    {
+                        Vector3 p = Polar(r, QuadDeg[q] + d);
+                        if (r > MapRadius - 6f - ShedReach) continue;                                                           // 울타리 안
+                        if (Mathf.Abs(p.x) < RoadRow + ShedReach + 2f || Mathf.Abs(p.z) < RoadRow + ShedReach + 2f) continue;   // 큰길·가로등 줄
+                        if (Mathf.Abs(r - RingRadius) < RingHalf + ShedReach + 1f) continue;                                   // 둥근 산책길
+                        candidates.Add(p);
+                    }
+                Vector3 centre = Polar((radius.x + radius.y) / 2f, QuadDeg[q] + (deg.x + deg.y) / 2f);
+                var chosen = new List<Vector3>();
+                while (chosen.Count < ShedsPerZone)
+                {
+                    float best = float.NegativeInfinity;
+                    Vector3 pick = default;
+                    foreach (Vector3 p in candidates)
+                    {
+                        if (!IsFree(p, ShedReach + 1f)) continue;
+                        float score = chosen.Count == 0 ? -Vector3.Distance(p, centre) : chosen.Min(c => Vector3.Distance(p, c));
+                        if (score > best) { best = score; pick = p; }
+                    }
+                    if (float.IsNegativeInfinity(best)) break;
+                    GameObject shed = Spawn(ChocolateFactoryAssets.ShedName, group, pick, FaceCenter(pick) * Quaternion.Euler(0f, 90f, 0f));
+                    Take(pick, ShedReach);
+                    chosen.Add(pick);
+                    if (shed == null) continue;
+                    ownFloors.Add((shed.transform, Rect.MinMaxRect(-4.3f, -4.3f, 4.3f, 4.3f)));
+                    placed.MonsterSeeds.Add(pick + Vector3.up * 0.1f);
+                    n++;
+                }
+                if (chosen.Count < ShedsPerZone) Debug.LogWarning($"[ChocolateFactoryMap] Q{q + 1} zone {(char)('A' + z)}: only {chosen.Count} sheds fit");
+            }
+        }
+        return n;
     }
 
     // 일반 건물 4: 사분면 가장자리의 큰 볼거리(문으로 드나들고 안에 숨을 수도 있다). 정문이 맵 가운데를 본다.

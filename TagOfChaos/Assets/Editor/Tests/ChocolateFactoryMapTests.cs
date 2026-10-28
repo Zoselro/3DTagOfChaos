@@ -92,7 +92,8 @@ public class ChocolateFactoryMapTests
             Assert.NotNull(b.GetComponent<QuadrantBuilding>(), $"Q{q + 1} quadrant building");
             Transform quadrant = map.Find($"Quadrant_Q{q + 1}");
             int sheds = quadrant.Cast<Transform>().Count(t => PrefabUtility.GetCorrespondingObjectFromSource(t.gameObject)?.name == ChocolateFactoryAssets.ShedName);
-            Assert.AreEqual(4, sheds, $"Q{q + 1} hideable sheds");
+            // 가운데 쪽 4 + 재료 건물·일반 건물 옆 두 구역에 ShedsPerZone씩(2026-10-28)
+            Assert.AreEqual(ChocolateFactoryMapBuilder.Sheds.Length + 2 * ChocolateFactoryMapBuilder.ShedsPerZone, sheds, $"Q{q + 1} hideable sheds");
         }
         foreach ((string key, float deg) in ChocolateFactoryMapBuilder.Landmarks)
             Assert.NotNull(all.FirstOrDefault(t => t.name == "Landmark_" + key), key);
