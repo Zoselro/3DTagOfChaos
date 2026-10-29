@@ -38,12 +38,22 @@ public class PlayerSkinApplier : MonoBehaviourPunCallbacks
         if (changed.ContainsKey(NetKeys.CharacterAssignments)) ApplySkin();
     }
 
+    // 그 사람의 캐릭터 칸(판의 배정이 있으면 그것 — 겹치지 않음).
+    public static int CharacterIndexOf(Player owner)
+    {
+        if (owner == null) return 0;
+        int selected = RoomState.TryGetPlayerInt(owner, NetKeys.SkinIndex, out int v) ? v : CharacterAssignment.Unselected;
+        return CharacterAssignment.Current(owner.ActorNumber, selected);
+    }
+
     private void ApplySkin()
     {
         if (bodyRenderer == null || catalog == null || catalog.Count == 0 || pv.Owner == null) return;
 
-        int selected = RoomState.TryGetPlayerInt(pv.Owner, NetKeys.SkinIndex, out int v) ? v : CharacterAssignment.Unselected;
-        int index = CharacterAssignment.Current(pv.Owner.ActorNumber, selected); // 판의 배정이 있으면 그것(겹치지 않음)
+        int index = CharacterIndexOf(pv.Owner);
+        // 캐릭터 모델(§45 CH6): 모델이 있는 칸이면 몸을 통째로 바꾸고, 없는 칸(쿠키)이면 쿠키 몸 + 머티리얼.
+        CharacterModelSwap.Apply(transform, catalog.GetModel(index));
+        if (catalog.GetModel(index) != null) return;
         Material skin = catalog.GetMaterial(index);
         if (skin == null) return;
 

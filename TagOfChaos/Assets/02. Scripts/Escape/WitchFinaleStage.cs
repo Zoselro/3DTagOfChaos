@@ -258,8 +258,14 @@ public class WitchFinaleStage : MonoBehaviour
             stand.DebrisColor = life != null ? life.CrumbColor : new Color(0.55f, 0.30f, 0.12f);
             stand.BreakVfx = life != null ? life.BreakVfxPrefab : null;
             stand.CrumbCount = life != null ? life.CrumbCount : 12;
-            var paint = src.GetComponent<PlayerPaintCanvas>();
-            if (paint != null) paint.SampleSurfaceColors(colors => stand.CrumbColors = colors);
+            var srcView = src.GetComponent<Photon.Pun.PhotonView>();
+            Color[] character = CookieLifeStatePresenter.CharacterCrumbColors(srcView != null ? srcView.Owner : null);
+            if (character != null) { stand.CrumbColors = character; stand.DebrisColor = character[0]; } // 캐릭터 가루 색(§45.10)
+            else
+            {
+                var paint = src.GetComponent<PlayerPaintCanvas>();
+                if (paint != null) paint.SampleSurfaceColors(colors => stand.CrumbColors = colors);
+            }
         }
 
         StripToVisuals(copy);

@@ -1,30 +1,50 @@
 using System;
 using UnityEngine;
 
-// 도구가 날아가는 모습(모든 화면): 물풍선은 던진 사람 손에서 떨어질 곳까지 포물선으로 날아가고, 떨어진 순간 명중 처리
-// (물보라·기절·색칠)를 한다. 스턴건은 쏜 사람에게서 맞은 곳까지 잠깐 빛줄기를 그린다.
+// 도구가 날아가는 모습(모든 화면). 물풍선(Request1009Plan.md §45.7 WB1·WB5): 던지는 사람 손에 머물다가 손을 떠나는 순간(맞는 시각 − 비행 시간)부터
+// 위로 솟는 포물선(꼭대기 = 시작·끝 중 높은 쪽 + max(1.5 m, 거리 × 0.35))으로 날아가, 방장이 정한 맞는 시각(hitAt)에 대상 몸 가운데에 닿는다.
+// 대상이 움직이면 끝점이 따라간다(유도). 스턴건은 쏜 사람에게서 맞은 곳까지 잠깐 빛줄기를 그린다.
 public class ToolShotFx : MonoBehaviour
 {
-    private const float BalloonSpeed = 16f;     // m/s (10 m ≈ 0.6초)
-    private const float BalloonArc = 0.35f;     // 거리 대비 포물선 높이
     private const float BeamSeconds = 0.18f;
+    private const float SmallBalloon = 0.42f; // 날아가는 물풍선 지름
 
     private Vector3 from, to;
     private float duration, age;
     private Action onArrive;
     private LineRenderer beam;
+    private Transform thrower, target;
+    private float releaseAt, hitTime;
+    private bool released;
 
-    public static void ThrowBalloon(ItemSO item, Vector3 from, Vector3 to, Action onArrive)
+    // 손 위치(오른손 뼈, 없으면 몸 앞).
+    public static Vector3 HandPosition(Transform body)
+    {
+        var animator = body.GetComponent<Animator>();
+        Transform hand = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.RightHand) : null;
+        return hand != null ? hand.position : body.position + Vector3.up * 1.2f + body.forward * 0.4f;
+    }
+
+    public static void ThrowBalloon(Transform thrower, Transform target, Vector3 point, double hitAt, Action onArrive)
     {
         var go = new GameObject("WaterBalloonShot");
         var fx = go.AddComponent<ToolShotFx>();
-        fx.from = from;
-        fx.to = to;
-        fx.duration = Mathf.Clamp(Vector3.Distance(from, to) / BalloonSpeed, 0.15f, 1f);
+        fx.thrower = thrower;
+        fx.target = target;
+        fx.to = point + Vector3.up;
         fx.onArrive = onArrive;
-        GameObject model = EscapeVisuals.CreateItemModel(item, go.transform);
-        if (model != null) model.transform.localPosition = Vector3.zero;
-        go.transform.position = from;
+        fx.hitTime = Time.time + (float)(hitAt - Photon.Pun.PhotonNetwork.Time);
+        Vector3 start = thrower != null ? HandPosition(thrower) : point;
+        fx.releaseAt = fx.hitTime - ToolAim.FlightSeconds(start, fx.TargetPoint());
+        fx.from = start;
+        WaterBubbleView.CreateSmall(go.transform, SmallBalloon);
+        go.transform.position = start;
+    }
+
+    private Vector3 TargetPoint()
+    {
+        if (target == null) return to;
+        return WaterBubbleView.BodyBounds(target).center;
     }
 
     public static void Beam(Vector3 from, Vector3 to, Color color)
@@ -43,22 +63,29 @@ public class ToolShotFx : MonoBehaviour
 
     private void Update()
     {
-        age += Time.deltaTime;
-        float t = Mathf.Clamp01(age / duration);
         if (beam != null)
         {
+            age += Time.deltaTime;
+            float t = Mathf.Clamp01(age / duration);
             Color c = beam.startColor;
             c.a = 1f - t;
             beam.startColor = beam.endColor = c;
+            if (t >= 1f) Destroy(gameObject);
+            return;
         }
-        else
+        if (Time.time < releaseAt)
         {
-            Vector3 p = Vector3.Lerp(from, to, t);
-            p.y += Mathf.Sin(t * Mathf.PI) * Vector3.Distance(from, to) * BalloonArc;
-            transform.position = p;
-            transform.Rotate(0f, 0f, 540f * Time.deltaTime, Space.Self);
+            if (thrower != null) from = HandPosition(thrower); // 손을 떠나기 전에는 손에 붙어 있다
+            transform.position = from;
+            return;
         }
-        if (t < 1f) return;
+        if (!released) released = true;
+        Vector3 end = TargetPoint();
+        float flight = Mathf.Max(0.05f, hitTime - releaseAt);
+        float k = Mathf.Clamp01((Time.time - releaseAt) / flight);
+        transform.position = ToolAim.ArcPoint(from, end, ToolAim.ApexHeight(from, end), k);
+        transform.Rotate(0f, 0f, 360f * Time.deltaTime, Space.Self);
+        if (k < 1f) return;
         onArrive?.Invoke();
         onArrive = null;
         Destroy(gameObject);

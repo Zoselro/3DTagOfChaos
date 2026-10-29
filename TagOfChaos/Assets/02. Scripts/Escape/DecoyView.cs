@@ -1,6 +1,8 @@
 using UnityEngine;
 
-// AI 하나의 모습: 늘 제자리에 서 있다(걷기는 없앴다, §26 H12). 녹음기가 붙으면 주인의 녹음 목소리를 5~20초 간격으로 3D로 낸다(DecoyVoice).
+// AI 하나의 모습: 방장이 정한 경로(DecoyRoute, Room Prop "DR_<id>")를 모든 화면이 같은 시각으로 따라간다(Request1009Plan.md §44.5).
+// 걷기·달리기·서기·춤을 진짜 쿠키와 같은 Animator 상태로 틀고, 달릴 때 진짜 쿠키와 같은 발소리를 낸다(괴물이 소리로 구별하지 못하게).
+// 높이는 경로 점 높이 + 0.2초마다 한 번 아래로 쏜 바닥 높이 차이(부드럽게). 녹음기가 붙으면 주인의 녹음 목소리를 5~20초 간격으로 3D로 낸다(DecoyVoice).
 // 괴물은 진짜 쿠키와 똑같이 조준(빨간 표시) + E로 잡는다(MonsterGrabKillTrigger) — 흰 E 안내는 뜨지 않는다(진짜와 구별되지 않게).
 // 잡히면 그 괴물의 GrabKill 동작(2.63초)에 맞춰 진짜 쿠키와 같은 순서로 Grab_Socket에 붙어 눌리고(소리) → 가루가 터지고(쿠키 가루 VFX·소리)
 // → 사라진다(CookieLifeStatePresenter와 같은 진행도·같은 VFX 프리팹). 방장이 잡는 시간 뒤 상태에서 지운다(§26 H6).
@@ -9,6 +11,11 @@ public class DecoyView : MonoBehaviour
     private const float VoiceCheckSeconds = 0.25f;
     private const float BodyCenterHeight = 0.95f;
     private const float RequestRetrySeconds = 1f;
+    private const float GroundCheckSeconds = 0.2f;
+    private const float GroundProbeUp = 1f, GroundProbeDown = 2.5f, MaxGroundOffset = 0.6f;
+    private const float TurnSpeed = 540f;
+    private const float StepInterval = 0.3f;   // CookieAudio.RunStepInterval과 같다
+    private const float StepAudibleDistance = 25f;
 
     private static CookieLifeStatePresenter cookieLook; // 진짜 쿠키 프리팹의 가루 설정(VFX·개수·색)
 
@@ -25,18 +32,34 @@ public class DecoyView : MonoBehaviour
     private float requestedAt = -10f;
     private Vector3 originalScale;
     private Color crumbColor = new Color(0.55f, 0.30f, 0.12f);
+    private Color[] crumbColors; // 캐릭터 가루 색(§45.10) — 있으면 이것만 쓴다
+    private PlayerAnimationDriver driver;
+    private float groundOffset;
+    private float targetGroundOffset;
+    private float nextGroundCheck;
+    private float nextStep;
+    private float yaw;
+    private bool yawSet;
 
     public int Id => id;
     // 괴물 조준에 잡히는지(아직 잡히지 않았고, 방금 잡기 요청을 보내지 않았다).
     public bool IsCatchable => !caught && EscapeManager.ActionsAllowed && Time.unscaledTime - requestedAt > RequestRetrySeconds;
 
-    public void Init(EscapeManager owner, int decoyId)
+    public void Init(EscapeManager owner, int decoyId, Color[] characterCrumbs = null)
     {
+        crumbColors = characterCrumbs != null && characterCrumbs.Length > 0 ? characterCrumbs : null;
         manager = owner;
         id = decoyId;
         originalScale = transform.localScale;
         foreach (SkinnedMeshRenderer r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             if (r.sharedMaterial != null && r.sharedMaterial.HasProperty("_Color")) { crumbColor = r.sharedMaterial.color; break; }
+        Animator animator = GetComponentInChildren<Animator>(true);
+        if (animator != null)
+        {
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms; // 화면 밖 AI는 뼈를 돌리지 않는다(50마리)
+            driver = new PlayerAnimationDriver(animator);
+        }
     }
 
     public void RequestCatch()
@@ -45,16 +68,20 @@ public class DecoyView : MonoBehaviour
         manager.Request(EscapeOp.DecoyCatch, id);
     }
 
+    // 상태가 바뀔 때: 경로가 없는 AI만 상태의 자리에 놓는다(경로가 있으면 Tick이 따라간다).
     public void Apply(EscapeState.Decoy d)
     {
-        if (caught) return;
+        if (caught || manager.Routes.TryGet(d.Id, out _)) return;
         transform.position = manager.SnapToGround(d.Pos + Vector3.up);
         transform.rotation = Quaternion.Euler(0f, d.Yaw, 0f);
+        yaw = d.Yaw;
+        yawSet = true;
     }
 
     public void Tick(EscapeState.Decoy d, double now)
     {
         if (d.Caught) { TickCaught(d); return; }
+        Follow(d, now);
         if (d.VoiceAt <= 0 || Time.unscaledTime < nextVoiceCheck) return;
         nextVoiceCheck = Time.unscaledTime + VoiceCheckSeconds;
         AudioClip clip = VoiceStore.ClipFor(d.Owner);
@@ -67,6 +94,54 @@ public class DecoyView : MonoBehaviour
         voice.clip = clip;
         voice.time = Mathf.Clamp(offset, 0f, clip.length - 0.01f);
         voice.Play();
+    }
+
+    // 경로를 따라간다: 위치·방향·애니메이션·발소리.
+    private void Follow(EscapeState.Decoy d, double now)
+    {
+        if (!manager.Routes.TryGet(d.Id, out DecoyRoute route)) { SetMotion(PlayerMoveState.Idle, 0); return; }
+        DecoyRoute.Pose pose = DecoyRoute.Sample(route, now, yawSet ? yaw : d.Yaw);
+
+        if (Time.time >= nextGroundCheck)
+        {
+            nextGroundCheck = Time.time + GroundCheckSeconds;
+            // 몸 캡슐 안에서 쏘므로 자기 몸에는 맞지 않는다.
+            if (Physics.Raycast(pose.Position + Vector3.up * GroundProbeUp, Vector3.down, out RaycastHit hit, GroundProbeUp + GroundProbeDown, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                && hit.collider.GetComponentInParent<DecoyView>() == null)
+                targetGroundOffset = Mathf.Clamp(hit.point.y - pose.Position.y, -MaxGroundOffset, MaxGroundOffset);
+        }
+        groundOffset = Mathf.MoveTowards(groundOffset, targetGroundOffset, Time.deltaTime * 2f);
+        transform.position = pose.Position + Vector3.up * groundOffset;
+
+        if (!yawSet) { yaw = pose.Yaw; yawSet = true; }
+        yaw = Mathf.MoveTowardsAngle(yaw, pose.Yaw, TurnSpeed * Time.deltaTime);
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+        if (pose.Moving)
+        {
+            bool run = route.Gait == DecoyGait.Run;
+            SetMotion(run ? PlayerMoveState.Run : PlayerMoveState.Walk, 0);
+            if (run && Time.time >= nextStep)
+            {
+                nextStep = Time.time + StepInterval;
+                if (NearListener(transform.position)) GameAudio.PlayAt(SoundId.CookieStep, transform.position);
+            }
+        }
+        else if (route.Gait == DecoyGait.Dance && now < route.StartAt + route.HoldUntil) SetMotion(PlayerMoveState.Dance, route.DanceId);
+        else SetMotion(PlayerMoveState.Idle, 0);
+    }
+
+    private void SetMotion(PlayerMoveState state, byte danceId)
+    {
+        if (driver == null) return;
+        if (state == PlayerMoveState.Dance) driver.PlayDance(danceId);
+        else driver.ChangeState(state);
+    }
+
+    private static bool NearListener(Vector3 p)
+    {
+        Camera cam = Camera.main;
+        return cam == null || (cam.transform.position - p).sqrMagnitude < StepAudibleDistance * StepAudibleDistance;
     }
 
     private void EnsureVoice()
@@ -136,7 +211,7 @@ public class DecoyView : MonoBehaviour
         var emit = new ParticleSystem.EmitParams();
         for (int i = 0; i < look.CrumbCount; i++)
         {
-            emit.startColor = i % 3 == 0 ? look.CrumbColor : crumbColor;
+            emit.startColor = crumbColors != null ? crumbColors[i % crumbColors.Length] : i % 3 == 0 ? look.CrumbColor : crumbColor;
             particles.Emit(emit, 1);
         }
     }

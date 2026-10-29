@@ -862,10 +862,15 @@ public sealed class EscapeAuthority
         int i = State.DecoyIndex(id);
         if (i < 0 || !RoomState.IsMonster(actor)) return false;
         EscapeState.Decoy d = State.Decoys[i];
-        if (d.Caught || !IsNear(actor, d.Pos, InteractReach)) return false;
+        double now = PhotonNetwork.Time;
+        // 움직이는 AI는 경로 위치로 잰다(모든 화면이 같은 경로로 그린다, Request1009Plan.md §44.6).
+        DecoyRoute.Pose pose = manager.Routes.PoseOf(d, now);
+        if (d.Caught || !IsNear(actor, pose.Position, InteractReach)) return false;
         // 바로 지우지 않고 잡는 동작(GrabKill) 동안 괴물 손에 들려 있게 한다 — 끝나면 Tick이 지운다(§26 R10)
+        d.Pos = pose.Position; // 마지막으로 확정한 자리(방장이 바뀌어도 여기서 시작)
+        d.Yaw = pose.Yaw;
         d.CaughtBy = actor;
-        d.CaughtAt = PhotonNetwork.Time;
+        d.CaughtAt = now;
         State.Decoys[i] = d;
         return true;
     }
@@ -906,7 +911,11 @@ public sealed class EscapeAuthority
         if (it.Charges <= 0) it.Loc = ItemLocation.Gone;
         State.Items[item] = it;
 
-        var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B };
+        // 물풍선: 맞는 시각(PhotonNetwork.Time)을 방장이 정해 모두가 같은 순간에 가둔다 — 손을 떠나는 0.35초 + 거리로 정한 비행 시간(§45.7).
+        double hitAt = PhotonNetwork.Time;
+        if (IsBalloon(def.Tool.Kind) && lastPositions.TryGetValue(r.Sender, out Vector3 thrower))
+            hitAt += PlayerActionPose.ThrowRelease + ToolAim.FlightSeconds(thrower + Vector3.up * 1.3f, r.Pos + Vector3.up);
+        var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B, hitAt };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
         return true;
     }
@@ -941,10 +950,10 @@ public sealed class EscapeAuthority
         if (targets == null || targets.Length == 0) return new int[0];
         if (!lastPositions.TryGetValue(sender, out Vector3 from)) return targets; // 위치를 아직 모르면 막지 않는다(입장 직후)
 
-        bool area = tool.Kind == ToolKind.WaterBalloon || tool.Kind == ToolKind.JailBalloon;
+        bool area = IsBalloon(tool.Kind);
         if (area && Flat(point - from) > tool.Range + ToolReachSlack) return new int[0];
 
-        int max = tool.Kind == ToolKind.JailBalloon ? 1 : targets.Length; // 감옥 풍선은 한 명만 가둔다
+        int max = area || tool.Kind == ToolKind.Hammer ? 1 : targets.Length; // 물풍선·뿅망치는 한 명(§45.5·§45.7)
         var kept = new List<int>(targets.Length);
         foreach (int viewId in targets)
         {
@@ -962,6 +971,8 @@ public sealed class EscapeAuthority
     }
 
     private const float ToolReachSlack = 3f;
+
+    private static bool IsBalloon(ToolKind kind) => kind == ToolKind.WaterBalloon || kind == ToolKind.JailBalloon;
 
     private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 

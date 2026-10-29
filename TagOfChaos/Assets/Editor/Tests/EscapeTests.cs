@@ -33,7 +33,7 @@ public class EscapeTests
         Assert.AreEqual(2, s.MinCookies);
         Assert.AreEqual(15f, s.PrepareSeconds, 1e-4f);
         Assert.NotNull(s.CharacterCatalog, "characterCatalog");
-        Assert.AreEqual(4, s.CharacterCatalog.Count, "four characters");
+        Assert.AreEqual(5, s.CharacterCatalog.Count, "cookie + four characters (Request1009Plan.md §45)");
         foreach (string scene in s.GameMapScenes) Assert.IsTrue(SceneNames.IsMapScene(scene), scene); // Test_ 맵 + 실제 모델 맵(§28)
     }
 
@@ -330,7 +330,7 @@ public class EscapeTests
         Assert.NotNull(c.DismantleTool, "dismantle");
         Assert.NotNull(c.HeliHat, "heli hat");
         Assert.NotNull(c.NoiseBomb, "noise bomb");
-        Assert.AreEqual(4, c.SpyRandomTools.Count, "stun gun, hammer, color balloon, jail balloon");
+        Assert.AreEqual(3, c.SpyRandomTools.Count, "stun gun, hammer, water balloon (jail balloon merged, §45.8 Q1)");
         Assert.AreEqual(3, c.CookieItems.Count, "skates, pumpkin, recorder");
         CollectionAssert.AreEqual(new[] { 5, 3, 5 }, c.CookieItemWeights.ToArray());
         foreach (ItemSO item in new[] { c.RepairKit, c.DismantleTool, c.HeliHat, c.NoiseBomb }.Concat(c.SpyRandomTools).Concat(c.CookieItems))

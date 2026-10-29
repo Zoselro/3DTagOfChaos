@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   kind: 1
   charges: 3
-  range: 8
+  range: 20
   hitRadius: 0.35
   stunSecondsCookie: 2
   stunSecondsMonster: 1.5

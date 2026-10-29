@@ -17,9 +17,9 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: e4e2e0411a46d2247bb2276ed11f662f, type: 3}
   modelPrefab: {fileID: 919132149155446097, guid: f4209d1f112ba674789f9bb2361b19ac, type: 3}
   tint: {r: 1, g: 0.4, b: 0.6, a: 1}
-  holdType: 0
+  holdType: 1
   category: 1
   tool: {fileID: 11400000, guid: d3df0b86ea74cb641949ab9311373b23, type: 2}
-  fitsAnyRocketSlot: 0
   holdOffset: {x: 0, y: 0, z: 0}
   holdEuler: {x: 0, y: 0, z: 0}
+  heldScale: 3

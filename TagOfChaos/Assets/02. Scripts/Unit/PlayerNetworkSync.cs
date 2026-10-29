@@ -11,11 +11,19 @@ public class PlayerNetworkSync : NetworkTransformSync<PlayerMoveState>
     // 이 쿠키를 들고 있는 쿠키의 ViewID(안 들렸으면 -1) — 들린 사람이 보낸다. 모든 화면이 각자 그 쿠키의 손 위에 놓는다.
     public int RemoteCarrierViewId { get; private set; } = -1;
 
-    public void Write(PhotonStream stream, Transform transform, PlayerMoveState state, bool isCarrying, int carrierViewId)
+    // 춤 번호(DanceCatalogSO) — 상태가 Dance일 때만 의미가 있다(Request1009Plan.md §44.9).
+    public byte RemoteDanceId { get; private set; }
+
+    // 스턴건 조준 중(우클릭 유지) — 다른 화면에서도 조준 자세가 보이게(Request1009Plan.md §45.6).
+    public bool RemoteAiming { get; private set; }
+
+    public void Write(PhotonStream stream, Transform transform, PlayerMoveState state, bool isCarrying, int carrierViewId, byte danceId, bool aiming)
     {
         Write(stream, transform, state);
         stream.SendNext(isCarrying);
         stream.SendNext(carrierViewId);
+        stream.SendNext(danceId);
+        stream.SendNext(aiming);
     }
 
     public override void Read(PhotonStream stream, Transform transform)
@@ -23,5 +31,7 @@ public class PlayerNetworkSync : NetworkTransformSync<PlayerMoveState>
         base.Read(stream, transform);
         RemoteIsCarrying = (bool)stream.ReceiveNext();
         RemoteCarrierViewId = (int)stream.ReceiveNext();
+        RemoteDanceId = (byte)stream.ReceiveNext();
+        RemoteAiming = (bool)stream.ReceiveNext();
     }
 }

@@ -25,6 +25,7 @@ public enum KeyAction
     SpectateNext,
     Chat,
     PushToTalk,
+    Dance,      // 춤(Request1009Plan.md §44.9) — 끝에 붙여 저장된 키 번호가 밀리지 않게 한다
 }
 
 // 같은 때 쓰이는 조작끼리의 묶음 — 겹침(빨간 경고)은 같은 묶음 안에서만 본다(쿠키 달리기와 괴물 돌진은 같은 Shift여도 된다).
@@ -141,6 +142,7 @@ public static class KeyBindings
             case KeyAction.SpectateNext: return b.SpectateNextKey;
             case KeyAction.Chat: return b.ChatSubmitKey;
             case KeyAction.PushToTalk: return b.PushToTalkKey;
+            case KeyAction.Dance: return b.DanceKey;
             default: return KeyCode.None;
         }
     }

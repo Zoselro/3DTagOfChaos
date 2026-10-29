@@ -42,6 +42,8 @@ public class RoundStateResetter : MonoBehaviourPunCallbacks
         if (!PhotonNetwork.IsMasterClient || !HasFinishedRoundTrace()) return;
 
         var props = BuildNullProps(PhotonNetwork.CurrentRoom.CustomProperties, NetKeys.RoundRoomKeys);
+        foreach (System.Collections.DictionaryEntry e in PhotonNetwork.CurrentRoom.CustomProperties)
+            if (e.Key is string key && NetKeys.IsRoundPrefixedKey(key, NetKeys.Target.Room)) props[key] = null; // AI 경로 "DR_<id>"(§44.6)
         if (props.Count > 0) AuthorityProps.SetRoom(props);
         foreach (Player p in PhotonNetwork.CurrentRoom.Players.Values)
         {

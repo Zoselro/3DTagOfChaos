@@ -121,6 +121,17 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
         RequestState(target);
     }
 
+    // 방장 전용: AI가 지나가려고 문을 연다(Request1009Plan.md §44.4). 사람이 여는 것과 같은 DoorStates 경로를 쓴다.
+    public void OpenByAuthority(Vector3 from)
+    {
+        if (state != DoorState.Closed || swingEndTime >= 0f) return;
+        DoorState target = hasOutwardParameter && IsInside(from) ? DoorState.OpenOutward : DoorState.OpenInward;
+        if (!RoomState.IsInRoom()) { ApplyState(target, instant: false); return; }
+        if (!PhotonNetwork.IsMasterClient || Time.time < requestExpireTime) return;
+        requestExpireTime = Time.time + RequestTimeout;
+        WriteState(DoorId, target);
+    }
+
     private bool IsInside(Vector3 worldPosition) => Vector3.Dot(worldPosition - leafCenter, inwardNormal) > 0f;
 
     // ---------------- network ----------------

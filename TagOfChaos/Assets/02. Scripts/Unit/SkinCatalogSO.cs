@@ -13,6 +13,9 @@ public class SkinCatalogSO : ScriptableObject
         public Material material; // 모델이 오기 전 임시 겉모습(지금 쿠키 몸에 입히는 색)
         [Tooltip("캐릭터 모델(Request1009Plan.md §25.6 — 사용자가 만들면 넣는다). 비어 있으면 지금 쿠키 몸 + material.")]
         public GameObject modelPrefab;
+        // 잡혀 부서질 때 가루 색 3~4개(Request1009Plan.md §45.10). 모델 텍스처에서 뽑는다(Tools/Characters/Build Characters).
+        [Tooltip("Crumb colors when this character is crushed (filled from the model texture).")]
+        public Color[] crumbColors;
     }
 
     [SerializeField] private SkinEntry[] skins = new SkinEntry[0];
@@ -23,4 +26,11 @@ public class SkinCatalogSO : ScriptableObject
     public int ClampIndex(int index) => Count == 0 ? 0 : Mathf.Clamp(index, 0, Count - 1);
     public Material GetMaterial(int index) => Count == 0 ? null : skins[ClampIndex(index)].material;
     public string GetLabel(int index) => Count == 0 ? string.Empty : skins[ClampIndex(index)].label;
+    public GameObject GetModel(int index) => Count == 0 ? null : skins[ClampIndex(index)].modelPrefab;
+    public Color[] GetCrumbColors(int index) => Count == 0 ? null : skins[ClampIndex(index)].crumbColors;
+
+#if UNITY_EDITOR
+    public void EditorSet(SkinEntry[] entries) => skins = entries;
+    public SkinEntry EditorGet(int index) => skins[index];
+#endif
 }

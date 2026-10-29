@@ -874,7 +874,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7cf08cf8b184edf408baa57b4db51a7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 20
+  speed: 6
   jumpPower: 6
   groundLayer:
     serializedVersion: 2
@@ -899,18 +899,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pv: {fileID: 8262779534870907500}
-  paintableCollider: {fileID: 3870170583646678642}
   bodyRenderer: {fileID: 9080992935516163813}
   paintedSkinShader: {fileID: 4800000, guid: ecba02a4c8c1b0c46bd48afb54543f2d, type: 3}
   palette: {fileID: 11400000, guid: 9d4f892f8a785f04ea2292914bc401eb, type: 2}
-  brushStampMaterial: {fileID: 2100000, guid: f91f4b7a219d36a4f9fc214c8b0d7854, type: 2}
   finalizeStampMaterial: {fileID: 2100000, guid: 7698b9f3930b22743a2bb62c5f9d291a, type: 2}
-  eraseStampMaterial: {fileID: 2100000, guid: 018f297987fecfc4fa69d5e255323110, type: 2}
   canvasSize: 512
-  minStrokesToRegister: 15
-  stampSpacingPixels: 6
-  maxStampsPerFrame: 32
-  maxStampsPerEvent: 64
   surfaceSampleUVs:
   - {x: 0.03517931, y: 0.5757786}
   - {x: 0.085413046, y: 0.7225375}

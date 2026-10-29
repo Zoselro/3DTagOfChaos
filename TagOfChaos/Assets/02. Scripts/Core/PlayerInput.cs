@@ -107,6 +107,7 @@ public static class PlayerInput
 #endif
     public static bool TentacleDashPressed => !IsGameplaySuppressed && Down(KeyAction.MonsterDash);
     // 인벤토리(EscapePlan.md §1.9): G키로 떨어뜨리기, 숫자키 1~4로 칸 고르기, 마우스로 도구 쓰기.
+    public static bool DancePressed => !IsGameplaySuppressed && Down(KeyAction.Dance); // 춤(§44.9)
     public static bool DropPressed => !IsGameplaySuppressed && Down(KeyAction.Drop);
     public static bool UseToolPressed => !IsGameplaySuppressed && Down(KeyAction.UseTool);
 

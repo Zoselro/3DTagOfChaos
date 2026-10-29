@@ -134,11 +134,30 @@ public static class NetKeys
     public static bool IsMasterKey(string key, Target target) => TryGetScope(key, target, out Scope s) && s.Writer == Writer.Master;
     public static bool IsSelfKey(string key) => TryGetScope(key, Target.Player, out Scope s) && s.Writer == Writer.Self;
 
+    // 접두어 키: 뒤에 번호가 붙어 여러 개가 생기는 키 무리(AI마다 경로 하나 "DR_<id>", Request1009Plan.md §44.6).
+    // 상수가 아니라 표(Scopes)에 키 하나로 적을 수 없으므로 따로 둔다 — 쓰기 권한·판 초기화는 접두어로 알아본다.
+    public static readonly string DecoyRoutePrefix = "DR_";
+    public static readonly Scope[] PrefixScopes = { new Scope(DecoyRoutePrefix, Target.Room, Lifetime.Round) };
+
+    // 이 키가 판이 끝나면 지우는 접두어 키인지(RoundStateResetter).
+    public static bool IsRoundPrefixedKey(string key, Target target)
+    {
+        foreach (Scope s in PrefixScopes)
+            if (s.Target == target && s.Lifetime == Lifetime.Round && key != null && key.StartsWith(s.Key)) return true;
+        return false;
+    }
+
     private static bool TryGetScope(string key, Target target, out Scope scope)
     {
         foreach (Scope s in Scopes)
         {
             if (s.Key != key || s.Target != target) continue;
+            scope = s;
+            return true;
+        }
+        foreach (Scope s in PrefixScopes)
+        {
+            if (s.Target != target || key == null || !key.StartsWith(s.Key)) continue;
             scope = s;
             return true;
         }

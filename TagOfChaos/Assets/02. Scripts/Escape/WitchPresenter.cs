@@ -94,6 +94,7 @@ public class WitchPresenter : MonoBehaviour
         renderers = model.GetComponentsInChildren<Renderer>(true);
         block = new MaterialPropertyBlock();
         animator = model.GetComponentInChildren<Animator>(true);
+        if (animator != null && animator.GetComponent<WitchArmsDown>() == null) animator.gameObject.AddComponent<WitchArmsDown>(); // T-Pose 팔을 내린 대기 자세로(2026-10-29)
         head = FindDeep(model, "Head");
         hat = FindDeep(model, "Hat1");
         thighL = FindDeep(model, "Thigh.L");

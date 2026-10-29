@@ -13,6 +13,8 @@ public class CarriedBodyPresenter : MonoBehaviour
 
     private HideOrSeekPlayer self;
     private Transform hips;
+    private Animator animatorRef;
+    private Avatar boneAvatar;
     private CapsuleCollider rootCapsule;
     private LayerMask normalExclude;
     private LayerMask carriedExclude;
@@ -22,6 +24,8 @@ public class CarriedBodyPresenter : MonoBehaviour
     public void Init(HideOrSeekPlayer owner, Animator animator)
     {
         self = owner;
+        animatorRef = animator;
+        boneAvatar = animator != null ? animator.avatar : null;
         hips = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Hips) : null;
         rootCapsule = GetComponent<CapsuleCollider>();
         normalExclude = rootCapsule != null ? rootCapsule.excludeLayers : (LayerMask)0;
@@ -48,6 +52,11 @@ public class CarriedBodyPresenter : MonoBehaviour
         Transform carrier = carrierView.transform;
         Vector3 hands = CarryPose.HandsCenter(carrier, carrierView.GetComponent<Animator>());
         rotation = CarryPose.CarriedRotation(carrier.rotation);
+        if (animatorRef != null && animatorRef.avatar != boneAvatar) // 캐릭터 모델이 바뀌면 엉덩이 뼈를 다시 찾는다(§45 CH6)
+        {
+            boneAvatar = animatorRef.avatar;
+            hips = animatorRef.isHuman ? animatorRef.GetBoneTransform(HumanBodyBones.Hips) : null;
+        }
         Vector3 hipsLocal = hips != null
             ? Quaternion.Inverse(transform.rotation) * (hips.position - transform.position)
             : new Vector3(0f, 0.8f, 0f);

@@ -21,9 +21,10 @@ public static class EscapeAssetsBuilder
         EnsureFolder("Assets/Resources", "Escape");
 
         // 도구(D23 — 첫 기본값, 플레이해 보고 조정)
-        ToolSO hammerTool = Tool("Tool_Hammer", ToolKind.Hammer, 3, 2f, 1.2f, 1.5f, 1f, 3f, false);
-        ToolSO stunTool = Tool("Tool_StunGun", ToolKind.StunGun, 3, 8f, 0.35f, 2f, 1.5f, 3f, false);
-        ToolSO balloonTool = Tool("Tool_WaterBalloon", ToolKind.WaterBalloon, 3, 12f, 1.5f, 1f, 0.8f, 3f, true);
+        // §45(2026-10-29): 뿅망치 5 m, 스턴건 20 m, 물풍선 10 m·5초 갇힘·색칠 없음
+        ToolSO hammerTool = Tool("Tool_Hammer", ToolKind.Hammer, 3, 5f, 1.2f, 3f, 3f, 3f, false); // 기절 3초(2026-10-29 사용자 지시)
+        ToolSO stunTool = Tool("Tool_StunGun", ToolKind.StunGun, 3, 20f, 0.35f, 2f, 1.5f, 3f, false);
+        ToolSO balloonTool = Tool("Tool_WaterBalloon", ToolKind.WaterBalloon, 3, 10f, 1.5f, 5f, 5f, 3f, false);
 
         var items = new List<ItemSO>();
         ItemSO Mat(string id, string name, Color c)
@@ -62,6 +63,8 @@ public static class EscapeAssetsBuilder
             Mat("CandyCell_Green", "Candy Cell", new Color(0.3f, 0.95f, 0.3f)),
         };
         ItemSO hammer = ToolItem("Hammer", "Toy Hammer", new Color(1f, 0.4f, 0.6f), hammerTool);
+        hammer.EditorSetup("Hammer", hammer.DisplayName, new Color(1f, 0.4f, 0.6f), HoldType.TwoHanded, ItemCategory.Tool, hammerTool); // 두 손으로 드는 거대한 망치(§45.5)
+        hammer.EditorSetHeldScale(3f);
         ItemSO stunGun = ToolItem("StunGun", "Stun Gun", new Color(0.3f, 0.7f, 1f), stunTool);
         ItemSO balloon = ToolItem("WaterBalloon", "Water Balloon", new Color(0.3f, 0.85f, 1f), balloonTool);
 
@@ -104,7 +107,7 @@ public static class EscapeAssetsBuilder
 
         var catalog = LoadOrCreate<EscapeCatalogSO>(ResourcesRoot + "/EscapeCatalog.asset");
         catalog.EditorSetup(items.ToArray(), recipes.ToArray(), hammer);
-        catalog.EditorSetupReform(repairKit, dismantle, new[] { stunGun, hammer, balloon, jail }, new[] { skates, pumpkin, recorder }, new[] { 5, 3, 5 }, heliHat, noiseBomb);
+        catalog.EditorSetupReform(repairKit, dismantle, new[] { stunGun, hammer, balloon } /* 감옥 풍선은 물풍선에 합쳤다(§45.8 Q1) */, new[] { skates, pumpkin, recorder }, new[] { 5, 3, 5 }, heliHat, noiseBomb);
         BuildXRayMaterial();
         EditorUtility.SetDirty(catalog);
         LoadOrCreate<EscapeTextsSO>(ResourcesRoot + "/EscapeTexts.asset");

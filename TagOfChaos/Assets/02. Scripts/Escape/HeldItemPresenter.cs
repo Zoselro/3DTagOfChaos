@@ -25,6 +25,16 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     private Vector3 holdOffset;   // 몸 방향 기준 추가 위치(ItemSO.HoldOffset)
     private Quaternion holdRotation = Quaternion.identity;
 
+    // 캐릭터 모델이 바뀌면(아바타 교체, §45 CH6) 손 뼈를 다시 찾는다.
+    private Avatar boneAvatar;
+
+    private void RefreshBones()
+    {
+        if (animator == null || animator.avatar == boneAvatar) return;
+        boneAvatar = animator.avatar;
+        rightHand = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.RightHand) : null;
+    }
+
     public void Init(EscapeManager escape, PhotonView ownerView)
     {
         manager = escape;
@@ -76,7 +86,16 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         if (def == null) return;
 
         holdType = def.HoldType;
-        model = EscapeVisuals.CreateItemModel(def, socket);
+        isHammer = def.IsTool && def.Tool.Kind == ToolKind.Hammer;
+        bool balloon = def.IsTool && (def.Tool.Kind == ToolKind.WaterBalloon || def.Tool.Kind == ToolKind.JailBalloon);
+        model = balloon ? WaterBubbleView.CreateSmall(socket, HeldBalloonSize) : EscapeVisuals.CreateItemModel(def, socket); // 물풍선은 갇힘 물방울과 같은 모양(§45.7 WB5)
+        if (def.HeldScale != 1f) model.transform.localScale *= def.HeldScale; // 뿅망치는 들고 있는 내내 3배(§45.5)
+        if (isHammer)
+        {
+            // 망치 머리(모델 X축으로 긴 원통)의 두드리는 면이 휘두르는 방향(소켓 앞, Z)을 보게 돌리고, 두 손이 자루 아래쪽을 잡게 올린다(§45.5 HM0).
+            model.transform.localRotation = Quaternion.Euler(0f, 90f, 0f) * model.transform.localRotation;
+            model.transform.localPosition += Vector3.up * HammerGripLift(model);
+        }
         bool oneHanded = holdType == HoldType.OneHanded;
         holdRotation = (oneHanded ? OneHandedTilt : Quaternion.identity) * Quaternion.Euler(def.HoldEuler);
         holdOffset = def.HoldOffset;
@@ -103,9 +122,37 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     {
         if (model == null) return;
         Quaternion body = transform.rotation;
+        RefreshBones();
         Vector3 anchor = holdType == HoldType.TwoHanded || rightHand == null
             ? CarryPose.HandsCenter(transform, animator)
             : rightHand.position;
-        socket.SetPositionAndRotation(anchor + body * holdOffset, body * holdRotation);
+        Quaternion rotation = body * holdRotation;
+        if (isHammer)
+        {
+            // 휘두르는 동안 자루가 가슴 → 두 손 방향을 따라 눕는다(머리 위로 들었다 앞 아래로 내리침). 들고만 있으면 세워 든다.
+            if (pose == null) pose = GetComponent<PlayerActionPose>();
+            Vector3 chest = transform.position + Vector3.up * HammerPivotHeight;
+            Vector3 dir = anchor - chest;
+            Vector3 up = pose != null && pose.IsSwinging && dir.sqrMagnitude > 0.01f ? dir.normalized : Vector3.up;
+            hammerUp = Vector3.Slerp(hammerUp, up, Mathf.Clamp01(Time.deltaTime * 30f));
+            rotation = Quaternion.LookRotation(Vector3.Cross(body * Vector3.right, hammerUp), hammerUp) * holdRotation;
+        }
+        socket.SetPositionAndRotation(anchor + body * holdOffset, rotation);
     }
+
+    // 자루 아래에서 1/4쯤을 쥔다: 모델 가운데를 (반 높이 − 높이의 1/4)만큼 위로.
+    private static float HammerGripLift(GameObject go)
+    {
+        var renderers = go.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return 0f;
+        Bounds b = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+        return b.extents.y * 0.5f - (b.center.y - go.transform.position.y);
+    }
+
+    private const float HeldBalloonSize = 0.38f;
+    private const float HammerPivotHeight = 0.75f;
+    private bool isHammer;
+    private PlayerActionPose pose;
+    private Vector3 hammerUp = Vector3.up;
 }

@@ -8585,6 +8585,7 @@ MonoBehaviour:
   - "\uAD00\uC804: \uB2E4\uC74C \uC0AC\uB78C"
   - "\uCC44\uD305"
   - "\uB9D0\uD558\uAE30(\uC74C\uC131 \uCC44\uD305)"
+  - "\uCDA4"
   listeningText: "\uD0A4\uB97C \uB204\uB974\uC138\uC694 (Esc: \uCDE8\uC18C)"
   normalKeyColor: {r: 0, g: 0, b: 0, a: 1}
   conflictKeyColor: {r: 0.9, g: 0.1, b: 0.1, a: 1}

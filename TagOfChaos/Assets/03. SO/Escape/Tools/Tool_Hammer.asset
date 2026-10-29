@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   kind: 0
   charges: 3
-  range: 2
+  range: 5
   hitRadius: 1.2
-  stunSecondsCookie: 1.5
-  stunSecondsMonster: 1
+  stunSecondsCookie: 3
+  stunSecondsMonster: 3
   cooldownSeconds: 3
   paintsTarget: 0
   effectSeconds: 5

@@ -13,15 +13,42 @@ MonoBehaviour:
   m_Name: SkinCatalog
   m_EditorClassIdentifier: 
   skins:
-  - label: "\uB9C8\uCE74\uB871 \uD560\uC544\uBC84\uC9C0"
+  - label: "\uCFE0\uD0A4"
     material: {fileID: 2100000, guid: 1268e9186102f9742b560cfaae4bf3f7, type: 2}
     modelPrefab: {fileID: 0}
-  - label: "\uCFE0\uD0A4\uC2E0\uC0AC"
-    material: {fileID: 2100000, guid: a8e0827426930614b81f7af2d630a730, type: 2}
-    modelPrefab: {fileID: 0}
+    crumbColors:
+    - {r: 0.55, g: 0.3, b: 0.12, a: 1}
+    - {r: 0.44000003, g: 0.24000001, b: 0.096, a: 0.8}
+    - {r: 0.72, g: 0.45, b: 0.2, a: 1}
+  - label: "\uB9C8\uCE74\uB871 \uD560\uC544\uBC84\uC9C0"
+    material: {fileID: 2100000, guid: 60d0ebf9e97a10c41a966fb0e17f4bb4, type: 2}
+    modelPrefab: {fileID: 6980580300047133641, guid: 5769a54e31650fc4abe65ef919ed491b, type: 3}
+    crumbColors:
+    - {r: 0.98468447, g: 0.55968356, b: 0.67392284, a: 1}
+    - {r: 0.98472065, g: 0.9635301, b: 0.949681, a: 1}
+    - {r: 0.56341076, g: 0.16605848, b: 0.31527314, a: 1}
+    - {r: 0.9290249, g: 0.4375308, b: 0.5816846, a: 1}
+  - label: "\uBABD\uBE14\uB791\uBC31\uC791"
+    material: {fileID: 2100000, guid: 16d98025bbf6c6a438ca8768fe4b2c8d, type: 2}
+    modelPrefab: {fileID: 3321632212124277523, guid: 855398379b77eee4bb4a9f822d17a0cc, type: 3}
+    crumbColors:
+    - {r: 0.19940788, g: 0.12753522, b: 0.11359076, a: 1}
+    - {r: 0.889411, g: 0.55711305, b: 0.3109704, a: 1}
+    - {r: 0.9886505, g: 0.960296, b: 0.94143265, a: 1}
+    - {r: 0.9947567, g: 0.7875573, b: 0.33881745, a: 1}
   - label: "\uC5D0\uC774\uB4DC\uACF5\uC8FC"
-    material: {fileID: 2100000, guid: b76e273c63878c04d9685c6e6948b4cf, type: 2}
-    modelPrefab: {fileID: 0}
-  - label: "\uB9C8\uB4E4\uB80C\uC789\uC5B4"
-    material: {fileID: 2100000, guid: c6d41834f407f4d459b091bca868614b, type: 2}
-    modelPrefab: {fileID: 0}
+    material: {fileID: 2100000, guid: 934725aa025398b41a83c67595887545, type: 2}
+    modelPrefab: {fileID: 8851807616903767691, guid: 215af49f6f4556f45a2c7fba1c1ea77d, type: 3}
+    crumbColors:
+    - {r: 0.9299185, g: 0.8411901, b: 0.8435092, a: 1}
+    - {r: 0.9730865, g: 0.57965225, b: 0.69123656, a: 1}
+    - {r: 0.9259619, g: 0.46755886, b: 0.5915232, a: 1}
+    - {r: 0.9539204, g: 0.79779166, b: 0.43972743, a: 1}
+  - label: "\uBD95\uC5B4\uBE75 \uC18C\uB144"
+    material: {fileID: 2100000, guid: 802ae297b2b9e5244b009c60c8e8553c, type: 2}
+    modelPrefab: {fileID: 1476522640307213131, guid: 857d3a044a2ab6649b6b92eb751a3f4f, type: 3}
+    crumbColors:
+    - {r: 0.9982253, g: 0.7598603, b: 0.42101526, a: 1}
+    - {r: 0.9838294, g: 0.92209256, b: 0.92230374, a: 1}
+    - {r: 0.2646697, g: 0.44758865, b: 0.7279516, a: 1}
+    - {r: 0.5716431, g: 0.8429815, b: 0.32343087, a: 1}

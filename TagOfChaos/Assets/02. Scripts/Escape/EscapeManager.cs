@@ -45,6 +45,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public WitchPresenter Witch => witch;
     public MapArea Area => area;
     public event System.Action StateChanged;
+    public DecoyRouteBook Routes { get; private set; } // AI 경로 "DR_<id>"(Request1009Plan.md §44)
 
     // "탈출했나"의 단일 기준은 방장이 쓴 EscapeState다(AuditFixPlan.md F-07·S-05). 다른 도메인은 이 두 함수만 부른다.
     public static bool HasLeftMap(int actor) => Instance != null && Instance.State != null && Instance.State.HasLeftMap(actor);
@@ -72,6 +73,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     // ---------------- scene geometry ----------------
 
     public int ExitCount => exits.Length;
+    public int BuildingCount => buildings.Length;
     public int RocketAnchorCount => rocketAnchors.Length;
     public int RainbowAnchorCount => rainbowAnchors.Length;
 
@@ -136,6 +138,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         for (int i = 0; i < exits.Length; i++) if (exits[i] != null) exits[i].Bind(this, i);
         if (rainbowChest != null) rainbowChest.Bind(this);
         authority = new EscapeAuthority(this, catalog, recipe);
+        Routes = new DecoyRouteBook(p => !IsOutsideMap(p, 2f) && !InMonsterRoom(p));
     }
 
     private void OnDestroy()
@@ -147,6 +150,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         EscapeHud.Create(this);
         gameObject.AddComponent<EscapeAudioPresenter>().Init(this); // 탈출 모드 소리(상태 차이, SoundPlan.md S5)
+        gameObject.AddComponent<DecoyBrain>().Init(this);           // AI 판단 — 방장만 돈다(§44)
         gameObject.AddComponent<DecoyPresenter>().Init(this);       // 맵의 AI(§25.5 L)
         gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 소음폭탄(§25.5 K)
         VoiceNet.SendLocalVoice();                                  // 대기실에서 녹음한 목소리를 방에 보낸다(§25.3 Q6)
@@ -205,6 +209,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private void ReadStateFromRoom()
     {
         if (!RoomState.IsInRoom()) return;
+        Routes.Read(PhotonNetwork.CurrentRoom.CustomProperties, full: true);
         if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(NetKeys.EscapeState, out object raw) && raw is byte[] data)
             ApplyLocalState(EscapeState.Decode(data));
     }
@@ -213,6 +218,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     public override void OnRoomPropertiesUpdate(Hashtable changed)
     {
+        // AI 경로: 방장은 자기가 쓴 값(DecoyBrain)이 원본이라 늦게 돌아온 옛 값으로 되돌아가지 않게 읽지 않는다(조작은 RoomPropertyGuard가 되돌린다).
+        if (!PhotonNetwork.IsMasterClient) Routes.Read(changed, full: false);
         if (changed.ContainsKey(NetKeys.EscapeState))
         {
             if (changed[NetKeys.EscapeState] is byte[] data) ApplyLocalState(EscapeState.Decode(data));

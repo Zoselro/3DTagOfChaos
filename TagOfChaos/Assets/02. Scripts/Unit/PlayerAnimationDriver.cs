@@ -45,6 +45,23 @@ public class PlayerAnimationDriver
         StateChanged?.Invoke(old, newState);
     }
 
+    // 춤(Request1009Plan.md §44.9): 춤 번호를 넣고 Dance 상태로. 다른 춤으로 바꿀 때는 같은 Dance 상태라도 다시 들어간다.
+    public byte DanceId { get; private set; }
+
+    public void PlayDance(byte danceId)
+    {
+        if (animator == null) return;
+        if (currentState == PlayerMoveState.Dance && danceId == DanceId) return;
+        DanceId = danceId;
+        animator.SetInteger(DanceCatalogSO.IdParameter, danceId);
+        if (currentState == PlayerMoveState.Dance)
+        {
+            animator.Play(DanceCatalogSO.StateName(danceId), 0, 0f);
+            return;
+        }
+        ChangeState(PlayerMoveState.Dance);
+    }
+
     // 새로운 점프/낙하 이벤트가 시작될 때 항상 Jump 애니메이션을 처음부터 재생한다.
     // ChangeState()는 "코드상 상태 라벨이 이미 같으면 무시"하는 가드가 있어, 연타 등으로 착지·재점프가
     // Idle/Walk를 거치지 못한 채 연속 처리되면 SetTrigger가 건너뛰어져 애니메이터가 얼려뒀던 지점부터

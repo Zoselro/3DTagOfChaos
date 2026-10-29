@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 84c6947a6848522478c7d4a90f76cc69, type: 3}
+  m_Name: DanceCatalog
+  m_EditorClassIdentifier: 
+  dances:
+  - id: 0
+    label: "\uC190 \uB4E4\uACE0 \uD754\uB4E4\uAE30"
+    clip: {fileID: -623603649343465320, guid: 44dc2f72d8977a7419cd96e27fa1c698, type: 3}
+    loop: 1
+    aiWeight: 1
+    playerUsable: 1
+    music: {fileID: 0}
+    icon: {fileID: 0}

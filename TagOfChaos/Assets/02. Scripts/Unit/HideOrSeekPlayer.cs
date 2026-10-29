@@ -21,6 +21,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     private float baseSpeed;
     private const float DodgeSpeedMultiplier = 2f;
     // 낼 수 있는 가장 빠른 속도(회피) — 방장이 위치 조작을 감지할 때 쓴다(S-15).
+    public float WalkSpeed => speed; // 걷기 속도(AI가 같은 속도로 걷는다, Request1009Plan.md §44.2)
     public float MaxMoveSpeed => Mathf.Max(speed, baseSpeed) * DodgeSpeedMultiplier * Mathf.Max(1f, SpeedBoost);
 
     // 인라인스케이트(Request1009Plan.md §25.5 I): 모든 화면이 같은 명중 알림으로 켠다 — 방장의 이동 검사(MaxMoveSpeed)도 이 배율을 안다.
@@ -100,6 +101,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
                                     || (pv != null && pv.Owner != null && EscapeManager.HasLeftMap(pv.Owner.ActorNumber))
                                     || IsFlying; // 헬리콥터 모자 비행은 HatFlight가 움직인다(§25.5 H)
     private StunReceiver stun; // 도구에 맞아 기절(EscapePlan.md §1.8)
+    private PlayerActionPose actionPose;
 
     // 외부에서 "이 인스턴스가 내 캐릭터인지" 판별할 수단 (GameManager의 채팅 이동잠금이 참조)
     public bool IsMine => pv != null && pv.IsMine;
@@ -287,6 +289,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         carryFollower = new PlayerCarryFollower(gameObject, rb, carriedBody);
         lifePresenter = GetComponent<CookieLifeStatePresenter>();
         stun = gameObject.AddComponent<StunReceiver>();
+        actionPose = gameObject.AddComponent<PlayerActionPose>(); // 조준·던지기·휘두르기·갇힘 동작(§45.4)
         stun.Init(2.3f);
         AttachEscapeMode();
 
@@ -387,6 +390,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         CheckMovementInput(); // 이동 입력 체크 + 회전 갱신(좌표 이동은 FixedUpdate의 Move()가 담당)
         CheckJumpInput(); // 점프 입력 체크(의도만 기록, 실제 적용은 FixedUpdate)
         CheckDodgeInput(); // 회피 입력 체크
+        CheckDanceInput(); // 춤(B키, §44.9)
         animationDriver.HandleJumpAnimationHold(); // 착지 전까지 Jump 애니메이션이 끝까지 재생되지 않도록 고정
     }
 
@@ -398,14 +402,17 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         // 들린 몸은 CarriedBodyPresenter가 이 화면의 그랩버 손 위에 놓으므로 보간하지 않는다(이중 지연 제거, Request1009Plan.md §16.3).
         if ((lifePresenter == null || !lifePresenter.IsBeingGrabKilled) && CurrentCarrierViewId < 0)
             networkSync.Interpolate(transform, Time.deltaTime);
-        animationDriver.ChangeState(networkSync.RemoteState);
+        if (networkSync.RemoteState == PlayerMoveState.Dance) animationDriver.PlayDance(networkSync.RemoteDanceId);
+        else animationDriver.ChangeState(networkSync.RemoteState);
         animationDriver.SetCarry(CarryReason.Cookie, networkSync.RemoteIsCarrying);
+        if (actionPose != null) actionPose.SetAiming(networkSync.RemoteAiming);
     }
 
     // 본인 캐릭터가 들림·기절·파괴·탑승으로 잠긴 동안. 회피 중이었으면 끝낸다 — 예전에는 회피 타이머가 멈춘 채 남아, 풀린 뒤
     // 옛 방향으로 2배 속도로 밀려났다(research.md R5-14). 기절이면 서 있는 자세로 돌린다(걷던 자세가 굳지 않게).
     private void OnLocalMovementLocked()
     {
+        dancing = false;
         if (isDodge) DodgeOut();
         jumpRequested = false;
         if (stun != null && stun.IsStunned && !IsBroken && !carryFollower.IsCarried)
@@ -470,6 +477,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
             if (isDodge)
                 rotation = dodgeRotation;
+            dancing = false; // 움직이면 춤을 멈춘다
 
             if (!isJump && !isDodge) // 점프와 회피 중이 아닐 때만 이동 애니메이션 상태 변경
             {
@@ -483,8 +491,31 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
             rotation_value = Vector3.zero;
 
             if (!isJump && !isDodge) // 점프와 회피 중이 아닐 때만 이동 애니메이션 상태 변경
-                animationDriver.ChangeState(PlayerMoveState.Idle);
+            {
+                if (dancing) animationDriver.PlayDance(danceId);
+                else animationDriver.ChangeState(PlayerMoveState.Idle);
+            }
         }
+    }
+
+    // 춤(Request1009Plan.md §44.9): B키를 누를 때마다 출 수 있는 춤 중 하나. 움직이기·점프·회피·아이템/상호작용·잡기·두 손 들기 중이면 멈춘다.
+    private bool dancing;
+    private byte danceId;
+
+    private void CheckDanceInput()
+    {
+        if (PlayerInput.JumpPressed || PlayerInput.DodgePressed || PlayerInput.UseToolPressed || PlayerInput.InteractPressed || PlayerInput.GrabPressed
+            || isJump || isDodge || animationDriver.IsCarryPoseOn)
+        {
+            dancing = false;
+            return;
+        }
+        if (!PlayerInput.DancePressed || rotation != Vector3.zero) return;
+        DanceCatalogSO catalog = DanceCatalogSO.Current;
+        if (catalog == null || !catalog.TryPickForPlayer(Random.value, out byte pick)) return;
+        danceId = pick;
+        dancing = true;
+        animationDriver.PlayDance(danceId);
     }
 
     private void CheckJumpInput()
@@ -596,7 +627,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
         if (stream.IsWriting) // 로컬 플레이어의 상태 정보 송신
         {
-            networkSync.Write(stream, transform, animationDriver.CurrentState, grabController != null && grabController.IsCarrying, carryFollower.CarrierViewId);
+            networkSync.Write(stream, transform, animationDriver.CurrentState, grabController != null && grabController.IsCarrying, carryFollower.CarrierViewId, animationDriver.DanceId, ToolUser.Aiming);
         }
         else // 원격 플레이어의 상태 정보 수신
         {

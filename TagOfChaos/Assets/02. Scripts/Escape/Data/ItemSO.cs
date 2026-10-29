@@ -33,6 +33,8 @@ public class ItemSO : ScriptableObject
     [Tooltip("손에 들었을 때 몸 방향 기준 추가 위치·각도(미세 조정, Request1009Plan.md §16.4). 한 손 = 오른손, 두 손 = 두 손 가운데 기준.")]
     [SerializeField] private Vector3 holdOffset;
     [SerializeField] private Vector3 holdEuler;
+    // 손에 들었을 때 크기 배율(뿅망치 3배 — 들고 있는 내내 거대, Request1009Plan.md §45.5).
+    [SerializeField, Min(0.1f)] private float heldScale = 1f;
 
     public string ItemId => itemId;
     public string DisplayName => displayName;
@@ -44,6 +46,7 @@ public class ItemSO : ScriptableObject
     public ToolSO Tool => tool;
     public Vector3 HoldOffset => holdOffset;
     public Vector3 HoldEuler => holdEuler;
+    public float HeldScale => heldScale;
     public bool LocksSlotSwitch => holdType == HoldType.TwoHanded;
     public bool IsTool => category == ItemCategory.Tool && tool != null;
 
@@ -58,6 +61,8 @@ public class ItemSO : ScriptableObject
         category = cat;
         tool = toolData;
     }
+
+    public void EditorSetHeldScale(float scale) => heldScale = Mathf.Max(0.1f, scale);
 
     public void EditorSetVisuals(Sprite iconSprite, GameObject model)
     {

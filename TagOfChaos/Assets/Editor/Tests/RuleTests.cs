@@ -266,10 +266,10 @@ public class RuleTests
         {
             go.transform.SetPositionAndRotation(new Vector3(1, 2, 3), Quaternion.Euler(0, 90, 0));
             PhotonStream writer = CreateWriteStream();
-            new PlayerNetworkSync().Write(writer, go.transform, PlayerMoveState.Dodge, true, 1007);
+            new PlayerNetworkSync().Write(writer, go.transform, PlayerMoveState.Dodge, true, 1007, 3, true);
 
             object[] sent = writer.ToArray();
-            Assert.AreEqual(5, sent.Length);
+            Assert.AreEqual(7, sent.Length); // + 춤 번호(§44.9) + 조준(§45.6)
             Assert.AreEqual((int)PlayerMoveState.Dodge, sent[2]); // 상태는 int로 전송
 
             var reader = new PhotonStream(false, sent);
@@ -281,6 +281,8 @@ public class RuleTests
                 Assert.AreEqual(PlayerMoveState.Dodge, sync.RemoteState);
                 Assert.IsTrue(sync.RemoteIsCarrying);
                 Assert.AreEqual(1007, sync.RemoteCarrierViewId);
+                Assert.AreEqual(3, sync.RemoteDanceId);
+                Assert.IsTrue(sync.RemoteAiming);
                 Assert.AreEqual(new Vector3(1, 2, 3), target.transform.position); // 첫 수신은 스냅
             }
             finally { Object.DestroyImmediate(target); }

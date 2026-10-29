@@ -64,6 +64,15 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
     // 마녀 도착 연출의 대역이 같은 가루를 쓴다(WitchFinaleStage)
     public GameObject BreakVfxPrefab => breakVfxPrefab;
     public Color CrumbColor => fallbackCrumbColor;
+
+    // 그 사람 캐릭터의 가루 색(SkinCatalogSO, §45.10). 없으면 null.
+    public static Color[] CharacterCrumbColors(Photon.Realtime.Player owner)
+    {
+        SkinCatalogSO catalog = GameSettings.Current != null ? GameSettings.Current.CharacterCatalog : null;
+        if (catalog == null || catalog.Count == 0 || owner == null) return null;
+        Color[] colors = catalog.GetCrumbColors(PlayerSkinApplier.CharacterIndexOf(owner));
+        return colors != null && colors.Length > 0 ? colors : null;
+    }
     public int CrumbCount => crumbCount;
 
     private void Awake()
@@ -93,8 +102,14 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
         DisableCollision(); // 괴물 몸·다른 쿠키와 부딪히지 않도록 즉시
 
         // 가루 색은 지금 몸에 보이는 색(칠한 색 + 스킨 색)으로 — 분쇄(약 1.6초 뒤) 전에 비동기로 읽어 둔다.
-        var paintCanvas = GetComponent<PlayerPaintCanvas>();
-        if (paintCanvas != null) paintCanvas.SampleSurfaceColors(colors => crumbColors = colors);
+        // 캐릭터 가루 색이 있으면 그것(§45.10 — 새 캐릭터는 칠하기를 쓰지 않는다), 없으면 몸에 칠한 색.
+        Color[] character = CharacterCrumbColors(pv != null ? pv.Owner : null);
+        if (character != null) crumbColors = character;
+        else
+        {
+            var paintCanvas = GetComponent<PlayerPaintCanvas>();
+            if (paintCanvas != null) paintCanvas.SampleSurfaceColors(colors => crumbColors = colors);
+        }
 
         FollowGrabSocket(Vector3.one);
         Debug.Log($"[CookieLife] view={pv.ViewID} grabbed by monster view={monster.View.ViewID}");
