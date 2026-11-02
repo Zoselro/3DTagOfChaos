@@ -5518,3 +5518,107 @@ v1 §S1~S8 그대로:
   - 고침: `RoundStateResetter` — 될 때까지 매 프레임 재시도(`roomResetPending`), 방 씬이 대기실이 아니거나 로드 중이면 다음 프레임에(새 판이 시작된 경우는 씬이 바뀌며 사라짐).
   - 확인: Play Mode에서 응답 지연을 흉내(대기실 첫 순간 curScn을 옛 맵으로, 1.5초 뒤 대기실로) — 옛 코드: 방 닫힌 채·흔적 남음(멀티와 동일), 새 코드: 응답 즉시 `Cleared 14 round room keys and reopened the room.`·방 열림. Console 오류 0. `Request1031Tests` 22/22, RoomSync·AuditFix·Rule·Request1011·Escape 통과.
 - **남은 것**: T2 멀티(2명 이상) — 실제 지연에서 "잡는 순간 도망"이 잡힘으로 처리되는지, 거절될 때 바로 풀리는지, AI가 두 화면에서 같은 지점에서 걷기로 바뀌는지, 스태미나 막대·숨소리.
+
+## 47. 2026-11-02 안 쓰는 리소스·코드 정리 (research.md 10차 보정 6장 · K-02 · N-01)
+
+**요청**
+- research.md 6장(10차 보정)의 조사 결과대로 정리한다. 사용자 결정은 아래와 같다.
+  - **옛 `Game_` 맵 파이프라인**: 정리한다. 에디터 도구와 시험도 포함한다.
+  - **캐릭터 Metallic/Roughness 텍스처**: 삭제한다.
+  - **안 쓰는 사운드 32개와 음악 6곡**: 모두 정리한다. enum 번호는 유지한다.
+  - **바로 진행**: A1·A2·C 삭제, `Source~` 이동, 물방울 셰이더 버그(N-01), 죽은 코드 정리(K-02).
+
+**원칙**
+- **완전 삭제는 하지 않는다.** 파일은 `.meta`와 함께 프로젝트 루트의 `_CleanupBackup/2026-11-02/<원래 경로>`로 옮긴다. `Assets` 밖이라 Unity는 가져오지 않고, 필요하면 같은 경로로 되돌리면 된다(§38과 같은 방식).
+- `Source~` 원본은 백업이 아니라 프로젝트 루트 `ArtSource/<원래 경로>`로 옮긴다. 계속 쓰는 원본이기 때문이다.
+- 판의 맵 순서(`GameSettings.gameMapScenes`)는 그대로다: `CandyForest, Test_GingerbreadVillage, ChocolateFactory, CursedCandyCarnival, Test_HauntedBakery`. 빌드 설정의 켜진 씬 7개도 바꾸지 않는다.
+- MapSceneBuilder의 "Build Map Scenes"와 MapCompactor의 "Compact"는 실행하지 않는다(사용자 규칙). 두 도구 자체를 정리 대상으로 옮긴다.
+
+### 47.1 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| CL0 | 계획 작성 | ✅ |
+| CL1 | **A1·A2·C와 캐릭터 텍스처를 백업으로 이동.** 대상: 붓 커서(`Brush.fbx`·`BrushCursor.prefab`·`BrushCursorMaterial.mat`), `BackArrow.png`, Photon `Demos` 3폴더, 6.3 C 목록(캐릭터 Metallic/Roughness 8, `Maps/Common/Models` 97, `Cogworks_Interior_NoBelt`, `GD_GyroDrop.fbx`, 원본 로비 배경, `ITEM_CandyCell_*.fbx`·주황 아이콘, `07. Expression`, `CF_Lollipop_*.prefab`, `Cookie_BaseSkin_B~D`, 붓·지우개 도장 재질·`PaintErase.shader`, `PlayerNoFriction*`, `_TerrainAutoUpgrade`, `M_Glow_Yellow_HauntedBakery`, `Test_ChocolateFactoryBuildings` 씬·재질). `Test_ChocolateFactoryBuildings`를 만드는 `ChocolateFactoryBuildingsScene` 도구와 그 시험도 함께 정리한다 | ✅ |
+| CL2 | **사운드 32개·음악 6곡 정리.** `SoundCatalog`·`MusicCatalog`에서 항목을 빼고 wav/ogg는 백업으로 옮긴다. `SoundId`·`MusicId` 번호는 남기고, `[System.Obsolete]` 대신 "은퇴" 주석으로 표시한다(직렬화 값 보호). 카탈로그 빌더(`AudioCatalogBuilder`)가 다시 넣지 않게 은퇴 목록을 두고, "모든 ID에 클립이 있다"는 시험은 은퇴 ID를 빼고 본다 | ✅ |
+| CL3 | **N-01 물방울 셰이더를 빌드에 포함.** `TagOfChaos/WaterBubble`을 GraphicsSettings의 "항상 포함" 셰이더에 넣는다. 빌드 포함 여부를 확인하는 시험을 추가한다 | ✅ |
+| CL4 | **K-02 죽은 코드 정리.** 몸 색칠 캔버스: `PlayerPaintCanvas` 삭제, 쿠키 프리팹에서 컴포넌트 제거, `PlayerSkinApplier`·`CookieLifeStatePresenter`·`WitchFinaleStage`의 분기 정리, `NetEventCodes.PaintStroke` 은퇴, `NetTamperMenu` 색칠 조작 항목 제거. A6 재질·셰이더, `ColorPaletteSO`·`DefaultColorPalette`도 정리한다. 감옥 풍선: `ToolKind.JailBalloon` 분기 8곳과 `Item_JailBalloon` 정리(enum 번호는 유지) | ✅ |
+| CL5 | **옛 `Game_` 맵 파이프라인 정리.** 에셋: 6.2 L 목록(`Game_*.unity` 5, `Maps/*/Compact`, 맵별 통짜 FBX, 옛 탈출 장치 `ESC_<Map>.fbx`, Twisted 소품 FBX·프리팹, GingerDim 등 재질, 관람차·마법 오븐 애니메이션). 에디터: `MapSceneBuilder`·`MapCompactor`·`TwistedPropPlacer`·`GingerbreadNeonDimmer`·`PaletteCoverageMeter`·`AmbientPlacer`·`TwistedModelImportPostprocessor`·`MapCompactTests`를 백업으로 옮긴다. 공용 상수(맵 이름 5개, 통행 격자 반경 등)는 새 `Editor/Maps/MapScenes.cs`로 옮긴다. `Game_` 씬을 열던 도구와 시험(`MapPassabilityCheck`·`MapPlaytestDriver`·`WitchBackdropBuilder`·`ConvexGapScanner`·`WitchModelSetup`·`EscapeMapSetup`·`TestMapBuilder`, `EscapeTests`·`WitchFinaleTests`·`Request1021Tests`·`TwistedTests`·`AudioTests`·`BuildSceneTests`)은 **판에 쓰는 씬**을 보도록 바꾸거나, `Game_` 전용 부분만 지운다. `CoasterExitBuilder`·`CarouselModelSwap`·`TwistedPropBuilder`는 실제 맵 빌더가 쓰는 도우미만 남긴다. 런타임 `SceneNames.MapScenePrefix`(`Game_`)도 지운다 | ✅ |
+| CL6 | **`Source~` 4곳(약 909 MB)을 `ArtSource/`로 이동.** 대상: `09. Environment/CandyForest/Source~`, `Maps/CursedCandyCarnival/Source~`, `Maps/Source~`, `10. Audio/Source~`, 그리고 `09. Environment/Witch/Source~`. 코드 주석이 가리키는 원본 경로도 고친다 | ✅ |
+| CL7 | **확인.** 컴파일 오류 0, Console 예외·경고 확인, EditMode 시험 전체 실행, 미사용 에셋 재스캔(빌드 씬에서 끊긴 참조 0 · Missing 스크립트 0), Play Mode에서 로비 → 대기실 → 맵 이동·물풍선 물방울·쿠키 스킨 확인. 문서: research.md(K-02·K-14~K-17·N-01 완료 표시), README 행 갱신 | ✅ |
+
+### 47.2 결과 (2026-11-02) ✅
+
+**옮긴 것** — `_CleanupBackup/2026-11-02/<원래 경로>`에 357항목(파일 654개, 125 MB)을 옮겼다. `.meta`도 함께다. 되돌리려면 같은 경로로 다시 옮기고 Unity에서 Refresh한다.
+- CL1(162): 붓 커서 3종, `BackArrow.png`, Photon `Demos` 3폴더(Chat·Realtime·PUN, 30.9 MB), 캐릭터 Metallic/Roughness 8, `Maps/Common/Models` 97, `Cogworks_Interior_NoBelt`, `GD_GyroDrop.fbx`, 원본 로비 배경, `ITEM_CandyCell_*.fbx` 4와 주황 아이콘, `07. Expression` 20, `CF_Lollipop_*.prefab` 4, `Cookie_BaseSkin_B~D` 5, 붓·지우개 도장 재질과 `PaintErase.shader`, `PlayerNoFriction*` 2, `_TerrainAutoUpgrade` 4, `M_Glow_Yellow_HauntedBakery`, `Test_ChocolateFactoryBuildings` 씬·재질과 `ChocolateFactoryBuildingsScene.cs`.
+- CL2(38): 사운드 32개와 음악 6곡의 wav.
+- CL4(9): `PlayerPaintCanvas.cs`, `ColorPaletteSO.cs`, `FinalizeStampMaterial.mat`, `PaintStamp.shader`, `PlayerPaintedSkin.shader`, `DefaultColorPalette.asset`, `Item_JailBalloon`·`Tool_JailBalloon`·`Icon_JailBalloon`.
+- CL5(148, 52.6 MB):
+  - `Game_*.unity` 5.
+  - `Maps/*/Compact` 결과 메시. 단, 빌드 씬이 쓰는 `*_Terrain_Decor` 4개는 남겼다.
+  - 맵별 통짜 FBX 33.
+  - 옛 탈출 장치 `ESC_<Map>.fbx` 4.
+  - Twisted 소품 FBX·프리팹 각 15. 단, 대기실이 쓰는 `TW_CrackedFence`·`TW_EyeLollipop_Warm`·`TW_HangingJellyBears` 3종과 `MT_*` 재질은 남겼다.
+  - GingerDim 등 재질 15, 관람차 애니메이션·컨트롤러.
+  - 에디터: `MapSceneBuilder`·`MapCompactor`·`TwistedPropPlacer`·`GingerbreadNeonDimmer`·`PaletteCoverageMeter`·`AmbientPlacer`·`MapCompactTests`.
+- Windows가 폴더째 옮기기를 막아서(Photon `Demos`) 폴더 안 파일을 하나씩 옮겼다. 그 뒤 비게 된 폴더 9곳(`ColorTag/Shaders`, `03. SO/ColorTag`, `07. Expression`, `06. Physics`, `_TerrainAutoUpgrade` 등)은 `.meta`와 함께 지웠다.
+
+**CL6** — `Source~` 5곳(파일 999개, 907 MB)을 `ArtSource/<원래 경로에서 Assets/를 뺀 것>`으로 옮겼다(폴더째 이동). 깊이가 같아서 Blender·소리 스크립트의 "스크립트 위치 기준" 상대 경로는 그대로 맞는다. 코드 쪽은 이렇게 고쳤다.
+- `CandyForestAssets.SourceDir` → `ArtSource/09. Environment/CandyForest/Source~`.
+- 주석 4곳의 원본 경로도 고쳤다.
+
+**코드 변경**
+- 런타임(15파일):
+  - **몸 색칠 제거**: `PlayerSkinApplier`(합성 재질 분기), `CookieLifeStatePresenter`·`WitchFinaleStage`(가루 색 대체 경로)를 정리했다. 가루 색은 캐릭터 표(`SkinCatalogSO`)에서만 온다.
+  - **이벤트 코드 은퇴**: `NetEventCodes.PaintStroke`(1)를 은퇴시켰다.
+  - **감옥 풍선 제거**: `ToolKind`에 **번호를 고정**했다(`JailBalloon`=3 은퇴, 나머지 값은 그대로 — 에셋 직렬화 보호). `ToolUser`·`ToolHitReceiver`·`HeldItemPresenter`·`EscapeAuthority`의 감옥 풍선 분기 6곳을 지웠다.
+  - **소리 ID 은퇴**: `SoundId` 32개와 `MusicId` 6개를 enum에서 뺐다. 은퇴 번호는 enum 위 주석에 적고 다시 쓰지 않는다. 다른 ID 번호는 바뀌지 않는다.
+  - **`Game_` 접두사 제거**: `SceneNames.MapScenePrefix`(`Game_`)를 없앴다. 맵 판정은 `Test_` 또는 실제 모델 맵이다.
+  - `WaterBubbleView.ShaderName`을 공개해 시험이 확인한다.
+- 에셋:
+  - `HideOrSeekPlayer.prefab`에서 `PlayerPaintCanvas` 컴포넌트를 뺐다.
+  - `EscapeCatalog.items`에서 감옥 풍선을 뺐다(27 → 26).
+  - `SoundCatalog` 항목 107 → 75, `MusicCatalog` 23 → 17.
+  - **GraphicsSettings "항상 포함"에 `TagOfChaos/WaterBubble`을 추가했다(N-01).**
+- 에디터:
+  - 새 `MapScenes`(맵 이름 5개, 판에 쓰는 씬 경로 = 실제 맵 또는 `Test_`, 기본 격자 반경 70).
+  - 옛 `Game_` 씬을 열던 도구는 판에 쓰는 씬을 보도록 바꿨다: `MapPassabilityCheck`(All Game Map Scenes), `MapPlaytestDriver`, `WitchBackdropBuilder`, `ConvexGapScanner`, `WitchModelSetup`, `EscapeMapSetup`.
+  - 실제 맵 빌더가 쓰는 도우미만 남긴 것:
+    - `CoasterExitBuilder`: 모델·재질·쐐기 메시만 남김. 옛 탈출구 조립은 삭제.
+    - `CarouselModelSwap`: Game_ 메뉴 삭제.
+    - `TwistedPropBuilder`: 충돌체·숨을 곳·폴더 도우미만 남김. TW 프리팹·팔레트 재질 만들기는 삭제.
+    - `TwistedAtmosphere`: 로비·대기실만 남김(메뉴 "Apply Twisted Atmosphere (Lobbies)").
+    - `TestMapBuilder`: 경로 상수만 남김. Game_ 복사 재생성과 판 맵 목록 덮어쓰기는 위험해서 삭제.
+  - 그 밖: `EscapeAssetsBuilder`에서 감옥 풍선 항목 삭제, `UiSoundInstaller`에서 색칠 버튼 소리 삭제, `AudioCatalogBuilder`에서 은퇴 ID 분기 삭제, `NetTamperMenu` 5번(색칠 조작) 삭제.
+- 시험:
+  - **바꾼 것**
+    - `AudioTests`: 맵 곡 규칙을 판에 쓰는 씬 이름으로 바꿨다.
+    - `EscapeTests`·`WitchFinaleTests`: `MapScenes`를 보도록 바꿨다.
+    - `RoomSyncTests`: 씬 이름을 `CandyForest`로 바꿨다.
+  - **새로 넣은 것**
+    - `BuildSceneTests.RuntimeFoundShaders_AreAlwaysIncluded`.
+  - **지운 것**
+    - 옛 `Game_` 씬을 검사하던 것: `TwistedTests`의 맵 분위기·소품·숨을 곳·지하 소리·놀이공원 충돌체 시험, `Request1021Tests`의 Game_ 회전목마·롤러코스터 탈출구, `BuildSceneTests`의 Game_ 삭제 오브젝트 확인, `AudioTests`의 AmbientPlacer 표 3개.
+    - 은퇴 소리를 검사하던 것: `Request1011Tests`의 고장 오븐 소리 2개.
+    - `ChocolateFactoryBuildingTests`의 확인 씬 시험.
+
+**확인**
+- 컴파일 오류 0, Console 오류·경고 0(업로드·Refresh 직후).
+- 빌드 씬 7개 + `04. Prefabs`·`Resources` 프리팹 + `Resources`·`03. SO` 데이터, 모두 217개 파일의 GUID 참조를 전수 검사했다 → **끊긴 참조 0**. 지운 형식(`PlayerPaintCanvas`·`ColorPaletteSO`·`MapSceneBuilder`·`MapCompactor`·`AmbientPlacer`·`TwistedPropPlacer`)이 어셈블리에 없는 것도 확인했다.
+- EditMode 전체 350개 중 실패 1개(`Request1011Tests.OvenBroken_IsGearB2Loop` — 은퇴한 소리 파일 검사). 그 시험을 지운 뒤 `Request1011Tests` 39/39, `BuildSceneTests` 9/9(새 셰이더 시험 포함)을 통과했다.
+- Play Mode(`CandyForest` 오프라인 방, 쿠키 + 괴물):
+  - 쿠키 몸 재질 = `Cookie_BaseSkin_A/Standard`(합성 셰이더 없음).
+  - 물방울 = `TagOfChaos/WaterBubble`(괴물 몸에 만들어 확인).
+  - 잡기 요청 → 방장 거절(NotMonster) → 즉시 해제 정상.
+  - 맵 판정 `IsMapScene(CandyForest)` = 참.
+  - 예외 0. 경고 3: 잡기 거절 로그(의도한 시험), `[NetGuard]` 스태미나 경고 2(오프라인에서 쿠키·괴물이 같은 액터 1이라 생긴 시험 환경 현상, §46 기능, 이번 정리와 무관).
+- 결과 크기:
+  - `Assets` 2,688 MB(약 1 GB 감소).
+  - 빌드에서 빠진 것은 이렇다: 붓 커서 3.8 MB, Photon 데모 `Resources` 2 MB, 사운드·음악 10.5 MB.
+
+**남은 것 / 주의**
+- `Editor/Escape/Legacy~`(옛 배치 도구 보관)는 그대로 두었다.
+- 옛 `Game_` 맵을 다시 만들 수는 없다(도구·원본 메시는 백업에 있음). 원본 `.blend`는 `ArtSource/Maps/Source~`에 있다.
+- 대기실의 Twisted 소품 3종은 남았지만, 그것을 배치하던 `TwistedPropPlacer`는 없어졌다(지금 배치는 씬에 저장돼 있음).
+- 6.5 큰 건물 FBX(133 MB·115 MB)는 이번 범위가 아니다(K-18).
+- 멀티 빌드 확인이 필요하다: 새 빌드에서 물풍선 물방울이 셰이더로 보이는지.

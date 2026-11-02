@@ -6,16 +6,13 @@ using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.UI;
 
-// 뒤틀린 과자 동화 분위기(TwistedCandyPlan.md §2.1·§2.2·V1). 맵 빌더(MapSceneBuilder)가 만든 씬 위에 덧칠한다:
-// 안개·주변광·방향광·카메라 배경색, 맵 PostFX 프로필의 색 보정·비네트, 점광원 색 빼기, 고장 난 전구(FlickerLight).
-// 대기실은 PostFX를 새로 붙이고, 로비는 배경 그림을 해 질 녘 판으로 바꾼다.
-// 맵을 다시 만들면(MapSceneBuilder) 이 값이 사라지므로 다시 실행한다. 여러 번 실행해도 같은 결과다 —
+// 뒤틀린 과자 동화 분위기(TwistedCandyPlan.md §2.1·§2.2·V1): 안개·주변광·방향광·카메라 배경색, PostFX 색 보정, 점광원 색 빼기, 고장 난 전구(FlickerLight).
+// 대기실은 PostFX를 새로 붙이고, 로비는 배경 그림을 해 질 녘 판으로 바꾼다. 여러 번 실행해도 같은 결과다 —
 // 점광원 색·강도는 FlickerLight가 아직 없는 씬에서만 바꾼다(처음 한 번).
-// 진저브레드는 GingerbreadNeonDimmer가 정한 블룸을 건드리지 않는다.
+// 옛 Game_ 맵 5개의 분위기 표와 적용은 그 맵과 함께 없앴다(Request1009Plan.md §47 CL5). 지금 맵은 각 맵 빌더가 조명을 정한다.
 public static class TwistedAtmosphere
 {
     private const string MenuRoot = "Tools/TagOfChaos/Maps/";
-    private const string MapSceneFolder = "Assets/Scenes/Maps";
     public const string GameLobbyScene = "Assets/Scenes/GameLobbyScene.unity";
     public const string LobbyScene = "Assets/Scenes/LobbyScene.unity";
     public const string GameLobbyProfile = "Assets/Maps/GameLobby/GameLobby_PostFX.asset";
@@ -40,43 +37,6 @@ public static class TwistedAtmosphere
 
     // §2.1 목업 값을 게임용으로 다듬은 값 — 안개는 목업의 약 0.8배, 밤 맵은 노출을 올려(+0.6~1.0) 화면 평균 밝기를
     // 원래의 60~70%로 맞췄다(목업 그대로면 30~40%라 길·괴물이 안 보인다, §7 C5).
-    public static readonly Dictionary<string, Look> Maps = new Dictionary<string, Look>
-    {
-        ["CandyForest"] = new Look
-        {
-            Fog = new Color(0.42f, 0.44f, 0.42f), FogDensity = 0.018f, AmbientScale = 0.75f,
-            OverrideSun = true, SunColor = new Color(0.8f, 0.85f, 0.9f), SunIntensity = 0.6f,
-            Saturation = -35f, Temperature = -8f, Tint = -14f, Contrast = 18f, PostExposure = 0f, Vignette = 0f,
-            PointDesaturate = 0.5f, PointScale = 0.8f, FlickerPrefixes = new[] { "CAN_", "LGT_Fill" }, FlickerEvery = 25,
-        },
-        ["GingerbreadVillage"] = new Look
-        {
-            Fog = new Color(0.12f, 0.14f, 0.2f), FogDensity = 0.016f,
-            Saturation = -45f, Temperature = -8f, Tint = -4f, Contrast = 20f, PostExposure = 0.9f, Vignette = 0f,
-            PointDesaturate = 0.3f, PointScale = 0.85f, FlickerPrefixes = new[] { "GIN_Lamp" }, FlickerEvery = 2,
-        },
-        ["ChocolateFactory"] = new Look
-        {
-            Fog = new Color(0.3f, 0.24f, 0.18f), FogDensity = 0.022f,
-            Saturation = -30f, Temperature = 12f, Tint = 0f, Contrast = 20f, PostExposure = 0.5f, Vignette = 0f,
-            PointDesaturate = 0.2f, PointScale = 0.9f, FlickerPrefixes = new[] { "LGT_CandyMachine", "LGT_ArchWindow" }, FlickerEvery = 3,
-        },
-        ["CursedCandyCarnival"] = new Look
-        {
-            Fog = new Color(0.08f, 0.12f, 0.1f), FogDensity = 0.02f,
-            Saturation = -50f, Temperature = -4f, Tint = -22f, Contrast = 25f, PostExposure = 1.0f, Vignette = 0f,
-            PointDesaturate = 0.25f, FlickerPrefixes = new[] { "LGT_CarnivalLamp", "LGT_Booth", "LGT_CircusTent" }, FlickerEvery = 2,
-        },
-        ["HauntedBakery"] = new Look
-        {
-            Fog = new Color(0.15f, 0.17f, 0.22f), FogDensity = 0.016f,
-            Saturation = -40f, Temperature = -18f, Tint = 0f, Contrast = 18f, PostExposure = 0.6f, Vignette = 0f,
-            PointDesaturate = 0.3f, FlickerPrefixes = new[] { "LGT_WallLantern", "LGT_Table" }, FlickerEvery = 3,
-        },
-    };
-
-    // 대기실(★★): 어두운 밤 — 등불 일부를 깜빡이게, 가마솥 빛만 강하게. 출발점에서 약 80 m 떨어진 마녀 집이 보이도록
-    // 안개를 옅게(0.03 → 0.012, Request1009Plan.md §5) 하고 집을 아래에서 올려 비춘다(ApplyWitchHouseLighting).
     public static readonly Look GameLobby = new Look
     {
         Fog = new Color(0.08f, 0.07f, 0.12f), FogDensity = 0.012f,
@@ -194,8 +154,6 @@ public static class TwistedAtmosphere
         AssetDatabase.SaveAssets();
     }
 
-    public static string MapScenePath(string map) => $"{MapSceneFolder}/Game_{map}.unity";
-
     // 모든 맵·대기실 후처리 프로필에서 비네트를 지운다(Request1009Plan.md §16.5). 지운 프로필 수.
     [MenuItem(MenuRoot + "Remove Vignette (All Profiles)")]
     public static int RemoveAllVignettes()
@@ -208,18 +166,11 @@ public static class TwistedAtmosphere
         return removed;
     }
 
-    [MenuItem(MenuRoot + "Apply Twisted Atmosphere (All)")]
+    [MenuItem(MenuRoot + "Apply Twisted Atmosphere (Lobbies)")]
     public static void ApplyAll()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         var report = new List<string>();
-        foreach (KeyValuePair<string, Look> kv in Maps)
-        {
-            var scene = EditorSceneManager.OpenScene(MapScenePath(kv.Key), OpenSceneMode.Single);
-            report.Add($"{kv.Key}: {ApplyToOpenMap(kv.Key)}");
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-        }
         var lobby = EditorSceneManager.OpenScene(GameLobbyScene, OpenSceneMode.Single);
         report.Add($"GameLobby: {ApplyToOpenGameLobby()}");
         EditorSceneManager.MarkSceneDirty(lobby);
@@ -231,16 +182,6 @@ public static class TwistedAtmosphere
         EditorSceneManager.SaveScene(menu);
         AssetDatabase.SaveAssets();
         Debug.Log("[TwistedAtmosphere]\n" + string.Join("\n", report));
-    }
-
-    public static string ApplyToOpenMap(string map)
-    {
-        Look look = Maps[map];
-        string env = ApplyEnvironment(look);
-        var volume = Object.FindFirstObjectByType<PostProcessVolume>();
-        if (volume == null || volume.sharedProfile == null) return env + ", no PostFX";
-        ApplyGrading(volume.sharedProfile, look);
-        return env + $", grading -> {AssetDatabase.GetAssetPath(volume.sharedProfile)}";
     }
 
     public static string ApplyToOpenGameLobby()

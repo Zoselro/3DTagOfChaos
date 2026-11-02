@@ -9,7 +9,7 @@ using UnityEngine.TestTools;
 // 마녀 연출 다시 짜기(Request1009Plan.md §23) — 마녀가 걷는 길(Ground 경계에 닿는 자리), 넓힌 배경, 박살 대상(맵을 바꿔도 동작하는 규칙).
 public class WitchFinaleTests
 {
-    private static readonly string[] Maps = { "CandyForest", "GingerbreadVillage", "ChocolateFactory", "CursedCandyCarnival", "HauntedBakery" };
+    private static readonly string[] Maps = MapScenes.MapNames;
 
     // ---- 내리칠 자리: 변에 닿든 모서리에 닿든 발끝이 Ground 경계에 닿는 곳(§23.4 Q6) ----
 
@@ -52,7 +52,7 @@ public class WitchFinaleTests
     [TestCaseSource(nameof(Maps))]
     public void Map_HasGroundPathBackdropAndBreakables(string map)
     {
-        var scene = EditorSceneManager.OpenScene(MapSceneBuilder.ScenePath(map), OpenSceneMode.Single);
+        var scene = EditorSceneManager.OpenScene(MapScenes.ScenePath(map), OpenSceneMode.Single);
         Assert.IsTrue(WitchPath.TryGetGroundRect(scene, out Rect ground), $"{map}: Map/Ground");
         WitchPresenter witch = Object.FindFirstObjectByType<WitchPresenter>(FindObjectsInactive.Include);
         Assert.NotNull(witch, $"{map}: WITCH_Anchor");

@@ -135,9 +135,9 @@ public static class ConvexGapScanner
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return "cancelled";
         var report = new List<string>();
-        foreach (string map in MapSceneBuilder.MapNames)
+        foreach (string map in MapScenes.MapNames)
         {
-            var scene = EditorSceneManager.OpenScene(MapSceneBuilder.ScenePath(map), OpenSceneMode.Single);
+            var scene = EditorSceneManager.OpenScene(MapScenes.ScenePath(map), OpenSceneMode.Single);
             Physics.SyncTransforms();
             List<Finding> found = Scan(map);
             var names = new List<string>();

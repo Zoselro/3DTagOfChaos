@@ -5,7 +5,7 @@ using UnityEngine;
 // (쿠키 약 3 m, 괴물 약 9.4 m). 몸 가운데를 따라간다. 터질 때 물방울 조각이 사방으로 튀고 물 터지는 소리가 난다.
 public class WaterBubbleView : MonoBehaviour
 {
-    private const string ShaderName = "TagOfChaos/WaterBubble";
+    public const string ShaderName = "TagOfChaos/WaterBubble"; // 빌드 포함: GraphicsSettings "항상 포함"(§47 CL3, BuildSceneTests)
     private static Material material;
 
     private Transform target;

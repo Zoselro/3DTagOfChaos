@@ -7,7 +7,7 @@ using UnityEngine;
 
 // 새 마녀(허수아비 마녀, Blender 리깅 — Request1009Plan.md §18.2)를 프로젝트에 맞춘다. 여러 번 실행해도 같은 결과.
 // 1) FBX 가져오기: Generic 리그, 동작 5개(Idle·Walk 반복, Rise·Strike·TurnBack — Request1009Plan.md §23 X3), 재질을 ME_WitchScarecrow로 연결.
-//    동작 원본: Source~/witch_rig(anim.py·export.py, Blender bpy로 만든다).
+//    동작 원본: ArtSource/09. Environment/Witch/Source~/witch_rig(anim.py·export.py, Blender bpy로 만든다).
 // 2) 재질(Standard: 색·노멀·금속/매끄러움)과 애니메이터(Idle 기본, Rise·Strike·TurnBack 트리거, Walking 참이면 Walk).
 // 3) 프리팹 WITCH_Scarecrow(키 270 m로 맞춤 — Request1009Plan.md §24.10, 예전 90 m) → 맵 5개 WITCH_Anchor의 "Model"로 교체하고 WitchPresenter.height도 맞춘다.
 public static class WitchModelSetup
@@ -21,7 +21,7 @@ public static class WitchModelSetup
     public const float SourceFeet = -0.824f;  // Blender 모델 원점이 몸 가운데라 발 높이(m) — 기준점(WITCH_Anchor)에 발을 맞춘다
     public const float TargetHeight = WitchPresenter.DefaultHeight; // WitchPresenter.height와 같은 크기(270 m)
     public static readonly string[] Clips = { "Idle", "Rise", "Strike", "Walk", "TurnBack" };
-    public static readonly string[] Maps = { "CandyForest", "GingerbreadVillage", "ChocolateFactory", "CursedCandyCarnival", "HauntedBakery" };
+    public static readonly string[] Maps = MapScenes.MapNames;
 
     [MenuItem("Tools/Escape/Setup Witch Model (Scarecrow)")]
     public static void SetupMenu() => Debug.Log("[WitchModelSetup] " + SetupAll(true));
@@ -164,7 +164,7 @@ public static class WitchModelSetup
         int n = 0;
         foreach (string map in Maps)
         {
-            var scene = EditorSceneManager.OpenScene($"Assets/Scenes/Maps/Game_{map}.unity", OpenSceneMode.Single);
+            var scene = EditorSceneManager.OpenScene(MapScenes.ScenePath(map), OpenSceneMode.Single);
             WitchPresenter witch = Object.FindFirstObjectByType<WitchPresenter>(FindObjectsInactive.Include);
             if (witch == null) continue;
             foreach (Transform child in witch.transform.Cast<Transform>().ToArray())

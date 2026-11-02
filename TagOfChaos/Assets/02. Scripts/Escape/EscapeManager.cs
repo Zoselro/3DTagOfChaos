@@ -25,7 +25,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     // 0이면 Ground 사각형이 맵 경계. 0보다 크면 맵 가운데를 중심으로 한 이 반지름의 원(캔디숲 실제 맵, Request1009Plan.md §28.6).
     [SerializeField, Min(0f)] private float mapRadius;
     [SerializeField] private WitchPresenter witch;
-    [Tooltip("비우면 씬 이름(Game_<Map>·Test_<Map>)으로 카탈로그에서 찾는다.")]
+    [Tooltip("비우면 씬 이름(<Map>·Test_<Map>)으로 카탈로그에서 찾는다.")]
     [SerializeField] private EscapeRecipeSO recipeOverride;
 
     private EscapeCatalogSO catalog;

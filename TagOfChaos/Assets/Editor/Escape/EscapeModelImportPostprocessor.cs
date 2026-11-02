@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-// 탈출 모드 Blender 모델(Assets/Maps/Source~/Scripts/escape_assets.py가 내보낸 FBX) 임포트 규칙(EscapePlan.md §4.4).
+// 탈출 모드 Blender 모델(ArtSource/Maps/Source~/Scripts/escape_assets.py가 내보낸 FBX) 임포트 규칙(EscapePlan.md §4.4).
 // - 1 unit = 1 m, 축 변환은 Blender에서 구웠으므로 bakeAxisConversion은 끈다. 애니메이션·카메라·조명은 가져오지 않는다.
 // - 머티리얼은 맵 공용 팔레트(M_*)와 탈출 모드 전용(ME_*) .mat으로 이름이 같으면 연결한다(앞 폴더 우선).
 // - 재료 상자(CHEST): 받침이 몸통 옆면과 같은 평면이고 몸통 띠·뚜껑 테두리 간격이 5 mm라 멀리서 깜빡였다(z-fighting,

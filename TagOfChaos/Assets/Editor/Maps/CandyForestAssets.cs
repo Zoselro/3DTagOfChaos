@@ -8,7 +8,7 @@ using UnityEngine;
 
 // 캔디숲 실제 모델 맵의 에셋(Request1009Plan.md §28, 단계 C4).
 // cf_build.py(Blender)가 Models/에 내보낸 FBX + <이름>.json(문·충돌 고리·받침대)을 읽어:
-// 1) Source~/<세트>의 텍스처를 Textures/로 옮긴다(금속 R + 매끄러움 A를 한 장으로 합침).
+// 1) 원본 폴더(SourceDir)/<세트>의 텍스처를 Textures/로 옮긴다(금속 R + 매끄러움 A를 한 장으로 합침).
 // 2) 세트마다 Standard 재질 하나(CF_<세트>), 건물·천막 안쪽용 어두운 재질 2개.
 // 3) FBX 재질을 그 재질로 연결하고, 충돌체를 붙인 프리팹을 Assets/04. Prefabs/Maps/CandyForest/에 만든다.
 // 충돌체 규칙은 §28.10 통행 안전 규칙(S1~S11)을 따른다 — 작은 장식은 충돌 없음, 나무는 줄기만, 닫힌 집은 속이 찬 상자,
@@ -16,7 +16,7 @@ using UnityEngine;
 public static class CandyForestAssets
 {
     public const string Root = "Assets/09. Environment/CandyForest";
-    public const string SourceDir = Root + "/Source~";
+    public const string SourceDir = "ArtSource/09. Environment/CandyForest/Source~"; // 원본은 Assets 밖(Request1009Plan.md §47 CL6)
     public const string ModelDir = Root + "/Models";
     public const string TextureDir = Root + "/Textures";
     public const string MaterialDir = Root + "/Materials";

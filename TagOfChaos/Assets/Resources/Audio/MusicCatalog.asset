@@ -33,44 +33,20 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 8f53ace9286f7b64b823edbf9500dd8f, type: 3}
     volume: 1
     loop: 1
-  - id: 11
-    clip: {fileID: 8300000, guid: b576778f6eb19b8419b62130a9663b49, type: 3}
-    volume: 1
-    loop: 1
   - id: 12
     clip: {fileID: 8300000, guid: e9f9b38771a42f449b8b30c70bca454e, type: 3}
-    volume: 1
-    loop: 1
-  - id: 13
-    clip: {fileID: 8300000, guid: 67cf00f60f65d9f44b263f1673cb9c30, type: 3}
     volume: 1
     loop: 1
   - id: 14
     clip: {fileID: 8300000, guid: 795a0ce20c6fd4d40be779d46be23eb8, type: 3}
     volume: 1
     loop: 1
-  - id: 15
-    clip: {fileID: 8300000, guid: d1785eba52c0f6a46a4002f83dbe44a3, type: 3}
-    volume: 1
-    loop: 1
   - id: 16
     clip: {fileID: 8300000, guid: ce478f5d66f729643baaa051ade4469e, type: 3}
     volume: 1
     loop: 1
-  - id: 17
-    clip: {fileID: 8300000, guid: e2d1f725dc3b8d249adc7f7ea4e30dfe, type: 3}
-    volume: 1
-    loop: 1
   - id: 18
     clip: {fileID: 8300000, guid: 266de7c1c579fab449003d64230b1ee1, type: 3}
-    volume: 1
-    loop: 1
-  - id: 19
-    clip: {fileID: 8300000, guid: 5bf1636979550f94e932f11895611bb2, type: 3}
-    volume: 1
-    loop: 1
-  - id: 20
-    clip: {fileID: 8300000, guid: 2a7fecbb02992fd4c8c921426a5372a9, type: 3}
     volume: 1
     loop: 1
   - id: 100

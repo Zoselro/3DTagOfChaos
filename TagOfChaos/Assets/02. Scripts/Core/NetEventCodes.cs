@@ -1,7 +1,7 @@
 // RaiseEvent 코드. 여러 도메인이 공유하므로 Core/에 둔다(research.md §7).
 public static class NetEventCodes
 {
-    public const byte PaintStroke = 1;  // 물풍선 전신 칠하기(PlayerPaintCanvas.ForceFillColor)를 다른 클라이언트에 전파
+    // 1(PaintStroke, 물풍선 전신 칠하기)은 몸 색칠 캔버스와 함께 없앴다(Request1009Plan.md §47 CL4). 비워 둔다.
     public const byte ClaimMonster = 2; // GameRule.md §2.1 — 가마솥 진입, 괴물 자원 신청
     // 3(ClearColor, 손 색칠 지우기)·4(FillAll)는 없앴다(Request1009Plan.md §38). 옛 빌드와 혼동하지 않도록 비워 둔다.
     public const byte StartGameRequest = 5; // Bug-fix-plan.md §33 — 호스트가 진행 권한을 가진 방장에게 판 시작을 요청

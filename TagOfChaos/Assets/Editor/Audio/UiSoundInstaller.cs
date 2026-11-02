@@ -15,10 +15,8 @@ public static class UiSoundInstaller
 
     public static SoundId ClickFor(string buttonName)
     {
-        if (buttonName.StartsWith("Swatch")) return SoundId.PaintPickColor; // 색 고르기는 색칠 소리
         switch (buttonName)
         {
-            case "EraseButton": return SoundId.PaintErase;
             case "ResetButton": return SoundId.PaintReset;
             case "StartGameButton": return SoundId.UiStart;
             case "YesButton":

@@ -59,7 +59,7 @@ public class ToolUser : MonoBehaviour
 
     private void UpdateBalloonPreview(ItemSO held, Camera cam)
     {
-        bool balloon = held != null && held.IsTool && (held.Tool.Kind == ToolKind.WaterBalloon || held.Tool.Kind == ToolKind.JailBalloon)
+        bool balloon = held != null && held.IsTool && held.Tool.Kind == ToolKind.WaterBalloon
                        && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
         if (!balloon) { if (preview != null) preview.Hide(); return; }
         if (preview == null) preview = BalloonAimPreview.Create();
@@ -186,7 +186,6 @@ public class ToolUser : MonoBehaviour
                 break;
             }
             case ToolKind.WaterBalloon:
-            case ToolKind.JailBalloon:
             {
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
                 if (pose != null) pose.Play(PlayerActionPose.OneShot.Throw);
@@ -212,7 +211,7 @@ public class ToolUser : MonoBehaviour
                 if (Physics.Raycast(point + Vector3.up * 2f, Vector3.down, out RaycastHit ground, 30f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
                     && ground.point.y < point.y + 0.1f)
                     point = ground.point;
-                CollectInSphere(point, tool.HitRadius, targets, tool.Kind == ToolKind.JailBalloon ? 1 : 8);
+                CollectInSphere(point, tool.HitRadius, targets, 8);
                 break;
             }
         }

@@ -29,17 +29,18 @@ public class BuildSceneTests
         Assert.IsEmpty(dev, $"{scenePath} uses dev-only scripts: {string.Join(", ", dev)}");
     }
 
-    // 사용자가 지운 맵 오브젝트(MapSceneBuilder.RemovedObjects)는 씬에 다시 생기면 안 된다(Request1003bPlan.md §5).
+    // 코드가 Shader.Find로만 찾는 셰이더는 "항상 포함" 목록에 있어야 빌드에 들어간다(research.md N-01 — 물풍선 물방울, §47 CL3).
     [Test]
-    public void MapScenes_DoNotContainRemovedObjects()
+    public void RuntimeFoundShaders_AreAlwaysIncluded()
     {
-        foreach (var kv in MapSceneBuilder.RemovedObjects)
+        var settings = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
+        SerializedProperty list = settings.FindProperty("m_AlwaysIncludedShaders");
+        var names = new List<string>();
+        for (int i = 0; i < list.arraySize; i++)
         {
-            string path = $"Assets/Scenes/Maps/Game_{kv.Key}.unity";
-            Assert.IsTrue(System.IO.File.Exists(path), path);
-            string text = System.IO.File.ReadAllText(path);
-            foreach (string name in kv.Value)
-                Assert.IsFalse(text.Contains("m_Name: " + name + "\n") || text.Contains("m_Name: " + name + "\r"), $"{path} still has {name}");
+            var shader = list.GetArrayElementAtIndex(i).objectReferenceValue as UnityEngine.Shader;
+            if (shader != null) names.Add(shader.name);
         }
+        CollectionAssert.Contains(names, WaterBubbleView.ShaderName);
     }
 }

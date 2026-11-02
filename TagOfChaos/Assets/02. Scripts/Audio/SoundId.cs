@@ -1,5 +1,6 @@
 // 효과음 ID(SoundPlan.md §3.2). 값은 SO에 숫자로 저장되므로 묶음마다 백 단위 구간을 두고, 새 소리는 구간 끝에 덧붙인다
 // (기존 값을 바꾸거나 중간에 끼우지 않는다). 새 소리 = 항목 추가 + Tools/TagOfChaos/Audio/Build Catalogs(파일 이름 = ID).
+// 은퇴한 번호(다시 쓰지 않는다 — 옛 저장값과 섞이지 않게, Request1009Plan.md §47 CL2): 111(UiSlotSelect), 114(UiChat), 300(PaintStroke), 301(PaintPickColor), 302(PaintSlotRegistered), 303(PaintErase), 305(PaintForceFill), 403(MonsterDeparted), 506(BoardHop), 507(BoardSuck), 700(CakeRumble), 702(CakeBurst), 703(CakeRocketRise), 704(CakeIgnite), 705(CakeLaunch), 710(CoasterBulbOn), 711(CoasterSparks), 713(CoasterLapBar), 714(CoasterDepart), 720(OvenGears), 721(OvenPiston), 722(OvenDoorRoll), 723(OvenFlash), 724(OvenBroken), 730(TrainPuff), 731(TrainWhistle), 732(TrainChug), 733(TrainTunnel), 740(AltarHum), 741(AltarGlow), 744(PortalClose), 745(LanternFlicker).
 public enum SoundId
 {
     None = 0,
@@ -16,10 +17,8 @@ public enum SoundId
     UiSaved = 108,
     UiTick = 109,
     UiTickFinal = 110,
-    UiSlotSelect = 111,
     UiToastInfo = 112,
     UiToastAlert = 113,
-    UiChat = 114,
 
     // 캐릭터(3D)
     CookieStep = 200,
@@ -41,17 +40,11 @@ public enum SoundId
     CookieBreath = 218, // 스태미나가 바닥났을 때 숨차는 소리(Request1009Plan.md §46.3)
 
     // 색칠(2D, 본인)
-    PaintStroke = 300,
-    PaintPickColor = 301,
-    PaintSlotRegistered = 302,
-    PaintErase = 303,
     PaintReset = 304,
-    PaintForceFill = 305,
 
     // 대기실
     CauldronBubble = 400,
     CauldronSplash = 401,
-    MonsterDeparted = 403,
 
     // 탈출 모드
     ChestOpen = 500,
@@ -60,8 +53,6 @@ public enum SoundId
     ItemDrop = 503,
     DeviceInsert = 504,
     DeviceComplete = 505,
-    BoardHop = 506,
-    BoardSuck = 507,
     RocketInsert = 508,
     RocketHatch = 509,
     RocketIgnite = 510,
@@ -83,39 +74,17 @@ public enum SoundId
     HammerBonk = 606,
 
     // 맵 연출(3D)
-    CakeRumble = 700,
     CakeCrack = 701,
-    CakeBurst = 702,
-    CakeRocketRise = 703,
-    CakeIgnite = 704,
-    CakeLaunch = 705,
-    CoasterBulbOn = 710,
-    CoasterSparks = 711,
     CoasterStartup = 712,
-    CoasterLapBar = 713,
-    CoasterDepart = 714,
     CoasterRoll = 715,   // 롤러코스터 열차가 달리는 소리(반복, 속도에 따라 크기 — Request1009Plan.md §31)
     CoasterChain = 716,  // 체인/부스터 구간 딸각딸각(반복)
     CoasterWhoosh = 717, // 빠른 내리막 바람(한 번)
-    OvenGears = 720,
-    OvenPiston = 721,
-    OvenDoorRoll = 722,
-    OvenFlash = 723,
-    OvenBroken = 724, // 완성 전 고장 난 오븐 반복음(Request1009Plan.md §16.7)
     VikingCreak = 725,  // 바이킹이 끝에서 돌아설 때 나무·쇠 삐걱(한 번, 변형 3 — Request1009Plan.md §36)
     VikingWhoosh = 726, // 바이킹이 가장 아래를 지날 때 바람(한 번)
     VikingHum = 727,    // 바이킹 축·모터 소리(반복, 흔들림 크기에 따라)
     VikingBell = 728,   // 바이킹 출발 종(한 번)
-    TrainPuff = 730,
-    TrainWhistle = 731,
-    TrainChug = 732,
-    TrainTunnel = 733,
-    AltarHum = 740,
-    AltarGlow = 741,
     PortalOpen = 742,
     PortalFlash = 743,
-    PortalClose = 744,
-    LanternFlicker = 745,
 
     // 환경음(반복)
     AmbCandyForest = 800,
@@ -129,6 +98,7 @@ public enum SoundId
 }
 
 // 배경음·스팅어·징글 ID(SoundPlan.md §3.1). 규칙은 SoundId와 같다.
+// 은퇴한 번호(다시 쓰지 않는다, §47 CL2): 11(CandyForestHunt), 13(GingerbreadHunt), 15(FactoryHunt), 17(CarnivalHunt), 19(BakeryHunt), 20(TimeAttack).
 public enum MusicId
 {
     None = 0,
@@ -139,16 +109,10 @@ public enum MusicId
     MonsterWait = 3,
     Result = 4,          // 판이 끝난 뒤 결과 화면(징글 뒤, Request1009Plan.md §20.1 Result_A)
     CandyForestPaint = 10,
-    CandyForestHunt = 11,
     GingerbreadPaint = 12,
-    GingerbreadHunt = 13,
     FactoryPaint = 14,
-    FactoryHunt = 15,
     CarnivalPaint = 16,
-    CarnivalHunt = 17,
     BakeryPaint = 18,
-    BakeryHunt = 19,
-    TimeAttack = 20,
 
     // 스팅어(한 번, 배경음을 잠시 낮춘다)
     StMonsterReveal = 100,

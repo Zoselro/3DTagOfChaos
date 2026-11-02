@@ -19,7 +19,7 @@ public static class WitchBackdropBuilder
     public const int PropCount = 150;
     private const string MeshFolder = "Assets/09. Environment/WitchBackdrop";
     private const int Segments = 128, Rings = 24;
-    private static readonly string[] Maps = { "CandyForest", "GingerbreadVillage", "ChocolateFactory", "CursedCandyCarnival", "HauntedBakery" };
+    private static readonly string[] Maps = MapScenes.MapNames;
 
     [MenuItem("Tools/TagOfChaos/Escape/Build Witch Backdrops")]
     public static void BuildMenu() => Debug.Log("[WitchBackdrop] " + BuildAll());
@@ -30,7 +30,7 @@ public static class WitchBackdropBuilder
         var report = new List<string>();
         foreach (string map in Maps)
         {
-            Scene scene = EditorSceneManager.OpenScene(MapSceneBuilder.ScenePath(map), OpenSceneMode.Single);
+            Scene scene = EditorSceneManager.OpenScene(MapScenes.ScenePath(map), OpenSceneMode.Single);
             report.Add(map + ": " + Build(scene, map));
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);

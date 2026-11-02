@@ -2,16 +2,16 @@ using UnityEngine;
 
 public enum ToolKind
 {
-    Hammer,
-    StunGun,
-    WaterBalloon,
-    JailBalloon, // 감옥 풍선: 맞은 쿠키·괴물 하나가 잠시 풍선에 갇힌다(Request1009Plan.md §25.5 J)
-    Skates,      // 인라인스케이트: 잠시 이동속도 +100%(§25.5 I)
-    Pumpkin,     // 호박마차: 맵 안 무작위 지점으로 이동
-    Recorder,    // 접착 목소리 녹음기: 내 AI 하나가 내 목소리를 내며 걷는다
-    Dismantle,   // 해체 도구: 가동된 건물에서 재료를 뺀다(누르기, 왼쪽 클릭으로 쓰지 않음)
-    HeliHat,     // 헬리콥터 모자: 들고 E — 떠올라 맵 밖으로(§25.5 H)
-    NoiseBomb,   // 괴물 소음폭탄이 터질 때의 기절 수치(아이템으로 줍지 않는다)
+    // 번호는 ToolSO 에셋에 저장되므로 고정한다. 3(감옥 풍선)은 없앴다(Request1009Plan.md §47 CL4) — 다시 쓰지 않는다.
+    Hammer = 0,
+    StunGun = 1,
+    WaterBalloon = 2,
+    Skates = 4,      // 인라인스케이트: 잠시 이동속도 +100%(§25.5 I)
+    Pumpkin = 5,     // 호박마차: 맵 안 무작위 지점으로 이동
+    Recorder = 6,    // 접착 목소리 녹음기: 내 AI 하나가 내 목소리를 내며 걷는다
+    Dismantle = 7,   // 해체 도구: 가동된 건물에서 재료를 뺀다(누르기, 왼쪽 클릭으로 쓰지 않음)
+    HeliHat = 8,     // 헬리콥터 모자: 들고 E — 떠올라 맵 밖으로(§25.5 H)
+    NoiseBomb = 9,   // 괴물 소음폭탄이 터질 때의 기절 수치(아이템으로 줍지 않는다)
 }
 
 // 도구 하나의 수치(EscapePlan.md §1.8, D23). 코드를 고치지 않고 에셋 값만 바꿔 밸런스를 테스트한다.

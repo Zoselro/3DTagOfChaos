@@ -3,15 +3,9 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
 
-// HideOrSeekPlayer.prefab에 부착. bodyRenderer는 PlayerPaintCanvas.bodyRenderer와 인스펙터에서
-// 동일한 SkinnedMeshRenderer를 연결한다(GameRule.md §1.5).
-//
-// Awake()에서 적용하는 이유: Unity는 같은 프레임 안에서 씬(또는 Instantiate)에 있는 모든
-// 컴포넌트의 Awake가 전부 끝난 뒤에야 비로소 아무 컴포넌트의 Start가 시작된다는 것을 보장한다 —
-// HideOrSeekPlayer.Awake()가 networkSync를 IsMine 여부와 무관하게 최우선 생성하는 것과 정확히
-// 같은 근거(research.md §5.7). 여기서 sharedMaterial을 미리 바꿔두면, 나중에 실행되는
-// PlayerPaintCanvas.Start()(ApplyPaintedSkinMaterial)가 bodyRenderer.sharedMaterial의 _MainTex를
-// 읽어 합성 머티리얼을 만드는 시점에는 이미 올바른 스킨이 반영돼 있다.
+// HideOrSeekPlayer.prefab에 부착. bodyRenderer는 쿠키 몸 SkinnedMeshRenderer(GameRule.md §1.5).
+// Awake()에서 적용한다 — 다른 컴포넌트의 Start가 몸 재질·모델을 읽기 전에 스킨이 반영돼 있도록(research.md §5.7).
+// (몸 색칠 캔버스 PlayerPaintCanvas는 없앴다 — Request1009Plan.md §47 CL4.)
 public class PlayerSkinApplier : MonoBehaviourPunCallbacks
 {
     [SerializeField] private PhotonView pv;
@@ -56,11 +50,6 @@ public class PlayerSkinApplier : MonoBehaviourPunCallbacks
         if (catalog.GetModel(index) != null) return;
         Material skin = catalog.GetMaterial(index);
         if (skin == null) return;
-
-        // PlayerPaintCanvas가 이미 페인트 합성 머티리얼을 입혔다면 기본 텍스처만 바꾼다 — 통째로 교체하면 칠한 색이 사라진다.
-        var paintCanvas = GetComponent<PlayerPaintCanvas>();
-        if (paintCanvas != null && paintCanvas.TrySetBaseSkin(skin)) return;
-
         bodyRenderer.sharedMaterial = skin;
     }
 }

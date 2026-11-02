@@ -74,7 +74,6 @@ public static class EscapeAssetsBuilder
         items.Add(repairKit);
         if (repairKit.ModelPrefab == null && toolbox.ModelPrefab != null) repairKit.EditorSetVisuals(toolbox.Icon, toolbox.ModelPrefab);
         ItemSO dismantle = ToolItem("Dismantle", "Dismantle Tool", new Color(0.55f, 0.55f, 0.6f), Tool("Tool_Dismantle", ToolKind.Dismantle, 1, 2f, 0.5f, 0f, 0f, 1f, false));
-        ItemSO jail = ToolItem("JailBalloon", "Jail Balloon", new Color(0.6f, 0.85f, 1f), Tool("Tool_JailBalloon", ToolKind.JailBalloon, 1, 12f, 1.5f, 4f, 3f, 3f, false));
         ItemSO skates = ToolItem("Skates", "Inline Skates", new Color(0.95f, 0.3f, 0.55f), Tool("Tool_Skates", ToolKind.Skates, 1, 1f, 0.5f, 0f, 0f, 1f, false, 5f, 2f));
         ItemSO pumpkin = ToolItem("Pumpkin", "Pumpkin Carriage", new Color(1f, 0.55f, 0.1f), Tool("Tool_Pumpkin", ToolKind.Pumpkin, 1, 1f, 0.5f, 0f, 0f, 1f, false));
         ItemSO recorder = ToolItem("Recorder", "Sticky Voice Recorder", new Color(0.75f, 0.45f, 0.95f), Tool("Tool_Recorder", ToolKind.Recorder, 1, 1f, 0.5f, 0f, 0f, 1f, false, 30f, 1f));

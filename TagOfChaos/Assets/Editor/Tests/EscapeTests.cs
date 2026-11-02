@@ -335,7 +335,7 @@ public class EscapeTests
         CollectionAssert.AreEqual(new[] { 5, 3, 5 }, c.CookieItemWeights.ToArray());
         foreach (ItemSO item in new[] { c.RepairKit, c.DismantleTool, c.HeliHat, c.NoiseBomb }.Concat(c.SpyRandomTools).Concat(c.CookieItems))
             Assert.IsTrue(item.DisplayName.Any(ch => ch >= '가' && ch <= '힣'), item.ItemId + " name");
-        foreach (string map in MapSceneBuilder.MapNames)
+        foreach (string map in MapScenes.MapNames)
         {
             EscapeRecipeSO recipe = c.RecipeFor(map);
             Assert.NotNull(recipe, map);
@@ -387,7 +387,7 @@ public class EscapeTests
     [Test]
     public void Items_ExistingHaveBlenderModels()
     {
-        var pending = new HashSet<string> { "Dismantle", "JailBalloon", "Skates", "Pumpkin", "Recorder", "HeliHat", "NoiseBomb" };
+        var pending = new HashSet<string> { "Dismantle", "Skates", "Pumpkin", "Recorder", "HeliHat", "NoiseBomb" };
         string[] guids = AssetDatabase.FindAssets("t:ItemSO", new[] { "Assets/03. SO/Escape/Items" });
         Assert.Greater(guids.Length, 0);
         foreach (string guid in guids)

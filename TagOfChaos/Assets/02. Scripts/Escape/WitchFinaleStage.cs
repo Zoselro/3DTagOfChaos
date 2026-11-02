@@ -261,11 +261,6 @@ public class WitchFinaleStage : MonoBehaviour
             var srcView = src.GetComponent<Photon.Pun.PhotonView>();
             Color[] character = CookieLifeStatePresenter.CharacterCrumbColors(srcView != null ? srcView.Owner : null);
             if (character != null) { stand.CrumbColors = character; stand.DebrisColor = character[0]; } // 캐릭터 가루 색(§45.10)
-            else
-            {
-                var paint = src.GetComponent<PlayerPaintCanvas>();
-                if (paint != null) paint.SampleSurfaceColors(colors => stand.CrumbColors = colors);
-            }
         }
 
         StripToVisuals(copy);

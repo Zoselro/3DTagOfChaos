@@ -192,9 +192,7 @@ public static class SoundDefaults
             case 7: // 맵 연출
                 World(e, 60f, 2);
                 e.importance = SoundImportance.High;
-                if (id == SoundId.OvenGears || id == SoundId.AltarHum) { e.pitchRange = Vector2.one; e.volume = 0.5f; } // 반복음 — 출발까지 계속 나므로 배경음보다 작게(S9 믹스)
-                else if (id == SoundId.OvenBroken) { e.pitchRange = Vector2.one; e.volume = 0.75f; } // 반복음 — 음원이 톱니보다 4dB 작아(피크 제한) 조금 크게
-                else if (id == SoundId.CoasterRoll || id == SoundId.CoasterChain)
+                if (id == SoundId.CoasterRoll || id == SoundId.CoasterChain)
                 {
                     e.pitchRange = Vector2.one; // 반복음 — 열차가 판 내내 돌므로 배경음보다 작게
                     e.volume = id == SoundId.CoasterRoll ? 0.6f : 0.5f;
@@ -211,19 +209,13 @@ public static class SoundDefaults
                 }
                 else if (id == SoundId.VikingCreak || id == SoundId.VikingWhoosh) { e.volume = 0.65f; e.cooldown = 0.8f; e.importance = SoundImportance.Normal; }
                 else if (id == SoundId.VikingBell) { e.volume = 0.6f; e.cooldown = 2f; e.importance = SoundImportance.Normal; }
-                else if (id == SoundId.LanternFlicker)
-                {
-                    e.volume = 0.5f;          // 등불 여러 개가 따로 깜빡인다 — 작게, 가까이서만
-                    e.cooldown = 0.2f;
-                    e.importance = SoundImportance.Low;
-                }
                 break;
             case 8: // 환경음(반복)
                 World(e, 40f, 2);
                 e.bus = SoundBus.Ambience;
                 e.pitchRange = Vector2.one;
                 e.cooldown = 0f;
-                if (id == SoundId.AmbFactory) { e.maxDistance = 28f; e.maxInstances = 4; } // 기계 여러 곳(AmbientPlacer)
+                if (id == SoundId.AmbFactory) { e.maxDistance = 28f; e.maxInstances = 4; } // 기계 여러 곳(ChocolateFactoryAssets)
                 else if (id == SoundId.AmbCandyForest || id == SoundId.AmbGingerbread || id == SoundId.AmbCarnival || id == SoundId.AmbBakery)
                 {
                     Flat(e, SoundBus.Ambience); // 맵 바탕(AmbientZone, 맵 전체) — 어디서나 같은 크기
@@ -287,7 +279,6 @@ public static class SoundDefaults
             case SoundId.CoasterRoll: falloff = SoundFalloff.Landmark; min = 6f; max = 45f; return;  // 열차 — 가까이 가야 또렷
             case SoundId.CoasterChain: falloff = SoundFalloff.Landmark; min = 4f; max = 30f; return;
             case SoundId.CoasterWhoosh: falloff = SoundFalloff.Landmark; min = 5f; max = 40f; return;
-            case SoundId.LanternFlicker: falloff = SoundFalloff.Action; min = 1.5f; max = 10f; return;
             case SoundId.VikingHum: falloff = SoundFalloff.Landmark; min = 6f; max = 40f; return;      // 바이킹 — 가까이 가야 또렷
             case SoundId.VikingCreak: case SoundId.VikingWhoosh: falloff = SoundFalloff.Landmark; min = 6f; max = 50f; return;
             case SoundId.VikingBell: falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return;

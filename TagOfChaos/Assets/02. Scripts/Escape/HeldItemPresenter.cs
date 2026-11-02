@@ -87,7 +87,7 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
 
         holdType = def.HoldType;
         isHammer = def.IsTool && def.Tool.Kind == ToolKind.Hammer;
-        bool balloon = def.IsTool && (def.Tool.Kind == ToolKind.WaterBalloon || def.Tool.Kind == ToolKind.JailBalloon);
+        bool balloon = def.IsTool && def.Tool.Kind == ToolKind.WaterBalloon;
         model = balloon ? WaterBubbleView.CreateSmall(socket, HeldBalloonSize) : EscapeVisuals.CreateItemModel(def, socket); // 물풍선은 갇힘 물방울과 같은 모양(§45.7 WB5)
         if (def.HeldScale != 1f) model.transform.localScale *= def.HeldScale; // 뿅망치는 들고 있는 내내 3배(§45.5)
         if (isHammer)

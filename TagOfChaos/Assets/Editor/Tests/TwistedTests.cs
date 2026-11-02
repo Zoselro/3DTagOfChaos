@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
@@ -7,11 +6,10 @@ using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
 using UnityEngine.SceneManagement;
 
-// 뒤틀린 과자 동화 개편(TwistedCandyPlan.md V1~V4) 회귀 방지: 분위기 값, 소품 배치·충돌체, 숨을 곳 출입(괴물 기준 출입구 2곳), 실내 소리 영역.
+// 뒤틀린 과자 동화 개편(TwistedCandyPlan.md V1~V4) 회귀 방지: 로비·대기실 분위기, 실내 소리 영역 계산.
+// 옛 Game_ 맵의 분위기·소품·숨을 곳·지하 소리·충돌체 시험은 그 맵과 함께 없앴다(Request1009Plan.md §47 CL5).
 public class TwistedTests
 {
-    private static readonly string[] Maps = MapSceneBuilder.MapNames;
-    private static readonly string[] ShelterMaps = { "GingerbreadVillage", "CursedCandyCarnival" };
     private SceneSetup[] savedSetup;
 
     [OneTimeSetUp]
@@ -26,25 +24,6 @@ public class TwistedTests
     public void RestoreSetup()
     {
         if (savedSetup != null && savedSetup.Length > 0) EditorSceneManager.RestoreSceneManagerSetup(savedSetup);
-    }
-
-    private static void Open(string map) => EditorSceneManager.OpenScene(MapSceneBuilder.ScenePath(map), OpenSceneMode.Single);
-
-    // ---- V1 분위기 ----
-
-    [TestCaseSource(nameof(Maps))]
-    public void Map_HasTwistedAtmosphere(string map)
-    {
-        Open(map);
-        TwistedAtmosphere.Look look = TwistedAtmosphere.Maps[map];
-        Assert.IsTrue(RenderSettings.fog);
-        Assert.AreEqual(look.FogDensity, RenderSettings.fogDensity, 1e-4f, $"{map}: run Tools/TagOfChaos/Maps/Apply Twisted Atmosphere (All).");
-        var volume = Object.FindFirstObjectByType<PostProcessVolume>();
-        Assert.IsTrue(volume.sharedProfile.TryGetSettings(out ColorGrading grading));
-        Assert.AreEqual(look.Saturation, grading.saturation.value, 0.01f);
-        Assert.AreEqual(look.PostExposure, grading.postExposure.value, 0.01f);
-        Assert.IsFalse(volume.sharedProfile.TryGetSettings(out Vignette _), $"{map}: vignette must stay removed (Request1009Plan.md §16.5)");
-        Assert.Greater(Object.FindObjectsByType<FlickerLight>(FindObjectsSortMode.None).Length, 0, $"{map}: no broken (flickering) lights");
     }
 
     [Test]
@@ -62,104 +41,6 @@ public class TwistedTests
         Assert.AreEqual(TwistedAtmosphere.LobbyBackground, AssetDatabase.GetAssetPath(bg.sprite));
     }
 
-    // ---- V3 소품 ----
-
-    [Test]
-    public void PaletteMaterials_MatchPaintPalette()
-    {
-        var palette = AssetDatabase.LoadAssetAtPath<ColorPaletteSO>(PaletteCoverageMeter.PalettePath);
-        for (int i = 0; i < TwistedPropBuilder.PaletteMaterials.Length; i++)
-        {
-            var m = AssetDatabase.LoadAssetAtPath<Material>($"{TwistedModelImportPostprocessor.MaterialFolder}/{TwistedPropBuilder.PaletteMaterials[i]}.mat");
-            Assert.NotNull(m, TwistedPropBuilder.PaletteMaterials[i]);
-            Color a = m.color, b = palette.GetColor(i);
-            Assert.That(Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b), Is.LessThan(0.01f), $"{m.name} drifted from palette colour {i}");
-        }
-    }
-
-    // 소품 충돌체는 자기 메시 그대로(정적 오목 MeshCollider) — 메시 경계 상자는 부품 사이 빈 곳까지 막았다(Request1009Plan.md §10).
-    // 숨을 곳처럼 COL_* 상자가 있는 프리팹은 그 상자만 쓴다.
-    [Test]
-    public void TwistedPrefabs_CollidersFollowTheirMeshes()
-    {
-        string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { TwistedPropBuilder.PrefabFolder });
-        Assert.GreaterOrEqual(guids.Length, 21, "Run Tools/TagOfChaos/Maps/Build Twisted Props.");
-        foreach (string guid in guids)
-        {
-            var go = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
-            var colliders = go.GetComponentsInChildren<Collider>(true).Where(c => !c.isTrigger).ToArray();
-            Assert.Greater(colliders.Length, 0, $"{go.name} has no collider");
-            bool explicitCollision = colliders.Any(c => c.name.StartsWith(TwistedPropBuilder.CollisionPrefix));
-            foreach (BoxCollider b in go.GetComponentsInChildren<BoxCollider>(true))
-                Assert.IsTrue(b.name.StartsWith(TwistedPropBuilder.CollisionPrefix), $"{go.name}/{b.name}: bounding box collider blocks the gaps between parts");
-            if (!explicitCollision)
-                foreach (MeshFilter f in go.GetComponentsInChildren<MeshFilter>(true))
-                {
-                    if (f.name.StartsWith(TwistedPropBuilder.DecalPrefix)) continue;
-                    var mc = f.GetComponent<MeshCollider>();
-                    Assert.NotNull(mc, $"{go.name}/{f.name} has no mesh collider");
-                    Assert.IsFalse(mc.convex, $"{go.name}/{f.name}: convex hull fills the gaps");
-                    Assert.AreSame(f.sharedMesh, mc.sharedMesh, $"{go.name}/{f.name}: collider mesh differs");
-                }
-            foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
-                Assert.IsTrue(r.sharedMaterials.All(m => m != null && AssetDatabase.GetAssetPath(m).StartsWith(TwistedModelImportPostprocessor.MaterialFolder)),
-                    $"{go.name}/{r.name} uses a material outside {TwistedModelImportPostprocessor.MaterialFolder}");
-        }
-    }
-
-    [TestCaseSource(nameof(Maps))]
-    public void Map_HasAllTwistedProps(string map)
-    {
-        Open(map);
-        GameObject root = GameObject.Find(TwistedPropPlacer.RootName);
-        Assert.NotNull(root, $"{map}: run Tools/TagOfChaos/Maps/Place Twisted Props (All).");
-        TwistedPropPlacer.SceneProps sp = TwistedPropPlacer.Scenes.First(s => s.ScenePath == MapSceneBuilder.ScenePath(map));
-        foreach (TwistedPropPlacer.Spot spot in sp.Spots)
-            Assert.AreEqual(spot.Count, root.transform.Cast<Transform>().Count(t => t.name.StartsWith(spot.Prefab + "_")), $"{map}: {spot.Prefab} count");
-    }
-
-    // ---- V4 숨을 곳 ----
-
-    private static IEnumerable<Transform> Shelters() =>
-        GameObject.Find(TwistedPropPlacer.RootName).transform.Cast<Transform>().Where(t => t.name.StartsWith("TW_Shelter_"));
-
-    private static Vector3 Ground(Vector3 p) => TwistedPropPlacer.FloorBelow(p);
-
-    // 문마다(출구 등 Light_Exit_*) 바깥 6 m에서 실내까지 괴물 경로가 있고, 그 경로가 건물을 돌아가지 않을 만큼 짧다 → 출입구 2곳 이상.
-    [TestCaseSource(nameof(ShelterMaps))]
-    public void Shelters_MonsterEntersThroughEveryDoor(string map)
-    {
-        Open(map);
-        Physics.SyncTransforms();
-        var shelters = Shelters().ToList();
-        Assert.AreEqual(2, shelters.Count, $"{map}: expected 2 hiding spots");
-        foreach (Transform s in shelters)
-        {
-            var exits = s.GetComponentsInChildren<Light>().Where(l => l.name.StartsWith("Light_Exit")).ToList();
-            Assert.GreaterOrEqual(exits.Count, 2, $"{s.name}: fewer than 2 doorways");
-            Assert.IsTrue(TwistedPropPlacer.DoorsOpen(s.gameObject), $"{s.name}: a doorway is blocked for the monster (no short grid path from 6 m outside to the inside).");
-        }
-    }
-
-    [TestCaseSource(nameof(ShelterMaps))]
-    public void Shelters_IndoorZoneCoversInsideOnly(string map)
-    {
-        Open(map);
-        foreach (Transform s in Shelters())
-        {
-            var zone = s.GetComponent<IndoorZone>();
-            Assert.NotNull(zone, $"{s.name}: no IndoorZone");
-            foreach (Light l in s.GetComponentsInChildren<Light>().Where(l => l.name.StartsWith("Light_Inside")))
-                Assert.IsTrue(zone.Contains(Ground(l.transform.position) + Vector3.up * 1.6f), $"{s.name}: {l.name} floor is not indoors");
-            foreach (Light exit in s.GetComponentsInChildren<Light>().Where(l => l.name.StartsWith("Light_Exit")))
-            {
-                Vector3 dir = exit.transform.position - s.position;
-                dir.y = 0f;
-                Assert.IsFalse(zone.Contains(Ground(exit.transform.position + dir.normalized * 4f) + Vector3.up * 1.6f), $"{s.name}: outside {exit.name} counts as indoors");
-            }
-        }
-    }
-
     [Test]
     public void IndoorZone_StepFadesTowardsTarget()
     {
@@ -169,60 +50,4 @@ public class TwistedTests
         Assert.AreEqual(0f, IndoorZone.Step(v, false, 10f));
         Assert.Less(IndoorZone.WallCutoffHz, SpatialGain.FarCutoffHz, "Through-wall muffle must be darker than plain distance muffle.");
     }
-
-    // ---- Request1009 §7 진저브레드 지하 소리 ----
-
-    // 지하(땅 아래)의 쿠키가 설 수 있는 모든 바닥에서 머리 높이가 동굴 소리 영역 안이다 — 관전 대상이 지하로 내려가도 듣는 위치가 영역에 든다.
-    // 땅 위 모서리(머리가 y > −1, 바탕 환경음 쪽)와 지형 아랫면(y ≈ −2.4, 갈 수 없음)은 뺀다.
-    [Test]
-    public void Gingerbread_UndergroundFloorsAreInsideCaveZone()
-    {
-        Open("GingerbreadVillage");
-        Physics.SyncTransforms();
-        AmbientZone cave = Object.FindObjectsByType<AmbientZone>(FindObjectsSortMode.None).FirstOrDefault(z => z.name == "AMB_Underground");
-        Assert.NotNull(cave, "Run Tools/TagOfChaos/Audio/Place Ambience.");
-        var hits = new RaycastHit[16];
-        int floors = 0;
-        var missing = new List<string>();
-        for (float x = -60f; x <= 12f; x += 1f)
-            for (float z = -26f; z <= 26f; z += 1f)
-            {
-                int n = Physics.RaycastNonAlloc(new Vector3(x, -0.6f, z), Vector3.down, hits, 20f, ~0, QueryTriggerInteraction.Ignore);
-                for (int i = 0; i < n; i++)
-                {
-                    Vector3 floor = hits[i].point, head = floor + Vector3.up * 1.6f;
-                    if (hits[i].normal.y < 0.6f || head.y > -1f || Mathf.Abs(floor.y + 2.4f) < 0.05f) continue;
-                    if (Physics.CheckSphere(floor + Vector3.up, 0.4f, ~0, QueryTriggerInteraction.Ignore)) continue; // 설 공간 없음
-                    floors++;
-                    if (!cave.Contains(head) && missing.Count < 20) missing.Add(floor.ToString("F1"));
-                }
-            }
-        Assert.Greater(floors, 500, "underground floor scan found too little — did the map change?");
-        Assert.IsEmpty(missing, "Underground floors outside AMB_Underground: " + string.Join(" ", missing));
-    }
-
-    // ---- Request1009 §10 놀이공원 충돌체 ----
-
-    // 맵 물체에 메시 경계 상자가 남지 않고(작은 서커스 텐트 등), 검토한 목록(부스 차양·풍선)은 오목이라 옆 통로를 막지 않는다.
-    [Test]
-    public void Carnival_NoBoundingBoxPropsAndListedHullGapsAreConcave()
-    {
-        Open("CursedCandyCarnival");
-        foreach (BoxCollider box in Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None))
-        {
-            if (box.isTrigger || box.GetComponent<MeshFilter>() == null) continue;
-            bool gameplayProp = false;
-            for (Transform t = box.transform; t != null; t = t.parent) if (t.name == "GameplayProps") gameplayProp = true;
-            Assert.IsFalse(gameplayProp, $"{box.name}: mesh replaced by its bounding box (run Tools/TagOfChaos/Maps/Fix Prop Box Colliders)");
-        }
-        int listed = 0;
-        foreach (MeshCollider mc in Object.FindObjectsByType<MeshCollider>(FindObjectsSortMode.None))
-        {
-            if (!ConvexGapScanner.IsListed(mc.name)) continue;
-            listed++;
-            if (mc.convex) Assert.Less(ConvexGapScanner.GapArea(mc), ConvexGapScanner.MinGapArea, $"{mc.name}: convex hull blocks a walkable gap (run Fix Convex Gaps)");
-        }
-        Assert.Greater(listed, 0);
-    }
 }
-

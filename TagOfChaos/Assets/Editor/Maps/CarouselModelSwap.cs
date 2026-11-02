@@ -5,10 +5,10 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 
 // 저주받은 놀이공원 회전목마 교체(Request1009Plan.md §29, 단계 K2).
-// 받은 본체 + 목마 16마리를 Blender에서 조립한 CUR_Carousel.fbx(Source~/Scripts/cur_carousel_build.py)를 CUR_Carousel_Top에 붙인다:
+// 받은 본체 + 목마 16마리를 Blender에서 조립한 CUR_Carousel.fbx(ArtSource/Maps/CursedCandyCarnival/Source~/Scripts/cur_carousel_build.py)를 CUR_Carousel_Top에 붙인다:
 // Top의 옛 메시 겉모습은 지우고 새 모델을 자식 "Model"로 — Top의 Animator(돌기)·키네마틱 Rigidbody는 그대로라 함께 돈다.
 // 충돌은 FBX의 COL_Carousel(본체를 줄인 메시)을 볼록 MeshCollider로(지금처럼 들어갈 수 없는 단단한 놀이기구).
-// MapSceneBuilder.BuildAnimated도 이 도구를 불러 맵을 다시 만들어도 유지된다.
+// 지금은 실제 맵 놀이기구 빌더(CarnivalRidesBuilder)가 부른다(옛 Game_ 씬용 메뉴는 §47 CL5에서 없앴다).
 public static class CarouselModelSwap
 {
     public const string TopName = "CUR_Carousel_Top";
@@ -16,20 +16,7 @@ public static class CarouselModelSwap
     public const string Folder = "Assets/Maps/CursedCandyCarnival/Models/Carousel";
     public const string ModelPath = Folder + "/CUR_Carousel.fbx";
     private const string CollisionName = "COL_Carousel";
-    private const string MenuRoot = "Tools/TagOfChaos/Maps/";
     private static readonly string[] Parts = { "CarouselBody", "CarouselHorse" }; // 텍스처·재질 이름(렌더러 CarouselHorses는 CarouselHorse 재질)
-
-    [MenuItem(MenuRoot + "Swap Carousel Model (Cursed Candy Carnival)")]
-    public static void SwapMenu()
-    {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-        var scene = EditorSceneManager.OpenScene(MapSceneBuilder.ScenePath("CursedCandyCarnival"), OpenSceneMode.Single);
-        Transform map = scene.GetRootGameObjects().Select(g => g.transform).FirstOrDefault(t => t.name == "Map");
-        Transform top = map != null ? map.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == TopName) : null;
-        Debug.Log("[CarouselModelSwap] " + Apply(top));
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
-    }
 
     // CUR_Carousel_Top 하나를 바꾼다(여러 번 불러도 같은 결과).
     public static string Apply(Transform top)

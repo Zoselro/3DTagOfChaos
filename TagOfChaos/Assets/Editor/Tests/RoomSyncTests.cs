@@ -6,9 +6,9 @@ public class RoomSyncTests
 {
     // ---------------- F1 방 씬 따라가기 ----------------
 
-    [TestCase("Game_CandyForest", "GameLobbyScene", false, 2.5f, true)]  // 방은 맵인데 나는 대기실(방장이어도) → 따라감
-    [TestCase("Game_CandyForest", "GameLobbyScene", true, 5f, false)]    // 로드 중이면 기다린다
-    [TestCase("Game_CandyForest", "GameLobbyScene", false, 1f, false)]   // 서버 응답이 따라올 시간
+    [TestCase("CandyForest", "GameLobbyScene", false, 2.5f, true)]  // 방은 맵인데 나는 대기실(방장이어도) → 따라감
+    [TestCase("CandyForest", "GameLobbyScene", true, 5f, false)]    // 로드 중이면 기다린다
+    [TestCase("CandyForest", "GameLobbyScene", false, 1f, false)]   // 서버 응답이 따라올 시간
     [TestCase("GameLobbyScene", "GameLobbyScene", false, 9f, false)]     // 같은 씬
     [TestCase(null, "GameLobbyScene", false, 9f, false)]                 // 방 씬 정보 없음(오프라인 시험 씬 등)
     public void ShouldFollow(string room, string active, bool loading, float mismatch, bool expected) =>
@@ -26,10 +26,10 @@ public class RoomSyncTests
     [Test]
     public void TrustOwnLoad_WhileCurScnCacheIsStale()
     {
-        Assert.IsTrue(SceneSyncRules.TrustOwnLoad("Game_CandyForest", "Game_CandyForest", 1f, 10f), "master just moved the room");
-        Assert.IsFalse(SceneSyncRules.TrustOwnLoad("Game_CandyForest", "GameLobbyScene", 1f, 10f));
-        Assert.IsFalse(SceneSyncRules.TrustOwnLoad("Game_CandyForest", "Game_CandyForest", 12f, 10f), "after the window the room scene wins");
-        Assert.IsFalse(SceneSyncRules.TrustOwnLoad(null, "Game_CandyForest", 1f, 10f));
+        Assert.IsTrue(SceneSyncRules.TrustOwnLoad("CandyForest", "CandyForest", 1f, 10f), "master just moved the room");
+        Assert.IsFalse(SceneSyncRules.TrustOwnLoad("CandyForest", "GameLobbyScene", 1f, 10f));
+        Assert.IsFalse(SceneSyncRules.TrustOwnLoad("CandyForest", "CandyForest", 12f, 10f), "after the window the room scene wins");
+        Assert.IsFalse(SceneSyncRules.TrustOwnLoad(null, "CandyForest", 1f, 10f));
     }
 
     [Test]
@@ -76,13 +76,13 @@ public class RoomSyncTests
         var scenes = new Dictionary<int, string>
         {
             { 1, "GameLobbyScene" }, // 대기실에 남은 괴물 호스트
-            { 2, "Game_CandyForest" },
-            { 3, "Game_CandyForest" },
+            { 2, "CandyForest" },
+            { 3, "CandyForest" },
             { 4, null },             // 아직 알리기 전
         };
-        Assert.AreEqual(0, MonsterArrival.Arrived(new[] { 1 }, scenes, "Game_CandyForest"));
-        Assert.AreEqual(1, MonsterArrival.Arrived(new[] { 1, 3 }, scenes, "Game_CandyForest"));
-        Assert.AreEqual(0, MonsterArrival.Arrived(new[] { 4, 9 }, scenes, "Game_CandyForest"));
+        Assert.AreEqual(0, MonsterArrival.Arrived(new[] { 1 }, scenes, "CandyForest"));
+        Assert.AreEqual(1, MonsterArrival.Arrived(new[] { 1, 3 }, scenes, "CandyForest"));
+        Assert.AreEqual(0, MonsterArrival.Arrived(new[] { 4, 9 }, scenes, "CandyForest"));
 
         Assert.IsTrue(MonsterArrival.ShouldReturn(1, 0), "no monster arrived → return to lobby");
         Assert.IsFalse(MonsterArrival.ShouldReturn(2, 1), "some arrived → the round continues");

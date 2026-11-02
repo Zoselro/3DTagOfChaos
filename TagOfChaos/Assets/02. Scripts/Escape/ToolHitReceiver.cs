@@ -23,7 +23,7 @@ public static class ToolHitReceiver
         // 쓴 사람은 누르는 순간 이미 들었다(ToolUser.Use). 다른 사람은 그 손에서 3D로(S5).
         bool mine = PhotonNetwork.LocalPlayer != null && senderActor == PhotonNetwork.LocalPlayer.ActorNumber;
         if (!mine) GameAudio.PlayAt(ToolUser.UseSound(item.Tool.Kind), from ?? point);
-        bool balloon = item.Tool.Kind == ToolKind.WaterBalloon || item.Tool.Kind == ToolKind.JailBalloon;
+        bool balloon = item.Tool.Kind == ToolKind.WaterBalloon;
         if (!mine && user != null && user.gameObject.TryGetComponent(out PlayerActionPose pose))
         {
             if (balloon) pose.Play(PlayerActionPose.OneShot.Throw);
@@ -83,7 +83,7 @@ public static class ToolHitReceiver
                 GameAudio.PlayAt(SoundId.StunHit, point);
                 break;
         }
-        bool balloon = item.Tool.Kind == ToolKind.WaterBalloon || item.Tool.Kind == ToolKind.JailBalloon;
+        bool balloon = item.Tool.Kind == ToolKind.WaterBalloon;
         if (!balloon || targets.Length == 0) ToolFx.Play(item.Tool.Kind, point, item.Tint);
         // 맞은 곳 소리(모두, 3D): 물풍선은 늘 터지고, 스턴건·뿅망치는 누군가 맞았을 때만(S5)
         switch (item.Tool.Kind)

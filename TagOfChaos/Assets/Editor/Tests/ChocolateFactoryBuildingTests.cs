@@ -176,22 +176,6 @@ public class ChocolateFactoryBuildingTests
             Assert.IsFalse(Load(key).GetComponentsInChildren<Transform>(true).Any(t => t.name.StartsWith("Socket_")), key + " takes no material");
     }
 
-    [Test]
-    public void TestScene_HasAllEightBuildings()
-    {
-        var setup = EditorSceneManager.GetSceneManagerSetup();
-        try
-        {
-            var scene = EditorSceneManager.OpenScene(ChocolateFactoryBuildingsScene.ScenePath, OpenSceneMode.Single);
-            GameObject root = scene.GetRootGameObjects().FirstOrDefault(g => g.name == ChocolateFactoryBuildingsScene.RootName);
-            Assert.IsNotNull(root);
-            foreach (string key in ChocolateFactoryAssets.AllBuildings)
-                Assert.IsNotNull(root.transform.Find(ChocolateFactoryAssets.PrefabName(key)), key);
-            Assert.AreEqual(16, root.GetComponentsInChildren<InteractableDoor>(true).Select(d => d.DoorId).Distinct().Count(), "16 doors, unique ids");
-        }
-        finally { if (setup.Length > 0) EditorSceneManager.RestoreSceneManagerSetup(setup); }
-    }
-
     private static GameObject Load(string key)
     {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ChocolateFactoryAssets.PrefabPath(key));

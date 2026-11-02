@@ -23,7 +23,7 @@ public static class MusicRules
             case SceneNames.GameLobby: return MusicScene.GameLobby;
         }
         if (!SceneNames.IsMapScene(sceneName)) return MusicScene.Other;
-        switch (SceneNames.MapOf(sceneName)) // Game_·Test_·실제 모델 맵 모두(§25 G1, §28)
+        switch (SceneNames.MapOf(sceneName)) // Test_·실제 모델 맵 모두(§25 G1, §28)
         {
             case "CandyForest": return MusicScene.CandyForest;
             case "GingerbreadVillage": return MusicScene.Gingerbread;
@@ -45,7 +45,7 @@ public static class MusicRules
 
         // 맵(사용자 결정 2026-10-03): 쿠키는 준비 시간(예전 변장 시간)에만 맵 곡을 듣고, 준비가 끝나면(추격·타임어택) 배경음을 끈다 —
         // 그때부터는 효과음·환경음·스팅어만. 괴물은 맵에 들어와도 맵 곡이 없다. 결과는 징글 뒤 결과 곡(로비 곡은 28초 한 번 재생이라 따로, §20.1).
-        // (MusicId의 …Hunt·TimeAttack 곡은 쓰지 않지만 ID 번호를 지키려고 남겨 둔다.)
+        // (옛 …Hunt·TimeAttack 곡은 §47 CL2에서 없앴다 — 번호 11·13·15·17·19·20은 다시 쓰지 않는다.)
         if (c.Phase == GamePhase.Result) return MusicId.Result;
         if (c.LocalIsMonster) return MusicId.None;
         return c.Phase == GamePhase.Lobby || c.Phase == GamePhase.Prepare ? MapPaint(c.Scene) : MusicId.None;

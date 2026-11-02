@@ -161,18 +161,6 @@ public class Request1011Tests
         Assert.IsNull(row.Find("Output_Headset"), "old preset buttons removed");
     }
 
-    // ---- §16.7 베이커리 고장 소리 ----
-
-    [Test]
-    public void BrokenOven_HasClipInCatalog()
-    {
-        Assert.AreEqual(724, (int)SoundId.OvenBroken);
-        var catalog = AssetDatabase.LoadAssetAtPath<SoundCatalogSO>("Assets/Resources/Audio/SoundCatalog.asset");
-        Assert.IsTrue(catalog.TryGet(SoundId.OvenBroken, out SoundCatalogSO.Entry e));
-        Assert.Greater(e.clips.Length, 0, "run Tools/TagOfChaos/Audio/Build Catalogs");
-        Assert.Greater(e.clips[0].length, 7.9f);
-    }
-
     // ---- §18.3 스파이가 끼운 재료 → 열린 상자 ----
 
     private static EscapeState ChestState(params (bool opened, bool spy, bool hasItem)[] chests)
@@ -361,19 +349,6 @@ public class Request1011Tests
         Assert.IsTrue(catalog.TryGet(MusicId.Result, out MusicCatalogSO.Entry entry));
         Assert.IsTrue(entry.loop);
         Assert.AreEqual(72f, entry.clip.length, 0.1f, "Result_A (E minor 3/4 60, 24 bars)");
-    }
-
-    [Test]
-    public void OvenBroken_IsGearB2Loop()
-    {
-        var clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/10. Audio/SFX/Device/OvenBroken.wav");
-        Assert.AreEqual(8f, clip.length, 0.01f, "8 s seamless loop");
-        float[] data = new float[clip.samples * clip.channels];
-        Assert.IsTrue(clip.GetData(data, 0));
-        // GearB2: 쇠끼리 부딪히는 높은 소리라 이웃 샘플 차이(고음 성분)가 크다 — 예전 증기·쿵 소리보다 훨씬 거칠다
-        double diff = 0, level = 0;
-        for (int i = 1; i < data.Length; i++) { diff += Mathf.Abs(data[i] - data[i - 1]); level += Mathf.Abs(data[i]); }
-        Assert.Greater(diff / level, 0.17, "metal-on-metal (bright) rather than low thuds — old steam/thud loop was 0.10");
     }
 
     // ---- §19 로켓 뒤 마녀·쿠키 탈출 뒤 처단·훔치기 10초·강퇴 ----

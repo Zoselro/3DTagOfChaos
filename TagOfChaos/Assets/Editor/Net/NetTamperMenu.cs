@@ -67,16 +67,6 @@ public static class NetTamperMenu
         Debug.Log("[NetTamper] Requested master client for myself. Expected: the policy master takes it back within a second.");
     }
 
-    [MenuItem(Root + "5 Paint other cookie")]
-    private static void PaintOther()
-    {
-        HideOrSeekPlayer cookie = CookieOf(FirstOther());
-        if (cookie == null) { Debug.Log("[NetTamper] No other cookie."); return; }
-        object[] content = { cookie.View.ViewID, 0 }; // { viewId, 팔레트 번호 } — 물풍선 전신 칠하기와 같은 모양
-        PhotonNetwork.RaiseEvent(NetEventCodes.PaintStroke, content, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
-        Debug.Log($"[NetTamper] Sent a paint fill for view {cookie.View.ViewID}. Expected: ignored on every screen.");
-    }
-
     [MenuItem(Root + "7 Grab other cookie from afar")]
     private static void GrabFromAfar()
     {

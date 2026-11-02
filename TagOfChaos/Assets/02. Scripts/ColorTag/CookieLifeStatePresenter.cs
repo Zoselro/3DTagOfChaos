@@ -107,13 +107,7 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
 
         // 가루 색은 지금 몸에 보이는 색(칠한 색 + 스킨 색)으로 — 분쇄(약 1.6초 뒤) 전에 비동기로 읽어 둔다.
         // 캐릭터 가루 색이 있으면 그것(§45.10 — 새 캐릭터는 칠하기를 쓰지 않는다), 없으면 몸에 칠한 색.
-        Color[] character = CharacterCrumbColors(pv != null ? pv.Owner : null);
-        if (character != null) crumbColors = character;
-        else
-        {
-            var paintCanvas = GetComponent<PlayerPaintCanvas>();
-            if (paintCanvas != null) paintCanvas.SampleSurfaceColors(colors => crumbColors = colors);
-        }
+        crumbColors = CharacterCrumbColors(pv != null ? pv.Owner : null);
 
         FollowGrabSocket(Vector3.one);
         Debug.Log($"[CookieLife] view={pv.ViewID} grabbed by monster view={monster.View.ViewID}");

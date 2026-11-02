@@ -1,36 +1,30 @@
-# 조사 보고서: TagOfChaos 스크립트 전수 해설 · 구조 점검 · 미사용 코드/에셋 (2026-10-23, 8차)
+# 조사 보고서: TagOfChaos 구조 점검 9차 — §39~§46 이후 전수 재점검 · 미사용 코드/에셋 · 버그 위험 (2026-11-02)
 
 > **이 문서에 대해**
-> - 7차 판(2026-10-12, 1,523줄 — 5·6·7차 감사, `R4.x`·`R5-x`·`§x`·`F-xx` 번호 체계)은 **`Plan.md/archive/research.2026-10-12.md`에 한 글자도 바꾸지 않고 옮겨 두었다.** 코드 주석 50개 파일이 `research.md R5-21`, `R4.7-9`, `§12.4` 같은 번호를 가리키는데, 그 번호는 모두 보관본에서 찾는다(이 문서는 새 번호 `A-xx`·`U-xx`·`D-xx`를 쓴다).
-> - 범위: `Assets/02. Scripts` 런타임 스크립트 **206개 파일 · 24,531줄**(Legacy~ 제외)을 모두 읽었다. 참조 확인을 위해 `Assets/Editor`(시험·빌더)와 `Assets/03. SO`도 함께 보았다. 에셋은 Unity 에디터에서 **빌드 씬 + Resources를 뿌리로 한 의존성 그래프**를 직접 계산했다.
-> - 코드·에셋은 **하나도 고치지 않았다**(조사만). 권장 조치는 8장에 우선순위로 적었고, 실제 정리는 사용자 결정 뒤 별도 계획서로 진행한다.
-> - 표기: ✅ 문제 없음 / ⚠️ 개선 권장 / ❌ 문제 / 💀 죽은 코드(실행되지 않음) / 🧪 시험·에디터에서만 씀.
-
-
-## 0. 처리 결과 (2026-10-23 — Request1009Plan.md §38)
-
-> 아래 2~9장은 조사 당시 상태다. 그중 A·B·D를 정리했고, 처리한 항목은 이 표가 현재 상태다. 옮긴 파일은 모두 프로젝트 밖 `_CleanupBackup/2026-10-23/`에 원래 경로 그대로 있다(.meta 포함). 확인이 끝나면 지워도 된다.
-
-| 묶음 | 결과 |
-|---|---|
-| A 죽은 코드 | NetHold(대기실 대기)·손 색칠·마녀 처단(Purge)·작은 멤버 약 30개·`Legacy~` 4폴더·`MonsterTestSpawner` 정리. `PlayerPaintCanvas` 649 → 약 200줄. 네트워크 번호(`NetEventCodes` 3·13, `WitchMode` 2, `EscapeNoticeKind` 2)는 비워 둠 |
-| B 씬 | 맵 7개의 꺼진 `PointLights`, 놀이공원 빈 `COL_0` 342개·꺼진 물 프로브 2개, 대기실 `MonsterWaitPanel` 삭제(놀이공원 4,404 → 3,948개). 빌더가 빈 `COL`을 다시 만들지 않게 수정 |
-| D 고아 에셋 | 77개(약 54 MB) 이동: 쿠키 애니메이션 FBX 3·백업 anim 2, `VK_Viking.fbx`, `CF_Tile_Grass`·`Ground_Floor_Tile` 프리팹+FBX, 재질 6, `SampleScene/NavMesh.asset`, 스크린샷 57장. `02. Scripts/Player.md` → `Plan.md/archive/Player.md`. 빌드 의존성 1,776개 그대로 |
-| 검증 | 컴파일 오류 0 · EditMode 320/320 · 통행 5/5 · Play Mode(물풍선 칠하기·마녀 타임어택·결과·대기실 문·걷기) Console 0건 |
-| 남긴 것 | 7.1의 빌더 입력(`Maps/Common` 97 FBX, `*_Effects.fbx`(MapSceneBuilder가 분류로 읽음), `FL_*`, `GD_GyroDrop`, `ITEM_CandyCell_*` 등), `Game_`·`Original/` 씬(C — 결정 대기), `Test_CandyForest`·`Test_CursedCandyCarnival`(실제 맵 원본 틀), 표정 그림·`LobbySceneBackGround.png`(사용 계획 확인 필요), `SoundSettingsPanel.prefab`(설치 도구가 경로로 씀), `EscapeRecipeSO` 옛 필드(에셋 만드는 도구가 채움), `ColorEntry.colorName`(인스펙터 이름표), `SoundId`·`MusicId` 값 |
+> - 8차 판(2026-10-23, 911줄 — `A-xx`·`U-xx`·`D-xx` 번호)은 **`Plan.md/archive/research.2026-10-23.md`에 한 글자도 바꾸지 않고 옮겼다.** 7차 이전 번호(`R4.x`·`R5-x`·`F-xx`·`§12.x`)는 `archive/research.2026-10-12.md`에 있다. 코드 주석이 가리키는 옛 번호는 그 보관본에서 찾는다. 이 문서는 새 번호 **`N-xx`(발견)·`K-xx`(조치)** 를 쓴다.
+> - 범위: `Assets/02. Scripts` 런타임 **221개 파일 · 25,352줄**, `Assets/Editor` 83개 파일(빌더·시험, 약 23,200줄)을 다시 읽었다. 8차 이후 바뀐 곳(§39~§46: AI 두뇌·캐릭터 5종·도구 개편·춤·스태미나·잡기 되돌림 판정·씬 이동 안전장치)은 줄 단위로 읽었고, 나머지는 8차 결론이 여전히 맞는지 근거 줄을 다시 확인했다.
+> - 에셋은 Unity 에디터에서 직접 계산했다: YAML 에셋 1,644개(913 MB)의 GUID 참조 + `.meta`의 FBX 외부 재질 연결 9,544개 + 빌드 설정의 씬 7개 + `Resources` 폴더를 뿌리로 한 **의존성 그래프**, 버튼 `m_MethodName`, `GraphicsSettings`의 "항상 포함" 셰이더.
+> - **10차 보정(2026-11-02, 같은 날)**: 사용자 지적(붓 커서)으로 미사용 에셋 조사를 다시 했다.
+>   - 뿌리를 `Resources` 폴더 통째에서 "코드가 실제로 부르는 경로"로 좁혔다.
+>   - Photon 폴더, `~` 원본 폴더, 3 MB 넘는 파일 209개를 실측했다.
+>   - 사운드·음악 ID와 아이템 배포 목록을 대조했다.
+>   - Unity에서 판 맵 목록을 확인했다.
+>   - **6장 전체와 1장·8장·9장의 해당 줄을 고쳤다.** 나머지 장은 9차 그대로다.
+> - **코드·에셋은 하나도 고치지 않았다**(조사만). 권장 조치는 8장에 우선순위로 적었다.
+> - 표기: ✅ 문제 없음 / ⚠️ 개선 권장 / ❌ 문제 / 🐞 실제 버그 / 💀 죽은 코드 / 🧪 시험·에디터에서만 씀 / ↗ 8차보다 나빠짐 / ↘ 8차보다 나아짐.
 
 ---
 
 ## 목차
 
 1. 한눈에 보는 결론
-2. 게임 전체 구조와 실행 흐름
-3. 핵심 기법 상세 해설 (Camera_Ctrl 구면좌표 → 이동 물리 → 네트워크 시계 → 방장 권위 → 소리 → 수학 도구)
-4. 폴더별 클래스·변수·메서드 해설 (13개 폴더)
-5. 구조 점검 12항목
-6. 미사용 코드 (클래스·메서드·필드·변수·열거값·문구)
-7. 미사용 에셋 (FBX·Prefab·씬·씬 오브젝트·기타 파일)
-8. 권장 조치 (우선순위) 와 사용자 결정이 필요한 것
+2. 게임 전체 구조와 실행 흐름 (현재)
+3. 8차 이후 추가된 시스템 상세 해설 (어떻게 동작하는가)
+4. 구조 점검 12항목
+5. 미사용 코드 목록
+6. 미사용 에셋 (10차 보정 — A 빌드 포함 미사용 / L 옛 `Game_` 맵 전용 / C 고아 / S 원본 폴더 / 크기 규칙)
+7. 발견한 버그·위험 (구조 점검과 별개로 바로 영향이 있는 것)
+8. 권장 조치 (우선순위)
 9. 부록 — 조사 방법·수치·한계
 
 ---
@@ -39,873 +33,486 @@
 
 | 영역 | 판정 | 한 줄 요약 |
 |---|---|---|
-| 네트워크 권위(Photon) | ✅ 우수 | 게임 상태는 **방장 한 명만 쓰는 Room Prop**(`EscapeState` 이진 스냅숏 + `Revision`)이고, 요청은 `RaiseEvent`로 방장에게만 간다. 받는 쪽은 **보낸 사람(`photonEvent.Sender` / `info.Sender`)·거리**로 검증한다. 조작된 속성은 `RoomPropertyGuard`가 되돌린다. Ownership 이전(`TransferOwnership`)은 쓰지 않는다 — 구조와 맞다. |
-| 결정적 연출 | ✅ 우수 | 롤러코스터·바이킹·로켓·마녀·AI 목소리가 모두 **`PhotonNetwork.Time` + 방 속성만으로 계산**되어, 위치를 보내지 않아도 모든 화면이 같은 장면을 본다(늦게 들어온 사람도). |
-| 죽은 코드 | ❌ 많음 | 규칙 개편(§25·§26)으로 **손 색칠·괴물 대기실 대기(NetHold)·마녀 처단(Purge)** 세 갈래가 통째로 실행되지 않는데 코드가 남아 있다 — 약 **1,100줄 이상**(6장). |
-| 미사용 에셋 | ❌ 많음 | 빌드(빌드 씬 + Resources)에서 닿지 않는 프로젝트 FBX **177개(61 MB)**, Prefab **25개**, 씬 **12개(옛 `Game_` 5 · `Original/` 5(24 MB) · 빌드 제외 `Test_` 2(실제 맵의 원본 틀이라 유지), 합 38 MB)**, 스크린샷 **57장(14 MB)**, 쓰지 않는 쿠키 애니메이션 FBX 3개(20 MB). 단 그중 상당수는 **에디터 빌더의 입력**이라 "지워도 되는 것"과 "빌드에 안 들어갈 뿐인 원본"을 나눠 적었다(7장). |
-| 씬 안 불필요 오브젝트 | ⚠️ | 모든 맵에 **꺼진 점광원 묶음 `MapLighting/PointLights`(72~394개)**, 놀이공원 울타리 아래 **빈 `COL` 오브젝트 342개**, 대기실의 옛 **`MonsterWaitPanel`**, 지운 물 위의 **꺼진 반사 프로브 2개**(7.4절). |
-| Singleton | ⚠️ 약간 많음 | 정적 인스턴스 16곳(DDOL 4 · 씬 싱글턴 7 · `Local` 2 · SO 캐시 3). 대부분 "자기 부트스트랩 + 파괴 시 해제"가 정확하지만 **`EscapeManager.Instance`가 8개 파일, `EscapeManager` 정적 멤버가 38개 파일**에서 쓰여 허브가 되었다(5.3·5.6). |
-| Prefab ↔ Script 역할 | ⚠️ | 런타임 `AddComponent` **75곳(32개 파일)**. 쿠키 프리팹에는 보이지 않는 컴포넌트 8개가 실행 중에 붙는다 — 인스펙터로 볼 수 없고 프리팹 수정이 반영되지 않는다(5.4). |
-| Scene 직접 의존 | ⚠️ | `GameObject.Find` 7곳·`FindFirstObjectByType` 7곳·`Camera.main` 20곳·이름 규칙(`Repair_Point`, `Slot_00_Empty`, `Ground`, `Map`) 다수(5.5). |
-| Event 구독/해제 | ✅ | `+=`/`-=` 짝을 전수 확인 — 해제가 빠진 것은 **같은 오브젝트 수명**(EscMenu·LobbyEscMenu)과 **죽은 NetHold** 뿐. Awake 구독·OnDisable 해제 같은 비대칭은 0건(5.9). |
-| Object Pool ↔ Instantiate | ⚠️ | 소리(보이스 풀)·맵 박살 조각·바닥 아이템은 풀을 쓰지만, 짧은 효과(도구 명중·풍선·경보등·소음폭탄)는 `CreatePrimitive`/`Destroy`를 매번 한다 — 충돌은 없으나 방식이 섞였다. **`BreakVfx` 가루 파티클 인스턴스는 코드로 지우지 않는다**(프리팹 Stop Action 의존)(5.10). |
-| 중복 로직 | ⚠️ | "액터 번호로 캐릭터 찾기"·"내 캐릭터 찾기" 루프 **9곳**, ESC 키 직접 읽기 **6곳**, 코드로 UI 만드는 도우미 **6벌**, 레지스트리 2벌, 애니메이션 상태 전환 2벌(5.12). |
-| ScriptableObject | ⚠️ | SO는 데이터 + 정적 `Current` 캐시로 일관되게 쓰인다. 다만 **옛 규칙 필드가 에셋 호환 때문에 남아**(`EscapeRecipeSO` 7개, `EscapeCatalogSO` 3개, `GameSettingsSO` 색칠 5개), SO 안에 런타임 정적 캐시가 있다(5.7). |
-| Unity 수명주기 | ✅ | `[DefaultExecutionOrder]` 2곳은 의도가 분명(들린 몸 → 카메라 순서). "Awake에서 PhotonView 콜백 받기 전 준비" 문제를 이미 고쳤다. 남은 주의점은 `ToolUser`와 `WitchRevealCamera`가 **같은 프레임에 카메라 FOV를 둘 다 쓴다**는 것 하나(5.8). |
+| 🐞 바로 고칠 것 | ❌ 1건 | **물풍선 물방울 셰이더 `TagOfChaos/WaterBubble`이 빌드에 들어가지 않는다.** 코드가 `Shader.Find`로만 찾고(`WaterBubbleView.cs:22`), 그 셰이더를 쓰는 재질·씬·`Resources`가 없으며, "항상 포함" 목록에도 없다 → 빌드에서는 대체 재질(단순 반투명 하늘색)로 그려진다. 에디터에서는 정상이라 눈치채기 어렵다(N-01). |
+| 네트워크 권위(Photon) | ✅ 우수(↘) | 방장 권위 Room Prop + 요청 이벤트 구조 유지. 8차 이후 **잡기 확정이 "괴물이 본 순간"으로 되돌려 재는 방식**(위치 기록 `PositionHistory`)으로 바뀌었고, 거절은 즉시 모두에게 알린다. RPC 6개 모두 보낸 사람 검증. Ownership 이전 0건. |
+| 씬 이동 | ✅(↘) | PUN `LoadLevel`의 "진행 중 로드 취소 → 이후 로드 모두 막힘" 함정을 `PunSceneLoad`로 막았고, 모든 씬 로드가 한 통로를 지난다(시험으로 강제). 다만 **메시지 큐를 직접 켜는 곳이 5곳**으로 늘었다(N-09). |
+| 죽은 코드 | ⚠️(↘) | 8차의 큰 덩어리(손 색칠·NetHold·Purge)는 정리됨. 새로 생긴 것: **몸 색칠 캔버스 전체가 사실상 죽음**(§45에서 물풍선 색칠을 없애 `ForceFillColor` 호출 0, 가루 색은 캐릭터 표에서 옴), **감옥 풍선(JailBalloon) 도구**가 어떤 상자에도 나오지 않음, 작은 멤버 약 25개(5장). |
+| 미사용 에셋 | ⚠️ | 10차 재조사(6장): **빌드에 들어가지만 안 쓰는 것 ≈ 16 MB**(붓 커서 3.8 MB, Photon 데모 `Resources` 2 MB, 안 쓰는 사운드 32개 6 MB·음악 6곡 4.5 MB 등), **옛 `Game_` 맵 파이프라인 전용 ≈ 53 MB**(판에서 안 씀), **완전 고아 ≈ 28 MB**(캐릭터 Metallic/Roughness 9.2 MB·`Maps/Common/Models` 6.9 MB 등), `Assets` 안 `Source~` 원본 **≈ 909 MB**. FBX 100 MB 규칙 위반 2건(6.5). |
+| 책임 분리 | ⚠️(↗) | 큰 클래스가 더 커졌다: `EscapeAuthority` 1,232 → **1,289줄**, `EscapeManager` 475 → **511줄**, `HideOrSeekPlayer` **682줄**(이동·점프·회피·춤·스태미나·들기 RPC·처형 RPC·동기화·리스폰·순간이동), `DecoyBrain` **519줄**. 위치 기록이 **두 벌**(N-06). |
+| Manager 의존 | ⚠️ | `EscapeManager`가 하위 객체 11종을 알고(팬아웃 1위), `EscapeManager` 정적 멤버를 **32개 파일**이 부른다(8차 38 ↘). 서로 참조 짝 11쌍 — 모두 같은 기능 묶음 안. |
+| Prefab ↔ Script | ⚠️(↗) | 런타임 `AddComponent` **89곳**(8차 75). 쿠키 9개·괴물 4개·`EscapeManager` 5개(AI 두뇌 포함)·HUD 10개가 실행 중 조립된다. |
+| Scene 직접 의존 | ⚠️(↗) | `GameObject.Find` **7곳**(그중 `EscapeManager`의 쿠키 스폰 찾기가 **3곳·호출마다**), `FindObjectsByType` 11곳, `Camera.main` 21곳, 이름 규칙 찾기 29곳. |
+| Singleton | ⚠️ | 정적 인스턴스/캐시 **24곳**(DDOL 5 · 씬 싱글턴 8 · SO 캐시 8 · 기타). 새로 `PositionHistory`(DDOL)·`DecoyBrain.Instance`·`DanceCatalogSO.Current`. 모두 파괴 시 해제 ✅. |
+| ScriptableObject | ✅/⚠️ | 데이터 전용 원칙 유지(런타임에 SO 값을 쓰는 곳 0). "정적 `Current` 로더" 상용구가 **8벌** 반복, `EscapeRecipeSO` 옛 필드 7개 여전. |
+| Lifecycle | ⚠️ | `[DefaultExecutionOrder]` 4곳(새로 `WaterTrapMotion(200)`·`WitchArmsDown(500)`) 의도 분명. 주의: **`GameManager.Start`·`PlayerSpawner`가 메시지 큐를 무조건 켠다** — PUN 씬 로드 중 일시정지와 겹칠 수 있다(N-09). |
+| Event 구독/해제 | ✅ | `+=`/`-=` 전수 대조 — 해제 누락 0건(정적 이벤트 8개 포함). 람다 구독은 가드가 있는 1곳뿐. |
+| Object Pool ↔ Instantiate | ✅ 충돌 없음 | 풀 4종(보이스·맵 조각·바닥 아이템·별). 가루 VFX는 프리팹 Stop Action = **Destroy 확인**(`CookieCrumbBurst.prefab`). |
+| 중복 로직 | ⚠️(↗) | `Flat()` **9벌**, "로컬/액터 캐릭터 찾기" 루프 23곳, 처형 연출(소켓 따라가기·눌림·가루) **3벌**, `FindClipLength` 2벌, `WhiteSprite` 2벌, SO 로더 8벌. |
 
 ---
 
-## 2. 게임 전체 구조와 실행 흐름
+## 2. 게임 전체 구조와 실행 흐름 (현재)
 
 ### 2.1 폴더 규모
 
-| 폴더 | 파일 | 줄 | 역할 |
-|---|---:|---:|---|
-| `Escape/` | 53 | 8,258 | 탈출 모드 전부 — 상태·방장 규칙·건물·상자·로켓·아이템·도구·AI·마녀 연출·HUD |
-| `Audio/` | 26 | 2,829 | 소리 엔진(보이스 풀·거리 감쇠·실내 차단)·음악·추격 북·출력 장치(Windows COM) |
-| `Core/` | 31 | 2,336 | 네트워크 키·권위 속성·방 상태 읽기·입력·조작키·음성 채팅·공용 도구 |
-| `Monster/` | 21 | 2,129 | 괴물 조작·잡기 판정·게임 규칙(방장)·결과 화면·관전·방장 정책 |
-| `Lobby/` | 13 | 1,511 | 로비(방 목록·지역)·대기실(플레이어 목록·강퇴·방 설정·게임 시작) |
-| `Unit/` | 11 | 1,247 | 쿠키 조작·애니메이션·들기(Carry)·스킨·이름표 |
-| `ColorTag/` | 4 | 1,057 | 몸 색칠 캔버스(지금은 물풍선 색만)·쿠키 생사 표시 |
-| `Environment/` | 9 | 940 | 문·롤러코스터·바이킹·가마솥·깜빡이는 빛 |
-| `Camera/` | 6 | 913 | 3인칭 궤도 카메라·괴물 1인칭·마녀 연출 카메라·조준점 |
-| `GameManager/` | 10 | 687 | 채팅·스폰·방 나가기·ESC 메뉴·낙하 복구 |
-| `UI/` | 4 | 467 | 설정 창(조작키·입력 장치)·로비 ESC |
-| `Interaction/` | 5 | 370 | E 상호작용(가까운 대상 찾기·길게 누르기·안내 UI) |
-| `Dev/` | 2 | 84 | 오프라인 시험 도구 |
-| **합계** | **206** | **24,531** | (+ `Legacy~` 11개 파일 — Unity가 컴파일하지 않음) |
+| 폴더 | 파일 | 줄 | 역할 | 8차 대비 |
+|---|---:|---:|---|---|
+| `Escape/` | 66 | 10,157 | 탈출 모드 — 상태·방장 규칙·건물·상자·로켓·아이템·도구·**AI 두뇌(DecoyAI/)**·마녀 연출·HUD | +13파일 · +1,899줄 |
+| `Audio/` | 26 | 2,796 | 소리 엔진·음악·추격 북·출력 장치 | ≈ |
+| `Core/` | 37 | 2,762 | 네트워크 키·권위 속성·방 상태·입력·**위치 기록·스태미나·씬 로드 안전장치** | +6파일 |
+| `Monster/` | 22 | 2,285 | 괴물 조작·잡기 판정·게임 규칙·결과·관전·방장 정책·판 초기화 | +1 |
+| `Unit/` | 14 | 1,638 | 쿠키 조작·애니메이션·들기·**캐릭터 모델 교체·춤·동작 층** | +3 |
+| `Lobby/` | 14 | 1,589 | 로비·대기실·게임 시작·**캐릭터 배정** | +1 |
+| `Environment/` | 13 | 1,136 | 문·놀이기구·분수·컨베이어 | +4 |
+| `Camera/` | 6 | 835 | 3인칭·괴물 1인칭·마녀 연출·조준점 | ≈ |
+| `GameManager/` | 10 | 686 | 채팅·스폰·나가기·ESC | ≈ |
+| `ColorTag/` | 3 | 582 | 몸 색칠 캔버스(💀 대부분)·쿠키 생사 표시 | −1파일 |
+| `UI/` | 4 | 465 | 설정 창 | ≈ |
+| `Interaction/` | 5 | 370 | E 상호작용 | ≈ |
+| `Dev/` | 1 | 51 | 오프라인 시험 방 | −1 |
+| **합계** | **221** | **25,352** | | +15파일 · +821줄 |
 
 ### 2.2 씬 흐름
 
 ```
-LobbyScene ──(방 만들기/참가, LobbyController)──▶ GameLobbyScene(대기실)
-   ▲                                              │ 호스트 "시작" → GameStartAuthority(방장이 실행)
-   │                                              │   PrepareEndTime·맵·스파이·캐릭터 배정 기록
-   │                                              │   OpRemoveCompleteCache → PhotonNetwork.LoadLevel
-   │                                              ▼
-   │                                   맵 씬(CandyForest / CursedCandyCarnival / Test_*)
-   │                                     GameSceneCore 프리팹(규칙·결과·관전·HUD 뿌리)
-   │                                     PlayerSpawner/MonsterJoinController → PhotonNetwork.Instantiate
-   │                                     EscapeManager(상태 보기) + EscapeAuthority(방장만, 규칙)
-   │                                     GameRuleController(방장) → GameResult 기록
-   │                                              ▼
-   └──(RoomExitController 나가기)◀── ResultScreenController(12초 뒤 대기실로, RoundStateResetter가 판 키 초기화)
+LobbyScene ──(방 만들기/참가, LobbyController → PunSceneLoad.Load(GameLobby))──▶ GameLobbyScene(대기실)
+   ▲                                     │ 호스트 "시작" → GameStartAuthority.TryStart(방장)
+   │                                     │   거절 조건: 방장 교체 중 · 이미 시작(PrepareEndTime) · 3초 안 중복
+   │                                     │              · 방 씬이 이미 맵/로드 중(StartReadiness.IsRoomMoving)   ← §46 후속
+   │                                     │   PrepareEndTime·맵·스파이·캐릭터 배정 기록 → 방 닫기(IsOpen=false)
+   │                                     │   RoomSceneTransition.LoadLevelForRoom(맵)
+   │                                     │     로드 중이면 미뤘다가 끝난 뒤(TickDeferred) · 아니면 OpRemoveCompleteCache → PunSceneLoad.Load
+   │                                     ▼
+   │                         맵 씬(CandyForest / ChocolateFactory / CursedCandyCarnival / Test_GingerbreadVillage / Test_HauntedBakery)
+   │                           PlayerSpawner(쿠키)·MonsterJoinController(괴물) → PhotonNetwork.Instantiate
+   │                           EscapeManager(모두: 상태 보기·요청) + EscapeAuthority(방장: 규칙) + DecoyBrain(방장: AI)
+   │                           GameRuleController(방장) → GameResult · RoomLifecycleWatcher(괴물 이탈 → 대기실)
+   │                                     ▼
+   └──(RoomExitController 나가기)◀── ResultScreenController / RoomLifecycleWatcher → LoadLevelForRoom(GameLobby)
+                                          대기실: RoundStateResetter가 판 키 지우고 방 다시 열기(될 때까지 매 프레임 재시도 — §46 후속)
+
+어느 씬에서나(DontDestroyOnLoad 자기 부트스트랩): AudioRuntime · RoomPropertyGuard · RoomSceneFollower(방 씬 따라가기·큐 복구·
+  취소된 로드 되살리기) · CharacterInteractor · PositionHistory(방장 위치 기록) · VoiceChat(설정된 씬만)
 ```
 
 ### 2.3 권위 모델 (누가 무엇을 쓰는가)
 
 | 데이터 | 쓰는 사람 | 통로 | 검증 |
 |---|---|---|---|
-| 판 상태(아이템·상자·건물·로켓·탈출·폭탄·AI) | **방장** | Room Prop `EscapeState`(이진, `Revision` 증가) | 클라이언트는 `EscapeRequest` 이벤트로 **요청만** → `EscapeAuthority.Handle`이 거리·역할·소지품 확인 |
-| 단계 시각(`PrepareEndTime`·`WitchAppearAt`·`TimeAttackEndTime`…) | 방장 | `AuthorityProps.SetRoom` | `RoomPropertyGuard`가 방장 아닌 사람이 쓴 키를 되돌림 |
-| 괴물 목록·잡은 수·사망 원인 | 방장 | 같은 경로 | `MonsterAssignmentAuthority`가 보낸 사람·가마솥 거리 확인, `GrabKillAuthority.TryConfirm` |
-| 내 위치·애니메이션 | 본인 | `PhotonView` + `NetworkTransformSync<T>` | 방장이 0.2초마다 위치 기록, 너무 빠른 이동은 "의심" 처리(`EscapeAuthority.TrackPositions`) |
-| 내 선택 칸·녹음 여부·스킨 | 본인 | Player Prop (`Writer.Self`) | 키별 쓰는 사람 정책 `NetKeys.Scopes` |
-| 들기(Carry) | 드는 쪽 → 들리는 쪽 | `PhotonView.RPC`(대상 소유자에게만) | 들리는 쪽이 `info.Sender`·거리·이미 들림 여부로 거절 가능 |
-| 채팅 | 각자 | `RPC LogMsg` | 받는 쪽에서 `ChatText.Sanitize`(리치텍스트 차단)·`ChatRateLimiter` |
+| 판 상태(아이템·상자·건물·로켓·탈출·폭탄·AI 목록) | 방장 | Room Prop `EscapeState`(이진 + `Revision`) | `EscapeRequest` 이벤트 → `EscapeAuthority.Handle`(거리·역할·소지품·의심 이동) |
+| **AI 경로**(§44) | 방장(`DecoyBrain`) | Room Prop `DR_<id>`(경로 1개 ≤ 92 B, 형식 2) | 받는 쪽 `DecoyRouteBook.Sanitize`(맵 밖·술래방 점 제거), 방장 아닌 사람이 쓰면 `RoomPropertyGuard`가 되돌림 |
+| 단계 시각·괴물 목록·결과·사망 | 방장 | `AuthorityProps.SetRoom/SetPlayer`(24곳) | `RoomPropertyGuard` |
+| **처형 확정**(§46) | 방장(`GrabKillAuthority`) | `HitCount`·`DeathCause`·`CatchCount` | 괴물이 보낸 "본 순간"의 두 위치·시각을 방장 위치 기록과 대조(4.11) |
+| 내 위치·애니메이션·춤 번호·조준 | 본인 | `PhotonView` + `PlayerNetworkSync`(7개 값) | 방장 0.2초 이동 속도 검사 + **스태미나 추정 검사**(로그만) |
+| 스태미나 | 본인 화면만 | 없음(움직임으로 드러남) | 방장 `StaminaWatch` 추정 |
+| 내 선택 칸·녹음·스킨·들어온 씬 | 본인 | Player Prop(`Writer.Self`) | `NetKeys.Scopes` |
+| 들기·처형 연출 | 드는 쪽 / 괴물 | `PhotonView.RPC` | 받는 쪽 `info.Sender`·거리, 처형 거절은 방장만 보낼 수 있음 |
+| 채팅 | 각자 | RPC `LogMsg` | `ChatText.Sanitize` + `ChatRateLimiter` |
 
 ---
 
-## 3. 핵심 기법 상세 해설
+## 3. 8차 이후 추가된 시스템 상세 해설
 
-### 3.1 `Camera_Ctrl` — 직교좌표계 ↔ 구면좌표계 변환 (3인칭 궤도 카메라)
+### 3.1 AI(미끼)가 플레이어처럼 움직이기 — `Escape/DecoyAI/` (§44)
 
-**파일**: `Assets/02. Scripts/Camera/Camera_Ctrl.cs` (158줄). 쿠키·괴물(3인칭 모드)·관전이 **모두 이 한 컴포넌트**로 카메라를 쓴다(`SetFollowTarget`).
+| 클래스 | 줄 | 하는 일 |
+|---|---:|---|
+| `DecoyNavMesh` | 37 | 맵마다 구운 `NavMeshData`(쿠키 몸 크기: 반지름 0.45·높이 2·턱 0.45·경사 40°)를 `OnEnable`에서 등록, `Ready` 정적 플래그 |
+| `DecoyHideSpot` | 28 | 창고·텐트 안 숨을 자리(정적 목록, 자리당 2마리) |
+| `DecoyRules` | 94 | 순수 판단: 성격(씨앗 → 겁·배회 범위·행동 가중치), 다음 행동 고르기, 도망 시작/해제 거리, 도망 지점 점수, 춤 확률 3% |
+| `DecoyRoute` | 199 | **경로 1개 = 시작 시각 + 걸음 종류 + 속도 + 점 ≤ 12개 + 달리기 끝 지점(`RunUntil`)**. `Sample(route, now)`가 순수 계산으로 위치·방향·`Moving`·`Running`을 낸다. 부호화 형식 2(형식 1도 읽음) |
+| `DecoyRouteBook` | 91 | Room Prop `DR_<id>` ↔ 경로 사전(받는 쪽 점 검사) |
+| `DecoyBrain` | 519 | **방장만**: 0.3초 주기로 AI를 나눠 생각(프레임당 길 찾기 4회), 행동(배회·쉬기·건물 방문·숨기·도망·춤)을 경로로 만들어 0.1초마다 모아 쓴다. 지나가는 문을 연다. 방장이 되면 남은 경로를 이어받는다(스태미나 50). 술래 위치는 `CharacterRegistry`에서 |
+| `DecoyView` | 249 | **모든 화면**: 같은 경로를 `PhotonNetwork.Time`으로 따라가 그린다(위치를 보내지 않음). 바닥 높이 보정, 걷기/달리기/춤/잡힘(Held) 동작, 발소리·목소리, 잡히면 괴물 손을 따라가 눌리고 가루 |
+| `DecoyPresenter` | 123 | 상태의 AI 목록 ↔ `DecoyView` 생성·삭제, 캐릭터별 템플릿 |
 
-#### (1) 원리 — 카메라 위치를 "구 위의 한 점"으로 본다
+동작 요약: 방장이 "언제 어디서 어디로 어떤 속도로"만 정해 Room Prop에 쓰면, 모든 화면이 같은 시각 함수로 같은 위치를 계산한다. 위치 동기화 트래픽이 없고, 늦게 들어온 사람도 같은 장면을 본다. AI 스태미나(§46.4)는 방장이 경로별로 "달린 시간 → 걸은 시간 → 멈춘 시간"을 나눠 진행하고, 달리기 경로에는 **남은 스태미나로 달릴 수 있는 거리까지만** `RunUntil`을 넣는다. 그 뒤 구간은 걷기 속도로 `Sample`된다.
 
-카메라는 대상의 눈높이 점 **T**(= 캐릭터 발 위치 + (0, `m_TargetHeight`, 0))를 중심으로 하는 **반지름 d의 구 위**에 있다. 구 위의 점은 직교좌표 (x, y, z) 세 개 대신 **구면좌표 (d, θ, φ)** 로 표현하면 조작이 쉽다.
+### 3.2 캐릭터 5종 — `Unit/CharacterModelSwap`·`PlayerSkinApplier`·`Lobby/CharacterAssignment` (§45)
 
-| 구면좌표 | 코드 변수 | 의미 | 입력 |
-|---|---|---|---|
-| 반지름 d | `CurrentDistance` (= `m_Distance` > 0 이면 그것, 아니면 `m_DefaultDist` 3.2) | 대상과의 거리 | 고정(휠 줌은 삭제됨) |
-| 방위각 θ (yaw) | `m_RotH` | 수평으로 몇 도 돌았나 | 우클릭 드래그 x × `hSpeed`(5.0) |
-| 고도각 φ (pitch) | `m_RotV` | 위에서 내려다보는 각 | 우클릭 드래그 y × `vSpeed`(2.4), **[-7°, 80°]로 제한** |
+- 방장이 시작 때 `CharacterAssignments`(입장 순서대로 선택 인정, 겹치면 남은 캐릭터)를 Room Prop으로 쓴다.
+- 각 쿠키는 `PlayerSkinApplier.CharacterIndexOf`로 자기 번호를 정하고, `CharacterModelSwap`이 쿠키 뼈대를 `__cookie`로 이름을 바꾼 뒤 새 모델을 붙여 Humanoid 아바타를 바꾸고 `Animator.Rebind`한다. 같은 애니메이션 컨트롤러를 5종이 공유한다.
+- 뼈를 캐시하는 쪽(`HeldItemPresenter`·`CarriedBodyPresenter`)은 아바타가 바뀌면 다시 읽는다.
+- 가루 색은 `SkinCatalogSO.GetCrumbColors(index)` — 5종 모두 값이 있다(Unity 확인: 3·4·4·4·4색).
 
-#### (2) 변환식 — 코드 한 줄이 곧 구면→직교 변환
+### 3.3 도구 개편 — `Escape/ToolUser`·`ToolAim`·`ToolHitReceiver`·`WaterBubbleView`·`WaterTrapMotion`·`Unit/PlayerActionPose` (§45)
 
-`Camera_Ctrl.cs:121, 129, 131`
+- 사용 흐름: 본인 `ToolUser`가 조준·대상 고르기(`ToolAim.PickInCone`) → `EscapeRequest(ToolUse)` → 방장 `EscapeAuthority.ToolUse`가 사거리·대상 수(물풍선·뿅망치 1명) 확인 → `ToolHit` 이벤트(맞는 시각 `hitAt` 포함) → 모두의 `ToolHitReceiver`가 **맞은 사람 본인**에게만 기절·갇힘을 적용하고, 효과는 모두가 같은 시각에 그린다.
+- 물풍선: `ToolAim.ArcPoint`로 포물선 미리보기(`BalloonAimPreview`), 비행 시간 `FlightSeconds`, 맞으면 `StunReceiver.Trap` → `WaterTrapMotion`(0.6초에 5 m 떠오름, `[DefaultExecutionOrder(200)]`) + `WaterBubbleView`(셰이더 — 7장 N-01).
+- 뿅망치: 두 손 들기, 휘두르는 동작의 맞는 순간(0.32)에 명중 판정(`HammerHit` 코루틴), 3초 기절.
+- 동작 층: `PlayerActionPose`가 Animator의 Action 층(상체 마스크)과 Trapped 층 가중치를 조절한다.
 
-```csharp
-m_TargetRotation = Quaternion.Euler(m_RotV, m_RotH, 0.0f);   // (φ, θ)로 회전 만들기
-m_BasicPos.z = -CurrentDistance;                            // 기준 벡터 (0, 0, -d)
-m_BuffPos = m_TargetPos + (m_CurrentRotation * m_BasicPos); // 회전한 벡터를 T에 더함
-```
+### 3.4 잡기 확정 — `Monster/MonsterGrabKillTrigger` → `Unit/HideOrSeekPlayer.RequestGrabKill` → `Monster/GrabKillAuthority` (§46 GK)
 
-`Quaternion.Euler(φ, θ, 0)`은 Unity 규칙대로 **Z → X → Y 순서**(실제로는 X로 φ만큼 숙인 뒤 Y로 θ만큼 돌림)다. 기준 벡터 **v₀ = (0, 0, −d)** (대상 "뒤쪽" d m)에 적용하면:
+1. 괴물 본인 화면: 조준(구 캐스트 + 시야선) → E → `PlayGrabKill()` + RPC `RequestGrabKill(viewId, 괴물 위치, 쿠키 위치, ServerTimestamp)`를 **모두에게**.
+2. 방장: `GrabKillAuthority.TryConfirm` — 공통 조건(`GrabPreconditions`: 보낸 사람이 괴물·사냥 단계·살아 있음·맵 안·간격) 뒤 `Judge`:
+   - 기록이 있으면 **되돌림 판정**(`NetSecurityRules.JudgeGrabClaim`): 본 두 위치의 거리 ≤ 잡기 거리 + 0.5 m, 주장이 0.6초 이내, 쿠키 주장 위치가 방장 기록(`PositionTrack`, 0.05초 × 30칸)의 [본 시각 − 0.5초, 지금] 길에서 2 m 안, 괴물 주장 위치도 같은 검사(방장 화면의 원격 괴물은 늦으므로 **마지막 속도로 지연만큼 앞으로 늘린 길**까지 — `TryMinDistanceLeading`).
+   - 기록이 없으면 옛 규칙(지금 위치 + 3 m).
+3. 모든 화면: `CookieLifeStatePresenter.BeginGrabKill`(손 소켓 따라가기). 거절이면 방장이 **즉시** RPC `GrabKillRejected` → 연출 취소(자리·크기·충돌 복원), 쿠키 본인 바로 움직임, 괴물 동작·쿨다운 반환.
+4. AI 잡기도 같은 원리(`EscapeAuthority.DecoyWithinReach` — 경로를 0.05초 간격으로 되짚고, 괴물 손 거리는 늘린 기록으로).
 
-1. X축으로 φ 회전: (0, 0, −d) → (0, **d·sinφ**, −d·cosφ)  
-   (Unity는 왼손 좌표계라 X축 양의 회전이 앞(+z)을 아래로 숙인다. 그래서 뒤쪽 벡터 −z는 **위로** 올라간다 = 내려다보는 카메라.)
-2. Y축으로 θ 회전: (x, y, z) → (x·cosθ + z·sinθ, y, −x·sinθ + z·cosθ)  
-   x = 0, z = −d·cosφ 를 넣으면 → (**−d·cosφ·sinθ**, d·sinφ, **−d·cosφ·cosθ**)
+### 3.5 스태미나 — `Core/StaminaModel`·`StaminaWatch`, `Escape/StaminaHud` (§46 ST)
 
-따라서 카메라 위치는
+- `StaminaModel`(순수): 최대 100, 달리기 20/s, 회복 25/s(0.8초 지연, 걸으면 ×0.7), 0이면 35까지 달리기 금지, 회피 25. 값은 `GameSettingsSO.Stamina`.
+- 쿠키 본인 `HideOrSeekPlayer`만 계산(대기실처럼 `EscapeManager`가 없으면 `Stamina == null` → 무한). 막대는 인벤토리 위(`StaminaHud`), 회피 칸 덮기(`SkillHud`), 바닥날 때 숨소리(`SoundId.CookieBreath`).
+- 방장 `StaminaWatch`: 0.2초 위치 차이로 "달렸는지" 추정해 같은 규칙을 돌리고, 지쳤어야 할 때 3초 넘게 달리면 경고 로그(막지 않음).
 
-```
-P = T + ( −d·cosφ·sinθ ,  d·sinφ ,  −d·cosφ·cosθ )
-```
+### 3.6 씬 이동 안전장치 — `Core/PunSceneLoad`·`RoomSceneTransition`·`RoomSceneFollower`, `Lobby/GameStartAuthority`·`StartReadiness`, `Monster/RoundStateResetter` (§46 후속)
 
-이는 교과서의 구면좌표 공식 (r sinϑ cosϕ, r sinϑ sinϕ, r cosϑ)을 **Unity 축(Y가 위)·"뒤에서 본다"(부호 −)·고도각 φ = 90° − 극각** 으로 바꿔 쓴 것과 같다. 수평 반지름이 d·cosφ, 높이가 d·sinφ — 고도각이 커질수록 카메라가 위로 올라가며 수평으로는 가까워진다(φ = 80°면 거의 머리 위).
+- `PunSceneLoad.Load`: PUN `LoadLevel`이 방장일 때 진행 중이던 로드를 `allowSceneActivation=false`로 버리는데, Unity에서는 그 로드가 90 %에서 멈춰 **이후 모든 로드를 막는다**. 부르기 직전 로드를 잡아 두었다가 취소됐으면 즉시 다시 허용한다. `IsBusy`는 PUN 내부 필드(`_AsyncLevelLoadingOperation`)를 리플렉션으로 읽는다(시험이 필드 존재를 확인).
+- `RoomSceneTransition.LoadLevelForRoom`: 로드 중이면 미뤘다가 `TickDeferred`로 이어서.
+- `GameStartAuthority.TryStart`: 방 씬이 이미 맵이거나 로드 중이면 거절. 대기실 버튼도 그동안 잠금("게임을 시작하는 중...").
+- `RoundStateResetter`: 대기실 첫 프레임에 방장 쪽 `curScn` 응답이 아직 처리 전일 수 있어, 판 키 지우기·방 다시 열기를 **될 때까지 매 프레임** 재시도.
 
-그 뒤 `transform.LookAt(m_TargetPos)`(`:133`)로 시선을 T에 맞춘다. 위치가 구 위에 있고 시선이 중심을 향하므로 "대상을 중심으로 도는" 카메라가 된다.
+### 3.7 춤 — `Unit/Dance/DanceCatalogSO`, `PlayerAnimationDriver.PlayDance` (§44.9)
 
-#### (3) 보조 기법
-
-| 기법 | 위치 | 설명 |
-|---|---|---|
-| **각도 정규화 후 제한** | `ClampAngle` `:153-157` | `Mathf.DeltaAngle(0, angle)`로 (−180, 180]로 접은 뒤 `Clamp`. 350°가 −10°로 바뀌어 아래 한계(−7°)에 정확히 걸린다(그냥 Clamp하면 350이 80으로 튐). |
-| **지수형 회전 보간** | `:122-123` | `Slerp(current, target, clamp(dt / 0.08))` — 매 프레임 남은 각도의 (dt/0.08)만큼 다가간다. 60fps면 약 21%씩 → 시정수 약 0.08초의 부드러운 따라가기. 각도(오일러)가 아니라 **쿼터니언을 Slerp**해서 짐벌락·360° 경계 튐이 없다. |
-| **거리 고정** | `:129` | 휠 줌은 삭제(휠은 지금 인벤토리 칸 고르기). 대상별 거리만 `SetFollowTarget(…, distance)`로 바꾼다(괴물은 체격에 맞춰 더 멀리). |
-| **흔들림은 마지막에 더하기** | `:134-136` | 정해진 위치를 `m_RestPos`로 저장하고 `CameraShake.Offset`을 **그 위에 더한다** — 다음 프레임 계산이 흔들린 위치에서 시작하지 않아 흔들림이 누적되지 않는다. 대상이 없을 때도(`:101-105`) 마지막 자리에서 흔들린다(마녀가 모두 쓰러뜨린 뒤의 관전). |
-| **커서 잠금은 드래그 중에만** | `UpdateCursorLock` `:141-145` | 우클릭을 누르는 순간 `Locked`, 떼는 순간 `None`. 컴포넌트가 꺼지면(`OnDisable`) 반드시 해제. |
-| **초기화 순서 독립** | `Start`·`SetFollowTarget` | `InitCamera`가 Start 전/후 어느 쪽에 불려도 `ResetToDefaultView()`가 대상이 있을 때만 실행 — 순서에 기대지 않는다. |
-| **소리 듣는 위치 공유** | `FocusPoint` `:41` | 카메라가 바라보는 점을 `AudioListenerAnchor`가 "귀 위치"로 쓴다(소리가 카메라가 아니라 캐릭터 기준으로 들림). |
-
-#### (4) 변수·메서드 표
-
-| 이름 | 종류 | 역할 |
-|---|---|---|
-| `m_Player` | `[SerializeField] GameObject` | 따라갈 대상(쿠키·괴물·관전 대상) |
-| `m_TargetPos` | `Vector3` | 이번 프레임 구의 중심 T |
-| `m_RotH` / `m_RotV` | `float` | 방위각 θ / 고도각 φ (도) |
-| `hSpeed` 5.0 / `vSpeed` 2.4 | `float` | 마우스 감도(가로가 더 빠름) |
-| `vMinLimit` −7 / `vMaxLimit` 80 | `float` | 고도각 범위(땅 아래로 파고들지 않게 −7, 머리 위 짐벌 근처 80) |
-| `m_DefaultRotH` 0 / `m_DefaultRotV` 25 | `float` | 초기 각도(정면 뒤 25° 위) — 값이 바뀌지 않으므로 `const`가 맞다 ⚠️ |
-| `m_DefaultDist` 3.2 | `[SerializeField] float` | 기본 거리 |
-| `m_CurrentRotation` / `m_TargetRotation` | `Quaternion` | 보간 중인 회전 / 목표 회전 |
-| `m_BasicPos` | `Vector3` | 기준 벡터 (0, 0, −d) |
-| `m_BuffPos` | `Vector3` | 계산된 카메라 위치 P |
-| `rotationSmoothTime` 0.08 | `float` | 회전 보간 시정수 |
-| `m_TargetHeight` / `m_Distance` | `float` | 대상별 눈높이·거리(괴물이 바꿈) |
-| `CookieTargetHeight` | `const` 1.5 | 쿠키 눈높이(다른 클래스가 참조) |
-| `m_RestPos` / `m_HasRestPos` | `Vector3`/`bool` | 흔들림을 뺀 위치 |
-| `InitCamera(…)` | 메서드 | 처음 붙일 때 — 기본 각도로 초기화 |
-| `SetFollowTarget(target, h, d, keepRotation)` | 메서드 | 대상만 바꾸기(관전 순환 시 `keepRotation=true`로 각도 유지) |
-| `ResetToDefaultView()` | 메서드 | 각도·위치를 기본값으로 즉시 맞춤 |
-| `LateUpdate()` | 메서드 | 캐릭터가 Update/FixedUpdate로 움직인 **뒤** 카메라 계산(떨림 방지) |
-| `ClampAngle(…)` | 메서드 | 위 (3) 참조 |
-
-**문제점**: ⚠️ 주석이 오래됨 — `:16`, `:20`, `:125-127`이 "휠은 붓 크기 조절 전용", `PlayerPaintCanvas.HandleBrushSizeInput()`을 말하지만 손 색칠은 삭제되었고 휠은 `PlayerInventory`의 칸 고르기다. `:140` 주석에 깨진 글자 **"풀어 둬EEAAAAAAAA야"**. 감도·한계값이 하드코딩(설정 SO나 `KeyBindings` 감도 옵션으로 옮길 만함).
-
-### 3.2 다른 카메라들
-
-| 클래스 | 기법 |
-|---|---|
-| `MonsterFirstPersonCamera` | 요/피치 1인칭. 잡기 처형 때는 `killBlend`를 `MoveTowards`로 0→1 올리며 `SmoothStep` 곡선으로 **눈 위치 → 잡는 손(소켓) 쪽 시점**으로 Slerp. 근접 클립 0.1 m로 바꿔 몸 안이 안 보이게. |
-| `MonsterViewSwitcher` | 괴물 1인칭/3인칭 전환. 1인칭일 때 자기 몸 렌더러를 `ShadowsOnly`로(그림자는 남김). `MonsterController`가 실행 중 `AddComponent`. |
-| `WitchRevealCamera` | `[DefaultExecutionOrder(1000)]` — 다른 모든 카메라 계산 **뒤에** 실행되어 "각자 시점"과 "연출 시점"을 가중치 w로 섞는다(`BlendPose`). 장면(`WitchShot`)은 `WitchTimeline.ShotAt(now, …)` 순수 함수가 공통 시계로 정하므로 모든 화면이 같은 장면. 포즈 함수(`CloseUpPose`·`LeadPose`·`FullBodyPose`·`LowAnglePose`·`StompPose`·`EndPose`)는 전부 **정적 순수 함수**라 EditMode 시험 가능. |
-| ↳ `FramePose` `:105-112` | 두 점 a, b를 한 화면에 담는 회전·시야각: 시선 = 정규화한 두 방향의 **합(이등분선)**, FOV = 두 방향 사이 각 + 여유(`margin`), [최소, 최대]로 제한. |
-| ↳ 가림막 숨기기 | `OccluderCandidates`가 카메라→마녀 얼굴 선분과 겹치는 렌더러를 `Bounds.IntersectRay`로 골라 잠시 끈다. `LineBlocked`는 `RaycastNonAlloc`. |
-| `GrabAimReticle` | 괴물 조준 대상 머리 위 표시. `WorldToScreenPoint`, UI는 코드로 생성. |
-| `CutsceneFade` | 정적 지연 생성 오버레이 캔버스(정렬 32000) — 검은 화면 페이드. |
-| `CameraShake`(Core) | 정적 진폭 누적 + 선형 감소, `Random.insideUnitSphere × 진폭`. 카메라들이 LateUpdate 끝에서 더한다. |
-
-### 3.3 캐릭터 이동 물리
-
-| 기법 | 위치 | 설명 |
-|---|---|---|
-| **입력은 Update, 물리는 FixedUpdate** | `HideOrSeekPlayer.Update`/`FixedUpdate`, `MonsterController` 동일 | 키 눌림(`JumpPressed`)은 프레임마다 읽어 플래그(`jumpRequested`)로 저장하고, 속도 적용은 물리 스텝에서 — 프레임/물리 주기가 달라도 입력이 사라지지 않는다. |
-| **카메라 기준 이동** | `PlayerInput.CameraRelativeMove` `Core/PlayerInput.cs:57-64` | 카메라 앞·오른쪽 벡터를 `ProjectOnPlane(…, up)`으로 수평면에 눕혀 정규화 → `forward·y + right·x` 후 다시 정규화(대각선이 √2배 빨라지지 않게). |
-| **수직 속도 보존** | `HideOrSeekPlayer.Move` `:539-573` | `rb.linearVelocity = (수평x, 기존 y, 수평z)` — 중력·점프는 물리 엔진 값 그대로. |
-| **회전은 `rb.MoveRotation`** | 같은 곳 | `transform.rotation` 직접 대입은 Rigidbody 보간과 어긋나 떨림 → 물리 회전 API만 사용. |
-| **공중 벽 붙기 방지** | `CharacterGroundDetector.RemoveWallPush` `Core/CharacterGroundDetector.cs:66-77` | 직전 물리 스텝에 닿은 벽 법선 n들에 대해 `into = v·n`이 음수(벽을 향함)면 `v −= into·n` — **벽 방향 성분만 빼고 벽을 따라 미끄러지는 성분은 남긴다**(벡터 사영 제거). 기록이 1.5스텝보다 오래되면 무시. |
-| **회피·질주·스케이트 배율** | `Move` | 회피 중에는 시작 방향으로 `baseSpeed × 2` 강제 이동(키를 떼도), 질주 ×1.3, 스케이트 `SpeedBoost`(만료 시각까지) 곱. |
-| **점프 자세 고정** | `jumpFreezeNormalizedTime` | 점프 애니메이션을 정규화 시간 0.5에서 `animator.speed = 0`으로 멈춰 공중 자세 유지, 착지 시 해제. |
-| **원격 캐릭터** | `NetworkTransformSync<TState>` | 원격은 Rigidbody `isKinematic`, 받은 위치·회전으로 Lerp(멀면 순간이동 Snap). 상태 enum을 `UnsafeUtility.As<TState,int>`로 박싱 없이 int 변환, 정적 생성자에서 "TState가 int 크기 enum인지" 검증. |
-| **괴물 돌진 — 지면 따라가기** | `MonsterController.FixedUpdateDash` `:290-332` | 초속 80 m 돌진 속도를 **지면 법선에 사영**(`ProjectOnPlane`)해 오르막·내리막을 따라감. 붙이기 거리 = 기본 0.6 m + **v·dt·tan(최대 경사)** — 한 스텝(1.6 m) 동안 최대 경사에서 땅이 떨어질 수 있는 높이만큼 늘려서 언덕 꼭대기에서 날아오르지 않게. 틈(gap)이 있으면 `velocity.y −= gap/dt`로 이번 스텝에 메움. 낭떠러지면 위 속도를 0 이하로(발사대 방지). 쿠키 앞 `SphereCastNonAlloc`으로 멈춤. |
-| **들기(Carry) 자세** | `CarryPose`(순수 수학) + `CarriedBodyPresenter[DefaultExecutionOrder(-50)]` | 드는 쪽 두 손 뼈의 중점에 들린 몸을 놓고 `LookRotation(face, bodyUp)`. 실행 순서 −50으로 **카메라 LateUpdate보다 먼저** 붙여 한 프레임 늦는 떨림을 없앤다. |
-| **충돌 무시 쌍** | `PlayerGrabController.SetCollisionIgnored`, `PlayerCarryFollower` | 들린 동안 두 캐릭터 모든 콜라이더 쌍에 `Physics.IgnoreCollision`. |
-
-### 3.4 네트워크 시계 기반 결정적 연출 (위치를 보내지 않는 동기화)
-
-모든 화면이 공유하는 시계 `PhotonNetwork.Time`과 **방장이 한 번 쓴 시각 하나**만 있으면, 연출 상태를 각자 계산해도 같은 결과가 나온다. 늦게 들어온 사람도 즉시 맞는 자리에 있다.
-
-| 대상 | 식 | 위치 |
-|---|---|---|
-| 롤러코스터 | 거리 s(t) = 속도표(`CoasterPathSO`)를 시간으로 적분한 표에서 **이분 탐색** → 레일 위 점. 실제 위치가 계산값과 크게 다르면 Snap, 작으면 따라잡기 보간 | `CoasterRide`, `CoasterTrain`(앞뒤 두 바퀴를 따로 샘플해 차체 방향) |
-| 바이킹 | 각도 = A(t)·sin(2π·t/T + 위상), 진폭 포락선 A(t). 속도 부호가 바뀌는 순간 소리 | `VikingRide` |
-| 로켓 발사 | 높이 = ½·a·(t − 점화)², a = 5 m/s², 점화 전 2초 불꽃·떨림 | `SpyRocket.AnimateLaunch` |
-| 마녀 걷기 | 진행률 = (now − walkStart)/(walkEnd − walkStart), 위치 = Lerp(시작, 내리칠 곳). **걸음 애니메이션 속도 = 거리/시간/(2·걸음 길이)·주기** → 발이 미끄러지지 않음 | `WitchPresenter.UpdateWalk`, `WalkAnimatorSpeed` |
-| 마녀 장면 | `WitchTimeline.ShotAt(mode, now, …)` — 시각표를 순수 함수로 | `WitchTimeline` |
-| AI 목소리 간격 | k번째 쉬는 시간 = 5 + 15·hash(seed, k) — 정수 해시(곱셈·xor-shift)로 모든 화면이 같은 순간 재생 | `DecoyVoice.Gap`, `TryCurrentPlay` |
-| 경계 소리 규칙 | `EscapeCue.ShouldCue(at, last, now)` — 지난 프레임 < at ≤ 이번 프레임일 때만 1번, 늦게 들어온 화면은 지난 소리 생략 | `EscapeCue` |
-
-### 3.5 방장 권위 상태 머신 (탈출 모드의 심장)
-
-| 구성 | 설명 |
-|---|---|
-| `EscapeState` (424줄) | 판 전체를 담는 클래스: `Items`(아이템 위치 `ItemLocation`: 상자/바닥/손/장치/사라짐 + A·B 인덱스 + 좌표 + 남은 횟수), `Chests`, `Buildings`(재료·수리 진행·수리자·완료), `RocketSlots`, `OpenExits`, `Escaped`/`Boarded`, `Rainbow`, `Flights`(모자 비행), `Bombs`, `Decoys`, `NextId`, `Revision`. |
-| 직렬화 | `Encode()`가 `BinaryWriter`로 **버전 번호(`FormatVersion` = 6) + 모든 필드**를 바이트 배열로. `Decode`는 반대. `Clone() => Decode(Encode())`. 방 속성 하나(`EscapeState` 키)에 통째로 넣는다 — 부분 갱신 경합이 없다. |
-| `Revision` | 방장이 쓸 때마다 +1. 방장 화면은 **자기가 이미 적용한 것보다 오래된 상태가 서버에서 돌아오면 무시**(속성 반영 지연으로 되돌아가는 문제 방지). |
-| `Commit()` `EscapeAuthority.cs:1215` | 상태를 방 속성으로 쓰고 **방장 화면에는 즉시 적용**(`manager.ApplyLocalState(State.Clone())`) — 서버 왕복을 기다리지 않는다. |
-| 수리 진행 | `Building.ProgressAtTime(now)` = 저장된 진행 + (now − 기록 시각) × (수리 중이면 +1/10초, 아니면 −1%/초) — **값을 매 프레임 보내지 않고 시각만 저장**, 화면은 시계로 계산. |
-| 요청 처리 | `EscapeManager.Request(op, a, b, pos, targets)` → `RaiseEvent(EscapeRequest, 방장에게)` → `EscapeAuthority.Handle`이 `EscapeOp`(20종)별로 거리(`IsNear`), 역할(`IsActiveEscaper`), 위치 신뢰(`NeedsTrustedPosition`·의심 이동), 손 상태 확인 후 상태 변경 + `Commit`. |
-| 이동 검사 | `TrackPositions` — 0.2초마다 각자 위치를 기록, `PlausibleSpeedFactor`를 넘는 순간 이동은 `SuspectSeconds` 동안 요청 거절. 텔레포트(호박마차·술래방 내보내기·리스폰)는 `moveExemptUntil`로 예외. |
-| 안전장치 | `RestoreMissingMaterials` — 재료가 사라져 판을 못 끝내면 빈 상자에 다시 생성(`MaterialCheckSeconds`마다), 도달 가능한 상자인지 `CountReachable`. |
-| 알림 | `Notice(kind, itemId)` → `RaiseEvent(EscapeNotice)`. 훔침 알림은 **보여 줄 시각**을 같이 보내 받는 쪽(`StolenNotice.Decide`)이 그때 다시 확인(그사이 되돌려 놓았으면 취소). |
-| 방장 교체 | 새 방장은 방 속성에서 상태를 읽어 `Adopt` — 진행 중인 판을 이어받는다. 개인 기록(도구 쿨다운 등)은 의도적으로 초기화. |
-
-`AuthorityProps` + `RoomPropertyGuard`(Core): 방장이 쓰는 키마다 **"기대값"을 기억**해 두고, 속성 변경 이벤트(`EventCode.PropertiesChanged`)에서 **쓴 사람(Sender)** 을 확인해 방장이 아닌 사람이 바꾼 키를 기대값으로 되돌린다. 방장이 막 바뀐 직후 1.5초 유예. `NetKeys.Scopes` 표 하나가 "키 → 대상(방/플레이어)·수명(판/세션)·쓰는 사람(방장/본인)"을 정하고, 판 초기화(`RoundStateResetter`)와 감시가 같은 표를 쓴다 — **규칙이 한 곳에 있는 좋은 설계**.
-
-### 3.6 소리 엔진
-
-| 기법 | 설명 |
-|---|---|
-| **보이스 풀(오브젝트 풀)** | `AudioRuntime`(DDOL, `BeforeSceneLoad` 자동 생성)이 시작할 때 **3D 24칸 + 2D 8칸 + 음악 3칸 + 추격 북 레이어**의 `AudioSource`를 미리 만든다. 소리마다 `Instantiate` 하지 않는다. |
-| **빼앗기 정책** | 칸이 모자라면 `AudioVoicePool`이 **중요도 → 지금 들리는 크기 → 가장 오래됨** 순으로 하나를 빼앗는다. |
-| **세대 번호 핸들** | `AudioHandle`(readonly struct)이 (칸 번호, 세대)를 갖는다. 칸이 다른 소리에 넘어가면 세대가 올라가 **옛 핸들로 새 소리를 끄는 사고가 불가능**. |
-| **직접 만든 거리 감쇠** | `SpatialGain.Distance` = **(min/d)^p × (1 − progress^taper)**, progress = (d − min)/(max − min). 앞항은 실제 소리처럼 거리에 반비례, 뒤항은 최대 거리에서 정확히 0으로 닫는다. 종류별 p·taper(발소리 0.7·4, 괴물 0.5·3, 도구 0.6·6, 랜드마크 0.8·2). Unity 자체 감쇠는 끄고 이 값만 쓴다. |
-| **층 감쇠** | 높이 차 4 m 이하 1 → 7 m에서 0.15로 선형. |
-| **먼 소리 먹먹하게** | 저역 통과 차단 주파수를 22 kHz → 3 kHz로 **로그 보간**(`LogLerp` = exp(lerp(ln a, ln b, t))) — 귀가 주파수를 로그로 느끼므로. |
-| **실내 차단** | `IndoorZone`(정적 목록) — 소리와 듣는 사람이 다른 공간이면 벽 너머 처리. |
-| **추격 북 동기** | `ChaseDirector`가 여러 북 레이어를 `PlayScheduled(같은 dspTime)`로 **샘플 단위 동시 시작** 후 거리 기반 강도로 음량만 조절(히스테리시스로 깜빡임 방지). |
-| **출력 장치 선택** | `WindowsAudioEndpoints`가 문서화되지 않은 Windows `IPolicyConfig` COM을 **vtable 함수 포인터로 직접 호출**(`Marshal.GetDelegateForFunctionPointer`), Windows 버전별 IID 2벌. 비Windows는 빈 구현. |
-| **상태 차이로 소리** | `EscapeAudioPresenter`가 이전 `EscapeState`(Clone)와 새 상태를 비교해 "상자 열림·수리 완료·탈출" 등을 소리로 — 소리 이벤트를 따로 보내지 않는다. |
-
-### 3.7 그 밖의 수학·알고리즘 도구
-
-| 도구 | 위치 | 설명 |
-|---|---|---|
-| 에르미트 스플라인 + 이분 탐색 | `CoasterPathSO` | 레일 중심선 점들을 Catmull-Rom 접선의 3차 에르미트로 보간·샘플, 누적 거리/시간 표에서 이분 탐색, 위 벡터는 Slerp 후 직교화. |
-| 원판 균등 표본 | `MapArea` | r = R·√u, θ = 2πv (√ 없으면 가운데 몰림). |
-| 광선-사각형 교차(slab) | `WitchPath.TryEntryPoint`/`Slab` | x·z 축별 [tmin, tmax] 교집합 — 마녀 발끝이 Ground 경계에 닿는 점. |
-| 충격파 일정 | `WitchShatter.OnImpact` | 각 물체 부서질 시각 = 지금 + 수평거리/120 m/s, 시각 순 정렬 후 매 프레임 앞에서부터 처리. |
-| RequireComponent 위상 정렬 삭제 | `WitchFinaleStage.StripToVisuals` | 다른 컴포넌트가 요구하는 것은 나중에 지우도록 반복 제거(최대 16회), 타입별 요구 목록 캐시. |
-| 꺼진 부모 아래 복제 | `WitchFinaleStage.Clone`, `DecoyPresenter.BuildTemplate` | `Instantiate`를 비활성 부모 아래에서 하면 **Awake/OnEnable이 실행되지 않는다** → PhotonView 등록·입력·카메라를 건드리지 않고 겉모습만 복제. |
-| μ-law 8비트 압축 | `VoiceStore.Encode/Decode` | m = sign(s)·ln(1+255|s|)/ln 256 → 0~255. 5초 8 kHz 목소리 ≈ 40 KB, 8 KB 조각으로 `RaiseEvent`, **보낸 사람 번호로 조립**(남의 목소리 위장 불가). |
-| 구간 평균 다운샘플 | `VoiceRecorderPanel.Downsample` | 48 kHz → 8 kHz를 구간 평균(간단한 저역 필터 겸)으로. 피크 정규화(최대 12배, 무음은 그대로). |
-| 한글 받침 판별 | `KoreanText.HasFinalConsonant` | (코드 − 0xAC00) % 28 ≠ 0 이면 받침 — "이/가" 고르기. |
-| 튀어나오기 곡선 | `MaterialChest.AppearScale` | 0→1.08(70%)→1, SmoothStep 두 구간. |
-| 정수 해시 | `DecoyVoice.Gap` | Knuth 곱셈 상수 2654435761 + xor-shift. |
-| 공용 재질 캐시 | `EscapeVisuals.Tint` | (색, 발광) 키로 재질 하나 공유, 씬 언로드 때 목록만 비움. **셰이더 변형 보존**을 위해 Resources에 재질 틀 4개(불투명/페이드 × 발광 여부)를 두고 복제. |
+- B키: 플레이어용 가중치로 춤 하나를 골라 `Dance` 상태(Animator int `DanceId`). 움직이거나 다른 행동을 하면 멈춘다. 춤 번호는 `PlayerNetworkSync`로 전달.
+- AI: 행동이 끝날 때 3% 확률로 AI용 가중치 춤(경로 `Gait.Dance`).
+- 새 춤 추가 = 카탈로그 항목 + 클립(빌더 `DanceStateBuilder`가 상태를 만든다).
 
 ---
 
-## 4. 폴더별 클래스·변수·메서드 해설
+## 4. 구조 점검 12항목
 
-> 표의 "핵심 멤버"는 그 클래스를 이해하는 데 필요한 변수·메서드다. 줄 번호는 `파일:줄`. 💀 = 실행되지 않는 멤버(6장 근거), 🧪 = 시험·에디터만 씀.
+각 항목: **판정 · 근거(파일:줄) · 8차 대비 · 권장**. `K-xx`는 8장 조치표 번호.
 
-### 4.1 `Camera/` (6개 · 913줄)
+### 4.1 쓰이지 않는 메서드·변수·필드·클래스·리소스가 있는가 — ⚠️ 있음(8차보다 적음)
 
-| 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `Camera_Ctrl` | 3인칭 궤도 카메라(쿠키·괴물 3인칭·관전 공용) | 3.1절 표 | 구면좌표·Slerp·DeltaAngle. ⚠️ 낡은 주석·깨진 글자 `:140` |
-| `MonsterFirstPersonCamera` | 괴물 1인칭(요·피치), 처형 때 손 쪽으로 시점 이동 | `yaw`, `pitch`, `killBlend`, `nearClip`; `LateUpdate` | `SmoothStep`+`Slerp` 블렌드 |
-| `MonsterViewSwitcher` | 1인칭↔3인칭 전환, 1인칭 때 몸을 그림자만 | `Init(owner, eye)`, 렌더러 목록 | `MonsterController`가 `AddComponent` ⚠️(5.4) |
-| `WitchRevealCamera` | 마녀 연출 카메라(10종 장면) | `CurrentShot(...)`, 정적 포즈 함수 9개, `OccluderCandidates`, `LineBlocked` | `[DefaultExecutionOrder(1000)]`; 💀 `ApproachPose`·`ApproachEyeHeightFor`·Purge 분기 `:274` |
-| `GrabAimReticle` | 괴물 조준 대상 표시 | 코드로 만든 Image, `LateUpdate`에서 `Camera.main.WorldToScreenPoint` | UI 코드 생성 도우미 중복(5.12) |
-| `CutsceneFade` | 화면 검게 덮기(정적) | `static Show(alpha)`, 지연 생성 캔버스 | 정렬 32000 |
-
-### 4.2 `Core/` (31개 · 2,336줄) — 네트워크·입력·공용 규칙
-
-| 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `AuthorityProps` | 방장이 방/플레이어 속성을 쓰는 **유일한 통로**, 기대값 기억 | `SetRoom(Hashtable)`, `SetPlayer(p, h)`, 기대값 사전 | 방장 교체 1.5초 유예 |
-| `RoomPropertyGuard` | 방장 아닌 사람이 바꾼 방장 키를 되돌림 | `WrittenByMaster(key)`, `RestoredCount`, `restoreBuffer`; `OnEvent(PropertiesChanged)` | DDOL 자기 부트스트랩(`RuntimeInitializeOnLoadMethod`), 같은 파일에 `HashtableCopyExtensions.Merged` ⚠️(한 파일 두 타입) |
-| `NetSecurityRules` | 검증 규칙 순수 함수(거리·속도·문자열 길이…) | 정적 메서드 | EditMode 시험 대상 |
-| `NetKeys` | 모든 속성 키 상수 + **`Scopes` 표**(대상·수명·쓰는 사람) | 상수 34개, `RoundKeys`, `SessionKeys`, `Writer` | 규칙 한 곳 ✅. 💀 `ForcedPaintActorNumbers`·`ForcedPaintColors`(아무도 안 씀)·`RegisteredSlotCount`(색칠)·`MonsterRevealTime`(쓰기만)·`MonsterSelectDeadline`(옛 정리용) |
-| `NetEventCodes` | RaiseEvent 코드 13개 | `EscapeRequest`, `ToolHit`, `VoiceClip`, … | 💀 `LobbyDoorState`(13)·`PaintStroke`/`ClearColor` 경로 대부분 |
-| `NetHold` | 💀 괴물 대기실 대기 중 PhotonView 인스턴스화를 "보관"하는 시스템 | `Begin()`, `Discard()`, `IsHolding`, `ParkedCount`, `HoldingPool : IPunPrefabPool` | **`Begin/Discard` 호출자 0**(호출하던 `MonsterLobbyWaitController`는 `Legacy~`). 그런데도 `PhotonNetwork.PrefabPool`을 `HoldingPool`로 감싼다(`:55`) ❌ |
-| `HeldSyncRecorder` | 💀 NetHold 보관 중 동기화 값 기록 | `OnPhotonSerializeView`, 리플렉션 `currentItem` | NetHold와 함께 죽음 |
-| `NetworkDefaults` | 공용 네트워크 기본값, 앱 시작 때 `SerializationRate` 설정 | `ApplyRates()` (`BeforeSceneLoad`) | |
-| `NetworkTransformSync<TState>` | 위치·회전·상태 동기화 기반(쿠키·괴물) | `OnPhotonSerializeView`, 보간/Snap, `UnsafeUtility.As` | 제네릭 + 정적 생성자 검증 ✅ |
-| `RoomState` | 방·플레이어 속성 **타입 안전 읽기** 모음 | `TryGetInt/Double/IntArray`, `IsMonster`, `IsSpy`, `IsBroken`, `Players`, `IsLocalMonster`… | 56개 파일이 사용(허브). 💀 `CanSelectMonster` |
-| `GamePhaseState` | 방 속성 → 현재 단계(`Lobby/Prepare/Hunt/TimeAttack/Result`) 해석 **한 곳** | `Current`, `Evaluate(...)` | 💀 `IsPaintActive => false` 상수 `:31` |
-| `GameSettings` / `GameSettingsSO` | 전역 규칙 SO(인원·시간·돌진·잡기·스폰…) 지연 로드 | `Current`, `PickGameMap`, `MonsterCountFor` | 💀 색칠 필드 5개(`maxColorSlots`, `paintColliderRefreshInterval`, `paintStrokeSendRate`, `paintStrokeReferencePlayers`, `minPaintStrokeSendRate`) |
-| `PlayerInput` | 입력 **정적 파사드**(키 → 행동), 게임 입력 억제 | `Move`, `CameraRelativeMove`, `JumpPressed`, `SlotKeyPressed`, `BrushSizeDelta`, `IsGameplaySuppressed`, `#if UNITY_EDITOR` 가짜 입력 | ⚠️ `BrushSizeDelta`는 이제 **휠 칸 고르기**(`PlayerInventory`)에 쓰는데 이름이 옛 색칠. 💀 `PaintHeld`·`PaintButton` |
-| `KeyBindings` / `InputBindingsSO` | 행동별 키를 PlayerPrefs에 저장 / 기본값 SO | `Get(action)`, `Set`, `DisplayName`, `Changed` 이벤트 | |
-| `InputDevices` | 마이크 장치 목록·선택 | `Selected`, `Changed` | 💀 `HasAny` |
-| `VoiceChat` / `VoiceChatSettings(SO)` | Photon Voice 음성 채팅 — 씬마다 생성/파괴, 발화자 위치 추적 | `IsCapturing`, `BodyOf(actor)`, 리플렉션 `usePrimaryRecorder` | 💀 `IsTransmitting`·`SpeakerCount`; `BodyOf`는 `CharacterRegistry.FindByOwner` 중복 |
-| `CameraShake` | 정적 흔들림 누적·감소 | `Add(strength, seconds)`, `Offset` | |
-| `CharacterGroundDetector` | 접지 판정·벽 접촉 기록 | `IsGrounded`, `RecordContacts`, `RemoveWallPush` | 3.3절 |
-| `GameCharacter.cs` | `IGameCharacter`·`ICameraFollowTarget`·`CharacterRole`·**`CharacterRegistry`** | `All`, `Register`, `IsAlive`, `FindByOwner` | 레지스트리 패턴 ✅. 단 `FindByOwner`를 3곳만 쓰고 6곳은 같은 루프를 다시 씀(5.12) |
-| `SpawnPositionFinder` | 겹치지 않는 스폰 자리 찾기 | `OverlapCapsuleNonAlloc` 무작위 시도 | |
-| `SceneSpawnPoints` | 이름으로 스폰 지점 찾기 | `GameObject.Find(name)` | 씬 이름 의존 ⚠️ |
-| `RoomSceneTransition` | 씬 이동 전 캐시 정리 | `OpRemoveCompleteCache` 후 `LoadLevel` | |
-| `UiListBuilder` | 자식 행 재사용/추가/삭제 | `Build(parent, template, count, bind)` | `GameLobbyController`는 이걸 안 씀(5.12) |
-| `CanvasGroupVisibility` | SetActive 대신 CanvasGroup으로 숨김 | `Ensure`, `Set` | Photon 콜백이 꺼지지 않게 ✅ |
-| `PhaseCountdownDisplay` | 단계 남은 시간 표시(씬) | `phase` | 💀 `CountdownPhase.Survival`(직렬화 호환용) |
-| `SceneNames`, `IRespawnable`, `GameSettings` 등 | 상수·계약 | | |
-
-### 4.3 `Unit/` (11개 · 1,247줄) — 쿠키
-
-#### `HideOrSeekPlayer` (606줄) — 쿠키 조작기
-
-| 그룹 | 멤버 (줄) | 역할 |
-|---|---|---|
-| 설정 | `speed`(10), `jumpPower`(12), `groundLayer`(13), `groundCheckOffset`(14), `jumpFreezeNormalizedTime`(15), `dodgeDuration`(16) | 인스펙터 값 |
-| 속도 | `baseSpeed`(20), `DodgeSpeedMultiplier`(22, ×2), `MaxMoveSpeed`(23), `speedBoost`/`speedBoostUntil`/`SpeedBoost`(25-29), `ApplySpeedBoost`(30) | 스케이트 배율·만료 |
-| 순간이동 | `TeleportTo`(36), `TeleportAfter`(45), `TeleportRoutine`(50) | 호박마차·술래방 내보내기 |
-| 상태 플래그 | `isJump`(59), `isDodge`(62), `keepMovingAfterDodge`(63), `rotation`/`rotation_value`(64-66), `dodgeRotation`/`dodgeMoveDir`/`dodgeTimer`(67-69), `jumpRequested`(70) | ⚠️ `rotation`은 회전이 아니라 **이동 방향 벡터**(이름 오해), `rotation_value`는 스네이크 표기 |
-| 부품 | `animator`, `rb`, `groundDetector`, `animationDriver`, `networkSync`, `grabController`, `carryFollower`, `carriedBody`, `lifePresenter`(71-80) | 조합된 순수 클래스·컴포넌트 |
-| 들기 RPC | `RpcOnGrabbedByOwner`·`RpcOnReleased`·`RpcRequestGrabKill`·`RpcOnGrabRejected`(86-91), `OnGrabbedByOwner`(147), `OnReleased`(167), `OnGrabRejected`(177), `RequestGrabKill`(204) | **`info.Sender` 검증** 후 수락/거절 ✅. `RequestGrabKill`은 모든 화면이 연출을 시작하고 방장만 `GrabKillAuthority.TryConfirm`. ⚠️ `:210`의 `if (pv == null) return; // … NetHold` 주석은 죽은 NetHold 설명 |
-| 계약 | `IsMine`, `IsLocallyControlled`, `Role`, `View`, `IsSpectatable`, `CanInteract`, `CameraTargetHeight`, `CameraDistance`, `IsBroken`(103-118), `IsMovementLocked`(95) | `IGameCharacter` 구현 |
-| 사망 대기 | `GrabKillConfirmTimeout`(124, 4초), `awaitingDeathUntil`, `CancelAwaitedDeath` | 방장 확정을 기다리되 시간 초과면 풀림 |
-| 탈출 모드 부착 | `AttachEscapeMode`(291/340) | ⚠️ 실행 중 **8개 컴포넌트 `AddComponent`**: `CookieAudio`, `CarriedBodyPresenter`, `StunReceiver`, `HeldItemPresenter`, `EscapeCharacterState`, `HatFlight`, `SkateVisual`, `PlayerInventory` |
-| 입력·이동 | `CheckMovementInput`(460), `CheckJumpInput`(489), `CheckDodgeInput`(502, 쿨다운 `DodgeCooldown` 3초), `DodgeOut`(526), `Move`(539), `UpdateRemote`(392) | 3.3절 |
-| 복구 | `RespawnToSpawnPoint`(573) | `IRespawnable`(FallGuard·VoidKillZone) |
-
-| 나머지 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `PlayerAnimationDriver` (순수 클래스) | 이동 상태 → 애니메이터 트리거 | `ChangeState(PlayerMoveState)`, `StateChanged` 이벤트, `ReplayJump`, Carry 레이어 가중치(`CarryReason [Flags]`) | 트리거 이름 = enum 이름 문자열 계약. `MonsterController.ChangeState`와 거의 같은 코드 ⚠️ |
-| `CarriedBodyPresenter` | 들린 몸을 드는 쪽 손에 붙임(모든 화면) | `[DefaultExecutionOrder(-50)]`, `LateUpdate` | |
-| `CarryPose` | 두 손 중점·들린 몸 회전 수학 | 정적 함수 | 순수 계산 ✅ |
-| `PlayerCarryFollower` (순수) | 들린 동안 kinematic, 충돌 무시, 내려놓기 1.2 m 앞 | | |
-| `PlayerGrabController` | F로 들기/내려놓기 | `OverlapSphereNonAlloc`, 대상 소유자에게 RPC, `SetCollisionIgnored` | `ReferenceEquals` vs Unity null 구분 ✅. 모든 콜라이더 쌍 O(n·m) |
-| `PlayerNetworkSync` | `NetworkTransformSync<PlayerMoveState>` + 들기 상태 | `isCarrying`, `carrierViewId` | |
-| `PlayerSkinApplier` | 판 캐릭터 색/재질 적용 | 속성 변경 시 다시 적용 | 헤더 주석 `InitPaintCanvas` 낡음 |
-| `SkinCatalogSO` | 캐릭터 4종 재질·모델 목록 | `GetMaterial`, 💀 `GetModel` | |
-| `PlayerBillBoard` | 이름표 빌보드 | `Camera.main` 매 LateUpdate, 0.25초 가시성 | |
-| `PlayerMoveState` | enum | | |
-
-### 4.4 `Monster/` (21개 · 2,129줄)
-
-#### `MonsterController` (449줄)
-
-| 그룹 | 멤버 (줄) | 역할 |
-|---|---|---|
-| 설정 | `eyeSocket`, `cameraTargetHeight`, `cameraDistance`, `speed`, `groundLayer`, `grabKillTrigger`, `animator`, `grabSocket`(16-24) | |
-| 처형 타이밍(정규화 시간) | `grabKillSquashStart/End`, `grabKillShrinkStart`, `grabKillCrumbTime`, `grabKillCrushNormalizedTime`(28-38) + 공개 getter | **애니메이션 진행도 하나로** 쿠키 눌림·가루·소멸 시점을 모든 화면이 맞춤 |
-| 처형 상태 | `GrabKillClipKeyword`(58), `grabKillDuration/Remaining`(65-66), `IsGrabKilling`(67), `GrabKillProgress`(79), `PlayGrabKill`(415), `FindClipLength`(195) | 클립 길이를 **이름 키워드로 검색** ⚠️ 문자열 계약 |
-| 돌진 | `tentacleDash`(53, 순수 `MonsterTentacleDash`), `wasDashing`/`lastDash*`(50-52), `FixedUpdateDash`(290), `TryProbeGround`(334), `TryStopBeforeCookieOnDashPath`(361), `DashStopMargin`(357), `dashSweepHits`(100), `DashCooldownLeft`(103) | 3.3절 |
-| 보안 | `RejectIfNotMonster`(153) | 괴물이 아닌 사람이 만든 괴물 캐릭터를 방장이 `PhotonNetwork.Destroy` ✅ |
-| 조준 | `TryGrabAimTarget`(165), `HasGrabAimTarget`(168) | `MonsterGrabKillTrigger`에 위임 |
-| 애니메이션 | `currentState`/`previousState`(55-56), `ChangeState`(212~429 여러 오버로드), `StateChanged`(425) | ⚠️ 쿠키 쪽과 중복 |
-| 계약 | `CameraTargetHeight`, `CameraDistance`, `IsLocallyControlled`, `Role`, `View`, `IsSpectatable`, `CanInteract`, `IsStunned`(104-116) | |
-| 부착 | `Awake`에서 `StunReceiver`, `MonsterAudio`, `MonsterEscapeState`, `MonsterViewSwitcher` `AddComponent` ⚠️ | |
-
-| 나머지 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `MonsterTentacleDash` (순수) | 돌진 시간·쿨다운·속도·진행 확인 | `DashVelocity(nearGround, normal, maxSlope)`, `ReportProgress`, `Cancel` | 막히면 자동 취소 |
-| `MonsterGrabKillTrigger` | 조준 + E로 잡기 | 화면 중앙 `SphereCastNonAlloc`, 시야선(눈/손 높이), 감옥 풍선 확인, `RpcRequestGrabKill` | RPC를 `RpcTarget.All`로 보내는 것은 의도 — 모든 화면이 처형 연출을 시작하고, 확정(`TryConfirm`)은 받는 쪽 중 방장만, 보낸 사람이 그 괴물 주인인지 `info.Sender`로 검증 ✅ |
-| `GrabKillAuthority` (정적) | 방장의 잡기 확정 | `TryConfirm(cookie, monster, sender)`, 정적 사전(씬 로드 때 초기화) | `RuntimeInitializeOnLoadMethod` |
-| `GameRuleController` | 방장이 매 프레임 판정(`EscapeRules`) → `GameResult` | 목록 재사용(할당 없음), `WriteWitchDeaths`, `FinishEscape` | 💀 비탈출 분기(`MonsterWins`/`CookiesWin` 옛 경로) |
-| `ResultScreenController` | 결과 화면, 12초 뒤 대기실 | CanvasGroup 숨김, `RoomPropertyGuard.WrittenByMaster` 확인, 유리병 트로피 | 행 `Instantiate`(한 번만) |
-| `PlayerResultRow` | 결과 행 | `SetEscaper`, `SetMonster(name, catches, witch)` | 💀 `SetMonster(name)`·`SetCookie` 옛 오버로드 |
-| `SpectatorController` | 관전(쿠키 프리팹) | 정적 이벤트 `SpectateTargetChanged`·`SpectatingVehicleChanged`, `SpectateRules` 사용 | 정적 이벤트로 `SpectatorLabel`과 분리 ✅ |
-| `SpectateRules` (순수) / `SpectatorLabel` | 관전 대상 규칙 / 관전 이름 표시(씬) | `IsCandidate`, `Merge` | |
-| `MonsterAssignmentAuthority` | 가마솥 지원 → 괴물 확정(방장) | Sender·정원·가마솥 거리 검증, `MonsterRoster.TryAppend` | 💀 `ClearLegacyDeadline`(`:81`) |
-| `MonsterRoster` (순수) | 괴물 목록 계산 | `Current`, `Remaining`, `ReturnWhenMonstersGone(…, witchPurging, …)`, `TryAppend` | `witchPurging` 인자는 늘 false 💀 |
-| `MasterClientPolicy` | 방장은 "괴물 아닌 가장 작은 액터"로 되찾기 | 속도 제한 카운터 | |
-| `Cauldron` / `MonsterRevealController` | 대기실 가마솥 트리거 → `ClaimMonster` 이벤트 / 괴물 발표 배너 | | |
-| `MonsterJoinController` | 괴물 본인이 `MonsterPlayer` 생성 | `GameObject.Find(MonsterSpawnPos)` ⚠️ | |
-| `GamePhaseStarter` | `PrepareEndTime`이 안 오면 방장이 대신 씀(안전장치) | | |
-| `RoomLifecycleWatcher` | 괴물이 모두 나가면 대기실로 | 💀 `witchPurging` `:28` | |
-| `RoundStateResetter` | `NetKeys` 판 키 일괄 삭제, 방 다시 열기 | | |
-| `MonsterDepartureBanner` | 괴물 이탈 경고(CanvasGroup) | | |
-| `MonsterMoveState` | enum | | |
-
-### 4.5 `ColorTag/` (4개 · 1,057줄)
-
-| 클래스 | 역할 | 살아 있는 부분 | 💀 죽은 부분 |
-|---|---|---|---|
-| `PlayerPaintCanvas` (649줄) | 쿠키 몸의 RenderTexture 색칠 캔버스 | `ForceFillColor`(물풍선 색), `ApplyRemote`의 ForceFill, `SampleSurfaceColors`(`AsyncGPUReadback` — 부서질 때 가루 색), `TrySetBaseSkin`, 칠해진 스킨 재질 | 손 색칠 전체: `HandlePaintInput`, `StampAtScreenPoint`, `TryRegisterSlotAndStamp`, `SetBrushColor`(321), `SetEraseMode`(327), `ResetCanvas`(332), `SendResetEvent`, `ClearColor` 이벤트(463), Erase 종류, `LateStrokeGrace`(417), `InPaintWindowNow`(475, 늘 false), `PaintableCollider`·`CurrentBrushRadius`·`CurrentBrushColorIndex`·`RegisteredColorSlots`(47-51), `ApplyForcedColorIfAssignedToMe`(Forced 키를 아무도 안 씀), 획 묶음 전송률 계산 |
-| ↳ 기법 | GL.QUADS로 스탬프, 스탬프 셰이더 하드웨어 블렌드(OneMinusDstAlpha)로 "먼저 칠한 색 고정", 획을 배열 묶음(SoA)으로 `RaiseEvent`, 보낸 사람 == 주인 검증 | | |
-| `PaintColliderUpdater` | 칠한 메시로 충돌체 굽기(IJob, `Physics.BakeMesh` 작업자 스레드, 이중 버퍼) | — | 💀 Tick이 `IsPaintActive`일 때만 → **하지만 로컬 쿠키마다 생성되어 Mesh 2개를 할당**한다 ❌ |
-| `CookieLifeStatePresenter` (310줄) | 쿠키 생사(부서짐·잡힘) 표시 | 멱등 `Reconcile`(0.5초 확인 + 콜백 + 재접속), 잡힘 때 괴물 손 소켓 따라가기, `CrushScale`, `ParticleSystem.Emit`(샘플 색) | ⚠️ **폴더가 틀림**(색칠이 아니라 생사 — `Unit/`이 맞음) |
-| `ColorPaletteSO` | 색 팔레트 | `colors` | 💀 `ColorEntry.colorName` |
-
-### 4.6 `Escape/` (53개 · 8,258줄) — 탈출 모드
-
-#### 4.6.1 상태·규칙·네트워크
-
-| 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `EscapeManager` (475줄) | **모든 화면**의 탈출 모드 허브: 상태 읽기·뷰 갱신·요청 보내기·지형 도우미 | 정적 `Instance`(13), `State`(40), `StateChanged`(48), 정적 `HasLeftMap`/`HasEscaped`/`IsActive`/`ActionsAllowed`/`ChestsVisibleIn`(49-64), `ReadStateFromRoom`(156/205), `ApplyLocalState`(212/237), `RefreshViews`(245), `Request`(286), `SentByMaster`(332), `ItemDef`(342), `InMonsterRoom`(347), `TryRandomMapPoint`(366), `IsValidTeleport`(380), `SafeGroundPoint`(395), `DropPointNear`(409-434), `SnapToGround`(444) | ⚠️ 책임이 많다(상태 동기 + 뷰 + 요청 + 지형 질의 + 시각 상수). 💀 `MapRect`(46), `BuildingView`(78), `ExitView`(79). `IsNearCookieSpawn`·`FallbackDropPoint`가 호출마다 `GameObject.Find`(`:415,422`). `SnapToGround`가 `RaycastAll`(할당) |
-| `EscapeAuthority` (1,232줄) | **방장만** 실행하는 규칙 엔진 | 상수(13-29: 칸 4, 줍기 거리, 폭탄 3칸·20초…), `rng`, `toolReadyAt`, `lastPositions`, `suspectUntil`, `moveExemptUntil`, `Initialize`(63), `Tick`(259), `Handle`(394), 작업별 `OpenChest`/`PickUp`/`Drop`/`RepairBegin`/`RepairStop`/`CompleteRepair`/`OpenExits`/`Dismantle`/`Exit`/`RocketInsert`/`RocketBoard`/`TryLaunchRocket`/`StartWitchTimer`/`RainbowOpen`/`RainbowBreak`/`HatFly`/`PlaceBomb`/`RemoveBomb`/`DetonateBombsAt`/`DecoyCatch`/`ToolUse`/`AttachRecorder`/`ValidTargets`, `RestoreMissingMaterials`(307), `OnPlayerLeft`(988), `OnPlayerBroken`(1000), `Commit`(1215) | 3.5절. ⚠️ 1,232줄 한 클래스(작업별 핸들러를 `partial` 또는 전략 객체로 나눌 만함). 요청마다 `IsNear`·역할·의심 검사 ✅ |
-| `EscapeState` (424줄) | 판 상태 데이터 + 이진 직렬화 | 3.5절, 중첩 struct `Item/Chest/Building/Slot/Flight/Bomb/Decoy` | `FormatVersion` 6 |
-| `EscapeNet` | 요청 페이로드(`EscapeOp` 20종), 알림 종류(`EscapeNoticeKind`) | `ToPayload`, `FromPayload` | 💀 `DecodeSlot`, `EscapeNoticeKind.StolenToRocket` |
-| `EscapeRules` (순수) | 게임 끝 판정 | `PlayerInfo`, `Decision`, `WitchSlamSeconds` | ✅ 시험 가능 |
-| `WitchTimeline` (순수) | 마녀 시각표 | 상수 15개, `ShotAt`, `FinaleShotAt`, `WalkStart/End`, `TryGetLeadInStart` | 💀 `PurgeAppearAt`, `PurgeStrikeAt`, `PurgeWalkSeconds`, `ShouldStartPurge`, `WitchMode.Purge`, `WitchShot.Approach` 분기, `CookieDiesInStrike`의 Purge 분기 |
-| `StolenNotice` (struct) | 훔침/다시 생김 알림 지연 판단 | `Decide(now, loc)`, `Template` | 순수 ✅ |
-| `MapArea` (readonly struct) | 맵 원판·무작위 점 | √ 균등 표본 | |
-| `KoreanText` | 받침 판별 | | |
-| `EscapeCue` | 경계 시각 소리 규칙, `FindDeep` | | 깊은 자식 찾기 한 곳 ✅ |
-
-#### 4.6.2 맵 사물(상호작용)
-
-| 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `QuadrantBuilding` | 사분면 재료 건물(수리·해체) | `Bind`, `Refresh`, `CurrentMode`(Repair/WrongMaterial/Dismantle/Busy), `HoldSecondsFor`, `DisplayProgress`(재시도 0.6초×3), `GetLabel` | `RepairHoldSeconds = 3600` — 끝은 방장이 정함 ✅. `FindPrefix`(Blender `.001` 접미사 대응). 게이지 빌보드 `Camera.main` 매 프레임 |
-| `EscapeGate` | 탈출구(문 내려가기·트리거 닿으면 탈출 요청) | `ExitTouchRadius` 3.5, `Bind`, `Refresh`, `UpdateVisuals` | `XRayMarker`로 벽 너머 표시 |
-| `MaterialChest` | 재료/스파이 상자 | `Show(index, chest, appear)`, `Hide`, `AppearScale`, 뚜껑 닫힘 연출 | |
-| `RainbowChest` | 무지개 상자(모자) | `Refresh`, 열기 2초/부수기 3초 | 모델 없으면 코드 도형 |
-| `SpyRocket` | 스파이 로켓(재료·탑승·발사) | `PlaceAt`, `Refresh`, `AnimateLaunch`, `RocketNeeds` | ⚠️ `Refresh`가 칸마다 `transform.Find($"Slot_{i:00}_Empty")` 문자열 생성·검색(`:97-98`) — `Awake`에서 `_Filled`만 캐시. `slotParts` 크기 4 vs `filledLooks` 2 불일치 |
-| `MonsterRoomDoor` | 괴물만 지나가는 문(본인 화면 충돌 무시) | `LocalMonster()` 루프 | 중복 루프(5.12) |
-| `MonsterRoomGuard` | 술래방에 들어간 쿠키 내보내기 | `IsInside`(순수), `TryEjectPoint`(반원 탐색), `IsEjectMove` | 🧪 `EditorBind` |
-| `CookieHole` | 쿠키만 지나가는 구멍(로컬 충돌 무시) | | |
-| `GroundItemView` | 바닥 아이템(풀 사용) | 모델이 바뀌면 `Destroy` 후 다시 생성 | |
-| `NoiseBombPresenter` / `NoiseBombView` | 괴물 소음폭탄 설치·표시 | `Sync`(상태와 뷰 맞추기), `LocalChargesLeft` | 뷰는 `CreatePrimitive`/`Destroy` |
-| `AlarmBeacon` | 폭탄 터진 건물 경보등(괴물만) | 정적 `Show(pos)` | `CreatePrimitive` + 시간 뒤 `Destroy` |
-
-#### 4.6.3 캐릭터 부착물·아이템·도구
-
-| 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `PlayerInventory` | 4칸 가방(로컬) | 정적 `Local`, `Selected`, `HeldItem`, `HandsLocked`, `Changed`, `TrySelect`, `RequestDropHeld`, `NextOccupied`(순수) | 💀 `RequestDropAll`. 휠 = `PlayerInput.BrushSizeDelta`(이름 낡음) |
-| `ToolUser` | 도구 쓰기(대상 고르기 → 방장 요청) | 정적 `Aiming`, `Use(slot, item)`, `UseSound`, `CollectInSphere`, `SortedHits` | ⚠️ 스턴건 조준 확대를 `Camera.main.fieldOfView`에 **매 프레임** 씀 — 마녀 연출 카메라도 FOV를 씀(5.8). `new System.Random()` 매번, `SphereCastAll` 할당 |
-| `ToolHitReceiver` (정적) | 방장 승인 명중 처리(모든 화면 효과 / 본인 상태) | `Handle(data)`, `Apply`, `ApplySelf`, `HandOf` | `HandOf`는 `FindByOwner` 중복 |
-| `ToolFx` / `ToolShotFx` | 명중 구 / 풍선 포물선·스턴 빔 | `Play`, `ThrowBalloon`, `Beam` | 매번 생성·파괴 |
-| `StunReceiver` | 기절 별·감옥 풍선 | `Stun`, `Jail`, `IsStunned`, `IsJailed` | 별은 한 번 만들어 켜고 끄기 ✅. 감옥 풍선 재질 `NewMaterial` 해제 없음 ⚠️ |
-| `HeldItemPresenter` | 손에 든 아이템 모양(모든 화면) | `SelectedSlot` 속성 반영 | |
-| `HatFlight` | 헬리콥터 모자 비행 | `NearestEdgeDirection`(🧪) | 공통 시계 |
-| `SkateVisual` | 스케이트 바퀴 | `SpeedBoost > 1`일 때 | |
-| `EscapeCharacterState` | 탈출·탑승 시 숨기기·관전 전환 | `OnStateChanged`, `ApplyHidden` | |
-| `XRayMarker` | 벽 너머 실루엣 재질 추가 | `Init(color)`, `SetVisible` | |
-| `MonsterEscapeState` | 괴물 마녀 사망 반영 | `ApplyIfDead` | 방장이 쓴 `DeathCause`만 믿음 ✅ |
-
-#### 4.6.4 AI(미끼)·목소리
-
-| 클래스 | 역할 | 핵심 멤버 | 기법 |
-|---|---|---|---|
-| `DecoyPresenter` | 상태의 `Decoys`를 각 화면이 그림 | `Sync`, `Create`, `BuildTemplate`(Resources 쿠키 프리팹을 겉모습만), `ApplySkin` | 꺼진 부모 아래 복제 |
-| `DecoyView` | AI 하나(잡히는 연출·목소리) | `IsCatchable`, `RequestCatch`, `Tick`, `TickCaught`, `Vanish` | 진짜 쿠키와 같은 진행도로 눌림·가루 |
-| `DecoyVoice` (순수) | 목소리 재생 시각 | `Gap`, `TryCurrentPlay` | 정수 해시 |
-| `VoiceRecorderPanel` | 대기실 5초 녹음 버튼 | `IsRecording`, `RecordWhenMicFree`, `Downsample`, `Normalize` | 자기 부트스트랩, 음성 채팅과 마이크 넘겨받기. 🧪 `EditorFakeRecording` |
-| `VoiceStore` / `VoiceNet` | 녹음 저장·전송·조립 | `SetLocal`, `ClipFor`, `Encode/Decode`, `SendLocalVoice`, `Receive` | μ-law, 크기 제한 |
-
-#### 4.6.5 마녀 연출
-
-| 클래스 | 역할 | 핵심 멤버 | 기법·주의 |
-|---|---|---|---|
-| `WitchPresenter` (442줄) | 마녀 등장·걷기·밟기 | 정적 `Current`, 정적 이벤트 `Impacted`, 상수(키 270 m 등), `BuildPath`, `EnsureStage`, `UpdateImpact`, `LateUpdate`(고개 숙임·발 들기 본 추가 회전), `StompLegAngle`, `WalkAnimatorSpeed`, `ApplyFog`, `UseFadeMaterials` | ⚠️ `Awake`에서 `WitchShatter`·`WitchFinaleStage` `AddComponent`, **`Camera.main.gameObject.AddComponent<WitchRevealCamera>()`**(`:347`) — 씬 카메라에 의존. 💀 `Facing`의 Purge 분기(`:259`). 🧪 `FadeAlpha`. 자리표시 마녀 재질은 해제하지 않음 |
-| `WitchFinaleStage` | 도착 연출 대역(쿠키·괴물 복제) | `Choose`/`Arrange`(순수), `GroundHeight`, `Clone`, `StripToVisuals`, `HideRealCharacters`, `OnImpact` | 3.7절 |
-| `WitchShatter` | 맵 박살 | 정적 `Current`, 조각 풀(`Stack<Piece>`, 미리 25개/프레임, 최대 400), `FindTargetGroups`, `IsBreakable`, `ShatterBody` | 자체 풀 ✅ |
-| `WitchPath` (정적) | 마녀 길(Ground 사각형) | `TryGetGroundRect`, `FindGround`, `TryEntryPoint`, `StrikePoint` | slab 교차 |
-
-#### 4.6.6 HUD·결과·공용 시각
-
-| 클래스 | 역할 | 핵심 멤버 | 주의 |
-|---|---|---|---|
-| `EscapeHud` (471줄) | 탈출 HUD(건물 상태·가방·알림·스파이 표시·마녀 타이머) | 정적 `instance`, 정적 API `Toast`/`Notice`/`ScheduleStolen`/`ScheduleRespawned`, `Build`, `RefreshRequirements`, `RefreshHotbar`, `CookieCaughtText` | ⚠️ `RefreshRequirements`가 0.25초마다 `List<(…)>`·문자열 생성. `Update`에서 `PlayerInventory.Local`을 폴링해 다시 묶음 |
-| `SkillHud` | 스킬 칸 2개 | `Set(slot, …)`, `BombState`, `LocalCharacter()` | 중복 루프 |
-| `MonsterJarTrophy` / `MonsterJarStage` | 괴물 승리 유리병(2D/3D RenderTexture) | `Build`, `Init`, `StackCookies` | `OnDestroy`에서 RT 해제 ✅ |
-| `EscapeVisuals` (정적) | 모델/도형 생성·재질 캐시·파티클 빌더 | `CreateItemModel`, `Tint`, `NewMaterial`, `ApplyFade`, `CreateParticles(ParticleStyle)`, `CreatePassenger` | 셰이더 변형 보존 ✅ |
-| 데이터 SO | `EscapeCatalogSO`(아이템·레시피 목록), `EscapeRecipeSO`(맵별 재료), `EscapeTextsSO`(모든 문구), `ItemSO`, `ToolSO` | 정적 `Current` 캐시 | 💀 옛 필드(6.4절) |
-
-### 4.7 `Audio/` (26개 · 2,829줄)
-
-| 클래스 | 역할 | 핵심 멤버 | 주의 |
-|---|---|---|---|
-| `GameAudio` (정적 파사드) | 모든 소리 진입점 | `Play`, `PlayAt`, `PlayOn`, `PlayCharacter`, `StartLoop`, `SetLoopFade`, `PlayMusic`, `Stinger` | 💀 `StopMusic`, `CurrentMusic` |
-| `AudioRuntime` | DDOL 실행기(보이스·음악·추격 소유) | `Boot()`(BeforeSceneLoad), `Instance`, `Music`, `Chase`, `quitting` | 자기 부트스트랩 싱글턴 ✅ |
-| `AudioVoicePool` (순수) | 칸 배정·빼앗기·세대 | `Acquire`(빼앗기 여부 `out stolen`), `Release`, `GenerationOf`, `SetAudibility`, `CountPlaying` | 💀 `CountBusy`. 🧪 `SoundAt` |
-| `SpatialGain` (순수) | 거리·층·저역 통과 계산 | `Distance`, `Floor`, `Evaluate`, `Cutoff`, `LogLerp` | 3.6절 |
-| `IndoorZone` | 실내 상자(정적 목록) | `Separated(src, listener)` | |
-| `AudioListenerAnchor` | 귀를 캐릭터 머리로, 씬 리스너 끄기 | `FindObjectsByType<AudioListener>` (씬 로드마다) | |
-| `AudioVolumeSettings` | 버스 음량 4개(PlayerPrefs) | `Changed` 정적 이벤트, 🧪 `ToDecibels` | |
-| `MusicPlayer` / `MusicDirector` / `MusicRules` | 크로스페이드 덱 2 + 스팅어 / 0.25초마다 상황 → 곡 / 곡 선택 순수 함수 | `Select(MusicContext)`, `LocalMonsterWaiting` | 💀 `LocalMonsterWaiting`(늘 false), `MusicId` Hunt 5종·TimeAttack(번호 보존용) |
-| `ChaseDirector` / `ChaseIntensity` / `ChaseAudioSettingsSO` | 괴물 접근 북소리 | `PlayScheduled` 동기, 히스테리시스 | 🧪 `Intensity` getter |
-| `CookieAudio` / `MonsterAudio` | 애니메이션 상태 이벤트 → 발소리·점프·회피 | `StateChanged` 구독 | 💀 `CookieAudio.TickPaint`(`:70`) |
-| `EscapeAudioPresenter` | 상태 차이 → 소리 | `previous`(Clone), `PlayOnActor` | `PlayOnActor`는 `FindByOwner` 중복 |
-| `AmbientEmitter` / `AmbientZone` | 제자리 반복음 / 영역 2D 환경음 | `ShouldPlay`(순수, 히스테리시스) | |
-| `OutputDevices` / `WindowsAudioEndpoints` | 출력 장치 목록·선택(COM) | `Select(id)`, `Changed` | 3.6절 |
-| `SoundSettingsPanel` | **옛 소리 설정 창**(§27 설정 메뉴 이전) | `PickOutput`(🧪), `closeOnEscape` | ⚠️ `SettingsMenu.prefab` 안에서 아직 컴포넌트로 쓰임, 단독 `SoundSettingsPanel.prefab`은 어디서도 안 씀 |
-| `UiSound` / `UiSoundCues` | 버튼 소리·프레임 중복 제거 | `OnPointerEnter`(인터페이스) | |
-| `SoundCatalogSO` / `MusicCatalogSO` / `SoundId` | ID → 클립·음량·감쇠 표 | `Find`, `IsLoopById`(🧪) | 💀 `SoundId` 20종(Legacy 시퀀스·색칠 전용), 6.5절 |
-
-### 4.8 `Environment/` (9개 · 940줄)
-
-| 클래스 | 역할 | 핵심 멤버 | 주의 |
-|---|---|---|---|
-| `InteractableDoor` (321줄) | 방장 권위 문(대기실·맵) | 방 속성 Hashtable 하나에 모든 문 상태 + 정적 `masterPendingWrites`(응답 전 덮어쓰기), 요청자 거리 검증, 애니메이터 bool | 💀 `NetHold.IsHolding` 분기, `LobbyDoorState` 이벤트(`:145`), 메시지 큐 정지 분기 |
-| `CoasterPathSO` | 레일 중심선·속도표 | `Evaluate(s)`, `TimeAt`(🧪), `Segment`(이분 탐색) | 💀 `DistanceAt`, `Gauge` |
-| `CoasterRide` / `CoasterTrain` / `CoasterTrainAudio` | 공통 시계 롤러코스터 / 차량 자세 / 속도 기반 소리 | `FixedUpdate`에서 kinematic `MovePosition` | 🧪 `TrainCount`, `Train`, `EditorPlaceAt`, `CarCount`, `CarBody` |
-| `VikingRide` | 공통 시계 바이킹 | 진폭 포락선 × sin | 💀 `CurrentAngle`, 🧪 `EditorSetPhase` |
-| `CauldronGlow` / `CauldronSplash` | 가마솥 빛(MaterialPropertyBlock) / 튀김 | `CauldronSplash`는 Update를 스스로 끔 | |
-| `FlickerLight` | Perlin 깜빡임 + 돌발 상태 | | |
-
-### 4.9 `GameManager/` (10개 · 687줄)
-
-| 클래스 | 역할 | 주의 |
-|---|---|---|
-| `GameManager` | **채팅만** 담당(이름 오해 ⚠️) — `RPC LogMsg`, `ChatText.Sanitize`, `ChatRateLimiter`, `ChatRules` | `Start`에서 `IsMessageQueueRunning = true`(옛 대기실 대기 흔적), `FindFirstObjectByType<RoomExitController>` |
-| `PlayerSpawner` | 쿠키 스폰(사분면 순서) | `GameObject.Find` 2곳, 낡은 `MonsterLobbyWaitController` 주석 |
-| `RoomExitController` | 나가기 확인 → `LeaveRoom` → 로비 | 옛 대기 복구 코드(큐·KeepAlive) |
-| `EscMenu` | 게임 씬 ESC 메뉴 | 정적 `Instance`, `Input.GetKeyDown(KeyCode.Escape)` 직접(`:63`) ⚠️ |
-| `RoomSettingsMenu` / `ConfirmDialog` | 방 설정 / 확인 창 | |
-| `FallGuard` / `VoidKillZone` | 낙하 복구(`IRespawnable`) | 정적 공유 쿨다운 |
-| `ChatText` / `ChatRules` | 채팅 정리·표시 규칙 | 순수 ✅ |
-
-### 4.10 `Interaction/` (5개 · 370줄)
-
-| 클래스 | 역할 | 핵심 멤버 | 주의 |
-|---|---|---|---|
-| `CharacterInteractor` | E 상호작용 — 0.1초마다 가장 가까운 대상 | DDOL 자기 부트스트랩, `HasFocus`, `FindLocalCharacter`, `HoldProgress` 사용 | ⚠️ `is MonsterController` 구체 타입 분기(잡기 우선) |
-| `HoldProgress` (순수) | 길게 누르기 상태 기계 | | ✅ |
-| `IInteractable.cs` | `IInteractable`·`IHoldInteractable`·`IHoldStartListener`·`IHoldEndListener`·`IHoldProgressDisplay` + `InteractableRegistry` | 인터페이스 분리 원칙 ✅ | 레지스트리가 `CharacterRegistry`와 같은 모양(중복) |
-| `IInteractionLabel` | 안내 문구 | | |
-| `InteractionPromptUI` | E 안내 UI(Resources 프리팹) | | |
-
-### 4.11 `Lobby/` (13개 · 1,511줄)
-
-| 클래스 | 역할 | 주의 |
-|---|---|---|
-| `LobbyController` (371줄) | 연결·지역·방 목록(차이 갱신)·만들기/참가 | UnityEvent 버튼 메서드(`OnMakeRoomButtonClicked` 등)는 씬에서 연결 — 이름 검색으로는 "미사용"처럼 보이지만 사용 중 |
-| `GameLobbyController` (316줄) | 대기실 플레이어 목록·강퇴·시작·지역 이동 | ⚠️ 목록을 매번 `Destroy`/`Instantiate`(`UiListBuilder` 미사용), `FindFirstObjectByType<RoomExitController>` 3번(`:183,215,297`) |
-| `GameStartAuthority` (정적) | 호스트 요청 → 방장 실행 | 💀 `CurrentMapScene`(`:128`) |
-| `CharacterAssignment` / `PlayerSkinSelector` | 캐릭터 배정(순수) / 선택 UI | |
-| `LobbyKick` / `RegionMove` / `RoomSettingsAuthority` / `RoomSettingStepper` / `RoomSettingField` | 강퇴 / 지역 이동(정적 대기) / 방 설정 요청 / 단계 계산 / 설정 행 | 💀 `RoomSettingField.StepBy` |
-| `RegionSelector` (+`PhotonRegions`) | 지역 드롭다운 | ⚠️ 한 파일에 두 타입 |
-| `PlayerListItem` / `RoomListItem` | 행 | |
-
-### 4.12 `UI/` (4개 · 467줄)
-
-| 클래스 | 역할 | 주의 |
-|---|---|---|
-| `SettingsMenu` | 설정 탭 | 💀 `CurrentTab`, ESC 직접 읽기 |
-| `KeyBindingsPage` | 조작키 다시 정하기 | 정적 `listening`/`confirming` → `ConsumesEscape`, 💀 `IsConfirmingReset`, 🧪 `EditorBind`·`EditorKeyText`(런타임 클래스 안 시험 훅) |
-| `InputDevicePage` | 마이크 선택·레벨 | `Peak` |
-| `LobbyEscMenu` | 로비 ESC | ESC 직접 읽기, `OpenSettings`(UnityEvent) |
-
-### 4.13 `Dev/` (2개 · 84줄)
-
-| 클래스 | 역할 | 판정 |
-|---|---|---|
-| `OfflineModeBootstrap` | 오프라인 시험 모드 시작 | 출시 씬에서는 제거됨(7차 F-02). 시험 도구로 유지 |
-| `MonsterTestSpawner` | `PlayerTestScene` 전용 괴물 스폰 | 💀 **어떤 씬·프리팹·코드도 참조하지 않음** — `PlayerTestScene`은 디스크에서 삭제됨(README) |
-
----
-
-## 5. 구조 점검 12항목
-
-각 항목: **판정 · 근거(파일:줄) · 영향 · 권장**. 번호 `A-xx`는 8장 조치표와 연결된다.
-
-### 5.1 쓰이지 않는 메서드·변수·필드·클래스·파일이 있는가 — ❌ 있음
-
-6장(코드)·7장(에셋)에 전부 적었다. 요약:
+5장(코드)·6장(에셋)에 전부 적었다. 큰 묶음만:
 
 | 묶음 | 규모 | 원인 |
 |---|---|---|
-| 손 색칠(ColorTag) | `PlayerPaintCanvas` 약 300줄 + `PaintColliderUpdater` 78줄 + `NetKeys` 3개 + `GameSettingsSO` 필드 5개 + `SoundId` 3개 + `CookieAudio.TickPaint` | §26 H12 "손 색칠 삭제" 뒤 `GamePhaseState.IsPaintActive => false`로 **입구만 막음** |
-| 괴물 대기실 대기(NetHold) | `NetHold` 203줄 + `HeldSyncRecorder` 25줄 + `InteractableDoor`·`GameManager`·`PlayerSpawner`·`RoomExitController`의 대기 분기·주석 + `MusicRules.LocalMonsterWaiting` + 대기실 씬 `MonsterWaitPanel` | 호출자 `MonsterLobbyWaitController`를 `Legacy~`로 옮김 → `NetHold.Begin()` 호출 0 |
-| 마녀 처단(Purge) | `WitchTimeline` 5개 멤버 + `WitchShot.Approach` + `WitchRevealCamera` 2개 함수·분기 + `WitchPresenter` 분기 + `RoomLifecycleWatcher`·`MonsterRoster` 인자 | §25 개편 뒤 `WitchMode.Purge`를 **런타임 어디서도 쓰지 않음**(시험 코드만) |
-| 옛 비탈출 결과 | `GameRuleController`·`ResultScreenController`·`PlayerResultRow`의 `MonsterWins/CookiesWin` 경로 | 모든 맵이 탈출 모드 |
-| `Legacy~` 폴더 | 런타임 11개 파일(약 2,300줄) + 에디터 2개 | Unity가 컴파일하지 않는 보관 폴더 |
+| 💀 몸 색칠 캔버스 | `PlayerPaintCanvas` 208줄(+ `ColorPaletteSO`·`PaintStamp`·`PlayerPaintedSkin` 셰이더·`NetEventCodes.PaintStroke`) | §45에서 물풍선 색칠을 없애 `ForceFillColor`(`PlayerPaintCanvas.cs:86`) 호출 0. 남은 일은 ① 쿠키 스킨을 "빈 캔버스 합성" 셰이더로 바꿔 그리기(`:53`)와 ② 가루 색 샘플(`CookieLifeStatePresenter.cs:115`)인데, ②는 캐릭터 표에 5종 모두 가루 색이 있어 **실행되지 않는다**. 쿠키마다 512² RenderTexture 1장을 계속 들고 있다 |
+| 💀 감옥 풍선 | `ToolKind.JailBalloon` 분기 8곳(`ToolUser.cs:189`, `ToolHitReceiver`, `HeldItemPresenter`, `EscapeAuthority.IsBalloon`…) + 카탈로그 아이템 | §45에서 스파이 도구 목록에서 뺐다. 카탈로그에는 남아 있지만 어떤 상자·레시피에도 들어가지 않는다(Unity 확인) |
+| 💀 옛 레시피 | `EscapeRecipeSO` 필드 7개(`ExitKind`·`Mode`·`Groups`·`CounterLabel`·`CounterItems`·`FillsCapacity`·`SpyToolbox`·`ExtraToolboxesPerSpy`·`MaxRequired`) + `EscapeExitKind`·`RecipeMode` enum | 8차와 같음 — 에셋 빌더만 채움 |
+| 💀 작은 멤버 | 약 25개(5.2절) — 그중 6개는 이번 §46 작업에서 생긴 것(`MaxRemoteLead`, `IsRunning`, `DeferredScene` 등) | |
 
-### 5.2 기존 책임 분리를 무시하는 코드가 있는가 — ⚠️ 몇 곳
+### 4.2 기존 책임 분리를 무시하는 코드가 있는가 — ⚠️(↗)
 
 | # | 근거 | 설명 | 권장 |
 |---|---|---|---|
-| A-01 | `GameManager/GameManager.cs` 전체 | 이름은 "게임 매니저"인데 **채팅만** 한다 | `ChatController`로 이름 변경(.meta GUID 유지) |
-| A-02 | `ColorTag/CookieLifeStatePresenter.cs` | 쿠키 생사 표시가 색칠 폴더에 있음 | `Unit/`로 이동 |
-| A-03 | `Escape/EscapeManager.cs` (475줄) | 상태 동기 + 뷰 갱신 + 요청 전송 + **지형 질의**(`SnapToGround`·`DropPointNear`·`IsValidTeleport`·`TryRandomMapPoint`) + 시각 상수 | 지형 질의를 `EscapeGeometry`(정적/순수)로 분리 |
-| A-04 | `Escape/EscapeAuthority.cs` (1,232줄) | 20종 작업 처리 + 이동 감시 + 재료 안전장치 + 마녀 타이머 + 알림이 한 클래스 | `partial class`로 작업군(상자·건물·로켓·도구·AI·폭탄)별 파일 분리 — 동작 변화 없이 읽기 쉬워짐 |
-| A-05 | `PlayerInput.BrushSizeDelta` → `PlayerInventory.cs:306` | 입력 이름이 옛 의미(붓 크기) | `SlotWheelDelta`로 이름 변경 |
-| A-06 | `Interaction/CharacterInteractor.cs` `is MonsterController` | 인터페이스 기반 설계에 구체 타입 분기 | `IGameCharacter`에 "잡기 우선" 속성 추가 |
-| A-07 | `UI/KeyBindingsPage`·`VoiceRecorderPanel`·`MonsterRoomGuard`·`EscapeCatalogSO` 등의 `Editor*` 메서드 | 시험 훅이 런타임 클래스 안에(`#if UNITY_EDITOR`로 감싼 것도 있고 아닌 것도 있음) | 모두 `#if UNITY_EDITOR`로 통일 |
+| N-02 | `Unit/HideOrSeekPlayer.cs` 682줄 | 이동 물리·점프·회피·**춤**·**스태미나**·들기 RPC 3개·**처형 RPC 2개**·동기화·리스폰·순간이동·속도 증가를 한 클래스가 한다(8차 이후 +약 100줄) | 처형 수신부(`RequestGrabKill`·`GrabKillRejected`·확정 대기)를 `CookieGrabKillReceiver`로, 춤·스태미나 입력을 `CookieLocomotion`으로 분리 |
+| N-03 | `Escape/EscapeAuthority.cs` 1,289줄 | 20종 작업 + 이동 감시 + **스태미나 추정** + 재료 안전장치 + AI 잡기 되돌림 | 8차 A-04 그대로: `partial class` 작업군별 분리. 이동 감시(`TrackPositions`·`WatchStamina`·의심)는 `MovementWatch`로 |
+| N-04 | `Escape/EscapeManager.cs` 511줄 | 상태 동기 + 뷰 갱신 + 요청 + 지형 질의에 **NavMesh 도달성 검사**(`IsWalkableFromSpawn`, 2026-10-31)까지 | 지형 질의 묶음을 `EscapeGeometry`로(8차 A-03) |
+| A-01(계속) | `GameManager/GameManager.cs` | 이름은 게임 매니저, 하는 일은 채팅 + **시간 배율·메시지 큐 켜기**(`:48-49`) | `ChatController`로 이름 변경, 큐 조작은 제거(N-09) |
+| A-02(계속) | `ColorTag/CookieLifeStatePresenter.cs` | 쿠키 생사·처형 연출이 색칠 폴더에 | `Unit/`로 |
+| A-06(계속) | `Interaction/CharacterInteractor.cs:51,100` `is MonsterController` | 인터페이스 설계에 구체 타입 분기 | `IGameCharacter`에 "잡기 우선" 속성 |
+| ↘ A-05 | `PlayerInput.SlotWheelDelta` | 8차의 `BrushSizeDelta` 이름 문제 해결됨 | — |
+| N-05 | `Monster/` 폴더 | 게임 규칙·결과·방장 정책·판 초기화·관전이 "Monster" 폴더에 있다(방 수명 관리) | 이동은 비용이 크니 새 파일부터 `Round/`(또는 `Core/Room/`)에 |
 
-### 5.3 Manager 간 의존성이 과도한가 — ⚠️ 허브 2개
+### 4.3 Manager 간 의존성이 과도한가 — ⚠️
 
-| 대상 | 참조 파일 수 | 판정 |
-|---|---:|---|
-| `RoomState` | 56 | ✅ 읽기 전용 정적 도우미 — 허브여도 상태를 바꾸지 않아 괜찮다 |
-| `NetKeys` | 51 | ✅ 상수 표 |
-| `EscapeManager`(정적 멤버 포함) | **38** | ⚠️ `EscapeManager.ActionsAllowed`·`HasLeftMap`·`IsActive`가 Audio·Monster·Unit·Interaction·Camera까지 퍼졌다. 탈출 모드가 아닌 씬(대기실)에서도 이 정적 멤버를 부른다 |
-| `EscapeManager.Instance` | 8 | ⚠️ 정적 싱글턴 접근(`ToolHitReceiver`, `WitchFinaleStage`, `MonsterRoomGuard` 등) |
-| `GameSettings.Current` | 27 | ✅ 설정 SO |
-| `GameAudio` | 27 | ✅ 파사드 |
-| `CharacterRegistry` | 23 | ✅ |
-| `EscapeAuthority` | 11 | ⚠️ 정적 상수(`BombMaxCharges`, `BombCooldown`, `InventorySlots`)를 HUD·인벤토리가 읽음 — 규칙 상수는 `EscapeRules`나 SO로 |
+| 대상 | 수치 | 판정 |
+|---|---|---|
+| `EscapeManager` 팬아웃 | **11종**(`DecoyBrain`, `DecoyPresenter`, `EscapeAudioPresenter`, `EscapeAuthority`, `EscapeHud`, `EscapeState`, `GamePhaseState`, `MonsterRoomGuard`, `NoiseBombPresenter`, `RoomState`, `WitchPresenter`) | ⚠️ 탈출 모드의 조립자 역할이라 어느 정도는 정상. 다만 하위 객체가 다시 `EscapeManager`를 참조하는 **짝 6쌍** |
+| `EscapeManager` 정적 멤버 사용 | **32개 파일**(`HasLeftMap` 11, `ActionsAllowed` 10, `IsActive` 7, `Instance` 8 — 겹침 포함) | ⚠️ 8차 A-08 그대로. Audio·Monster·Unit·Camera·GameManager까지 |
+| `RoomState` 팬인 | 34 매니저류(전체 56파일) | ✅ 읽기 전용 정적 도우미 |
+| `GamePhaseState.Current` | 10곳 · 매 호출 방 속성 3번 조회 | ✅ 동작 문제 없음, 매 프레임 여러 곳에서 불러 작은 낭비 |
+| 서로 참조 짝 | 11쌍(`EscapeManager`↔하위 6, `EscapeHud`↔`SkillHud`·`StaminaHud`, `GameManager`↔`RoomExitController`, `MonsterController`↔`MonsterEscapeState`) | ✅ 모두 같은 묶음 안 — 묶음 사이 순환 없음 |
 
-**순환 의존**: `EscapeManager` ↔ `EscapeHud`(HUD가 매니저 상태를 읽고 매니저가 HUD를 만듦), `EscapeManager` ↔ `EscapeAuthority`(서로 참조) — 같은 기능 묶음 안이라 심각하지 않다. 다른 묶음 사이 순환은 찾지 못했다.
+권장(K-08): 8차 A-08 유지 — `HasLeftMap`·`ActionsAllowed`처럼 방 속성만으로 답할 수 있는 질문은 `EscapeQuery`(정적·순수)로.
 
-**권장(A-08)**: 탈출 모드 밖에서도 묻는 질문(`ActionsAllowed`, `HasLeftMap`)을 `GamePhaseState`처럼 **방 속성만 읽는 정적 해석기**(`EscapeQuery`)로 옮기면 `EscapeManager` 의존이 절반 이하로 준다.
+### 4.4 Prefab과 Script의 역할이 뒤섞이는가 — ⚠️(↗)
 
-### 5.4 Prefab과 Script의 역할이 뒤섞이는가 — ⚠️ 런타임 조립이 많다
+- 런타임 `AddComponent<…>` **89곳**(8차 75). 상위: `EscapeHud` 10, `HideOrSeekPlayer` 9(`CookieAudio`·`CarriedBodyPresenter`·`StunReceiver`·**`PlayerActionPose`**·`HeldItemPresenter`·`EscapeCharacterState`·`HatFlight`·`SkateVisual`·`PlayerInventory`), `EscapeManager` 5(**`DecoyBrain`** 포함), `VoiceRecorderPanel` 5, `VoiceChat` 5, `MonsterController` 4, `WitchPresenter` 4.
+- 코드로 만드는 시각물: `WaterBubbleView`(구 + 매듭), `BalloonAimPreview`(LineRenderer), `StaminaHud`, `XRayMarker`, `ToolShotFx`, `MonsterJarTrophy`, 자리표시 마녀·무지개 상자.
+- 판정: 프리팹을 덜 건드려 병합 충돌이 적은 장점은 그대로지만, **인스펙터에서 값을 볼 수 없는 컴포넌트가 늘었다**. `PlayerActionPose`의 수치(던지기 0.35·휘두르기 0.32)는 상수라 조정하려면 코드를 고쳐야 한다.
+- 권장(K-09): 8차 A-09 유지 — 항상 붙는 컴포넌트(쿠키의 `StunReceiver`·`CookieAudio`·`CarriedBodyPresenter`·`PlayerActionPose`, 괴물 4개)는 프리팹에 미리 붙이고 `Init`만 코드로.
 
-- `AddComponent<…>` **75곳 / 32개 파일**. 대표:
-  - 쿠키 프리팹: `HideOrSeekPlayer.AttachEscapeMode`가 8개 컴포넌트를 붙임.
-  - 괴물 프리팹: `MonsterController.Awake`가 4개(`StunReceiver`, `MonsterAudio`, `MonsterEscapeState`, `MonsterViewSwitcher`).
-  - 마녀: `WitchPresenter.Awake`가 `WitchShatter`·`WitchFinaleStage`, 그리고 **`Camera.main`에 `WitchRevealCamera`** 를 붙임(`:345-347`).
-  - HUD·패널: `EscapeHud`·`SkillHud`·`VoiceRecorderPanel`·`GrabAimReticle`·`CutsceneFade`·`ToolUser.CreateCrosshair`·`MonsterJarTrophy`가 **UI 전체를 코드로** 만든다.
-- 장점: 프리팹·씬을 덜 건드려 병합 충돌이 적고, 탈출 모드가 아닌 씬에는 붙지 않는다.
-- 단점: 인스펙터에서 보이지 않아 값 조정·디버깅이 어렵고, 디자이너가 HUD 배치를 바꾸려면 코드를 고쳐야 한다. 같은 UI 도우미가 6벌(5.12).
-- **권장(A-09)**: "항상 붙는" 컴포넌트(쿠키의 `StunReceiver`·`CookieAudio`·`CarriedBodyPresenter`, 괴물의 4개)는 **프리팹에 미리 붙이고** `Init`만 코드로. 모드별 선택 부착(`PlayerInventory` 등)은 지금처럼 코드로 두어도 된다. HUD는 당장은 유지하되 UI 도우미를 하나(`UiFactory`)로 합친다.
-
-### 5.5 Scene에 직접 의존하는 코드가 늘어나는가 — ⚠️
+### 4.5 Scene에 직접 의존하는 코드가 늘어나는가 — ⚠️(↗)
 
 | 방식 | 횟수 | 위치 |
 |---|---:|---|
-| `GameObject.Find(이름)` | 7 | `PlayerSpawner.cs:51,69`, `MonsterJoinController.cs:28`, `EscapeManager.cs:415,422`(**호출마다**), `SceneSpawnPoints.cs:13`, `MonsterTestSpawner.cs:24`(💀) |
-| `FindFirstObjectByType` 등 | 7 | `GameLobbyController.cs:183,215,297`(같은 대상 3번), `GameManager.cs:40`, `MonsterAssignmentAuthority.cs:64`, `VoiceRecorderPanel.cs:37`, `AudioListenerAnchor.cs:52` |
-| `Camera.main` | 20 / 13개 파일 | 대부분 매 프레임(`ToolUser`, `QuadrantBuilding`, `PlayerBillBoard`, `HideOrSeekPlayer.CheckMovementInput`…). Unity 2020+는 내부 캐시라 성능 문제는 작지만, **"주 카메라가 하나"라는 씬 가정**이 퍼져 있다 |
-| 이름 규칙 | 다수 | `Repair_Point`/`Socket_`/`ESC_Glow`(건물), `Slot_00_Empty/Filled`·`Flame`·`Hatch`(로켓), `Ground`/`Map`/`FarBackdrop`(마녀), `EyeSocket`·`Grab_Socket`(괴물), `Lid`(상자), `PlayerSpawnPos`/`MonsterSpawnPos`/`Spawn_Cookie_Q*` |
+| `GameObject.Find(이름)` | 7 | `PlayerSpawner.cs:51,69`, `MonsterJoinController.cs:28`, `SceneSpawnPoints.cs:13`, **`EscapeManager.cs:406,451,458`**(쿠키 스폰 — 8차 2곳 → 3곳, `FallbackDropPoint`·`IsNearCookieSpawn`은 **호출마다** 찾음) |
+| `FindObjectsByType` 등 | 11 | `GameLobbyController` 3, **`DecoyBrain.cs:65`(문 전체)**, `GameManager`, `MonsterAssignmentAuthority`, `VoiceRecorderPanel`, `SpectatorController`, `AudioListenerAnchor`, `IInteractable`, `GameCharacter` |
+| `Camera.main` | 21 / 14파일 | 대부분 매 프레임 |
+| 이름 규칙 찾기 | 29 | `EyeSocket`, `Lid`, `Model`/`SlamArm`/`Head`/`Thigh.L`(마녀), `Door_`/`ExitTrigger_`(탈출구), `Flame`/`Hatch`/`Spin`(로켓), `Map`(마녀 길), `CookieStack`, `Label`/`KeyButton`(조작키 화면) |
+| `Resources.Load` 프리팹 | 2 | `DecoyBrain.cs:66`·`DecoyView.cs:226`이 쿠키 프리팹을 통째로 불러 걷기 속도·가루 설정을 읽음 |
 
-- 7차 감사(F-21) 뒤 레시피·오븐 문은 씬 직렬화 참조로 바뀌었고 이름 규칙은 예비로만 남았다 — 방향은 맞다.
-- **권장(A-10)**: `EscapeManager`는 이미 `chestAnchors`·`buildings`·`exits`를 직렬화로 받으므로 **쿠키 스폰 지점도 직렬화 필드**로(매 호출 `GameObject.Find` 제거). `GameLobbyController`는 `RoomExitController`를 직렬화 필드 하나로.
+권장(K-10): `EscapeManager`에 쿠키 스폰 지점 직렬화 필드 하나(3곳의 `GameObject.Find` 제거). `DecoyBrain`의 걷기 속도는 `GameSettingsSO`로, 문 목록은 `InteractableRegistry`에서.
 
-### 5.6 Singleton이 남발되는가 — ⚠️ 16곳, 대부분 정당
+### 4.6 Singleton이 남발되는가 — ⚠️ 24곳, 대부분 정당
 
 | 종류 | 클래스 | 판정 |
 |---|---|---|
-| DDOL 자기 부트스트랩 | `AudioRuntime`, `RoomPropertyGuard`, `CharacterInteractor`, `NetHold`💀 | ✅ 앱 전역 서비스(NetHold만 죽음) |
-| 씬 싱글턴(`Instance`/`Current`/`instance`) | `EscapeManager`, `EscMenu`, `EscapeHud`, `WitchPresenter`, `WitchShatter`, `VoiceChat`, `VoiceRecorderPanel`, `AudioListenerAnchor` | ⚠️ 모두 `OnDestroy`에서 `if (x == this) x = null` 처리 ✅. 그러나 `EscapeHud`·`ToolHitReceiver`·`WitchFinaleStage`가 서로를 정적 접근으로 찾음 — 시험에서 대체 불가 |
-| "로컬 플레이어" 정적 | `PlayerInventory.Local`, `PlayerPaintCanvas.Local` | ⚠️ 관전·재접속 때 이전 값이 남지 않게 해제는 되어 있음 ✅ |
-| 정적 상태(싱글턴 대용) | `ToolUser.Aiming`, `KeyBindingsPage.listening/confirming`, `RegionMove` 대기, `GrabKillAuthority` 사전, `InteractableDoor.masterPendingWrites` | ⚠️ 씬 로드 때 초기화하는지 개별 확인 필요 — `GrabKillAuthority`는 `sceneLoaded`로 초기화 ✅, `masterPendingWrites`는 방장 교체 시 비움 ✅ |
-| SO 정적 캐시 | `GameSettings`, `EscapeCatalogSO.Current`, `EscapeTextsSO.Current`, `SoundCatalogSO`, `MusicCatalogSO`, `VoiceChatSettingsSO` | ✅ 읽기 전용 데이터 |
+| DDOL 자기 부트스트랩 | `AudioRuntime`, `RoomPropertyGuard`, `RoomSceneFollower`, `CharacterInteractor`, **`PositionHistory`**(새) | ✅ 앱 전역 서비스. `PositionHistory`는 방장만 기록하고 아니면 비운다 |
+| 씬 싱글턴 | `EscapeManager`, `EscMenu`, `EscapeHud`, `WitchPresenter`, `WitchShatter`, `VoiceChat`, `VoiceRecorderPanel`, `AudioListenerAnchor`, **`DecoyBrain`**(새) | ✅ 모두 `OnDestroy`에서 해제 |
+| `Local` 정적 | `PlayerInventory.Local` | ✅(8차의 `PlayerPaintCanvas.Local`은 제거됨 ↘) |
+| SO 정적 캐시 | `GameSettings`, `EscapeCatalogSO`, `EscapeTextsSO`, `SoundCatalogSO`, `MusicCatalogSO`, `ChaseAudioSettingsSO`, `VoiceChatSettingsSO`, **`DanceCatalogSO`**(새) | ✅ 읽기 전용. 다만 같은 로더 코드 8벌(4.12) |
+| 정적 상태 | `GameStartAuthority`(시작 시각·대기 요청·직전 맵), `MasterClientPolicy`(요청), `RoomSceneFollower`(자기 로드), `RoomSceneTransition`(미룬 씬), `PunSceneLoad`(지켜보는 로드), `GrabKillAuthority`(사전·마지막 판정), `CameraShake`, `IndoorZone` 등 73개 정적 가변 필드 | ⚠️ 씬·방이 바뀔 때 초기화하는지 개별 확인 필요. `GrabKillAuthority`는 `sceneLoaded`로 비움 ✅, `GameStartAuthority.lastMap`·`lastStartTime`은 **방을 나가도 남는다**(다른 방에서 3초 안에 시작하면 `AlreadyStarted` — 실제로는 거의 없음) |
 
-**권장(A-11)**: 새로 만들 때는 정적 `Instance` 대신 **`EscapeManager`가 하위 객체에 자신을 넘기는 방식**(지금 `Bind(owner)`·`Init(owner)` 패턴이 이미 있다)을 기본으로. 남은 정적 접근 8곳(`EscapeManager.Instance`)은 `Init`으로 넘길 수 있다.
+### 4.7 ScriptableObject의 책임이 잘못 쓰이는가 — ✅/⚠️
 
-### 5.7 ScriptableObject 책임이 잘못 쓰이는가 — ⚠️ 경미
+- ✅ SO는 데이터만(설정·카탈로그·문구·경로). 런타임 SO 쓰기 0(에디터 `Editor*` 세터 제외). 새 `StaminaSettings`는 `GameSettingsSO` 안의 직렬화 묶음으로 들어가 원칙에 맞다. 조작키 변경은 SO가 아니라 PlayerPrefs ✅.
+- ⚠️ "정적 `Current` + `Resources.Load` + 없으면 경고/기본값" 코드가 **8벌**(`GameSettings`, `EscapeCatalogSO`, `EscapeTextsSO`, `SoundCatalogSO`, `MusicCatalogSO`, `ChaseAudioSettingsSO`, `VoiceChatSettingsSO`, `DanceCatalogSO`). 동작은 맞지만 하나는 SO 밖(`GameSettings`), 나머지는 SO 안. → `ResourceAsset<T>.Get(path)` 제네릭 하나로(K-13).
+- ⚠️ 카탈로그에 쓰이지 않는 아이템(`JailBalloon`)과 옛 레시피 필드가 남아 인스펙터가 헷갈린다(4.1).
+- ⚠️ `ColorPaletteSO`는 죽은 색칠에만 쓰인다.
 
-- ✅ SO는 **데이터만**(아이템·도구 수치·레시피·문구·소리 표·조작키 기본값·롤러코스터 경로). 런타임 상태를 SO에 쓰는 곳은 없다(에디터 빌더 `Editor*` 세터 제외).
-- ⚠️ 정적 `Current` 캐시를 SO 클래스 안에 둔다(`EscapeCatalogSO.cached`, `EscapeTextsSO.cached`) — 동작은 맞지만 "SO = 데이터, 로더 = 다른 클래스" 원칙(`GameSettings` ↔ `GameSettingsSO`)과 섞였다. `GameSettings` 방식으로 통일 권장.
-- ⚠️ `EscapeTextsSO.Current`는 에셋이 없으면 `CreateInstance`로 영어 기본값을 만든다 — 조용히 실패를 숨긴다. 빌드에서 에셋 누락 시 경고 로그 권장.
-- ❌ **옛 규칙 필드가 남아 있음**(6.4절): 인스펙터에 쓰이지 않는 칸이 보여 혼란. `[HideInInspector]` 또는 삭제(삭제해도 YAML 값은 무시되므로 에셋은 깨지지 않는다).
-- ⚠️ `CoasterPathSO`처럼 굽는 데이터(에디터가 생성)와 손으로 조정하는 데이터(`ToolSO`)가 같은 `03. SO`에 섞여 있다 — 굽는 것은 `Generated` 하위 폴더 권장.
-
-### 5.8 Unity Lifecycle 순서 문제가 있는가 — ✅ 대체로 안전, 1건 주의
+### 4.8 Unity Lifecycle 순서 문제가 있는가 — ⚠️ 1건 주의
 
 | 확인 | 결과 |
 |---|---|
-| `[DefaultExecutionOrder]` | `CarriedBodyPresenter(-50)`: 들린 몸을 카메라보다 먼저 → 떨림 없음 ✅. `WitchRevealCamera(1000)`: 모든 카메라 뒤에 연출 섞기 ✅ |
-| Awake 의존 | `Camera_Ctrl.Start`/`InitCamera` 순서 독립 ✅. 쿠키가 PhotonView 콜백 전에 부품을 준비(`Awake`) ✅ |
-| `RuntimeInitializeOnLoadMethod` | 8곳 — `BeforeSceneLoad`(AudioRuntime·NetworkDefaults)와 `AfterSceneLoad`(Guard·Interactor·VoiceChat·VoiceRecorderPanel·GrabKillAuthority·NetHold) 구분이 의도대로 ✅ |
-| SetActive로 숨기면 Photon 콜백이 끊기는 문제 | `CanvasGroupVisibility`로 해결 ✅(결과 화면·괴물 이탈 배너) |
-| ⚠️ A-12 **FOV 쓰기 경합** | `ToolUser.Update`가 매 프레임 `cam.fieldOfView = baseFov × zoom`(`ToolUser.cs:44`), `WitchRevealCamera`(실행 순서 1000)가 연출 중 FOV를 정함. 연출 중에는 `WitchRevealCamera`가 나중에 써서 이기지만, **연출이 끝난 프레임에 `ToolUser`의 `baseFov`가 연출 전 값인지**에 기대고 있다. 또 `ToolUser`가 처음 본 FOV를 `baseFov`로 저장하므로, 괴물 1인칭(근접 클립·FOV 다름)으로 바뀐 뒤 쿠키로 관전하는 경우 등 기준값이 섞일 수 있다. → 확대는 `Camera_Ctrl`이 소유하고 `ToolUser`는 "조준 중" 플래그만 주는 구조 권장 |
-| `OnDestroy`에서 정적 해제 | 확인한 모든 싱글턴 ✅ |
+| `[DefaultExecutionOrder]` | `CarriedBodyPresenter(-50)`, **`WaterTrapMotion(200)`**(이동 뒤 몸을 띄움), **`WitchArmsDown(500)`**(Animator 뒤 팔 내림), `WitchRevealCamera(1000)` — 모두 의도 분명 ✅ |
+| Awake에서 다른 싱글턴 읽기 | `HideOrSeekPlayer.Awake`·`MonsterController.Awake`가 `EscapeManager.Instance/IsActive`를 읽는다. 캐릭터는 씬 로드 뒤 `PhotonNetwork.Instantiate`로 생기므로 `EscapeManager.Awake`가 늘 먼저 ✅(씬에 캐릭터를 미리 두면 깨지는 가정) |
+| `RuntimeInitializeOnLoadMethod` | 9곳(`PositionHistory` 추가) — 첫 씬의 `Awake`보다 늦은 `AfterSceneLoad`라 첫 씬 코드가 `Awake`에서 이들을 찾으면 없다. 지금은 그런 코드 없음 ✅ |
+| 스킨·모델 교체 순서 | `PlayerPaintCanvas.Start`가 `PlayerSkinApplier.Awake` 뒤를 가정(주석으로 명시). 모델 교체 뒤 뼈 캐시는 아바타 변경 감지로 다시 읽음 ✅ |
+| ⚠️ N-09 **메시지 큐를 직접 켜는 곳 5곳** | `GameManager.cs:49`(Start), `PlayerSpawner.cs:78`, `RoomExitController.cs:32,50`, `RegionMove.cs:53`, `RoomSceneFollower.cs:115`. PUN은 씬 로드 동안 큐를 멈췄다가 로드가 끝나면 스스로 켠다. 위 코드는 대부분 "로드가 끝난 씬의 Start"라 평소엔 무해하지만, **미뤄진 두 번째 로드·취소된 로드를 되살린 경우**(3.6) 중간 씬의 `Start`가 큐를 켜면 다음 씬으로 갈 메시지(인스턴스 생성·RPC)를 사라질 씬에서 처리할 수 있다. → 큐 제어를 `RoomSceneFollower` 한 곳으로(K-04) |
 
-### 5.9 Event 구독/해제가 제대로 되는가 — ✅
+### 4.9 Event 구독/해제가 제대로 되는가 — ✅
 
-전수 스캔(`+=` 메서드 그룹·람다 → 같은 파일 `-=` 확인, Awake/Start 구독 ↔ OnDisable 해제 비대칭 검사) 결과:
+- 인스턴스 이벤트(`EscapeManager.StateChanged` 구독자 7곳, `PlayerAnimationDriver.StateChanged`, `MonsterController.StateChanged`): 모두 `Init`에서 구독 → `OnDestroy`에서 `manager != null` 확인 후 해제 ✅. `HeldItemPresenter`는 다시 붙을 때 `-=` 후 `+=`로 중복 방지 ✅.
+- 정적 이벤트 8개(`SpectatorController` 2, `WitchPresenter.Impacted`, `KeyBindings/InputDevices/OutputDevices/AudioVolumeSettings/VoiceChatSettings.Changed`): 구독자 전부 짝 ✅.
+- `SceneManager.sceneLoaded`: 정적 부트스트랩 3곳은 `-=` 후 `+=`로 중복 방지 ✅, `AudioListenerAnchor`는 OnEnable/OnDisable 짝 ✅. 람다 구독은 `EscapeVisuals.cs:93` 한 곳(가드 플래그로 1회) ✅.
+- `Button.onClick.AddListener` 36곳 / 해제 3곳 — 모두 **자기 자식 버튼**이라 함께 파괴된다 ✅. `RoomListItem`·`ConfirmDialog`는 `Awake`에서 한 번만 등록해 다시 써도 중복 없음 ✅.
 
-| 해제가 없는 구독 | 판정 |
+### 4.10 Object Pool과 Instantiate/Destroy가 충돌하는가 — ✅ 충돌 없음
+
+| 풀 | 생성/파괴 방식 |
 |---|---|
-| `EscMenu.cs:44,50` `roomSettings.Closed += Open`, `settingsMenu.Closed += Open`; `LobbyEscMenu.cs:33` | ✅ 같은 오브젝트(자식 패널)라 함께 파괴 — 누수 아님 |
-| `NetHold.cs:56` `SceneManager.sceneLoaded += …` | 💀 DDOL·죽은 코드 |
-| `EscapeVisuals.cs:93` `sceneUnloaded += _ => tintCache.Clear()` | ✅ 정적 한 번(가드 플래그) |
-| `EscapeHud.cs:61` `owner.StateChanged += instance.RefreshRequirements` | ✅ `OnDestroy`에서 `manager.StateChanged -= RefreshRequirements` |
-| 정적 이벤트 8개(`SpectatorController` 2, `WitchPresenter.Impacted`, `VoiceChatSettings/InputDevices/KeyBindings/OutputDevices/AudioVolumeSettings.Changed`) | 구독자 모두 `OnEnable/OnDisable` 또는 `OnDestroy` 짝 ✅ |
+| `AudioVoicePool`(사전 생성 칸·세대 번호) · `WitchShatter`(`Stack<Piece>`, 미리 만들기) · `EscapeManager.groundPool`(`GroundItemView`, 숨김/재사용) · `StunReceiver` 별 | 짧은 효과(`ToolFx`·`ToolShotFx`·`WaterBubbleView`·`AlarmBeacon`·`NoiseBombView`·`XRayMarker`)는 매번 `new GameObject`/`Destroy`. `GameLobbyController` 목록은 매번 전부 파괴·재생성(같은 일을 하는 `UiListBuilder`가 있는데 안 씀) |
 
-Awake에서 구독하고 OnDisable에서 해제(다시 켜지면 끊김) 같은 비대칭은 **0건**.
+- 풀 객체를 `Destroy`하거나 파괴된 것을 풀에 돌려주는 경우 **없음** ✅.
+- 가루 VFX(`CookieCrumbBurst.prefab`)는 Stop Action = **Destroy**, Loop 끔, 1초 — 코드가 지우지 않아도 사라짐 ✅(8차 A-13의 우려는 프리팹 설정으로 확인).
+- 런타임 `new GameObject` 52곳 — 대부분 판 1회. 매 사용 생성하는 것은 도구 효과뿐이라 풀은 선택 사항.
 
-### 5.10 Object Pool과 Instantiate/Destroy가 충돌하는가 — ⚠️ 충돌은 없음, 방식 혼재·해제 누락 3건
-
-| 풀을 쓰는 곳 | 풀 없이 생성/파괴 |
-|---|---|
-| 소리 보이스(사전 생성) · `WitchShatter` 조각(`Stack<Piece>`) · `GroundItemView`(바닥 아이템 뷰) · `StunReceiver` 별(한 번 만들어 켜고 끄기) | `ToolFx`·`ToolShotFx`(명중마다), `AlarmBeacon`, `NoiseBombView`, `QuadrantBuilding` 힌트·넣은 재료 모델, `SpyRocket` 칸 모델, `GroundItemView` 안의 **모델은 아이템이 바뀌면 Destroy 후 재생성**, `GameLobbyController` 목록 행, `ResultScreenController` 행 |
-
-- 풀 객체를 `Destroy`하거나 파괴된 것을 풀에 돌려주는 **충돌은 없다**.
-- ⚠️ A-13 **파티클 인스턴스 해제를 코드가 하지 않는 곳**: `WitchFinaleStage.SpawnCrumbs`(`:385`), `DecoyView.SpawnCrumbs`, `CookieLifeStatePresenter`의 가루 `Instantiate(BreakVfx…)` — 프리팹 `ParticleSystem`의 **Stop Action = Destroy**에 기대고 있다. 프리팹 설정이 바뀌면 오브젝트가 쌓인다. → `Destroy(burst, 수명)`을 코드로 보장 권장.
-- ⚠️ A-14 **런타임 재질 해제 누락**: `StunReceiver` 감옥 풍선 재질(`EscapeVisuals.NewMaterial`, 캐릭터당 1개), `WitchPresenter` 자리표시 마녀 재질(모델이 있으면 안 쓰임). 판마다 수 개 수준이라 영향은 작다.
-- 명중 효과는 짧고 드물어 풀이 꼭 필요하지는 않다. 다만 `ToolFx`는 `CreatePrimitive`(메시 콜라이더 생성 후 바로 삭제)라 **풀 하나(8개)** 로 바꾸면 GC·물리 등록 비용이 사라진다.
-
-### 5.11 Photon의 Ownership/RPC 구조를 무시하는가 — ✅ 잘 지킴
+### 4.11 Photon의 Ownership/RPC 구조를 무시하는가 — ✅ 잘 지킴
 
 | 확인 | 결과 |
 |---|---|
-| `PhotonNetwork.Instantiate` | 4곳 — 쿠키(본인), 괴물(본인, `MonsterJoinController`), 시험 도구(💀). 모두 **자기 캐릭터만 자기가 생성** ✅ |
-| `PhotonNetwork.Destroy` | 1곳 — 방장이 가짜 괴물 제거(`MonsterController.cs:161`). PUN은 방장의 남의 오브젝트 파괴를 허용 ✅ |
-| Ownership 이전 | 0곳 — 들기도 소유권을 옮기지 않고 RPC + kinematic 따라가기로 처리 ✅(소유권 경합 없음) |
-| `[PunRPC]` | 5개(`HideOrSeekPlayer` 4, `GameManager` 1) — **모두 `PhotonMessageInfo.Sender` 검증** ✅ |
-| `RaiseEvent` | 15곳 — 요청은 `ReceiverGroup.MasterClient`, 방장 → 모두는 `Others/All`, 개인 통지는 `TargetActors` ✅. 받는 쪽은 `photonEvent.Sender`로 위장 방지 ✅ |
-| Room Prop 쓰기 | 방장 키는 `AuthorityProps` 한 통로(23곳). 직접 `CurrentRoom.SetCustomProperties`는 `AuthorityProps` 자신과 `OfflineModeBootstrap`(시험)뿐 ✅ |
-| Player Prop 쓰기 | 본인 키(`SelectedSlot`, `HasVoice`, `SkinIndex`)만 `LocalPlayer.SetCustomProperties` 6곳 ✅ |
-| `IsMasterClient` 분기 | 39곳/21파일 — 방장 교체 시 `Adopt`·`MasterClientPolicy`가 이어받음 ✅ |
-| ⚠️ 남은 것 | `PlayerPaintCanvas`가 `PaintStroke`·`ClearColor` 이벤트를 보낼 수 있는 코드가 남아 있음(💀 경로지만, 받는 쪽 검증은 있음). `NetHold.HoldingPool`이 `PhotonNetwork.PrefabPool`을 감싸 **모든 PhotonView 생성 경로에 불필요한 층**을 넣는다 |
+| `PhotonNetwork.Instantiate` | 2곳(쿠키·괴물 — 자기 캐릭터만) ✅ |
+| `PhotonNetwork.Destroy` | 1곳(방장이 가짜 괴물 제거) ✅ |
+| Ownership 이전 | 0곳 ✅ |
+| `[PunRPC]` | **6개**: `HideOrSeekPlayer` 5(`OnGrabbedByOwner`·`OnReleased`·`OnGrabRejected`·`RequestGrabKill`·**`GrabKillRejected`**), `GameManager.LogMsg` — 모두 `info.Sender` 검증. `GrabKillRejected`는 방장만 받아들임 ✅ |
+| `RaiseEvent` | 13곳 — 요청 → 방장, 방장 → 모두/대상. 받는 쪽 `SentByMaster`·`Sender` 확인 ✅ |
+| Room Prop 쓰기 | `AuthorityProps` 24곳 + `OfflineModeBootstrap`(🧪) ✅. AI 경로 `DR_*`도 `AuthorityProps.SetRoom` ✅ |
+| Player Prop 쓰기 | 본인 키만(`SkinIndex`·`SelectedSlot`·`HasVoice`·`LoadedScene`·판 초기화) ✅ |
+| 위치 신뢰 | 처형은 괴물 주장을 **방장 기록과 대조**해 받아들임(조작 시 `CookieMismatch`·`MonsterMismatch`·`ClaimTooOld`) ✅ |
+| ⚠️ N-06 **위치 기록 두 벌** | `EscapeAuthority.lastPositions`(액터 번호 키, 0.2초, 모든 클라이언트, 이동 검사·드롭 위치·도구 거리) ↔ `PositionHistory`(ViewID 키, 0.05초, 방장, 처형). 같은 데이터를 두 곳에서 다른 주기·다른 키로 모은다. **액터 키 쪽은 한 사람이 캐릭터 둘을 가지면 섞인다**(오프라인 시험에서 `[NetGuard]` 경고가 이것 때문) |
+| ⚠️ N-07 PUN 내부 의존 | `PunSceneLoad`가 PUN의 private 필드를 리플렉션으로 읽는다 — PUN 업데이트로 이름이 바뀌면 `IsBusy`가 옛 방식(진행도)으로 떨어진다(시험 `Sources_AllSceneLoadsGoThroughPunSceneLoad`가 필드 존재를 확인하므로 업데이트 시 바로 드러남) |
 
-### 5.12 중복 로직이 있는가 — ⚠️
+### 4.12 중복 로직이 있는가 — ⚠️(↗)
 
 | # | 중복 | 위치 | 권장 |
 |---|---|---|---|
-| D-01 | **액터 번호로 캐릭터 찾기** | `CharacterRegistry.FindByOwner`(정식, 3곳 사용) vs `VoiceChat.BodyOf`, `EscapeAudioPresenter.PlayOnActor`, `ToolHitReceiver.HandOf`, `DecoyView.FindMonster` | 모두 `FindByOwner`로 |
-| D-02 | **내 캐릭터 찾기** | `CharacterInteractor.FindLocalCharacter`, `SkillHud.LocalCharacter`, `MonsterRoomGuard.LocalEscaper`, `MonsterRoomDoor.LocalMonster`, `NoiseBombPresenter.Update`, `ChaseDirector` | `CharacterRegistry.FindLocal(role?)` 추가 |
-| D-03 | **ESC 키 직접 읽기** | `EscMenu:63`, `LobbyEscMenu:39`, `SettingsMenu:41`, `SoundSettingsPanel:114`, `KeyBindingsPage:126,133` | `PlayerInput.CancelPressed` 하나(조작키 화면의 소비 규칙 포함) |
-| D-04 | **코드로 UI 만들기** | `EscapeHud.NewRect/NewImage/NewText/WhiteSprite`(+`SkillHud`가 재사용), `VoiceRecorderPanel.NewButton`, `ToolUser.CreateCrosshair.Bar`, `MonsterJarTrophy.Rect/Img/Text`, `GrabAimReticle`, `CutsceneFade` | `UiFactory` 정적 클래스 하나 |
-| D-05 | **레지스트리** | `CharacterRegistry` ↔ `InteractableRegistry` (같은 `List` + `Register/Unregister/IsAlive`) | `Registry<T>` 제네릭 |
-| D-06 | **애니메이션 상태 전환** | `PlayerAnimationDriver.ChangeState` ↔ `MonsterController.ChangeState`(enum 이름 = 트리거 이름, 이전 상태 기록, 이벤트) | `AnimatorStateDriver<TState>` 제네릭 |
-| D-07 | **목록 UI 다시 그리기** | `UiListBuilder`(정식) vs `GameLobbyController` 목록 직접 Destroy/Instantiate | `UiListBuilder` 사용 |
-| D-08 | **"Register on enable" 상용구** | `QuadrantBuilding`, `SpyRocket`, `MaterialChest`, `RainbowChest`, `NoiseBombView`, `GroundItemView`의 `registered` 플래그 + `SetRegistered` | 추상 기반 `RegisteredInteractable : MonoBehaviour` |
-| D-09 | **들린 쿠키 손 소켓 따라가기** | `CookieLifeStatePresenter`, `DecoyView.TickCaught`, `WitchFinaleStage.LateUpdate` — 같은 `ProjectOnPlane(monster − socket)` → `LookRotation` → `socket − up·bodyCenter` 계산 | `CarryPose.HeldBySocket(...)` 순수 함수로 |
+| D-10 | **수평 거리 `Flat()`** 9벌 | `EscapeAuthority:1023`, `GrabKillAuthority:115`, `ToolUser:273`, `ToolAim:57`, `MapArea`, `DecoyRules:82`, `MonsterRoomGuard:116`, `WitchShatter:287`, `WitchRevealCamera:158` | `VectorX.FlatDistance/Flat` 하나 |
+| D-01(계속) | **액터로 캐릭터 찾기 / 내 캐릭터 찾기** | `CharacterRegistry.All` 순회 23곳: `SkillHud.LocalCharacter`, `CookieHole.LocalCharacter`, `StaminaHud.LocalStamina`, `DecoyView.FindMonster`, `VoiceChat.BodyOf`, `EscapeAudioPresenter.PlayOnActor`, `ToolHitReceiver.HandOf`, `NoiseBombPresenter`, `ChaseDirector` 2, `MonsterRoomGuard`, `MonsterRoomDoor`, `EscapeGate`, `DecoyBrain.CollectMonsters`… | `CharacterRegistry.Local`·`Monsters`·`FindByOwner`로 |
+| D-09(계속·↗) | **처형 연출(소켓 따라가기·눌림·가루·소리)** 3벌 | `CookieLifeStatePresenter.FollowGrabSocket:188`·`SpawnCrumbs`, `DecoyView.TickCaught`·`SpawnCrumbs:202`, `WitchFinaleStage.SpawnCrumbs` | `GrabCrushPresenter`(진행도 → 크기·소리·가루) 하나를 쿠키·AI가 공유 |
+| D-11 | `FindClipLength` 2벌 | `MonsterController:196`, `InteractableDoor:290` | 정적 `AnimatorUtil` |
+| D-04(계속) | 코드 UI 도우미 | `EscapeHud.NewRect/NewImage/NewText/WhiteSprite`, `GrabAimReticle.WhiteSprite`(같은 코드), `VoiceRecorderPanel`, `MonsterJarTrophy`, `CutsceneFade` | `UiFactory` |
+| D-12 | SO 정적 로더 8벌 | 4.7 | `ResourceAsset<T>` |
+| D-13 | 스폰 지점 찾기 | `SceneSpawnPoints.TryFindClearPosition`(정식) vs `PlayerSpawner`·`MonsterJoinController`·`EscapeManager`가 각자 `GameObject.Find` | 정식 하나로 |
+| D-14 | 위치 기록 | N-06 | `PositionHistory` 하나로 합치고 `lastPositions`는 거기서 읽기 |
+| D-07(계속) | 목록 UI | `GameLobbyController.cs:175-179`가 `UiListBuilder`를 안 씀 | `UiListBuilder` |
+| D-05·D-06·D-08(계속) | 레지스트리 2벌, 애니메이션 상태 전환 2벌, "등록 플래그" 상용구 6벌 | 8차와 같음 | 8차 권장 그대로 |
+
+텍스트 그대로 복사된 6줄 이상 덩어리는 2곳뿐이다(`MonsterController:174`↔`HideOrSeekPlayer:337` 충돌 무시 설정, `CookieLifeStatePresenter` 안). 중복은 대부분 "같은 생각을 각자 다시 쓴" 형태다.
 
 ---
 
-## 6. 미사용 코드 목록
+## 5. 미사용 코드 목록
 
-> 판정 방법: ① 이름 기반 전수 집계(선언 7,631개, 주석 제거) → ② 씬·프리팹·SO의 스크립트 GUID 참조(`usage.tsv`) → ③ UnityEvent(버튼)·애니메이션 이벤트·`[RuntimeInitializeOnLoadMethod]`·인터페이스 구현·리플렉션 사용을 제외 → ④ 남은 후보를 직접 열어 확인. **"거짓 양성"으로 제외한 것**: `AudioRuntime.Boot`·`NetworkDefaults.ApplyRates`(자동 실행), `UiSound.OnPointerEnter`·`PaintColliderUpdater.Execute`(인터페이스), `LobbyController.On…ButtonClicked` 3개·`GameLobbyController.OnStartGameButtonClicked`·`LobbyEscMenu.OpenSettings`(씬 버튼), 씬·프리팹에 붙은 컴포넌트 클래스 20개(`PhaseCountdownDisplay`, `GamePhaseStarter`, `SpectatorLabel`, `PlayerBillBoard` 등), `HashtableCopyExtensions`(확장 메서드 `Merged`로 사용).
+> 판정: 이름 기반 전수 집계(주석 제거, 런타임 + 에디터 + 시험 전체에서 참조 수) → 씬·프리팹 GUID 참조(Unity 계산) → 버튼 `m_MethodName`(`OnMakeRoomButtonClicked`·`OnRandomJoinButtonClicked`·`OnRefreshButtonClicked`·`OnStartGameButtonClicked`·`OpenSettings`는 **씬 버튼이 부름 → 제외**) → 자동 실행(`AudioRuntime.Boot`·`NetworkDefaults.ApplyRates` — `[RuntimeInitializeOnLoadMethod]`, 제외) → 확장 메서드(`HashtableCopyExtensions.Merged` 사용 중, 제외) → 남은 후보를 직접 열어 확인.
+> 런타임 MonoBehaviour·SO 스크립트는 **모두** 씬·프리팹·에셋에 놓였거나 코드가 붙인다(놓이지 않은 스크립트 0개).
 
-### 6.1 클래스·파일 (실행되지 않음)
+### 5.1 죽은 기능 (호출 경로가 없음)
 
-| 대상 | 근거 | 조치 |
+| 기능 | 근거 | 지울 때 함께 |
 |---|---|---|
-| `Dev/MonsterTestSpawner.cs` | 씬·프리팹·코드 참조 0, 대상 씬 `PlayerTestScene` 삭제됨 | 삭제 |
-| `Core/NetHold.cs` + `Core/HeldSyncRecorder.cs` | `Begin()/Discard()` 호출 0 → `IsHolding` 늘 false. 그런데 `HoldingPool`이 PrefabPool을 감쌈(`NetHold.cs:55`) | 삭제 + 관련 분기 제거(아래 6.2) |
-| `Escape/Legacy~/*` 10개, `Monster/Legacy~/MonsterLobbyWaitController.cs`, `Editor/Escape/Legacy~/EscapeMapSetup_Old.cs`, `Editor/Tests/Legacy~/EscapeReachabilityTests.cs` | 컴파일 안 됨 | git 기록에 있으므로 삭제 권장(보관이 필요하면 저장소 밖) |
-| `ColorTag/PaintColliderUpdater.cs` | 색칠 충돌체 — Tick 조건이 늘 거짓, **그래도 로컬 쿠키마다 생성·Mesh 2개 할당** | 생성 코드와 함께 삭제 |
+| 몸 색칠 | `PlayerPaintCanvas.ForceFillColor:86` 호출 0 / 가루 색 샘플은 캐릭터 표가 대신 | `PlayerPaintCanvas`(스킨 합성 재질 적용만 남기거나 통째로), `ColorPaletteSO`·팔레트 에셋, `PaintStamp`·`PlayerPaintedSkin` 셰이더, `NetEventCodes.PaintStroke`(번호는 비워 둠), `CookieLifeStatePresenter`의 샘플 분기 |
+| 감옥 풍선 | 카탈로그에 있으나 배포 경로 0 | `ToolKind.JailBalloon` 분기 8곳(enum 값은 직렬화 번호라 남김), 카탈로그 아이템 |
 
-### 6.2 메서드·속성·필드 (죽은 경로 포함)
+### 5.2 작은 멤버 (선언만 있음 — 참조 0)
 
-| 파일:줄 | 멤버 | 상태 |
+| 파일:줄 | 멤버 | 비고 |
 |---|---|---|
-| `GamePhaseState.cs:31` | `IsPaintActive => false` | 💀 입구 막음 — 이걸 보는 모든 분기가 죽음 |
-| `PlayerPaintCanvas.cs` | `HandlePaintInput`, `StampAtScreenPoint`, `TryRegisterSlotAndStamp`, `ReportSlotCount`, `SetBrushColor`(321), `SetEraseMode`(327), `ResetCanvas`(332), `SendResetEvent`, `IsColliderRefreshWanted`, `IsPointerOverBounds`, `InPaintWindowNow`(475), `ApplyForcedColorIfAssignedToMe`, `LateStrokeGrace`(417), `PaintableCollider`/`CurrentBrushRadius`/`CurrentBrushColorIndex`/`RegisteredColorSlots`(47-51), `pendingStrokeCounts`, `registeredColorSlots`, `minStrokesToRegister`, `stampSpacing`, `maxStampsPerFrame`, Erase 종류, `ClearColor` 송수신 | 💀 |
-| `CookieAudio.cs:66-70` | `TickPaint` (`LastStampTime`이 바뀌지 않음) | 💀 |
-| `InteractableDoor.cs` | `NetHold.IsHolding` 분기, `LobbyDoorState` 이벤트 송수신(`:145`), 메시지 큐 정지 분기 | 💀 |
-| `GameManager.cs`, `PlayerSpawner.cs`, `RoomExitController.cs` | `IsMessageQueueRunning = true`·KeepAlive 복구·`MonsterLobbyWaitController` 주석 | 💀 방어 코드 — 무해하지만 오해 유발 |
-| `HideOrSeekPlayer.cs:210` | `if (pv == null) return; // … NetHold` 주석 | 낡은 설명 |
-| `MusicRules.cs:9,57` / `MusicDirector.cs:37` | `LocalMonsterWaiting`(늘 false) | 💀 |
-| `WitchTimeline.cs` | `PurgeAppearAt`, `PurgeStrikeAt`, `PurgeWalkSeconds`, `ShouldStartPurge`, `WalkStart/WalkEnd`·`ShotAt`의 Purge 분기, `CookieDiesInStrike`의 Purge 분기 | 💀 (시험에서만 Purge 사용) |
-| `WitchRevealCamera.cs` | `ApproachPose`, `ApproachEyeHeightFor`, `:274` Purge 분기, `WitchShot.Approach` 처리 | 💀 |
-| `WitchPresenter.cs:259` | `Facing`의 Purge 분기; `FadeAlpha`(🧪) | 💀/🧪 |
-| `RoomLifecycleWatcher.cs:28` / `MonsterRoster.ReturnWhenMonstersGone` | `witchPurging` | 💀 늘 false |
-| `GameRuleController` / `ResultScreenController` / `PlayerResultRow` | 비탈출 승패(`MonsterWins`/`CookiesWin`), `SetMonster(name)`, `SetCookie` | 💀 모든 맵이 탈출 모드 |
-| `MonsterAssignmentAuthority.cs:77-81` | `ClearLegacyDeadline` | 💀 쓰는 곳 없는 키 지우기 |
-| `RoomState.cs:105` | `CanSelectMonster` | 💀 |
-| `GameStartAuthority.cs:128` | `CurrentMapScene` | 💀 |
-| `EscapeManager.cs:46,78,79` | `MapRect`, `BuildingView`, `ExitView` | 💀 |
-| `EscapeNet.cs:6` | `DecodeSlot` | 💀 |
-| `PlayerInventory.cs:130` | `RequestDropAll` | 💀 |
-| `GameAudio.cs:63,79` | `CurrentMusic`, `StopMusic` | 💀 |
-| `AudioVoicePool.cs:82` | `CountBusy` | 💀 |
-| `VoiceChat.cs:26-27` | `IsTransmitting`, `SpeakerCount` | 💀 |
-| `InputDevices.cs:16` | `HasAny` | 💀 |
-| `NetHold.cs:42` | `ParkedCount` | 💀 |
-| `CoasterPathSO.cs:23,30` | `Gauge`, `DistanceAt` | 💀 |
-| `VikingRide.cs:34` | `CurrentAngle` | 💀 |
-| `CauldronGlow.cs:12` | (속성 `ColorUsage`는 특성 — 거짓 양성) | — |
-| `KeyBindingsPage.cs:36` | `IsConfirmingReset` | 💀 |
-| `SettingsMenu.cs:27` | `CurrentTab` | 💀 |
-| `RoomSettingField.cs:72` | `StepBy` | 💀 |
-| `SkinCatalogSO.cs:26` | `GetModel` | 💀 |
-| `WitchPresenter.cs:86` | `FinaleSince` | 💀 |
-| `ColorPaletteSO.cs:18` | `ColorEntry.colorName` | 💀 |
-| `PlayerInput` | `PaintHeld`, `PaintButton` | 💀 |
-
-### 6.3 시험·에디터에서만 쓰는 런타임 멤버 (🧪, 지우면 시험이 깨짐)
-
-`VoiceRecorderPanel.EditorFakeRecording`, `KeyBindingsPage.EditorBind/EditorKeyText`, `SoundSettingsPanel.PickOutput/HasOutputDropdown`, `VikingRide.EditorSetPhase`, `CoasterRide.EditorPlaceAt/TrainCount/Train`, `CoasterTrain.CarCount/CarBody`, `CoasterPathSO.TimeAt/EditorSet`, `EscapeManager.EditorSetMapRadius/EditorBind`, `MonsterRoomGuard.EditorBind/InnerHalf`, `ChaseDirector.Intensity`, `ChaseAudioSettingsSO.EditorSetRadius`, `AudioVolumeSettings.ToDecibels`, `AudioVoicePool.SoundAt`, `MusicCatalogSO.IsLoopById`, `HatFlight.NearestEdgeDirection`, `EscapeState.ActiveBuildingCount`, `PlayerAnimationDriver.IsCarryPoseOn`, `WitchPresenter.FadeAlpha`, `WitchTimeline.PurgeAppearAt/ShouldStartPurge`, `GameSettingsSO.MinCookies/GameMapScenes`(빌더). → 유지하되 `#if UNITY_EDITOR`로 감싸는 것을 권장(5.2 A-07).
-
-### 6.4 ScriptableObject 필드·문구
-
-| SO | 쓰이지 않는 필드 | 근거 |
-|---|---|---|
-| `EscapeRecipeSO` | `mode`, `groups`, `counterLabel`, `counterItems`, `fillsCapacity`, `spyToolbox`, `extraToolboxesPerSpy`, `MaxRequired`(+`RecipeMode`·`SlotGroup`), `exitKind`(에디터만) | 툴팁에 "예전 규칙(쓰지 않음, 에셋 호환)"이라 명시. 런타임 읽기 0 |
-| `EscapeCatalogSO` | `hammer`/`Hammer`(에디터만), `spyChestTools`, `hammersPerCookie` | "개편 뒤 쓰지 않음" |
-| `ItemSO` | `fitsAnyRocketSlot` | 읽기 0 (수리키트는 `EscapeCatalogSO.RepairKit`로 판별) |
-| `GameSettingsSO` | `maxColorSlots`, `paintColliderRefreshInterval`, `paintStrokeSendRate`, `paintStrokeReferencePlayers`, `minPaintStrokeSendRate` (+`PaintStrokeSendIntervalFor`) | 색칠 경로에서만 |
-| `EscapeTextsSO` 문구 | `escapeDevice`, `cannotEnter`, `witchTimerFormat`, `boardingFormat`(어디서도 안 씀); `repairing`, `noiseBombLabel`, `decoyCatch`, `exitLabel`, `recorded`, `departing`(에디터 빌더가 값만 채움) | 런타임 읽기 0 |
-
-### 6.5 열거값
-
-| enum | 쓰이지 않는 값 | 비고 |
-|---|---|---|
-| `SoundId` | `CakeRumble`, `CakeBurst`, `CakeRocketRise`, `CakeIgnite`, `CakeLaunch`, `CoasterBulbOn`, `CoasterSparks`, `CoasterLapBar`, `CoasterDepart`, `OvenPiston`, `OvenDoorRoll`, `OvenFlash`, `TrainPuff`, `TrainWhistle`, `TrainChug`, `TrainTunnel`, `AltarGlow`, `PortalClose`, `UiSlotSelect`, `UiChat` (20개) | 앞 18개는 `Legacy~` 탈출 시퀀스 전용 → **카탈로그 항목과 오디오 클립도 빌드에 들어간다**(Resources 카탈로그가 참조). 코드엔 없지만 씬 직렬화로 쓰는 값(`Amb*`, `CarouselSpin`, `OvenGears`, `LanternFlicker` 등)은 사용 중이므로 제외 |
-| `SoundId` (코드에선 시험만) | `PaintPickColor`, `PaintErase`, `PaintReset`, `MonsterDeparted`, `BoardHop`, `BoardSuck`, `UiCancel`, `UiStart` | 코드 호출은 시험뿐 — 씬·프리팹 직렬화 값(`AmbientEmitter.sound` 등)으로 쓰이는지 정리 전에 확인 필요 |
-| `MusicId` | `CandyForestHunt`, `GingerbreadHunt`, `FactoryHunt`, `CarnivalHunt`, `BakeryHunt`, `TimeAttack` | 주석에 "ID 번호를 지키려고 남김" — 의도적. 단 카탈로그 클립이 있으면 빌드 용량 |
-| `EscapeNoticeKind` | `StolenToRocket` | |
-| `DeathCause` | `None` | 기본값 의미로 유지 가능 |
-| `WitchMode` / `WitchShot` | `Purge` / `Approach` | 6.2 |
-| `PhaseCountdownDisplay.CountdownPhase` | `Survival` | 씬 직렬화 호환 |
-| `NetKeys` | `ForcedPaintActorNumbers`, `ForcedPaintColors`(쓰는 곳 0), `RegisteredSlotCount`(색칠), `MonsterRevealTime`(쓰기만, 읽기 0), `MonsterSelectDeadline`(옛 정리용) | `Scopes` 표에서도 함께 제거 |
-| `NetEventCodes` | `LobbyDoorState`(13), `PaintStroke`·`ClearColor`(💀 경로) | 번호는 비워 두고 재사용 금지 주석 |
+| `Core/NetSecurityRules.cs:81` | `MaxRemoteLead` | §46 후속에서 생김 — `RemoteLead`가 `GrabClaimMaxAge`로 상한 |
+| `Unit/HideOrSeekPlayer.cs:562` | `IsRunning` | §46 ST1 |
+| `Core/RoomSceneTransition.cs:16` | `DeferredScene` | §46 후속(Play Mode 확인용으로만 썼음) |
+| `Unit/PlayerActionPose.cs:32` | `IsAiming` | §45 |
+| `Unit/CharacterModelSwap.cs:72` | `BodyRenderers()` | §45 |
+| `Escape/DecoyAI/DecoyBrain.cs:58` | `AgentCount` | §44 |
+| `Escape/EscapeNet.cs:3-6` | 클래스 `EscapeNet` + `EncodeSlot` | 파일 안 enum·구조체만 쓰임 |
+| `Escape/EscapeVisuals.cs:232` | `CreatePassenger` | |
+| `Escape/WitchPresenter.cs:78-81` | `GroundContact`·`MapCenter`·`StartPoint` 속성 | 필드는 내부에서 씀 |
+| `Audio/GameAudio.cs:64` | `PlayMusic` | 음악은 `MusicDirector`가 직접 |
+| `Audio/SoundSettingsPanel.cs:102` | `PickOutput` | |
+| `Environment/FountainWater.cs:23`, `SpinPart.cs:15` | `WaterMaterialIndex`, `DegreesPerSecond` | |
+| 🧪 `Environment/VikingRide.cs:120` `EditorSetPhase`, `Escape/VoiceRecorderPanel.cs:211` `EditorFakeRecording`, `UI/KeyBindingsPage.cs:170` `EditorKeyText` | 시험 훅인데 **시험에서도 안 씀** | |
+| `ColorTag/ColorPaletteSO` `colorName` | 인스펙터 이름표(8차 결정: 유지) | |
+| `EscapeRecipeSO` 옛 필드 7개 + `MaxRequired` | 8차 결정: 에셋 빌더가 채움 — 유지 또는 `[HideInInspector]` | |
 
 ---
 
-## 7. 미사용 에셋
+## 6. 미사용 에셋 — 재조사(2026-11-02, 10차 보정)
 
-> 기준: **빌드에 실제로 들어가는 것** = 빌드 목록에서 켜진 씬 7개(`LobbyScene`, `GameLobbyScene`, `CandyForest`, `CursedCandyCarnival`, `Test_GingerbreadVillage`, `Test_ChocolateFactory`, `Test_HauntedBakery` — 맵 순환 `GameMapScenes`와 정확히 일치) + `Resources/` 아래 모든 에셋을 뿌리로 `AssetDatabase.GetDependencies(…, recursive)`. 결과 1,779개가 "사용". 아래는 그 밖의 것을 **누가 참조하는지**로 다시 나눴다. Photon·TextMesh Pro 패키지 데모·셰이더는 제외(패키지 소유).
+> ✅ **조치 완료(같은 날, Request1009Plan.md §47):** 아래 A1~A6·C·L은 `_CleanupBackup/2026-11-02/`로 옮겼고(357항목, 되돌릴 수 있음), S(`Source~` 5곳, 907 MB)는 프로젝트 루트 `ArtSource/`로 옮겼다. 예외로 남긴 것은 셋이다: 빌드 씬이 쓰는 `*_Terrain_Decor` 4개, 대기실이 쓰는 Twisted 소품 3종, `MT_*` 재질. 6.5(큰 FBX)는 그대로다. 아래 표는 조치 전 조사 기록이다.
 
-### 7.1 FBX (프로젝트 177개 · 61 MB 미사용)
+> **조사 방법.**
+> - **뿌리**는 세 가지다.
+>   - 빌드 설정에서 켜진 씬 7개.
+>   - 코드가 `Resources.Load`로 실제로 부르는 경로 19종. 폴더 통째가 아니다. 9차는 `Resources` 폴더 전체를 뿌리로 잡는 실수를 했다.
+>   - ProjectSettings가 참조하는 에셋.
+> - **간선**은 YAML GUID 참조와 `.meta`의 외부 재질 연결이다.
+> - **ID 수준**도 대조했다.
+>   - 사운드·음악 카탈로그 항목: 코드의 `SoundId.X`·`MusicId.X`, 그리고 씬·프리팹에 직렬화된 `sound`·`click`·`hover` 값과 맞춰 봤다.
+>   - 아이템: 상자·레시피 배포 목록과 맞춰 봤다.
+> - **판의 맵 순서**는 Unity에서 `GameSettings.gameMapScenes`로 확인했다. 순서는 `CandyForest, Test_GingerbreadVillage, ChocolateFactory, CursedCandyCarnival, Test_HauntedBakery`다. **`Game_*` 씬은 하나도 쓰이지 않는다.**
+> - 디스크 실측: `Assets` 아래 3 MB 넘는 파일 209개, `~` 폴더, Photon 폴더. 9차는 Photon을 아예 훑지 않았다.
+> - 9차 6장 표의 "닿지 않는 365개 · 90.7 MB"는 아래 분류로 대체한다.
 
-| 분류 | 개수 | 예 | 판정 |
-|---|---:|---|---|
-| **어디서도 참조 없음(고아)** | 약 120 | `Animation/Cookie/Cookie_Dodge.fbx`·`Cookie_Idle.fbx`·`Cookie_StandUp.fbx`(각 6.4~6.6 MB, **합 19.5 MB**), `Maps/*/Models/*_Effects.fbx` 5개, `09. Environment/Escape/Models/ITEM_CandyCell_{Green,Orange,Red,Yellow}.fbx`, `ESC_CursedCandyCarnival.fbx`, `Maps/CursedCandyCarnival/Models/Viking/VK_Viking.fbx`(받은 선체로 교체됨), `…/GyroDrop/GD_GyroDrop.fbx`, `…/Floor/FL_*.fbx` 8개 | 애니메이션 3개·`_Effects`·`VK_Viking`은 **삭제 후보**. 나머지 일부는 빌더 입력(아래) |
-| ↳ 그중 **에디터 빌더가 경로로 읽는 원본** | — | `Maps/Common/Models/*.fbx` **97개(7.2 MB)** ← `MapSceneBuilder`·`EscapeModelImportPostprocessor`; `FL_*` ← `CarnivalMapBuilder`; `GD_GyroDrop` ← `CarnivalRideModelsImporter`; `ITEM_CandyCell_*` ← `CandyForestAssets` | **맵을 다시 만들 때만 필요**. `MapSceneBuilder`는 삭제된 `PlayerTestScene`을 틀로 써서 지금은 실행 불가(README 기록) → 옛 맵 파이프라인 전체를 보관 여부 결정(8장 Q2) |
-| 빌드 제외 `Game_*` 씬만 참조 | 27 + 1 | `ESC_CandyForest/Gingerbread/HauntedBakery/ChocolateFactory.fbx`, `CandyForest_Decoration/GameplayProps/MainStructures.fbx`, `ChocolateFactory_*`, `CursedCandyCarnival_*` 4, `GingerbreadVillage_*` 3, `HauntedBakery_*` 3 | `Game_` 씬을 지우면 함께 고아 |
-| `Original/` 씬만 참조 | 16 | `*_Ground.fbx`, `*_Water.fbx`, `*_Lighting.fbx`, `*_Terrain.fbx`, `09. Environment/Escape/Models/WITCH.fbx`(옛 마녀) | `Original/` 씬과 함께 |
-| 미사용 프리팹만 참조 | 20 | `09. Environment/Twisted/Models/TW_*.fbx` 18개, `CF_Tile_Grass.fbx`, `Ground_Floor_Tile.fbx` | 프리팹과 함께 |
+### 6.1 A — 빌드에 들어가지만 아무도 쓰지 않음 (빌드 크기에 직접 영향, 우선 정리)
 
-### 7.2 Prefab (프로젝트 25개 미사용)
+| # | 에셋 | 크기 | 근거 |
+|---|---|---:|---|
+| A1 | `04. Prefabs/Resources/BrushCursor.prefab` + `Brush.fbx`, `ColorTag/Shaders/BrushCursorMaterial.mat` | 3.8 MB | 옛 손 색칠 붓 커서. 불러오는 코드·참조 0. `Resources` 안이라 빌드에 포함된다 |
+| A1 | `Resources/UI/Button/BackArrow.png` | 1 KB | 참조 0 |
+| A2 | **Photon 데모의 `Resources` 4곳**: `PhotonChat/Demos/Demo Chat/Resources`(1.7 MB·9개), `PUN/Demos/DemoAsteroids/Resources`(251 KB), `PunBasics-Tutorial/Resources`(60 KB), `DemoSlotRacer/Resources` | 2.0 MB | `Resources` 폴더는 위치와 관계없이 빌드에 들어간다. 데모 폴더 전체(`*/Demos` 3곳, **300개 · 30.9 MB**)는 게임과 무관하다. ⚠️ `PhotonUnityNetworking/Resources`(PhotonServerSettings)와 `PhotonVoice/Resources`는 **필수라 유지** |
+| A3 | 사운드 카탈로그 항목 **32개**: `UiSlotSelect`(111)·`UiChat`(114)·Paint 300~303·305·`MonsterDeparted`(403)·`BoardHop`(506)·`BoardSuck`(507)·옛 탈출 장치 케이크 700~705·롤러코스터 710~714·오븐 720~724·기차 730~733·제단 740/741·`PortalClose`(744)·`LanternFlicker`(745) | 6.0 MB | 코드의 `SoundId.X` 0회, 직렬화 값 0회. `SoundCatalog`가 클립을 참조해 빌드에 포함된다. 정리할 때는 **enum 번호는 남기고**, 카탈로그 항목과 wav만 뺀다. 304 `PaintReset`은 버튼 `click: 304`로 쓰여서 제외했다 |
+| A4 | 음악 `CandyForestHunt`(11)·`GingerbreadHunt`(13)·`FactoryHunt`(15)·`CarnivalHunt`(17)·`BakeryHunt`(19)·`TimeAttack`(20) | 4.5 MB | `MusicRules.cs:48`이 "쓰지 않지만 ID 번호를 지키려고 남긴다"고 명시한다. 번호는 enum이 지키므로 **카탈로그 클립은 빼도 된다** |
+| A5 | 아이템 `Item_JailBalloon` | 작음 | 어떤 상자·레시피에도 없다. 코드 분기 8곳과 함께 정리한다(4.1) |
+| A6 | `FinalizeStampMaterial.mat`·`PaintStamp.shader`·`PlayerPaintedSkin.shader`·`DefaultColorPalette.asset` | 작음 | 쿠키 프리팹의 `PlayerPaintCanvas`가 참조해 빌드에 들어간다. 죽은 몸 색칠(5.1)을 지울 때 같이 빠진다 |
 
-| 프리팹 | 참조 | 판정 |
-|---|---|---|
-| `04. Prefabs/Twisted/TW_*.prefab` **18개**(망가진 소품·숨을 곳 텐트/진저 집) | 빌드 제외 `Game_*` 씬에서만 사용 | 지금 맵(CandyForest·놀이공원·Test_ 3개)에는 없음. `TwistedPropPlacer`로 다시 배치할 계획이 없으면 삭제 후보 |
-| `04. Prefabs/Maps/CandyForest/CF_Lollipop_{Blue,Green,Red,Yellow}.prefab` | 코드 `CandyForestAssets`·`CandyForestLayout`만 이름으로 참조, 씬 배치 0 | 빌더 재실행용 |
-| `04. Prefabs/Maps/CandyForest/CF_Tile_Grass.prefab` | 없음 | 삭제 후보(새 초록 바닥으로 교체됨) |
-| `04. Prefabs/Environment/WitchCookieProps/Ground/Ground_Floor_Tile.prefab` | 없음 | 삭제 후보 |
-| `04. Prefabs/UI/SoundSettingsPanel.prefab` | 없음(설치 도구 `SoundSettingsInstaller`만 경로 문자열) | §27 `SettingsMenu`로 대체 — 삭제 후보(컴포넌트 클래스는 `SettingsMenu.prefab` 안에서 아직 사용) |
+**A 합계 ≈ 16.3 MB** (빌드 압축 전 기준).
 
-### 7.3 씬
+### 6.2 L — 옛 `Game_` 맵 파이프라인 전용 (판에서 안 쓰임 · 빌드 제외 · 지우려면 에디터 도구도 같이)
 
-| 씬 | 크기 | 상태 | 판정 |
-|---|---:|---|---|
-| `Scenes/Maps/Game_{CandyForest,ChocolateFactory,CursedCandyCarnival,GingerbreadVillage,HauntedBakery}.unity` | 8.7 MB | 빌드 목록에 있으나 **꺼짐** | 옛 판 맵(§25 이전). `Test_*`·새 실제 맵으로 대체 — 보관 여부 결정(Q1) |
-| `Scenes/Maps/Original/*.unity` 5개 | **24.4 MB** | 빌드 목록에 없음 | `MapCompactor` 이전 원본 — 삭제 후보 |
-| `Scenes/Maps/Test/Test_CandyForest.unity`, `Test_CursedCandyCarnival.unity` | 4.7 MB | 빌드 목록에서 꺼짐 | ⚠️ **삭제 금지** — 실제 맵의 **원본 틀**이다. `CandyForestMapBuilder`(`SourceScene`, `:19,51`)와 `CarnivalMapBuilder`(`:82-84`)가 실행될 때마다 이 Test 씬을 `CopyAsset`으로 복사한 뒤 그 위에 실제 맵을 짓는다(카메라·관리자·마녀·환경음은 Test 씬 그대로). 지우면 실제 맵을 다시 만들 수 없다. 빌드에서 뺀 것은 의도된 상태 |
-| `Scenes/SampleScene/NavMesh.asset` | 작음 | 씬 없이 내비메시만 | 삭제 |
+`Game_<Map>` 씬은 MapSceneBuilder(맵별 통짜 FBX 배치)와 MapCompactor(결과 메시 굽기)가 만든 **1세대 맵**이다. 지금 판의 맵은 실제 모델 맵 3개와 `Test_` 2개다. 아래는 `Game_` 씬에서만 닿거나, 그 빌더만 쓰는 파일이다.
 
-### 7.4 빌드 씬 안의 필요 없어진 오브젝트
+| MB | 파일 | 내용 |
+|---:|---:|---|
+| 8.5 | 5 | `Scenes/Maps/Game_*.unity` 5개 |
+| 23.0 | 40 | `Maps/<Map>/Compact/` 5맵 — `*_COL_Boundary*`·`*_Terrain_Walkable*` 등 MapCompactor 결과 |
+| 17.6 | 39 | `Maps/<Map>/Models/<Map>_<분류>.fbx`(맵별 통짜 FBX — Ground·Decoration·Effects·GameplayProps…), 그리고 `CursedCandyCarnival/Models`의 임시 소켓 재질 |
+| 2.8 | 5 | `09. Environment/Escape/Models/ESC_<Map>.fbx` — 옛 탈출 장치(`CoasterExitBuilder`가 `LegacyDevice`로 지우는 대상) |
+| 1.3 | 36 | `09. Environment/Twisted/Models` 18 + `04. Prefabs/Twisted` 18 — `TwistedPropPlacer`가 `Game_` 씬에만 놓는다 |
+| 0.1 | 17 | `Maps/GingerbreadVillage/Materials/*GingerDim*`, `CursedCandyCarnival/Materials`, `HauntedBakery/Materials`, `Common/Doors`·`Animations`(관람차·마법 오븐) |
 
-| 씬 | 오브젝트 | 수 | 근거 | 판정 |
-|---|---|---:|---|---|
-| 모든 맵 5개 | `MapLighting/PointLights` (**꺼진 채로 저장**) | Test_Gingerbread 391 · Test_Chocolate 72 · Test_Bakery 80 · CandyForest 394 · Carnival 112 (자식 포함) | 빌더(`TestMapBuilder:115`, `CandyForestMapBuilder:637`, `CarnivalMapBuilder:921`)가 "옛 맵 점광원은 새 맵과 안 맞아 끈다"며 비활성화만 함. 코드에서 다시 켜는 곳 0 | **삭제 후보** — 씬 용량·로딩·에디터 탐색 비용. 빌더는 `Find` 실패 시 그냥 넘어가므로 지워도 안전 |
-| `CursedCandyCarnival` | `MapLighting/ReflectionProbes/Probe_CUR_Water_CursedPond`, `Probe_CUR_Water_GlowPond_West` (꺼짐) | 2 | 빌더가 "옛 연못 자리"라 끔 | 삭제 후보 |
-| `CursedCandyCarnival` | `MO_Fence/COL` — **컴포넌트가 Transform뿐인 빈 오브젝트** | **342** | 충돌체가 부모로 옮겨진 뒤 남은 껍데기로 보임 | 삭제 후보(빌더 쪽 생성 코드 확인 후) |
-| `GameLobbyScene` | `GameLobbyUICanvas/MonsterWaitPanel` (꺼짐) | 1(+자식 1) | 옛 괴물 대기실 대기 UI, 코드 참조 0 | 삭제 |
-| `CandyForest` | 꺼진 `MeshRenderer` 420개(`COL_Mesh` 368, `COL_Shell` 43 …) | 420 | **충돌 전용 메시**라 렌더러를 끈 것 — 정상. 다만 렌더러 컴포넌트 자체가 불필요 | 선택: 렌더러 제거(조금의 메모리) |
-| `CandyForest` | `Map/Edge/CF_MonsterHouse (1)`, `CF_Tent (1)` | 2 | 이름이 복제본 기본 이름 — 의도된 배치인지 확인 | 확인 후 이름 정리 |
-| 모든 게임 씬 | `GameSceneCore/Canvas/ResultScreen`, `EscMenu`, `InputFieldChat`, `…/RowTemplate`·`…/Template` (꺼짐) | — | 실행 중 켜지는 UI·템플릿 | ✅ 정상 |
-| 모든 씬 | Missing Script | **0** | | ✅ |
+**L 합계 ≈ 53 MB · 142개.** 그 원본인 `Maps/Source~`(.blend, 163 MB)도 이 파이프라인용이다.
 
-### 7.5 그 밖의 파일
+⚠️ **지우려면 함께 정리할 에디터 코드가 있다.**
+- `MapSceneBuilder`, `MapCompactor`, `TwistedPropPlacer`, `GingerbreadNeonDimmer`.
+- `TwistedAtmosphere`·`MapPassabilityCheck`·`MapPlaytestDriver`의 `Game_` 분기.
+- 시험: `MapCompactTests`, `TwistedTests`, `BuildSceneTests`의 `Game_` 부분.
 
-| 대상 | 크기 | 판정 |
-|---|---:|---|
-| `Assets/Screenshots/` 57장 | 14.1 MB | 작업 기록 스크린샷 — 프로젝트 밖(또는 `Plan.md/images/`)으로 이동 |
-| `Assets/07. Expression/얼굴*_*.png` 20장 | 작음 | 표정 텍스처 — 어디서도 안 씀 |
-| `Assets/08. Resources/LobbySceneBackGround.png` | 2.2 MB | 안 씀 |
-| `Assets/08. Resources/ItemIcons/Icon_CandyCell_Orange.png` | 작음 | 안 씀(다른 색 아이콘은 사용) |
-| `Assets/Animation/Monster/Monster_Rigged_textures/` 3장 | 9.9 MB | 안 씀(같은 폴더 2장은 사용) |
-| `Assets/Animation/Cookie/Cookie_Dodge_Original.anim`, `Cookie_Dodge_Retimed_Backup_PreRootFix.anim` | 2.7 MB | 백업 — 삭제 |
-| `Assets/Maps/Common/Doors/*.controller` 2개, `Maps/Common/Animations/*.anim` 3개 | 작음 | 옛 문 |
-| `Assets/05. Materials/Lobby_{Crate,Fence,Grass,Parasol}.mat`, `TestGround.mat`, `02. Scripts/ColorTag/Shaders/ColorReplaceMaterial.mat` | 작음 | 안 씀 |
-| `Assets/03. SO/Maps/CandyForestLayout.asset` | 작음 | 빌더 입력(코드가 이름으로 읽음) |
-| `Assets/Maps/*/Compact/*.asset` 42개 | 27 MB | 빌드 제외 `Game_`/`Test_` 씬의 압축 메시 — 그 씬들과 함께 |
-| `Assets/09. Environment/TestMaps/Materials/{CandyForest,CursedCandyCarnival}/*` 25개 | 작음 | 빌드 제외 Test 씬 전용 — 그 Test 씬이 실제 맵의 원본 틀이므로 **유지** |
-| `Assets/02. Scripts/Player.md` (33 KB) | — | 스크립트 폴더 안 문서 → `Plan.md/archive/` |
-| `~` 폴더: `09. Environment/CandyForest/Source~` **429 MB**(받은 원본 FBX·텍스처), `Maps/CursedCandyCarnival/Source~` 189 MB, `Maps/Source~` 162 MB(.blend·파이썬 빌드 스크립트), `10. Audio/Source~` 125 MB(합성 스크립트·후보 음원) — **합 약 905 MB** | 큼 | Unity가 가져오지 않으므로 빌드·임포트 영향 없음. **저장소 용량만** — Git LFS 또는 저장소 밖 보관 권장 |
+사용자 규칙("Build Map Scenes·Compact 실행 금지")과도 맞는다. 다만 1세대 맵을 다시 쓸 계획이 있으면 유지해야 하므로 **결정 필요**다.
+
+### 6.3 C — 아무도 쓰지 않음 (빌드 제외 · 에디터 도구도 안 씀 · 삭제 안전)
+
+| MB | 파일 | 에셋 | 확인 내용 |
+|---:|---:|---|---|
+| 9.2 | 8 | `Animation/Characters/<4종>/*_Metallic.png`·`*_Roughness.png` | §45에서 만들었지만 `CHR_*.mat`이 쓰지 않는다. `CharacterBuilder`는 `_Metallic`을 0으로만 설정한다. 재질에 연결할 계획이 없으면 삭제 |
+| 6.9 | 97 | `Maps/Common/Models/*.fbx` | Blender에서 소품을 하나씩 내보낸 것. 맵별 통짜 FBX에 이미 합쳐져 있다. 코드·씬 참조 0(8차 "빌더 입력" 판단 정정 — 경로를 쓰는 코드 없음) |
+| 4.7 | 1 | `Maps/ChocolateFactory/Generated/CHO_Bld_Cogworks_Interior_NoBelt.asset` | 예전 생성 메시. 지금 프리팹은 다른 메시를 쓴다. 참조 0 |
+| 3.3 | 1 | `Maps/CursedCandyCarnival/Models/GyroDrop/GD_GyroDrop.fbx` | `CarnivalMapAssets.BuildGyroDrop`은 부품 4개(`GD_Platform`·`Tower`·`Ring`·`Crown`)만 불러온다. 통짜 FBX는 참조 0 |
+| 2.1 | 1 | `08. Resources/LobbySceneBackGround.png` | 로비는 `LobbySceneBackGround_Twisted.png`를 쓴다(`TwistedAtmosphere.cs:22`). 원본은 참조 0 |
+| 0.1 | 5 | `09. Environment/Escape/Models/ITEM_CandyCell_*.fbx` 4 + `08. Resources/ItemIcons/Icon_CandyCell_Orange.png` | 재료 프리팹은 `CF_Lollipop_*.fbx`로 만든다(`CandyForestAssets.cs:229`). FBX는 대체 경로라 쓰이지 않는다 |
+| 0.1 | 20 | `07. Expression/얼굴1~5_*.png` | 참조 0. 지금 표정은 다른 방식이다. 파일 이름이 한글이라 경로 문제 위험도 있다 |
+| 작음 | 4 | `04. Prefabs/Maps/CandyForest/CF_Lollipop_*.prefab` | 빌더가 만들지만 맵·아이템이 쓰지 않는다(아이템은 `ITEM_CandyCell_*`) |
+| 작음 | 5 | `05. Materials/Character/Cookie_BaseSkin_B~D` + 색 텍스처 | `CharacterBuilder`는 `_A`만 쓴다 |
+| 작음 | 3 | `ColorTag/Shaders/BrushStampMaterial.mat`·`EraseStampMaterial.mat`·`PaintErase.shader` | 옛 손 색칠 |
+| 작음 | 2 | `06. Physics/PlayerNoFriction.physicMaterial`·`_tmp` | 참조 0. 시험 드라이버는 실행 중에 직접 만든다 |
+| 작음 | 4 | `_TerrainAutoUpgrade/*.terrainlayer` | Unity가 자동 변환하며 남긴 것. 지형 참조 0 |
+| 작음 | 1 | `Maps/HauntedBakery/Materials/M_Glow_Yellow_HauntedBakery.mat` | `Game_HauntedBakery`도 쓰지 않는다 |
+| 1.8 | 2 | `Scenes/Maps/Test/Test_ChocolateFactoryBuildings.unity` + `M_CHO_PreviewGround.mat` | §41 건물 확인용 씬. 확인이 끝났다면 삭제 후보(`ChocolateFactoryBuildingsScene` 도구와 함께) |
+
+**C 합계 ≈ 28 MB · 154개.**
+
+목록에서 **제외(오탐)**한 것:
+- `TagOfChaos.Scripts.asmdef`: 필수다.
+- `09. Environment/Shaders/WaterBubble.shader`: 쓰이지 않는 것이 아니라 **빌드에서 빠지는 버그**다(N-01).
+- `SoundSettingsPanel.prefab`: `SoundSettingsInstaller`가 만들고 시험이 검사하는 원본이다.
+- `03. SO/Maps/CandyForestLayout.asset`: 캔디숲 빌더의 위치표다.
+- 빌드 제외 `Test_CandyForest`·`Test_ChocolateFactory`·`Test_CursedCandyCarnival`: 실제 맵 빌더의 원본 틀이다.
+
+### 6.4 S — `Assets` 안의 원본·작업 파일 (Unity가 가져오지 않음 · 빌드 영향 0 · 저장소·디스크만 차지)
+
+| 크기 | 위치 | 내용 |
+|---:|---|---|
+| **430 MB** | `09. Environment/CandyForest/Source~` (178개) | 캔디숲 실제 모델 원본(.blend 분할본 + 중간 FBX) |
+| **190 MB** | `Maps/CursedCandyCarnival/Source~` (89개) | 놀이공원 놀이기구 원본(Horse·Entrance·Viking.blend…) |
+| **163 MB** | `Maps/Source~` (88개) | 1세대 `Game_` 맵 .blend — 6.2 L의 원본 |
+| **126 MB** | `10. Audio/Source~` (528개) | 소리 원본·생성 스크립트 |
+| 0.3 MB | `Maps/*`·`09. Environment/*` 안의 `.json`·`README.md` 80개 | Blender 내보내기 메타·설명 |
+
+`~`로 끝나는 폴더는 Unity가 무시하므로 게임에는 영향이 없다. 합계 약 **909 MB**는 `Assets` 밖(예: 프로젝트 루트 `ArtSource/`)으로 옮기는 것을 권장한다. 그러면 백업·복제가 가벼워진다. `Maps/Source~`는 L을 정리할 때 함께 결정한다.
+
+### 6.5 크기 규칙 위반 (미사용은 아님)
+
+- **FBX 100 MB 규칙 위반 2건**:
+  - `Maps/ChocolateFactory/Models/Buildings/CHO_Bld_MacaronWheel.fbx` **133 MB**.
+  - `CHO_Bld_Gear.fbx` **115 MB**.
+  - 생성 메시 `Generated/CHO_Bld_MacaronWheel_Exterior.asset`도 **101 MB**다.
+- 프리팹은 FBX에서 문·내부·소켓만 쓰고, 외벽은 생성 메시(**정점 77만 개**)를 쓴다. FBX 안의 원래 외벽 메시는 빌드에 들어가지 않는다. 그래서 디스크 규칙 문제이면서 동시에 **실행 성능 위험**(외벽 한 채가 정점 77만 개)이다.
+- 같은 폴더의 다른 건물 FBX도 63~84 MB로 한계에 가깝다.
+
+### 6.6 코드 쪽 재확인
+
+- 런타임 `MonoBehaviour` 중 빌드 씬·프리팹에 붙어 있지 않은 46종을 하나씩 확인했다. **모두** 코드가 `AddComponent`하거나 `[RuntimeInitializeOnLoadMethod]`로 만든다. **붙일 곳 없는 죽은 컴포넌트는 0개**다.
+- 죽은 코드는 5장 그대로다: 몸 색칠 캔버스, 감옥 풍선, 옛 레시피 필드, 작은 멤버 약 25개.
+
+### 6.7 정리 순서 제안 (모두 사용자 확인 후 진행 — 삭제는 되돌리기 어려움)
+
+1. **A1·A2·C**: 참조 0이 확인된 것. 지워도 동작이 바뀌지 않는다. A2는 `Demos` 폴더째 지운다. 약 32 MB(빌드 2 MB+3.8 MB 감소).
+2. **A3·A4**: 카탈로그 항목과 wav/ogg만 뺀다. enum은 유지한다. 빌드 10.5 MB 감소.
+3. **A5·A6**: 5.1 죽은 코드 정리와 한 묶음으로 한다. 코드 변경이 있으므로 시험으로 확인한다.
+4. **L**: 1세대 맵을 다시 쓸지 결정한 다음, 에디터 도구·시험과 함께 정리한다.
+5. **S**: `Source~` 4곳을 `Assets` 밖으로 옮긴다.
+6. **6.5**: 큰 건물 FBX를 다시 내보내고(분할·감량), 외벽 생성 메시를 LOD로 낮춘다.
+
+---
+
+## 7. 발견한 버그·위험
+
+| # | 등급 | 내용 | 근거 | 권장 |
+|---|---|---|---|---|
+| N-01 | 🐞 **버그** | 물풍선 물방울 셰이더가 빌드에 없다. `Shader.Find("TagOfChaos/WaterBubble")`는 셰이더가 재질·씬·`Resources`에서 참조되거나 Graphics Settings "항상 포함"에 있어야 빌드에 들어간다. 지금은 둘 다 아니어서 빌드에서는 `EscapeVisuals.NewMaterial`의 대체(투명 하늘색 Standard)로 보인다 | `WaterBubbleView.cs:8,22`, 의존성 그래프에서 닿지 않음, `GraphicsSettings.m_AlwaysIncludedShaders`는 내장 6개뿐 | `Resources/`에 `WaterBubble.mat`을 두고 `Resources.Load`로 쓰거나, 셰이더를 직렬화 필드로 받기(K-01) |
+| N-09 | ⚠️ 위험 | 메시지 큐를 켜는 곳이 5곳 — 씬 로드 중 PUN의 일시정지와 겹치면 사라질 씬에서 메시지를 처리할 수 있다 | 4.8 | 큐 제어 단일화(K-04) |
+| N-06 | ⚠️ 위험 | 위치 기록 두 벌, 액터 키 쪽은 한 사람이 캐릭터 둘이면 섞여 이동 검사·스태미나 추정이 엉뚱한 경고를 낸다(실제 게임에선 1인 1캐릭터라 시험에서만) | 4.11 | ViewID 키 하나로(K-05) |
+| N-10 | ⚠️ 위험 | `ToolUser`와 `WitchRevealCamera`가 같은 카메라의 FOV를 각자 저장·복원 — 8차 A-12 그대로 | `ToolUser.cs:47-49,102`, `WitchRevealCamera.cs:292-293,349` | FOV 소유자 하나(K-11) |
+| N-11 | 낮음 | `GameStartAuthority`의 정적 `lastStartTime`·`lastMap`이 방을 나가도 남는다 | 4.6 | 방을 나갈 때 초기화 |
+| N-12 | 낮음 | 쿠키마다 쓰지 않는 512² 색칠 RenderTexture(약 1 MB) + 합성 셰이더 | 5.1 | 색칠 제거 시 함께 |
 
 ---
 
 ## 8. 권장 조치 (우선순위)
 
-> 모두 **제안**이다. 실제 작업은 사용자 승인 뒤 `Plan.md`에 별도 계획서를 만들어 단계별로 진행한다(규칙: 계획 → 승인 → 실행 → 컴파일·Console·Play Mode 확인).
-
-| 순위 | 묶음 | 내용 | 위험 | 효과 |
+| 순위 | 번호 | 조치 | 효과 | 위험 |
 |---|---|---|---|---|
-| **P1** | 죽은 시스템 제거 ① NetHold | `NetHold`·`HeldSyncRecorder` 삭제, `InteractableDoor`·`GameManager`·`PlayerSpawner`·`RoomExitController`·`HideOrSeekPlayer` 대기 분기/주석, `MusicRules.LocalMonsterWaiting`, 대기실 `MonsterWaitPanel` | 낮음(호출 0 확인) | PrefabPool 감싸기 제거, 약 350줄 |
-| **P1** | ② 손 색칠 | `PlayerPaintCanvas` 색칠 입력·전송·Forced·Erase·Clear 경로, `PaintColliderUpdater`, `GamePhaseState.IsPaintActive`, `CookieAudio.TickPaint`, 관련 `NetKeys`·`NetEventCodes`·`GameSettingsSO` 필드·`SoundId`. **남길 것**: `ForceFillColor`·`ApplyRemote(ForceFill)`·`SampleSurfaceColors`·스킨 | 중간(물풍선 색·가루 색 시험 필요) | 약 450줄 + 쿠키마다 Mesh 2개 할당 제거 |
-| **P1** | ③ 마녀 처단(Purge) | `WitchTimeline`/`WitchRevealCamera`/`WitchPresenter`/`RoomLifecycleWatcher`/`MonsterRoster`의 Purge·Approach, 관련 시험 갱신 | 중간(시험 수정) | 약 150줄, 연출 코드 단순화 |
-| **P1** | ④ 작은 죽은 멤버 | 6.2 표의 나머지(약 30개), `MonsterTestSpawner`, `Legacy~` 폴더들 | 낮음 | 정리 |
-| **P2** | 에셋 정리 | 7.1~7.5의 "삭제 후보"(고아 FBX·백업 anim·스크린샷·표정 PNG·`Original/` 씬·`SampleScene`·꺼진 `PointLights`·빈 `COL` 342개·꺼진 프로브) | 낮음~중간(씬 저장) | 저장소 약 80 MB↓, 씬 로딩·에디터 탐색 개선 |
-| **P2** | 중복 통합 | D-01·D-02(`CharacterRegistry.FindLocal/FindByOwner` 일원화), D-03(ESC 입력 하나), D-07(`UiListBuilder`) | 낮음 | 버그 표면 감소 |
-| **P2** | 안전성 | A-12 FOV 소유권 정리, A-13 가루 파티클 `Destroy(burst, t)` 보장, A-14 런타임 재질 해제, `EscapeTextsSO` 에셋 누락 경고 | 낮음 | |
-| **P3** | 구조 | A-01 `GameManager`→`ChatController`, A-02 폴더 이동, A-03/A-04 `EscapeManager` 지형 분리·`EscapeAuthority` partial 분할, A-05 입력 이름, A-08 `EscapeQuery`, A-09 상시 컴포넌트 프리팹화, D-04 `UiFactory`, D-05/D-06 제네릭화 | 중간(이동·이름 변경은 .meta GUID 유지 필요) | 가독성·확장성 |
-| **P3** | 문서·주석 | `Camera_Ctrl` 낡은 주석·깨진 글자(`:16,20,125-127,140`), `OfflineModeBootstrap`·`MonsterTestSpawner`·`PlayerSkinApplier`·`MonsterController.PlayerGrabKill` 낡은 머리 주석, 코드 주석의 `research.md R…` 참조를 `archive/research.2026-10-12.md`로 | 없음 | |
-
-### 사용자 결정이 필요한 것
-
-| # | 질문 | 선택지 |
-|---|---|---|
-| Q1 | 옛 `Game_*` 맵 5개(빌드 목록에서 꺼짐)를 남길까? | (a) 삭제 — FBX 27개·Compact 42개·TW 프리팹 18개·Twisted FBX 18개가 함께 정리됨 / (b) 보관 폴더로 이동 / (c) 그대로 |
-| Q2 | 옛 맵 생성 파이프라인(`MapSceneBuilder` + `Maps/Common/Models` 97개 FBX + `CandyForestLayout`)을 남길까? — `PlayerTestScene`이 없어 지금은 실행 불가 | (a) 삭제 / (b) 보관 |
-| Q3 | 망가진 소품 `TW_*`(§V3)를 지금 맵에 다시 배치할 계획이 있나? | 있으면 유지, 없으면 Q1과 함께 정리 |
-| Q4 | 시험용 Purge 시나리오(시험 코드)도 함께 지울까? | 처단 모드를 되살릴 가능성이 없으면 삭제 |
-| Q5 | `Legacy~`·`Source~` 원본을 저장소에 계속 둘까? | Git LFS / 저장소 밖 / 그대로 |
+| 1 ✅ | K-01 | **물방울 셰이더를 빌드에 포함** — §47 CL3: GraphicsSettings "항상 포함"에 추가, `BuildSceneTests.RuntimeFoundShaders_AreAlwaysIncluded`(재질을 `Resources`에 두거나 직렬화 참조) | 빌드에서 §45 물방울이 의도대로 보임 | 매우 낮음 |
+| 2 | K-04 | 메시지 큐 켜기를 `RoomSceneFollower` 한 곳으로(`GameManager`·`PlayerSpawner`의 무조건 켜기 제거) | 씬 이동 안정성 | 낮음 — 씬 이동 Play Mode 시험 필요 |
+| 3 | K-05 | 위치 기록 통합(`PositionHistory`를 모든 클라이언트·ViewID 키, `lastPositions`는 그 마지막 값) | 중복 제거, 시험 거짓 경고 제거 | 중간 — 이동 검사·드롭 위치 시험 |
+| 4 ✅ | K-02 | 죽은 몸 색칠·감옥 풍선 정리(5.1) + 6.1 A5·A6 — §47 CL4 완료 | 약 300줄·셰이더 3·RT 1장/쿠키 감소 | 낮음 — 쿠키 스킨이 합성 셰이더를 쓰므로 원래 재질로 되돌리는 확인 필요 |
+| 5 | K-03 | 작은 미사용 멤버 정리(5.2, 이번 작업에서 생긴 6개 포함) | 읽기 쉬움 | 매우 낮음 |
+| 6 | K-06 | 처형 연출 공용화(D-09) + `Flat` 공용화(D-10) + 캐릭터 찾기(D-01) | 중복 제거 | 낮음 |
+| 7 | K-07 | 큰 클래스 분리(N-02·N-03·N-04) — 동작 변화 없는 이동만 | 유지보수 | 중간 — 회귀 시험 넓게 |
+| 8 | K-08~K-13 | 8차 A-08~A-11 유지 + SO 로더 제네릭(K-13) + FOV 소유자(K-11) | 구조 | 낮음~중간 |
+| ✅ §47 | K-14 | 6.1 A1·A2(붓 커서·`BackArrow`·Photon `Demos` 3폴더) + 6.3 C 전체 삭제 | 빌드 −5.8 MB, 저장소 약 −60 MB | 매우 낮음(참조 0 확인) — **사용자 확인 후** |
+| ✅ §47 | K-15 | 6.1 A3·A4 — 안 쓰는 사운드 32개·음악 6곡을 카탈로그에서 빼고 파일 삭제(enum 번호 유지) | 빌드 −10.5 MB | 낮음 — 카탈로그 시험 |
+| ✅ §47 | K-16 | 6.2 L — 옛 `Game_` 맵 파이프라인(씬 5·Compact·통짜 FBX·Twisted 소품 + 에디터 도구·시험) 정리 | 저장소 −53 MB(+ `Maps/Source~` 163 MB) | 중간 — 1세대 맵을 다시 쓸 계획이 없을 때만. **사용자 결정** |
+| ✅ §47 | K-17 | 6.4 S — `Source~` 4곳(약 909 MB)을 `Assets` 밖으로 이동 | 프로젝트 가벼워짐 | 매우 낮음(Unity가 무시하는 폴더) |
+| 결정 | K-18 | 6.5 — `CHO_Bld_MacaronWheel`(133 MB)·`CHO_Bld_Gear`(115 MB) FBX 재내보내기, 외벽 생성 메시(정점 77만) 감량 | 규칙 준수·실행 성능 | 중간 — 원본 Blender 작업 필요 |
 
 ---
 
 ## 9. 부록 — 조사 방법·수치·한계
 
-| 항목 | 내용 |
+| 항목 | 값 |
 |---|---|
-| 정독 | `Assets/02. Scripts` 206개 파일 전부(Legacy~ 제외), `Editor`·`03. SO`는 참조 확인 목적 |
-| 이름 기반 집계 | 주석 제거 후 식별자 토큰 빈도, 선언 7,631개 → 런타임에서 선언 외 등장 0인 83개 → 거짓 양성 제거 후 6장 |
-| 에셋 참조 | 씬·프리팹·SO YAML의 스크립트 GUID(`m_Script`) 역색인 — 206개 중 120개는 직접 에셋 참조 0(정적·순수·AddComponent 클래스) |
-| 의존성 그래프 | Unity 에디터에서 `EditorBuildSettings.scenes`(켜진 7개) + `Resources/` 62개 뿌리 → `GetDependencies(recursive)` = 1,779개 |
-| 씬 스캔 | 켜진 빌드 씬 7개를 추가 모드로 열어 비활성 하위 트리·Missing Script·빈 오브젝트·꺼진 렌더러/빛/충돌체 집계(씬은 저장하지 않고 닫음) |
-| 이벤트 감사 | `+=`/`-=` 짝, 구독 위치(Awake/Start/OnEnable) ↔ 해제 위치 비대칭 자동 검사 |
-| 한계 | ① 문자열로 부르는 호출(`Invoke("…")`·`InvokeRepeating`·`StartCoroutine("…")`·`SendMessage`)은 검색 결과 0건, 리플렉션은 `VoiceChat`(`usePrimaryRecorder`)·`HeldSyncRecorder`(`currentItem`)만 — 그래도 동적 호출을 100% 보장하지는 못한다. ② 애니메이션 이벤트는 0건 확인. ③ `SoundId` 값은 씬 직렬화(int)로 쓰일 수 있어 "코드 미사용" 중 일부는 실제 사용 — 6.5에 구분. ④ 에디터 빌더가 경로 문자열로 읽는 에셋은 "빌드 미사용이지만 도구 입력"으로 따로 표시. ⑤ 멀티플레이 실행 경로(방장 교체 중간 상태 등)는 정적 분석만 했다 |
-| 이전 판 | 7차(2026-10-12): `Plan.md/archive/research.2026-10-12.md` — F-01~F-25 상태표, 5·6차 원문(부록 Z) 포함. 4차: `Plan.md/archive/research.prev.md` |
+| 런타임 코드 | 221파일 · 25,352줄(`Assets/02. Scripts`) |
+| 에디터·시험 | 83파일 · 약 23,200줄(`Assets/Editor`) |
+| YAML 에셋 스캔 | 1,644파일 · 913 MB(Photon 제외), `.meta` 외부 참조 9,544개. 10차 보정에서 Photon 647파일(69.9 MB)·`~` 폴더 4곳(약 909 MB)·3 MB 넘는 파일 209개 실측 추가 |
+| GUID 표 | 2,926개 |
+| 빌드 씬 | 켜짐 7 / 꺼짐 3 |
+| 닿는 에셋 | 2,279(10차 보정 뿌리 기준) |
+| 미사용 분류(10차 보정) | A 빌드 포함 미사용 ≈ 16.3 MB · L 옛 `Game_` 전용 142개 ≈ 53 MB · C 고아 154개 ≈ 28 MB · S 원본 ≈ 909 MB · 작업 파일 80개 0.3 MB |
+| `AddComponent` | 89 |
+| `GameObject.Find` / `FindObjectsByType` / `Camera.main` / 이름 찾기 | 7 / 11 / 21 / 29 |
+| 정적 가변 필드 | 73 |
+| `[PunRPC]` / `RaiseEvent` / `AuthorityProps.Set*` / `IsMasterClient` | 6 / 13 / 24 / 48(24파일) |
+
+**한계**
+- 의존성 그래프는 직렬화 참조만 본다. 코드의 문자열 로드(`Resources.Load`는 뿌리에 포함), `Shader.Find`, 이름 찾기는 따로 확인했다. Addressables는 쓰지 않는다.
+- 10차 보정 전에는 `Resources` 폴더 전체를 뿌리로 잡아, 그 안의 안 쓰는 파일(붓 커서 등)을 놓쳤다. 지금은 코드의 `Resources.Load` 경로 19종만 뿌리로 잡는다. `Resources`의 하위 폴더를 문자열로 조합해 부르는 코드가 새로 생기면 이 목록도 고쳐야 한다.
+- "닿지 않음"은 "빌드에 안 들어감"이다. 에디터 빌더(`MapSceneBuilder` 등)의 입력일 수 있어 삭제 판단은 사용자 몫이다.
+- 미사용 멤버는 이름 기반이라 같은 이름이 다른 곳에 있으면 놓칠 수 있다(거짓 음성). 거짓 양성은 직접 열어 걸렀다.
+- 런타임 동작(성능 계측·메모리 프로파일)은 이번 범위가 아니다.

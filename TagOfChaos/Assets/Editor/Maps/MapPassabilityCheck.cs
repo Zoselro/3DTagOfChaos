@@ -36,7 +36,7 @@ public static class MapPassabilityCheck
 
     public sealed class Options
     {
-        public float Half = MapCompactor.NewHalf;
+        public float Half = MapScenes.DefaultGridHalf;
         public float Cell = MapPassabilityCheck.Cell;
         public Body[] Bodies = { CookieBody };
         public System.Func<Vector3, bool> CookieForbidden; // 쿠키가 들어갈 수 없는 곳(술래방, S11) — 주머니·쿠키 전용 판정에서도 뺀다
@@ -99,12 +99,12 @@ public static class MapPassabilityCheck
     [MenuItem("Tools/TagOfChaos/Maps/Check Passability (Active Scene)")]
     private static void CheckActive() => Report(Run(SceneManager.GetActiveScene()));
 
-    [MenuItem("Tools/TagOfChaos/Maps/Check Passability (All Map Scenes)")]
+    [MenuItem("Tools/TagOfChaos/Maps/Check Passability (All Game Map Scenes)")]
     private static void CheckAll()
     {
-        foreach (string map in MapSceneBuilder.MapNames)
+        foreach (string map in MapScenes.MapNames)
         {
-            Scene scene = EditorSceneManager.OpenScene(MapSceneBuilder.ScenePath(map), OpenSceneMode.Single);
+            Scene scene = EditorSceneManager.OpenScene(MapScenes.ScenePath(map), OpenSceneMode.Single);
             Report(Run(scene));
         }
     }
@@ -122,7 +122,7 @@ public static class MapPassabilityCheck
     // Fits: 몸마다(비트) 그 자리에 설 수 있는지. 0번 비트는 FindPath가 쓰는 지금 쿠키.
     private struct Node { public float Y; public int Fits; public bool Monster, Ground, Covered; public bool Cookie => (Fits & 1) != 0; }
 
-    public static Result Run(Scene scene) => Run(scene, MapCompactor.NewHalf, Cell);
+    public static Result Run(Scene scene) => Run(scene, MapScenes.DefaultGridHalf, Cell);
 
     // half·cell을 바꾸면 원본 크기 씬(±172 m)도 비교용으로 검사할 수 있다.
     public static Result Run(Scene scene, float half, float cell) => Run(scene, new Options { Half = half, Cell = cell })[0];
@@ -280,7 +280,7 @@ public static class MapPassabilityCheck
 
     // Play Mode 검증용: from에서 to까지 쿠키(cookie=true) 또는 괴물이 갈 수 있는 격자 경로(칸 중심, 바닥 높이). 없으면 null.
     // 닫힌 문은 지나갈 수 있는 것으로 본다(가는 길에 여는 것은 MapPlaytestDriver가 한다). 이미 열린 문짝은 장애물로 둔다.
-    public static List<Vector3> FindPath(Vector3 from, Vector3 to, bool cookie) => FindPath(from, to, cookie, MapCompactor.NewHalf);
+    public static List<Vector3> FindPath(Vector3 from, Vector3 to, bool cookie) => FindPath(from, to, cookie, MapScenes.DefaultGridHalf);
 
     public static List<Vector3> FindPath(Vector3 from, Vector3 to, bool cookie, float half)
     {

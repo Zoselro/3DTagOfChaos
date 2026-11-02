@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 //   Building_Q1~Q4 → QuadrantBuilding, Exit_N/E/S/W → EscapeGate, MonsterDoor_0~3 → MonsterRoomDoor,
 //   CHEST_Slot_nn 표시 → 상자(지금 상자 모델), RocketSpawn_nn → 로켓 후보(지금 맵 로켓 모델 하나를 판마다 옮긴다),
 //   RainbowSpawn_nn → 무지개 상자 후보, WITCH_Anchor(마녀 위치)는 그대로 둔다.
-// 이름 규칙이 없는 옛 맵(Game_<Map> — 탈출 장치·탈것)은 건너뛴다. 옛 배치 도구는 Editor/Escape/Legacy~에 있다.
+// 옛 1세대 맵(Game_<Map>)은 §47 CL5에서 없앴다. 옛 배치 도구는 Editor/Escape/Legacy~에 있다.
 public static class EscapeMapSetup
 {
     public const string RootName = "EscapeSetup";
@@ -30,7 +30,7 @@ public static class EscapeMapSetup
     [MenuItem("Tools/TagOfChaos/Escape/Setup All Map Scenes")]
     public static void SetupAll()
     {
-        foreach (string map in MapSceneBuilder.MapNames)
+        foreach (string map in MapScenes.MapNames)
         {
             string path = TestMapBuilder.ScenePath(map);
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null) continue;
@@ -48,7 +48,7 @@ public static class EscapeMapSetup
     public static string SetupRoomGuards()
     {
         var report = new List<string>();
-        foreach (string map in MapSceneBuilder.MapNames)
+        foreach (string map in MapScenes.MapNames)
         {
             string path = TestMapBuilder.ScenePath(map);
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null) continue;

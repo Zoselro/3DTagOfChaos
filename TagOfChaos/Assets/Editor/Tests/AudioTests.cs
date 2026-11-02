@@ -130,7 +130,6 @@ public class AudioTests
     [TestCase("StartGameButton", SoundId.UiStart)]
     [TestCase("YesButton", SoundId.UiConfirm)]
     [TestCase("NoButton", SoundId.UiCancel)]
-    [TestCase("Swatch7", SoundId.PaintPickColor)]
     [TestCase("Increase", SoundId.UiClick)]
     public void ButtonClickSound_ChosenByName(string name, SoundId expected)
     {
@@ -174,11 +173,11 @@ public class AudioTests
 
     [TestCase("LobbyScene", MusicScene.Lobby)]
     [TestCase("GameLobbyScene", MusicScene.GameLobby)]
-    [TestCase("Game_CandyForest", MusicScene.CandyForest)]
-    [TestCase("Game_GingerbreadVillage", MusicScene.Gingerbread)]
-    [TestCase("Game_ChocolateFactory", MusicScene.Factory)]
-    [TestCase("Game_CursedCandyCarnival", MusicScene.Carnival)]
-    [TestCase("Game_HauntedBakery", MusicScene.Bakery)]
+    [TestCase("CandyForest", MusicScene.CandyForest)]
+    [TestCase("Test_GingerbreadVillage", MusicScene.Gingerbread)]
+    [TestCase("ChocolateFactory", MusicScene.Factory)]
+    [TestCase("CursedCandyCarnival", MusicScene.Carnival)]
+    [TestCase("Test_HauntedBakery", MusicScene.Bakery)]
     [TestCase("PlayerTestScene", MusicScene.Other)]
     public void Music_SceneFromName(string scene, MusicScene expected)
     {
@@ -192,7 +191,7 @@ public class AudioTests
         foreach (UnityEditor.EditorBuildSettingsScene s in UnityEditor.EditorBuildSettings.scenes)
         {
             string name = System.IO.Path.GetFileNameWithoutExtension(s.path);
-            if (!name.StartsWith("Game_")) continue;
+            if (!s.enabled || !SceneNames.IsMapScene(name)) continue;
             Assert.AreNotEqual(MusicScene.Other, MusicRules.SceneFromName(name), $"{name} has no music rule.");
         }
     }
@@ -248,58 +247,7 @@ public class AudioTests
         Assert.AreEqual(expected, MusicRules.JingleFor(result, monster, survived, anyEscaped));
     }
 
-    // ---- 환경음 배치 ----
-
-    [Test]
-    public void AmbientTable_UsesRealMapsAndWorldSounds()
-    {
-        var catalog = Resources.Load<SoundCatalogSO>(SoundCatalogSO.ResourcePath);
-        foreach (var map in AmbientPlacer.Table)
-        {
-            Assert.Contains(map.Key.Replace("Game_", ""), MapSceneBuilder.MapNames, $"{map.Key} is not a map scene.");
-            foreach (AmbientPlacer.Spot spot in map.Value)
-            {
-                Assert.IsTrue(catalog.TryGet(spot.Sound, out var entry), $"{spot.Sound} has no catalog entry.");
-                Assert.AreEqual(SoundSpace.World3D, entry.space, $"{spot.Name}: ambient sounds must be 3D.");
-                Assert.GreaterOrEqual(entry.maxInstances, map.Value.Count(s => s.Sound == spot.Sound), $"{spot.Sound}: more emitters than allowed instances.");
-            }
-        }
-    }
-
-    [Test]
-    public void AmbientZones_UseRealMapsAndLoopedSounds()
-    {
-        var catalog = Resources.Load<SoundCatalogSO>(SoundCatalogSO.ResourcePath);
-        foreach (var map in AmbientPlacer.Zones)
-        {
-            Assert.Contains(map.Key.Replace("Game_", ""), MapSceneBuilder.MapNames, $"{map.Key} is not a map scene.");
-            foreach (AmbientPlacer.Zone zone in map.Value)
-            {
-                Assert.IsTrue(catalog.TryGet(zone.Sound, out var entry) && entry.HasClip, $"{zone.Sound} needs a clip.");
-                Assert.IsNotEmpty(zone.Boxes);
-                Assert.IsTrue(zone.Boxes.All(b => b.max.y < 0f), $"{zone.Name}: underground zones stay below the ground.");
-            }
-        }
-    }
-
-    // 맵 바탕 환경음(S7): 실제 맵, 2D 반복음, 맵 하나에 하나, 진저브레드는 지하 동굴 영역과 겹치지 않는다.
-    [Test]
-    public void AmbientBeds_CoverMaps_AndStayOffTheCave()
-    {
-        var catalog = Resources.Load<SoundCatalogSO>(SoundCatalogSO.ResourcePath);
-        foreach (var map in AmbientPlacer.Beds)
-        {
-            Assert.Contains(map.Key.Replace("Game_", ""), MapSceneBuilder.MapNames, $"{map.Key} is not a map scene.");
-            Assert.IsTrue(catalog.TryGet(map.Value.Sound, out var entry) && entry.HasClip, $"{map.Value.Sound} needs a clip.");
-            Assert.AreEqual(SoundSpace.Flat2D, entry.space, $"{map.Value.Sound}: map beds are 2D.");
-            Assert.IsTrue(map.Value.Boxes.Any(b => b.Contains(new Vector3(130f, 2f, -130f)) && b.Contains(Vector3.up * 40f)), $"{map.Key}: bed covers the map.");
-            if (!AmbientPlacer.Zones.TryGetValue(map.Key, out AmbientPlacer.Zone[] zones)) continue;
-            foreach (AmbientPlacer.Zone zone in zones)
-                foreach (Bounds cave in zone.Boxes)
-                    Assert.IsTrue(map.Value.Boxes.All(b => b.min.y >= cave.max.y), $"{map.Key}: bed overlaps {zone.Name}.");
-        }
-        Assert.AreEqual(4, AmbientPlacer.Beds.Count, "every map but the factory (machines are its bed) has a bed");
-    }
+    // (옛 Game_ 맵 환경음 배치표 AmbientPlacer 시험은 그 도구와 함께 없앴다 — Request1009Plan.md §47 CL5.)
 
     // ---- 소리 설정 창(S9) ----
 
@@ -409,7 +357,7 @@ public class AudioTests
         SoundId[] world = { SoundId.CookieStep, SoundId.CookieJump, SoundId.CookieLand, SoundId.CookieDodge, SoundId.CookieGrab, SoundId.CookieRelease,
             SoundId.CookieCrumble, SoundId.MonsterStep, SoundId.MonsterDash, SoundId.MonsterGrab, SoundId.MonsterSquash, SoundId.StunStars,
             SoundId.Respawn, SoundId.DoorOpen, SoundId.DoorClose, SoundId.CauldronBubble, SoundId.CauldronSplash };
-        SoundId[] flat = { SoundId.MonsterAimLock, SoundId.PaintStroke, SoundId.PaintSlotRegistered, SoundId.PaintForceFill, SoundId.MonsterDeparted };
+        SoundId[] flat = { SoundId.MonsterAimLock };
         foreach (SoundId id in world.Concat(flat))
         {
             Assert.IsTrue(catalog.TryGet(id, out SoundCatalogSO.Entry e), id.ToString());
@@ -425,7 +373,7 @@ public class AudioTests
     {
         var catalog = Resources.Load<SoundCatalogSO>(SoundCatalogSO.ResourcePath);
         SoundId[] world = { SoundId.ChestOpen, SoundId.ChestRespawn, SoundId.ItemPickup, SoundId.ItemDrop, SoundId.DeviceInsert, SoundId.DeviceComplete,
-            SoundId.BoardHop, SoundId.RocketInsert, SoundId.RocketHatch, SoundId.StunFire, SoundId.StunHit, SoundId.BalloonThrow, SoundId.BalloonSplash,
+            SoundId.RocketInsert, SoundId.RocketHatch, SoundId.StunFire, SoundId.StunHit, SoundId.BalloonThrow, SoundId.BalloonSplash,
             SoundId.HammerSwing, SoundId.HammerBonk };
         SoundId[] flat = { SoundId.HeartBeat, SoundId.EscapeSuccessSelf, SoundId.StunAimHum };
         foreach (SoundId id in world.Concat(flat))
@@ -460,7 +408,7 @@ public class AudioTests
     public void S6Sounds_HaveClips_AndRightSpace()
     {
         var catalog = Resources.Load<SoundCatalogSO>(SoundCatalogSO.ResourcePath);
-        var world = new List<SoundId> { SoundId.BoardSuck, SoundId.RocketIgnite, SoundId.RocketLiftoff };
+        var world = new List<SoundId> { SoundId.RocketIgnite, SoundId.RocketLiftoff };
         foreach (SoundId id in Enum.GetValues(typeof(SoundId))) if ((int)id / 100 == 7) world.Add(id);
         SoundId[] flat = { SoundId.WitchAppear, SoundId.WitchSlam };
         foreach (SoundId id in world.Concat(flat))
@@ -469,7 +417,5 @@ public class AudioTests
             Assert.IsTrue(e.HasClip, $"{id} has a clip");
             Assert.AreEqual(world.Contains(id) ? SoundSpace.World3D : SoundSpace.Flat2D, e.space, id.ToString());
         }
-        Assert.IsTrue(catalog.TryGet(SoundId.LanternFlicker, out SoundCatalogSO.Entry lantern));
-        Assert.LessOrEqual(lantern.maxDistance, 15f, "lantern crackle is heard only nearby");
     }
 }

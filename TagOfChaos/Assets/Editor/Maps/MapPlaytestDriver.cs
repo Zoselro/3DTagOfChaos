@@ -38,7 +38,7 @@ public static class MapPlaytestDriver
 
     private static readonly List<Walk> walks = new List<Walk>();
     // 경로 격자 반 크기 — 캔디숲 실제 맵은 둥근 울타리(80 m) + 탈출구 받침까지(§28 C11)
-    public static float GridHalf = MapCompactor.NewHalf;
+    public static float GridHalf = MapScenes.DefaultGridHalf;
     public static IReadOnlyList<Walk> Walks => walks;
 
     public static string Status => string.Join("\n", walks.Select(w => w.ToString()));
@@ -83,7 +83,7 @@ public static class MapPlaytestDriver
     // 맵 씬을 연다. 오프라인 방은 Play Mode에 들어간 뒤 StartWalks가 만든다(부트스트랩을 실행 중에만 만들어 씬 파일에 남지 않게).
     public static string Prepare(string map)
     {
-        var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MapSceneBuilder.ScenePath(map), UnityEditor.SceneManagement.OpenSceneMode.Single);
+        var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MapScenes.ScenePath(map), UnityEditor.SceneManagement.OpenSceneMode.Single);
         return scene.path;
     }
 

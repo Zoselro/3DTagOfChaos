@@ -1018,7 +1018,7 @@ public sealed class EscapeAuthority
 
     private const float ToolReachSlack = 3f;
 
-    private static bool IsBalloon(ToolKind kind) => kind == ToolKind.WaterBalloon || kind == ToolKind.JailBalloon;
+    private static bool IsBalloon(ToolKind kind) => kind == ToolKind.WaterBalloon;
 
     private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
