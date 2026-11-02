@@ -10,22 +10,28 @@ using UnityEngine;
 public class RoundStateResetter : MonoBehaviourPunCallbacks
 {
     private bool localResetDone;
+    private bool roomResetPending; // 방 초기화·재개방을 아직 못 했다(씬 로드가 끝나기 전 등) — 될 때까지 매 프레임 다시 시도한다
 
     private void Update()
     {
         // 씬 로드 직후 InRoom이 아직 false일 수 있으므로(Bug-fix-plan.md §12) 방에 들어온 첫 프레임에 수행한다.
-        if (localResetDone || !RoomState.IsInRoom()) return;
-        localResetDone = true;
-
-        ResetLocalPlayerRoundState();
-        TryResetRoom();
+        if (!RoomState.IsInRoom()) return;
+        if (!localResetDone)
+        {
+            localResetDone = true;
+            ResetLocalPlayerRoundState();
+            roomResetPending = true;
+        }
+        // 예전에는 첫 프레임에 한 번만 시도했다 — 그 순간 대기실 씬 로드가 아직 "끝남"이 아니면 건너뛰고 다시 시도하지 않아, 방이
+        // 닫힌 채 남아 로비에서 3/4인데도 들어올 수 없었다(2026-11-02 멀티).
+        if (roomResetPending) roomResetPending = !TryResetRoom();
     }
 
     // 대기실 입장 직후 방장이 바뀌어도(방장 정책으로 방 생성자에게 되돌림, 방장 퇴장) 새 방장이 이전 판 흔적을
     // 이어서 지운다 — 누가 방장이든 한 번은 초기화된다(§26.8.3 ③).
     public override void OnMasterClientSwitched(Player newMasterClient)
     {
-        if (localResetDone) TryResetRoom();
+        if (localResetDone) roomResetPending = !TryResetRoom();
     }
 
     // 본인이 쓰는 Player Props(NetKeys.Writer.Self)는 각자 지운다. SkinIndex는 판이 바뀌어도 유지한다.
@@ -37,9 +43,17 @@ public class RoundStateResetter : MonoBehaviourPunCallbacks
         if (props.Count > 0) PhotonNetwork.LocalPlayer.SetCustomProperties(props);
     }
 
-    private static void TryResetRoom()
+    // 끝났으면 true(방장이 아님·지울 흔적 없음 포함), 지금은 할 수 없어 다시 시도해야 하면 false.
+    private static bool TryResetRoom()
     {
-        if (!PhotonNetwork.IsMasterClient || !HasFinishedRoundTrace()) return;
+        if (!PhotonNetwork.IsMasterClient || !HasFinishedRoundTrace()) return true;
+        // 방 씬(curScn)이 대기실이 아니거나 씬 로드 중이면 지우지 않고 다음 프레임에 다시 본다(§46 후속).
+        //  - 대기실에 막 들어온 방장: 씬을 불러오는 동안 메시지 큐가 멈춰 있어, 자기가 보낸 curScn = 대기실의 서버 응답이 첫 프레임에는
+        //    아직 처리되지 않아 캐시가 옛 맵을 가리킨다(온라인만 — 오프라인은 캐시가 바로 바뀐다). 예전에는 여기서 그냥 끝내 방이 닫힌 채
+        //    남았다(2026-11-02 멀티: 3/4인데 로비에서 입장 불가). 응답이 오면 대기실이 되므로 그때 지운다.
+        //  - 새 판이 이미 시작돼 맵으로 옮겨 가는 중: 지우면 새 판의 맵·준비 시각이 사라진다. 씬이 바뀌면 이 컴포넌트도 사라진다.
+        string roomScene = RoomSceneFollower.RoomScene();
+        if ((!string.IsNullOrEmpty(roomScene) && roomScene != SceneNames.GameLobby) || PunSceneLoad.IsBusy) return false;
 
         var props = BuildNullProps(PhotonNetwork.CurrentRoom.CustomProperties, NetKeys.RoundRoomKeys);
         foreach (System.Collections.DictionaryEntry e in PhotonNetwork.CurrentRoom.CustomProperties)
@@ -54,6 +68,7 @@ public class RoundStateResetter : MonoBehaviourPunCallbacks
         PhotonNetwork.CurrentRoom.IsOpen = true;    // 게임 시작 때 닫은 방을 다시 연다(두 복귀 경로 공통)
         PhotonNetwork.CurrentRoom.IsVisible = true;
         Debug.Log($"[RoundStateResetter] Cleared {props.Count} round room keys and reopened the room.");
+        return true;
     }
 
     // 이전 판이 진행된 흔적이 남아 있는지. 대기실에서 새로 정해진 괴물·선정 기준 시각은 판이 시작되기 전의

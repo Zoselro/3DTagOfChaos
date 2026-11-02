@@ -28,13 +28,15 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
     [SerializeField] private string readyForOthersFormat = "Monster: {0} - waiting for host {1} to start"; // {1}=방장 닉네임
     // 정원·괴물은 정해졌는데 아직 대기실을 불러오는 사람이 있을 때(Request1009Plan.md §43 — 막 재입장한 사람). {0} = 기다리는 사람 수
     [SerializeField] private string waitingArrivalFormat = "Waiting for {0} player(s) to enter the lobby...";
+    [Tooltip("시작을 눌러 맵으로 옮겨 가는 중(버튼 잠김, §46 후속).")]
+    [SerializeField] private string startingText = "Starting the game...";
     [Tooltip("강퇴 확인 문구. {0} = 대상 닉네임(Request1009Plan.md §19.6)")]
     [SerializeField] private string kickConfirmFormat = "Kick {0}?";
     [Tooltip("녹음하지 않은 사람이 있을 때 시작 확인 문구(§26 H11)")]
     [SerializeField] private string unrecordedConfirmText = "Some players have not recorded. Start anyway?";
 
     // 시작 요청 후 방장 응답(씬 전환)을 기다리는 동안 버튼을 잠시 막는다 — 방장 교체 순간에 요청이 무시됐으면 다시 누를 수 있다.
-    private const float StartRequestCooldown = 2f;
+    private const float StartRequestCooldown = 5f; // 시작 요청 뒤 방 씬이 바뀔 때까지 버튼을 잠근다(그 뒤는 IsStarting이 잠근다)
     private float startRequestPendingUntil = float.NegativeInfinity;
     private bool wasStartRequestPending;
 
@@ -77,11 +79,11 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
             RefreshStartButton();
         }
 
-        bool isPending = IsStartRequestPending();
+        bool isPending = IsStartRequestPending() || IsStarting();
         if (isPending != wasStartRequestPending)
         {
             wasStartRequestPending = isPending;
-            RefreshStartButton(); // 요청 대기가 끝나면 버튼을 다시 활성화
+            RefreshStartButton(); // 요청 대기·맵 이동이 끝나면 버튼을 다시 활성화
         }
 
         GameStartAuthority.TickPending(); // 방장 교체가 가라앉기를 기다리던 시작 요청을 다시 시도(§43)
@@ -236,12 +238,22 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private bool IsStartRequestPending() => Time.unscaledTime < startRequestPendingUntil;
 
-    private bool CanStartGame() => GameStartAuthority.IsReady() && !IsStartRequestPending();
+    private bool CanStartGame() => GameStartAuthority.IsReady() && !IsStartRequestPending() && !IsStarting();
+
+    // 이미 시작돼 맵으로 옮겨 가는 중(방 씬이 대기실이 아님·씬 로드 중). 맵 로드가 몇 초 걸려 화면이 안 바뀐 것처럼 보여 시작을 한 번 더
+    // 누르면 다른 맵으로 시작이 다시 처리돼 방장만 대기실에 갇혔다(2026-10-31 멀티) — 그동안 버튼을 잠그고 "시작 중"을 보여 준다.
+    private static bool IsStarting() => StartReadiness.IsRoomMoving(RoomSceneFollower.RoomScene(), SceneNames.GameLobby, PunSceneLoad.IsBusy);
 
     private void RefreshStatus()
     {
         if (statusText == null || !RoomState.IsInRoom()) return;
         Room room = PhotonNetwork.CurrentRoom;
+
+        if (IsStarting())
+        {
+            statusText.text = startingText;
+            return;
+        }
 
         if (!IsRoomFull())
         {

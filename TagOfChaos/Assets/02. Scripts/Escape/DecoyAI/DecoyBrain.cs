@@ -32,7 +32,11 @@ public class DecoyBrain : MonoBehaviour
         public double NextZigzag;
         public int Claim = -1;      // 건물 번호(0~) 또는 숨을 곳 번호(1000~)
         public System.Random Rng;
+        public StaminaModel Stamina; // 진짜 쿠키와 같은 규칙(§46.4) — 방장만 계산한다
+        public double StaminaAt;     // Stamina를 이 시각까지 진행했다
     }
+
+    public const float AdoptedStamina = 50f; // 방장이 바뀌면 남은 값을 모르므로 50에서 시작(순간 회복 꼼수 방지, §46.4 ST7)
 
     private EscapeManager manager;
     private readonly Dictionary<int, Agent> agents = new Dictionary<int, Agent>();
@@ -112,10 +116,34 @@ public class DecoyBrain : MonoBehaviour
                 Rng = new System.Random(d.Id * 7919 + d.Owner),
             };
             a.DecideAt = now + a.Rng.NextDouble() * StartSpread;
+            a.Stamina = new StaminaModel(StaminaSettings(), float.MaxValue);
+            a.StaminaAt = now;
             agents[d.Id] = a;
             order.Add(d.Id);
         }
     }
+
+    private static StaminaSettings StaminaSettings() => GameSettings.Current != null ? GameSettings.Current.Stamina : null;
+
+    // 지금 경로대로 [StaminaAt, now] 동안 달린·걸은·쉰 시간만큼 스태미나를 진행한다(경로 순서: 달리기 → 걷기 → 멈춤).
+    private static void AdvanceStamina(Agent a, double now)
+    {
+        if (a.Stamina == null || now <= a.StaminaAt) return;
+        double t0 = a.StaminaAt;
+        a.StaminaAt = now;
+        if (!a.HasRoute || !a.Route.Moves) { a.Stamina.Tick((float)(now - t0), false, false); return; }
+        DecoyRoute r = a.Route;
+        double runEnd = r.StartAt + r.RunSeconds;
+        double moveEnd = r.StartAt + r.TravelSeconds;
+        float run = Overlap(t0, now, r.StartAt, runEnd);
+        float walk = Overlap(t0, now, System.Math.Max(r.StartAt, runEnd), moveEnd);
+        float rest = Mathf.Max(0f, (float)(now - t0) - run - walk);
+        if (run > 0f) a.Stamina.Tick(run, true, true);
+        if (walk > 0f) a.Stamina.Tick(walk, false, true);
+        if (rest > 0f) a.Stamina.Tick(rest, false, false);
+    }
+
+    private static float Overlap(double a0, double a1, double b0, double b1) => (float)System.Math.Max(0.0, System.Math.Min(a1, b1) - System.Math.Max(a0, b0));
 
     // 방장이 된 순간: 남아 있는 경로를 이어받는다(§44.6).
     private void AdoptRoutes(EscapeState s)
@@ -127,7 +155,8 @@ public class DecoyBrain : MonoBehaviour
         foreach (EscapeState.Decoy d in s.Decoys)
         {
             if (d.Caught) continue;
-            var a = new Agent { Id = d.Id, P = DecoyRules.FromSeed(d.Id * 7919 + d.Owner), Rng = new System.Random(d.Id * 7919 + d.Owner + 17) };
+            var a = new Agent { Id = d.Id, P = DecoyRules.FromSeed(d.Id * 7919 + d.Owner), Rng = new System.Random(d.Id * 7919 + d.Owner + 17),
+                                Stamina = new StaminaModel(StaminaSettings(), AdoptedStamina), StaminaAt = now };
             if (manager.Routes.TryGet(d.Id, out DecoyRoute r))
             {
                 a.Route = r;
@@ -163,7 +192,7 @@ public class DecoyBrain : MonoBehaviour
         thinkCarry += order.Count * Time.deltaTime / ThinkCycle;
         int n = Mathf.Min(order.Count, Mathf.FloorToInt(thinkCarry));
         thinkCarry -= n;
-        float audible = ChaseAudioSettingsSO.Current != null ? ChaseAudioSettingsSO.Current.AudibleRadius : 20f;
+        float audible = ChaseAudioSettingsSO.Current != null ? ChaseAudioSettingsSO.Current.AudibleRadius : 30f;
         for (int k = 0; k < n; k++)
         {
             if (cursor >= order.Count) cursor = 0;
@@ -363,7 +392,15 @@ public class DecoyBrain : MonoBehaviour
         var points = new Vector3[n];
         points[0] = from; // 지금 자리에서 이어서(순간이동 없음)
         for (int i = 1; i < n; i++) points[i] = DecoyRoute.Quantize(corners[i]);
+        // 달리기는 지금 스태미나로 달릴 수 있는 거리까지만, 그 뒤는 걷는다. 지쳤으면(0 → 35) 처음부터 걷는다(§46.4).
+        AdvanceStamina(a, now);
+        if (gait == DecoyGait.Run && a.Stamina != null && !a.Stamina.CanRun) gait = DecoyGait.Walk;
         var route = new DecoyRoute { StartAt = now, Gait = gait, Speed = DecoyRules.SpeedFor(gait, walkSpeed), FaceYaw = faceYaw, Points = points };
+        if (gait == DecoyGait.Run && a.Stamina != null)
+        {
+            float runDistance = a.Stamina.RunSecondsLeft * route.Speed;
+            if (runDistance < route.Length) route.RunUntil = Mathf.Max(0.05f, Mathf.HalfToFloat(Mathf.FloatToHalf(runDistance)));
+        }
         route.HoldUntil = route.TravelSeconds + rest;
         Write(a, route);
         return true;
@@ -371,6 +408,7 @@ public class DecoyBrain : MonoBehaviour
 
     private void Write(Agent a, DecoyRoute route)
     {
+        AdvanceStamina(a, route.StartAt); // 바뀌기 전 경로로 지금까지 진행
         a.Route = route;
         a.HasRoute = true;
         a.DecideAt = route.EndsAt;

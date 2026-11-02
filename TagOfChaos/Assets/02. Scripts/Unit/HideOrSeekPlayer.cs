@@ -90,6 +90,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     public const string RpcOnReleased = nameof(OnReleased);
     public const string RpcRequestGrabKill = nameof(RequestGrabKill);
     public const string RpcOnGrabRejected = nameof(OnGrabRejected);
+    public const string RpcGrabKillRejected = nameof(GrabKillRejected);
 
     // 이 쿠키가 다른 쿠키를 들고 있는지(본인은 자기 상태, 원격은 동기화 값) — 들기 대상 고르기·거절에 쓴다.
     public bool IsCarryingSomeone => pv != null && pv.IsMine ? grabController != null && grabController.IsCarrying : networkSync != null && networkSync.RemoteIsCarrying;
@@ -207,7 +208,8 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     // 괴물 소유 클라이언트가 전원에게 보낸다(MonsterGrabKillTrigger). 모든 클라이언트가 쿠키를 그 괴물의 Grab_Socket에 붙여 처형 연출을
     // 보여 주고(CookieLifeStatePresenter), 파괴 확정은 본인 클라이언트만 한다(Bug-fix-plan.md §36).
     [PunRPC]
-    private void RequestGrabKill(int monsterViewId, PhotonMessageInfo info)
+    // seenMonster·seenCookie·seenStamp: 괴물 화면이 잡기를 판정한 순간의 두 위치와 PhotonNetwork.ServerTimestamp(§46.2 GK1).
+    private void RequestGrabKill(int monsterViewId, Vector3 seenMonster, Vector3 seenCookie, int seenStamp, PhotonMessageInfo info)
     {
         if (pv == null) return;
         // 보낸 사람이 그 괴물 캐릭터의 주인인지 확인한다 — 아무 클라이언트나 쿠키를 파괴할 수 없게(research.md R4.10-2).
@@ -220,15 +222,22 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         }
         if (IsBroken) return;
 
-        // 방장이 확정을 검증한다 — 처형 연출이 몸을 괴물 손으로 옮기기 전, 방장 화면의 실제 위치로(S-06).
+        // 방장이 확정을 검증한다 — 처형 연출이 몸을 괴물 손으로 옮기기 전에, 괴물 화면이 본 순간으로 되돌려(S-06, §46.2 GK1).
         // 확정하면 방장이 HitCount·DeathCause·CatchCount를 쓰고, 아이템은 EscapeAuthority.OnPlayerBroken이 그 자리에 떨어뜨린다(D11).
-        if (PhotonNetwork.IsMasterClient) GrabKillAuthority.TryConfirm(this, monster, info.Sender);
+        bool rejected = PhotonNetwork.IsMasterClient && !GrabKillAuthority.TryConfirm(this, monster, info.Sender,
+            new GrabKillAuthority.GrabClaim { Valid = true, Monster = seenMonster, Cookie = seenCookie, SeenStamp = seenStamp });
 
         // 붙잡힘 연출을 먼저 시작해야 곧이어 오는 HitCount 변경에 즉시 사라지지 않는다.
         bool presented = lifePresenter != null && lifePresenter.BeginGrabKill(monster);
 
-        if (!pv.IsMine) return;
+        // 거절은 모두에게 바로 알린다(GK3). 방장 자신에게는 RpcTarget.All이 즉시 실행되므로 이 처리(연출·확정 대기)를 마친 뒤에 보낸다.
+        if (pv.IsMine) BeginAwaitingDeath(presented);
+        if (rejected) pv.RPC(RpcGrabKillRejected, RpcTarget.All, monsterViewId);
+    }
 
+    // 본인: 붙잡혀 확정을 기다린다.
+    private void BeginAwaitingDeath(bool presented)
+    {
         // 본인: 연출만 맞춘다. 파괴 확정은 방장이 쓴 HitCount로 온다(OnPlayerPropertiesUpdate). 확정이 오지 않으면 풀린다.
         awaitingDeathUntil = Time.time + GrabKillConfirmTimeout;
 
@@ -259,15 +268,29 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         rb.isKinematic = true;
     }
 
+    // 방장이 잡기를 거절했다(§46.2 GK3): 모든 화면이 붙잡힘 연출을 끝내고, 쿠키 본인은 바로 움직이고, 괴물 본인은 잡는 동작과 쿨다운을 되돌린다.
+    [PunRPC]
+    private void GrabKillRejected(int monsterViewId, PhotonMessageInfo info)
+    {
+        if (pv == null || (info.Sender != null && !info.Sender.IsMasterClient && !PhotonNetwork.OfflineMode)) return;
+        if (IsBroken) return;
+        if (lifePresenter != null) lifePresenter.CancelGrabKill();
+        if (pv.IsMine && awaitingDeathUntil > 0f) CancelAwaitedDeath(rejected: true);
+        PhotonView monsterView = PhotonView.Find(monsterViewId);
+        if (monsterView != null && monsterView.IsMine && monsterView.TryGetComponent(out MonsterController monster)) monster.CancelGrabKill();
+    }
+
     // 처형 확정이 오지 않았다(방장이 거절했거나 방장이 바뀌는 사이 사라짐): 다시 움직일 수 있게 되돌린다.
-    private void CancelAwaitedDeath()
+    private void CancelAwaitedDeath(bool rejected = false)
     {
         awaitingDeathUntil = -1f;
         if (IsBroken) return;
         rb.isKinematic = false;
         rb.linearVelocity = Vector3.zero;
         animationDriver.ChangeState(PlayerMoveState.Idle);
-        Debug.LogWarning($"[HideOrSeekPlayer] Grab kill on view {pv.ViewID} was not confirmed by the master. Released.");
+        if (lifePresenter != null) lifePresenter.CancelGrabKill();
+        if (rejected) Debug.Log($"[HideOrSeekPlayer] Grab kill on view {pv.ViewID} was rejected by the master. Released at once.");
+        else Debug.LogWarning($"[HideOrSeekPlayer] Grab kill on view {pv.ViewID} was not confirmed by the master in {GrabKillConfirmTimeout}s. Released.");
     }
 
     private void Awake()
@@ -303,6 +326,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     private void Start()
     {
         baseSpeed = speed;
+        if (pv.IsMine) stamina = new StaminaModel(GameSettings.Current != null ? GameSettings.Current.Stamina : null, float.MaxValue);
         if (animator != null)
             animator.applyRootMotion = false; // 이동은 전부 Move()가 Rigidbody 속도를 직접 갱신하므로, 클립에 내장된 루트 모션이 겹쳐 적용되면 안 됨
 
@@ -383,10 +407,14 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
         if (IsMovementLocked)
         {
+            runningNow = false;
+            TickStamina(false, false);
             OnLocalMovementLocked();
             return;
         }
 
+        bool wantsMove = PlayerInput.Move != Vector2.zero || isDodge;
+        runningNow = TickStamina(PlayerInput.RunHeld && !isDodge, wantsMove);
         CheckMovementInput(); // 이동 입력 체크 + 회전 갱신(좌표 이동은 FixedUpdate의 Move()가 담당)
         CheckJumpInput(); // 점프 입력 체크(의도만 기록, 실제 적용은 FixedUpdate)
         CheckDodgeInput(); // 회피 입력 체크
@@ -481,8 +509,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
             if (!isJump && !isDodge) // 점프와 회피 중이 아닐 때만 이동 애니메이션 상태 변경
             {
-                bool isRunning = PlayerInput.RunHeld;
-                animationDriver.ChangeState(isRunning ? PlayerMoveState.Run : PlayerMoveState.Walk);
+                animationDriver.ChangeState(runningNow ? PlayerMoveState.Run : PlayerMoveState.Walk); // 지쳤으면 Shift를 눌러도 걷는다(§46.3)
             }
         }
         else
@@ -526,6 +553,23 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         }
     }
 
+    // 스태미나(Request1009Plan.md §46.3): 본인 화면에서만 계산한다. 달리기(Shift)·회피가 쓰고, StaminaHud·SkillHud가 읽는다.
+    public const float RunMultiplier = 1.3f;
+    private StaminaModel stamina;
+    private bool runningNow;
+    // 대기실(GameLobbyScene 등 탈출 모드가 아닌 씬)에서는 무한 — 스태미나를 쓰지 않는다(2026-10-31 사용자 요청).
+    public StaminaModel Stamina => EscapeManager.IsActive ? stamina : null;
+    public bool IsRunning => runningNow;
+
+    private bool TickStamina(bool wantsRun, bool moving)
+    {
+        StaminaModel model = Stamina;
+        if (model == null) return wantsRun;
+        bool ran = model.Tick(Time.deltaTime, wantsRun, moving);
+        if (model.ConsumeJustExhausted()) GameAudio.PlayCharacter(SoundId.CookieBreath, this); // 바닥나는 순간 숨차는 소리
+        return ran;
+    }
+
     // 회피는 3초에 한 번(§26 H9). 스킬 칸(SkillHud)이 남은 시간을 그린다.
     public const float DodgeCooldown = 3f;
     private float dodgeReadyAt;
@@ -533,7 +577,8 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
     private void CheckDodgeInput()
     {
-        if (PlayerInput.DodgePressed && rotation != Vector3.zero && !isJump && !isDodge && Time.time >= dodgeReadyAt)
+        if (PlayerInput.DodgePressed && rotation != Vector3.zero && !isJump && !isDodge && Time.time >= dodgeReadyAt
+            && (Stamina == null || Stamina.TrySpendDodge())) // 회피는 스태미나 25(§46.3) — 모자라면 하지 않는다
         {
             dodgeReadyAt = Time.time + DodgeCooldown;
             dodgeMoveDir = rotation;
@@ -583,7 +628,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         }
         else // Shift를 눌렀을 경우 기본 속도의 +30%(질주). 아니면 100% 속도 유지 — 점프/낙하 중에도 동일하게 적용(PlayerControllPlan.md §24/§25)
         {
-            vel = (PlayerInput.RunHeld ? baseSpeed * 1.3f : baseSpeed) * SpeedBoost;
+            vel = (runningNow ? baseSpeed * RunMultiplier : baseSpeed) * SpeedBoost;
             dir = rotation;
             lookDir = new Vector3(rotation.x, 0f, rotation.z);
         }

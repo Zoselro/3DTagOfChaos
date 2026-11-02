@@ -42,6 +42,7 @@ public sealed class EscapeAuthority
     private bool witchTimerRequested;
     private readonly Dictionary<int, float> lastPositionAt = new Dictionary<int, float>();
     private readonly Dictionary<int, float> suspectUntil = new Dictionary<int, float>();
+    private readonly Dictionary<int, StaminaWatch> staminaWatch = new Dictionary<int, StaminaWatch>(); // §46.3 ST4
     private readonly Dictionary<int, float> moveExemptUntil = new Dictionary<int, float>(); // 호박마차 순간이동 직후(이동 검사 제외)
     private const float SuspectSeconds = 1f;          // 불가능한 이동을 본 뒤 그 사람의 위치가 중요한 요청을 거부하는 시간(S-15, §26 H2: 3초 → 1초)
     private const float PlausibleSpeedFactor = 1.5f;
@@ -250,9 +251,24 @@ public sealed class EscapeAuthority
                     Debug.LogWarning($"[NetGuard] Actor {actor} moved {Vector3.Distance(prev, pos):F1} m in {now - prevAt:F2}s — escape requests ignored for {SuspectSeconds}s.");
                 }
             }
+            if (judge && c is HideOrSeekPlayer runner && lastPositions.TryGetValue(actor, out Vector3 before) && lastPositionAt.TryGetValue(actor, out float beforeAt))
+                WatchStamina(actor, runner, before, pos, now - beforeAt, exempt);
             lastPositions[actor] = pos;
             lastPositionAt[actor] = now;
         }
+    }
+
+    // 방장 추정 검사(§46.3 ST4): 수평 속도로 달렸는지 추정해 같은 스태미나 규칙을 돌리고, 지쳤어야 할 때 계속 달리면 경고 로그만 남긴다.
+    private void WatchStamina(int actor, HideOrSeekPlayer cookie, Vector3 from, Vector3 to, float dt, bool exempt)
+    {
+        if (dt <= 0.05f || dt > 1f) return;
+        if (!staminaWatch.TryGetValue(actor, out StaminaWatch watch)) staminaWatch[actor] = watch = new StaminaWatch(GameSettings.Current.Stamina);
+        Vector3 d = to - from;
+        d.y = 0f;
+        float speed = d.magnitude / dt;
+        bool skip = exempt || cookie.CurrentCarrierViewId >= 0 || cookie.IsMovementLocked;
+        if (watch.Observe(dt, skip ? 0f : speed, cookie.WalkSpeed * cookie.SpeedBoost, Time.realtimeSinceStartup))
+            Debug.LogWarning($"[NetGuard] Actor {actor} kept running {watch.OverrunSeconds:F1}s past the stamina limit (speed {speed:F1} m/s).");
     }
 
     private bool IsSuspect(int actor) => suspectUntil.TryGetValue(actor, out float until) && Time.realtimeSinceStartup < until;
@@ -425,7 +441,7 @@ public sealed class EscapeAuthority
             case EscapeOp.HatEscape: changed = HatEscape(r.Sender); break;
             case EscapeOp.PlaceBomb: changed = PlaceBomb(r.Sender, r.Pos); break;
             case EscapeOp.RemoveBomb: changed = RemoveBomb(r.Sender, r.A); break;
-            case EscapeOp.DecoyCatch: changed = DecoyCatch(r.Sender, r.A); break;
+            case EscapeOp.DecoyCatch: changed = DecoyCatch(r.Sender, r.A, r.Pos, r.B); break;
             default: changed = false; break;
         }
         if (changed) Commit();
@@ -857,7 +873,8 @@ public sealed class EscapeAuthority
         }
     }
 
-    private bool DecoyCatch(int actor, int id)
+    // seen·seenStamp: 괴물 화면이 잡은 순간의 AI 위치와 PhotonNetwork.ServerTimestamp(§46.2 GK4, 0이면 옛 클라이언트).
+    private bool DecoyCatch(int actor, int id, Vector3 seen, int seenStamp)
     {
         int i = State.DecoyIndex(id);
         if (i < 0 || !RoomState.IsMonster(actor)) return false;
@@ -865,7 +882,7 @@ public sealed class EscapeAuthority
         double now = PhotonNetwork.Time;
         // 움직이는 AI는 경로 위치로 잰다(모든 화면이 같은 경로로 그린다, Request1009Plan.md §44.6).
         DecoyRoute.Pose pose = manager.Routes.PoseOf(d, now);
-        if (d.Caught || !IsNear(actor, pose.Position, InteractReach)) return false;
+        if (d.Caught || !DecoyWithinReach(actor, d, pose, seen, seenStamp, now)) return false;
         // 바로 지우지 않고 잡는 동작(GrabKill) 동안 괴물 손에 들려 있게 한다 — 끝나면 Tick이 지운다(§26 R10)
         d.Pos = pose.Position; // 마지막으로 확정한 자리(방장이 바뀌어도 여기서 시작)
         d.Yaw = pose.Yaw;
@@ -873,6 +890,35 @@ public sealed class EscapeAuthority
         d.CaughtAt = now;
         State.Decoys[i] = d;
         return true;
+    }
+
+    // 괴물 화면이 본 순간으로 되돌려 잰다(§46.2 GK4): 그 화면이 본 AI 위치가 [본 시각 − 0.5초, 지금] 동안의 경로에서 2 m 안이고,
+    // 괴물이 그 위치에 손이 닿으면 잡힌다. 경로가 없거나(서 있는 AI) 본 시각이 없으면 지금 경로 위치로 잰다.
+    private bool DecoyWithinReach(int actor, EscapeState.Decoy d, DecoyRoute.Pose pose, Vector3 seen, int seenStamp, double now)
+    {
+        if (seenStamp == 0 || !manager.Routes.TryGet(d.Id, out DecoyRoute route)) return IsNear(actor, pose.Position, InteractReach);
+        float age = unchecked(PhotonNetwork.ServerTimestamp - seenStamp) / 1000f;
+        double from = now - Mathf.Max(0f, age) - NetSecurityRules.GrabRewindWindow;
+        float error = DecoyRoute.MinDistance(route, seen, from, now);
+        bool reach = MonsterCouldReach(actor, seen, from, now, age, out float monsterGap);
+        bool ok = age <= NetSecurityRules.GrabClaimMaxAge && age >= -0.1f && error <= NetSecurityRules.GrabClaimPathTolerance && reach;
+        Debug.Log($"[GrabKill] Decoy {d.Id} {(ok ? "caught" : "rejected")}: path error {error:F1} m, now {Vector3.Distance(seen, pose.Position):F1} m apart, " +
+                  $"monster gap {monsterGap:F1} m, age {age * 1000f:F0} ms.");
+        return ok;
+    }
+
+    // 괴물이 본 AI 자리에 손이 닿았는지: 방장 기록의 괴물 길(지연만큼 앞으로 늘림)이 그 자리에서 InteractReach 안을 지났는지(§46 후속).
+    // 예전에는 0.2초마다 잰 방장 화면의 지금 위치로만 재서, 달려와 잡은 괴물은 아직 뒤에 있는 것으로 보여 거절됐다.
+    private bool MonsterCouldReach(int actor, Vector3 seen, double from, double now, float age, out float gap)
+    {
+        gap = -1f;
+        IGameCharacter monster = CharacterRegistry.FindByOwner(actor);
+        if (monster == null || monster.View == null || !PositionHistory.TryGet(monster.View.ViewID, out PositionTrack track))
+            return IsNear(actor, seen, InteractReach);
+        Vector3 current = monster.gameObject.transform.position;
+        float lead = monster.View.IsMine ? 0f : NetSecurityRules.RemoteLead(age);
+        if (!track.TryMinDistanceLeading(seen, from, now, current, lead, out gap)) return IsNear(actor, seen, InteractReach);
+        return gap <= InteractReach;
     }
 
     // ---------------- tools ----------------

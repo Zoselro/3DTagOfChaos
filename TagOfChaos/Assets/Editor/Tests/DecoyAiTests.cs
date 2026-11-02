@@ -65,7 +65,7 @@ public class DecoyAiTests
         for (int i = 0; i < points.Length; i++) points[i] = new Vector3(-150.25f + i * 3.3f, 1.07f * i, 149.99f - i * 7.1f);
         var r = new DecoyRoute { StartAt = 12345.678, Gait = DecoyGait.Run, DanceId = 7, Speed = 26f, HoldUntil = 18.5f, FaceYaw = 123.4f, Points = points };
         byte[] data = DecoyRoute.Encode(r);
-        Assert.LessOrEqual(data.Length, 18 + DecoyRoute.MaxPoints * 6, "one route stays under ~90 bytes");
+        Assert.LessOrEqual(data.Length, 20 + DecoyRoute.MaxPoints * 6, "one route stays under ~92 bytes (format 2 adds RunUntil, §46.4)");
 
         Assert.IsTrue(DecoyRoute.TryDecode(data, out DecoyRoute d));
         Assert.AreEqual(r.StartAt, d.StartAt, 1e-9);

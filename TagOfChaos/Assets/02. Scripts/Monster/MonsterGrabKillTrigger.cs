@@ -168,7 +168,9 @@ public class MonsterGrabKillTrigger : MonoBehaviour
 
         // 전원에게 보낸다: 모든 클라이언트가 쿠키를 이 괴물의 Grab_Socket에 붙여 처형 연출을 보여야 하므로 괴물 ViewID를 함께 넘긴다.
         // 파괴 확정(HitCount)은 여전히 피해자 본인 클라이언트만 한다(소유권 원칙, Bug-fix-plan.md §36).
-        cookiePv.RPC(HideOrSeekPlayer.RpcRequestGrabKill, RpcTarget.All, monsterPv.ViewID);
+        // 이 화면이 판정한 순간의 두 위치와 시각을 함께 보낸다 — 방장이 그 순간으로 되돌려 잰다(§46.2 GK1).
+        cookiePv.RPC(HideOrSeekPlayer.RpcRequestGrabKill, RpcTarget.All, monsterPv.ViewID,
+            monsterPv.transform.position, cookie.transform.position, PhotonNetwork.ServerTimestamp);
         // 파괴·잡은 횟수는 방장이 거리·단계를 검증한 뒤 쓴다(GrabKillAuthority, AuditFixPlan.md §8.1).
         return true;
     }

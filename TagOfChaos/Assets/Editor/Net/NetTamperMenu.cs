@@ -95,7 +95,9 @@ public static class NetTamperMenu
         foreach (MonsterController m in Object.FindObjectsByType<MonsterController>(FindObjectsSortMode.None))
             if (m.photonViewOwner() == PhotonNetwork.LocalPlayer) monster = m;
         if (target == null || monster == null) { Debug.Log("[NetTamper] Need to be a monster and another cookie."); return; }
-        target.View.RPC(HideOrSeekPlayer.RpcRequestGrabKill, RpcTarget.All, monster.GetComponent<PhotonView>().ViewID);
+        // 실제 위치를 그대로 보낸다(멀다) — 방장은 OutOfReach로 거절하고 모두에게 거절을 알린다(§46.2 GK3).
+        target.View.RPC(HideOrSeekPlayer.RpcRequestGrabKill, RpcTarget.All, monster.GetComponent<PhotonView>().ViewID,
+            monster.transform.position, target.transform.position, PhotonNetwork.ServerTimestamp);
         Debug.Log("[NetTamper] Sent a grab-kill request from afar. Expected: the master logs [GrabKill] Rejected, the cookie stays alive.");
     }
 

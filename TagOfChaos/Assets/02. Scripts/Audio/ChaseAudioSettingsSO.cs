@@ -22,7 +22,7 @@ public class ChaseAudioSettingsSO : ScriptableObject
 
     [Header("Distance")]
     [Tooltip("술래가 이 거리(m) 안에 들어오면 추격음이 들리기 시작한다")]
-    [SerializeField, Min(1f)] private float audibleRadius = 20f;
+    [SerializeField, Min(1f)] private float audibleRadius = 30f; // 2026-10-31 사용자 지시: 20 → 30 m
     [Tooltip("audibleRadius × 이 비율 안에서는 최대 음량")]
     [SerializeField, Range(0f, 0.95f)] private float fullRadiusRatio = 0.25f;
     [Tooltip("가로 0 = 들리기 시작하는 거리, 1 = 최대 음량 거리 / 세로 = 음량 배율")]

@@ -85,6 +85,10 @@ public class GameSettingsSO : ScriptableObject
     [Tooltip("괴물 발에서 잡을 수 있는 쿠키 발까지의 최대 높이(m). 구조물 위에 올라간 쿠키도 이 높이까지는 잡는다(Request1009Plan.md §11).")]
     [SerializeField, Min(0f)] private float maxGrabHeight = 6f;
 
+    [Header("Stamina (Request1009Plan.md §46.3 — 쿠키·AI 공통)")]
+    [SerializeField] private StaminaSettings stamina = new StaminaSettings();
+    public StaminaSettings Stamina => stamina ?? (stamina = new StaminaSettings());
+
     [Header("Monster View (GameFixPlan.md F6)")]
     [Tooltip("괴물이 판을 시작할 때의 시점.")]
     [SerializeField] private MonsterViewMode monsterDefaultView = MonsterViewMode.FirstPerson;

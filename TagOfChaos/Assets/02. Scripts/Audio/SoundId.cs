@@ -38,6 +38,7 @@ public enum SoundId
     Respawn = 214,
     DoorOpen = 216,
     DoorClose = 217,
+    CookieBreath = 218, // 스태미나가 바닥났을 때 숨차는 소리(Request1009Plan.md §46.3)
 
     // 색칠(2D, 본인)
     PaintStroke = 300,

@@ -58,6 +58,10 @@ public static class GameStartAuthority
         if (requesterActor != RoomState.HostActor()) return Result.NotHost;
         if (RoomState.TryGetDouble(NetKeys.PrepareEndTime, out _) || Time.unscaledTime - lastStartTime < DuplicateGuardSeconds)
             return Result.AlreadyStarted;
+        // 방이 이미 맵으로 옮겨지는 중이면(방 씬이 대기실이 아님·씬 로드 중) 다시 시작하지 않는다(§46 후속). 예전에는 첫 맵을 불러오는 동안
+        // 시작이 한 번 더 처리되어 다른 맵을 골랐고, PUN이 첫 로드를 취소해 방장만 대기실에 갇혔다.
+        if (StartReadiness.IsRoomMoving(RoomSceneFollower.RoomScene(), SceneNames.GameLobby, PunSceneLoad.IsBusy))
+            return Result.AlreadyStarted;
         if (StartReadiness.IsSettling(MasterClientPolicy.SwitchPending, Time.realtimeSinceStartup - MasterClientPolicy.LastSwitchAt, SettleSeconds))
         {
             RememberPending(requesterActor);

@@ -59,7 +59,7 @@ public static class NetSecurityRules
 
     public const float GrabReachSlack = 3f; // 동기화 지연·몸 크기 여유(m)
 
-    // 방장이 처형을 확정해도 되는지(S-04·S-06). 위치는 방장 화면 기준.
+    // 방장이 처형을 확정해도 되는지(S-04·S-06). 위치는 방장 화면 기준 — 기록(PositionHistory)이 없을 때(입장 직후)만 쓴다.
     public static bool CanConfirmGrabKill(bool senderIsMonster, bool huntPhase, bool cookieAlive, bool cookieOnMap,
         Vector3 monsterFeet, Vector3 cookieFeet, float reachFromCenter, float maxHeight, float sinceLastConfirm, float minInterval)
     {
@@ -70,6 +70,57 @@ public static class NetSecurityRules
         d.y = 0f;
         float reach = reachFromCenter + GrabReachSlack;
         return d.sqrMagnitude <= reach * reach;
+    }
+
+    // 되돌림 판정(Request1009Plan.md §46.2 GK1): 괴물 화면이 본 순간의 두 위치로 잡기 거리를 재고, 그 위치들이 방장 기록의 실제 길과 맞는지 본다.
+    public const float GrabClaimReachSlack = 0.5f;   // 괴물 화면 판정과 보낸 값의 차이(반올림·한 프레임)
+    public const float GrabClaimPathTolerance = 2f;  // 주장한 위치가 방장 기록의 길에서 벗어나도 되는 거리(m)
+    public const float GrabClaimMaxAge = 0.6f;       // 이보다 오래된 주장은 받지 않는다(초)
+    public const float GrabRewindWindow = 0.5f;      // 본 시각보다 이만큼 앞선 기록부터 비교한다(초)
+    public const float RemoteViewLag = 0.15f;        // 방장 화면의 원격 캐릭터가 받은 위치보다 늦게 그려지는 시간(보간, 초)
+    public const float MaxRemoteLead = 0.6f;
+
+    // 원격 캐릭터의 기록을 앞으로 늘릴 시간: 보낸 뒤 걸린 시간 + 보간 지연.
+    public static float RemoteLead(float claimAge) => Mathf.Clamp(claimAge, 0f, GrabClaimMaxAge) + RemoteViewLag;
+
+    public enum GrabVerdict : byte
+    {
+        Confirmed,
+        NotMonster,
+        WrongPhase,
+        NotAlive,
+        OffMap,
+        TooSoon,
+        ClaimTooOld,
+        OutOfReach,
+        CookieMismatch,
+        MonsterMismatch,
+    }
+
+    // 공통 조건(보낸 사람·단계·생존·맵·간격).
+    public static GrabVerdict GrabPreconditions(bool senderIsMonster, bool huntPhase, bool cookieAlive, bool cookieOnMap, float sinceLastConfirm, float minInterval)
+    {
+        if (!senderIsMonster) return GrabVerdict.NotMonster;
+        if (!huntPhase) return GrabVerdict.WrongPhase;
+        if (!cookieAlive) return GrabVerdict.NotAlive;
+        if (!cookieOnMap) return GrabVerdict.OffMap;
+        return sinceLastConfirm < minInterval ? GrabVerdict.TooSoon : GrabVerdict.Confirmed;
+    }
+
+    // 괴물 화면이 본 순간(claimAge초 전)의 괴물·쿠키 위치로 확정해도 되는지. cookiePathError·monsterPathError는 그 주장 위치가
+    // 방장 기록의 길(본 시각 − 0.5초 ~ 지금)에서 가장 가까웠던 거리(PositionTrack.TryMinDistance).
+    public static GrabVerdict JudgeGrabClaim(Vector3 seenMonster, Vector3 seenCookie, float reachFromCenter, float maxHeight,
+        float claimAge, float cookiePathError, float monsterPathError)
+    {
+        if (claimAge > GrabClaimMaxAge || claimAge < -0.1f) return GrabVerdict.ClaimTooOld;
+        Vector3 d = seenCookie - seenMonster;
+        if (d.y > maxHeight + GrabClaimReachSlack) return GrabVerdict.OutOfReach;
+        d.y = 0f;
+        float reach = reachFromCenter + GrabClaimReachSlack;
+        if (d.sqrMagnitude > reach * reach) return GrabVerdict.OutOfReach;
+        if (cookiePathError > GrabClaimPathTolerance) return GrabVerdict.CookieMismatch;
+        if (monsterPathError > GrabClaimPathTolerance) return GrabVerdict.MonsterMismatch;
+        return GrabVerdict.Confirmed;
     }
 
     // ---------------- 쿠키 들기 ----------------

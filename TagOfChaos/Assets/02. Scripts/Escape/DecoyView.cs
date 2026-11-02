@@ -1,3 +1,4 @@
+using Photon.Pun;
 using UnityEngine;
 
 // AI 하나의 모습: 방장이 정한 경로(DecoyRoute, Room Prop "DR_<id>")를 모든 화면이 같은 시각으로 따라간다(Request1009Plan.md §44.5).
@@ -65,7 +66,7 @@ public class DecoyView : MonoBehaviour
     public void RequestCatch()
     {
         requestedAt = Time.unscaledTime;
-        manager.Request(EscapeOp.DecoyCatch, id);
+        manager.Request(EscapeOp.DecoyCatch, id, PhotonNetwork.ServerTimestamp, transform.position); // 본 순간의 위치·시각(§46.2 GK4)
     }
 
     // 상태가 바뀔 때: 경로가 없는 AI만 상태의 자리에 놓는다(경로가 있으면 Tick이 따라간다).
@@ -119,7 +120,7 @@ public class DecoyView : MonoBehaviour
 
         if (pose.Moving)
         {
-            bool run = route.Gait == DecoyGait.Run;
+            bool run = pose.Running; // 지친 AI는 경로의 달리기 끝 지점부터 걷는다(§46.4)
             SetMotion(run ? PlayerMoveState.Run : PlayerMoveState.Walk, 0);
             if (run && Time.time >= nextStep)
             {
@@ -163,6 +164,8 @@ public class DecoyView : MonoBehaviour
             caught = true;
             if (voice != null) voice.Stop();
             foreach (Collider col in GetComponentsInChildren<Collider>()) col.enabled = false; // 괴물 손에 들린 동안 부딪히지 않는다
+            // 진짜 쿠키와 같은 잡힌 동작(Held — 매달려 버둥거림, §46 사용자 요청). 쿠키 본인 화면의 RequestGrabKill과 같은 상태.
+            SetMotion(PlayerMoveState.Held, 0);
         }
         MonsterController monster = FindMonster(d.CaughtBy);
         if (monster == null || monster.GrabSocket == null) return;

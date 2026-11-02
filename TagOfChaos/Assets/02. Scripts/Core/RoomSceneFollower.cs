@@ -47,15 +47,9 @@ public class RoomSceneFollower : MonoBehaviourPunCallbacks
     public static string RoomScene() =>
         RoomState.IsInRoom() && PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(CurrentSceneKey, out object v) ? v as string : null;
 
-    // PUN LoadLevel이 씬을 불러오는 중인지(0 = 한 번도 안 불렀음, 1 = 끝남).
-    public static bool IsPunLoading
-    {
-        get
-        {
-            float p = PhotonNetwork.LevelLoadingProgress;
-            return p > 0f && p < 1f;
-        }
-    }
+    // PUN LoadLevel이 씬을 불러오는 중인지(대기열에서 기다리는 중 포함 — 예전에는 진행도 0을 "안 불러옴"으로 봐서 큐를 되살리고
+    // 다시 불러오기를 반복했다, §46 후속).
+    public static bool IsPunLoading => PunSceneLoad.IsBusy;
 
     // 내가 방의 씬에 들어와 있는지(방 씬 정보가 없으면 그렇다고 본다). 방장 되찾기가 쓴다 — 씬에 없는 사람은 방장이 되면 안 된다.
     public static bool InRoomScene()
@@ -80,8 +74,11 @@ public class RoomSceneFollower : MonoBehaviourPunCallbacks
         if (now < nextTick) return;
         nextTick = now + TickInterval;
 
+        if (PunSceneLoad.RescueCancelled(RoomState.IsInRoom()))
+            RoomSyncLog.Note("A cancelled scene load was blocking later loads — let it finish.");
         bool loading = IsPunLoading;
         RestoreQueueIfStuck(now, loading);
+        RoomSceneTransition.TickDeferred();
         if (!RoomState.IsInRoom() || !PhotonNetwork.IsMessageQueueRunning) { mismatchSince = -1f; return; }
 
         PublishLoadedScene(now, loading);
@@ -104,7 +101,7 @@ public class RoomSceneFollower : MonoBehaviourPunCallbacks
         mismatchSince = -1f;
         FollowCount++;
         RoomSyncLog.Note($"Stranded in {active} while the room is in {room}. Loading it (master: {PhotonNetwork.IsMasterClient}).");
-        PhotonNetwork.LoadLevel(room); // 방장이어도 curScn과 같은 값이라 Props는 다시 쓰지 않고 로컬만 로드한다
+        PunSceneLoad.Load(room); // 방장이어도 curScn과 같은 값이라 Props는 다시 쓰지 않고 로컬만 로드한다
     }
 
     private void RestoreQueueIfStuck(float now, bool loading)

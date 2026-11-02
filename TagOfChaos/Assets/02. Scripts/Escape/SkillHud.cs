@@ -71,6 +71,8 @@ public class SkillHud : MonoBehaviour
         else if (me is HideOrSeekPlayer cookie)
         {
             Set(slots[0], texts.skillDodge, KeyAction.Dodge, cookie.DodgeCooldownLeft, HideOrSeekPlayer.DodgeCooldown, null);
+            // 스태미나가 회피 비용보다 적으면 칸을 어둡게 덮는다(쿨타임 숫자는 그대로, §46.3 ST3).
+            if (cookie.DodgeCooldownLeft <= 0.05f && cookie.Stamina != null && !cookie.Stamina.CanDodge) slots[0].Cover.fillAmount = 1f;
             Set(slots[1], texts.skillUnknown, null, 0f, 1f, null, disabled: true);
         }
     }

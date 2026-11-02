@@ -3,6 +3,7 @@ using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.SceneManagement;
 
 // 맵 씬마다 하나(EscapeSetup 루트, EscapeMapSetup 에디터 도구가 배치). 탈출 상태의 사본을 들고 화면(상자·바닥 아이템·
@@ -376,10 +377,41 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
             Vector2 xz = area.RandomPoint(random, MapInset);
             point = SnapToGround(new Vector3(xz.x, 30f, xz.y));
             if (point.y > 20f || InMonsterRoom(point)) continue;
-            if (IsClearForCharacter(point)) return true;
+            if (IsClearForCharacter(point) && IsWalkableFromSpawn(point)) return true;
         }
         point = default;
         return false;
+    }
+
+    // 쿠키가 걸어서 갈 수 있는 바닥인지(2026-10-31 — 문 기둥 위 들보 같은 올라갈 수 없는 곳에 AI가 생겼다). 위에서 쏜 광선은 가장 높은 면에
+    // 닿으므로, 그 자리가 AI NavMesh 위이고 쿠키 스폰 자리에서 그곳까지 길이 이어지는지 본다. NavMesh가 없는 맵·씬은 막지 않는다.
+    private const float WalkableSnapHeight = 0.6f;
+    private NavMeshPath reachPath;
+    private Vector3 reachAnchor;
+    private bool reachAnchorSet;
+
+    public bool IsWalkableFromSpawn(Vector3 feet)
+    {
+        if (!DecoyNavMesh.Ready) return true;
+        if (!NavMesh.SamplePosition(feet, out NavMeshHit hit, 1.2f, NavMesh.AllAreas) || Mathf.Abs(hit.position.y - feet.y) > WalkableSnapHeight) return false;
+        if (!TryReachAnchor(out Vector3 anchor)) return true;
+        if (reachPath == null) reachPath = new NavMeshPath();
+        return NavMesh.CalculatePath(anchor, hit.position, NavMesh.AllAreas, reachPath) && reachPath.status == NavMeshPathStatus.PathComplete;
+    }
+
+    private bool TryReachAnchor(out Vector3 anchor)
+    {
+        if (!reachAnchorSet)
+        {
+            GameObject spawn = GameObject.Find(SceneSpawnPoints.Cookie);
+            if (spawn != null && NavMesh.SamplePosition(spawn.transform.position, out NavMeshHit hit, 6f, NavMesh.AllAreas))
+            {
+                reachAnchor = hit.position;
+                reachAnchorSet = true;
+            }
+        }
+        anchor = reachAnchor;
+        return reachAnchorSet;
     }
 
     // 이동할 곳이 맞는지(방장 검사): 맵 안, 술래방 밖, 캐릭터가 끼지 않는다.

@@ -26,8 +26,20 @@ public static class GrabKillAuthority
         catches.Clear();
     }
 
+    // 괴물 화면이 본 순간(§46.2 GK1): 괴물·쿠키 위치와 그때의 PhotonNetwork.ServerTimestamp. Valid가 false면 옛 규칙(방장 화면 지금 위치).
+    public struct GrabClaim
+    {
+        public bool Valid;
+        public Vector3 Monster;
+        public Vector3 Cookie;
+        public int SeenStamp;
+    }
+
+    public static float LastClaimAge { get; private set; }               // 시험·로그용
+    public static NetSecurityRules.GrabVerdict LastVerdict { get; private set; }
+
     // 방장: RequestGrabKill RPC를 받은 즉시(처형 연출이 몸을 소켓으로 옮기기 전) 부른다. 확정했으면 true.
-    public static bool TryConfirm(HideOrSeekPlayer cookie, MonsterController monster, Player sender)
+    public static bool TryConfirm(HideOrSeekPlayer cookie, MonsterController monster, Player sender, GrabClaim claim)
     {
         if (!PhotonNetwork.IsMasterClient || cookie == null || monster == null || sender == null) return false;
         Player victim = cookie.View != null ? cookie.View.Owner : null;
@@ -43,13 +55,18 @@ public static class GrabKillAuthority
         GameSettingsSO settings = GameSettings.Current;
         float reach = (trigger != null ? trigger.BodyFrontOffset : 0f) + settings.GrabReachFromFront;
 
-        if (!NetSecurityRules.CanConfirmGrabKill(RoomState.IsMonster(monsterActor), hunt, alive, onMap,
-                monster.transform.position, cookie.transform.position, reach, settings.MaxGrabHeight, since, monster.GrabKillDuration * 0.8f))
+        NetSecurityRules.GrabVerdict verdict = NetSecurityRules.GrabPreconditions(RoomState.IsMonster(monsterActor), hunt, alive, onMap, since, monster.GrabKillDuration * 0.8f);
+        string detail;
+        if (verdict == NetSecurityRules.GrabVerdict.Confirmed) verdict = Judge(cookie, monster, claim, reach, settings.MaxGrabHeight, out detail);
+        else detail = $"phase {phase}, alive {alive}, onMap {onMap}, since {since:F1}s";
+        LastVerdict = verdict;
+
+        if (verdict != NetSecurityRules.GrabVerdict.Confirmed)
         {
-            Debug.LogWarning($"[GrabKill] Rejected: monster actor {monsterActor} -> actor {victim.ActorNumber} " +
-                             $"(phase {phase}, alive {alive}, onMap {onMap}, distance {Vector3.Distance(monster.transform.position, cookie.transform.position):F1} m, since {since:F1}s).");
+            Debug.LogWarning($"[GrabKill] Rejected ({verdict}): monster actor {monsterActor} -> actor {victim.ActorNumber} ({detail}).");
             return false;
         }
+        Debug.Log($"[GrabKill] Confirmed: monster actor {monsterActor} -> actor {victim.ActorNumber} ({detail}).");
 
         lastConfirmAt[monsterActor] = Time.time;
         AuthorityProps.SetPlayer(victim, new Hashtable { { NetKeys.HitCount, 2 }, { NetKeys.DeathCause, (int)DeathCause.Monster } });
@@ -61,4 +78,39 @@ public static class GrabKillAuthority
         AuthorityProps.SetPlayer(sender, new Hashtable { { NetKeys.CatchCount, next } });
         return true;
     }
+
+    // 위치 판정. 기록이 있으면 되돌림 판정, 없으면(입장 직후·옛 클라이언트) 방장 화면의 지금 위치 + 3 m.
+    private static NetSecurityRules.GrabVerdict Judge(HideOrSeekPlayer cookie, MonsterController monster, GrabClaim claim,
+        float reach, float maxHeight, out string detail)
+    {
+        Vector3 monsterNow = monster.transform.position;
+        Vector3 cookieNow = cookie.transform.position;
+        float nowDistance = Flat(cookieNow - monsterNow);
+
+        if (claim.Valid && PositionHistory.TryGet(cookie.View.ViewID, out PositionTrack cookieTrack)
+                        && PositionHistory.TryGet(monster.View.ViewID, out PositionTrack monsterTrack))
+        {
+            float age = unchecked(PhotonNetwork.ServerTimestamp - claim.SeenStamp) / 1000f;
+            LastClaimAge = age;
+            double now = PhotonNetwork.Time;
+            double from = now - Mathf.Max(0f, age) - NetSecurityRules.GrabRewindWindow;
+            bool cookieKnown = cookieTrack.TryMinDistance(claim.Cookie, from, now, cookieNow, out float cookieError);
+            // 괴물이 보낸 것은 자기 "지금" 위치 — 방장 화면의 괴물은 그보다 늦으므로 기록 끝을 마지막 속도로 앞으로 늘려 비교한다.
+            // 괴물 본인이 방장이면 기록이 곧 실제 위치라 늘리지 않는다.
+            float lead = monster.View.IsMine ? 0f : NetSecurityRules.RemoteLead(age);
+            bool monsterKnown = monsterTrack.TryMinDistanceLeading(claim.Monster, from, now, monsterNow, lead, out float monsterError);
+            if (cookieKnown && monsterKnown)
+            {
+                detail = $"seen {Flat(claim.Cookie - claim.Monster):F1} m, now {nowDistance:F1} m, path error cookie {cookieError:F1} / monster {monsterError:F1} m, age {age * 1000f:F0} ms";
+                return NetSecurityRules.JudgeGrabClaim(claim.Monster, claim.Cookie, reach, maxHeight, age, cookieError, monsterError);
+            }
+        }
+
+        LastClaimAge = -1f;
+        detail = $"no history, now {nowDistance:F1} m";
+        return NetSecurityRules.CanConfirmGrabKill(true, true, true, true, monsterNow, cookieNow, reach, maxHeight, float.MaxValue, 0f)
+            ? NetSecurityRules.GrabVerdict.Confirmed : NetSecurityRules.GrabVerdict.OutOfReach;
+    }
+
+    private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 }

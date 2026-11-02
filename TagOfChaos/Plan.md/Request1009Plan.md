@@ -5334,3 +5334,187 @@ v1 §S1~S8 그대로:
 - `ChocolateFactory.unity`의 개발용 `__OfflineBoot`을 지웠다(사용자 확인) → `BuildSceneTests` 9/9. 오프라인 Play 확인은 시험 코드가 Play 중에 오프라인 방을 만든다.
 - Console 오류·경고 0(오프라인에서 쿠키·괴물을 한 사람이 동시에 가진 시험 때만 NetGuard 이동 경고가 났다 — 실제 판에는 없는 상황).
 - 남은 것: **T2 멀티(2명 이상)** — 두 화면에서 캐릭터 겉모습·던지기·휘두르기·갇힘 위치가 같은지, 갇힌 동안 괴물이 잡지 못하는지, 조준 자세가 보이는지.
+
+## 46. 2026-10-31 추격음 30 m · 잡는 순간 도망친 쿠키가 "못 잡음"이 되는 문제 · 스태미나(쿠키·AI)
+
+**요청**
+- 추격음 거리를 30 m로 늘린다 — **바로 적용**.
+- 괴물이 잡는 거리에서 딱 잡는 순간 쿠키가 도망가면, 잡는 동작은 나오는데 쿠키는 도망친 것(못 잡음)으로 처리된다.
+- 스태미나 시스템을 넣는다. AI에도 똑같이 적용한다.
+- 나머지 두 가지는 소스를 읽고 실제 코드에 맞춰 상세 계획을 쓴다(이번에는 계획만).
+
+### 46.0 추격음 30 m — 적용함 ✅
+
+- `Assets/Resources/Audio/ChaseAudioSettings.asset`의 `audibleRadius`: **실제 저장값은 35 m였다**(코드 기본값 20 m와 달랐다) → **30 m**.
+  - 최대 음량 반경 = 30 × 0.25 = 7.5 m. 북 단계 시작 거리는 비율을 따라 30 m · 7.5 m로 자동으로 다시 계산됐다.
+- 코드 기본값(`ChaseAudioSettingsSO.audibleRadius`)도 30 m로, AI 도망 판단의 대비값(`DecoyBrain`, 설정을 못 읽을 때)도 30 m로 맞췄다.
+- AI 도망은 같은 거리를 쓴다 → 30 m × 겁 0.8~1.2 = 24~36 m에서 도망을 시작한다(이전 35 m 기준 28~42 m).
+- 시험: `DistanceFadeTests` 12/12, `AudioTests` 57/57, `DecoyAiTests` 14/14, 컴파일 오류 0.
+
+### 46.1 지금 코드 — 잡기
+
+| 부분 | 코드 | 지금 하는 일 |
+|---|---|---|
+| 조준 | `MonsterGrabKillTrigger.FindAimTarget` | **괴물 화면**에 보이는 쿠키 위치(보간된 원격 위치)로 몸 앞면 + `GrabReachFromFront` 2 m(중심에서 1.87 + 2 = 3.87 m) 안인지 본다 |
+| 잡기 시작 | `TryGrabKill` | 괴물 주인 화면에서 바로 `PlayGrabKill()`(잡는 동작) + 모든 화면에 RPC `RequestGrabKill`. 괴물 쿨다운 시작 |
+| 받는 쪽 | `HideOrSeekPlayer.RequestGrabKill` | 모든 화면이 `CookieLifeStatePresenter.BeginGrabKill`로 쿠키를 괴물 손에 붙이는 연출을 **먼저** 시작한다. 쿠키 본인은 4초(`GrabKillConfirmTimeout`) 동안 멈추고 확정을 기다린다 |
+| 확정 | `GrabKillAuthority.TryConfirm` → `NetSecurityRules.CanConfirmGrabKill` | **방장 화면의 지금 위치**로 거리를 다시 잰다: 3.87 + 여유 `GrabReachSlack` 3 m = 6.87 m. 넘으면 거절(로그만) |
+| 거절되면 | `CancelAwaitedDeath`(4초 뒤) | 쿠키 본인만 4초 뒤 풀린다. 괴물에게는 거절을 알리지 않는다 |
+| 위치 동기화 | `NetworkTransformSync.Interpolate` | 초당 10번 보내고, 받는 쪽은 초당 10 비율로 따라간다(약 0.1~0.3초 뒤처짐) |
+
+**원인**
+- 쿠키 달리기는 20 m/s × 1.3 = **26 m/s**(회피 2배면 40 m/s)다. 괴물 화면과 방장 화면은 각자 0.1~0.3초 뒤처진 위치를 보고, RPC가 가는 데도 시간이 든다.
+- 그래서 괴물 화면에서는 손 안이던 쿠키가 방장 화면에서는 이미 **5~10 m 밖**이다. 여유 3 m로는 모자라 확정이 거절된다.
+- 그런데 연출은 확정을 기다리지 않고 모든 화면에서 시작한다. 결과: **잡는 동작은 나오는데, 4초 뒤 쿠키가 풀린다**(사용자가 본 현상).
+
+### 46.2 잡기 고치기 설계(GK0~GK5)
+
+1. **방장이 "괴물이 본 순간"으로 되돌려 잰다(지연 보정)** — GK0·GK1
+   - 새 `PositionHistory`(Core/): 방장이 모든 캐릭터의 위치를 0.05초마다 1.5초분 기록한다(`PhotonNetwork.Time` 기준, 원형 버퍼). 기존 `EscapeAuthority.TrackPositions`(0.2초)와 별도로, 캐릭터마다 30칸.
+   - 괴물 RPC에 **"괴물 화면이 본 쿠키 위치·괴물 위치"**와 보낸 시각(`info.SentServerTime`)을 함께 보낸다.
+   - 방장 판정(`CanConfirmGrabKill` 확장):
+     - (a) 괴물이 보낸 두 위치의 거리 ≤ 잡기 거리 + 0.5 m(괴물 화면 판정이 맞는지)
+     - (b) 괴물이 보낸 쿠키 위치가, 방장 기록에서 [보낸 시각 − 0.5초, 받은 시각] 사이 쿠키가 실제로 있던 길에서 **2 m 안**(조작 막기 — 없는 곳을 주장하지 못함)
+     - (c) 괴물 위치도 같은 방식으로 기록과 맞는지
+   - 셋 다 맞으면 확정한다. 지금의 "방장 화면 현재 위치 + 3 m" 규칙은 기록이 없을 때(입장 직후)만 쓴다.
+   - 효과: 괴물 화면에서 손 안에 있었으면 쿠키가 그 뒤에 도망쳐도 잡힌다(잡는 쪽 기준, 액션 게임의 일반적인 방식). 다만 0.5초보다 오래된 주장은 받지 않는다.
+2. **잡힌 쿠키는 확정 전까지 그 자리에 "붙잡힘"** — GK2
+   - 쿠키 본인 화면: RPC를 받는 순간 이미 멈추고 손으로 옮겨지는 것은 지금과 같다. 그대로 둔다.
+   - 확정이 오면 지금처럼 부서진다. 확정까지 걸리는 시간은 0.1~0.3초다.
+3. **거절되면 바로 모두에게 알린다** — GK3
+   - 새 RPC `GrabKillRejected`(방장 → 모두): 쿠키 연출을 바로 끝낸다(`CookieLifeStatePresenter.CancelGrabKill` 새로 — 크기·위치 복원). 쿠키 본인은 4초 기다리지 않고 바로 움직인다. 괴물은 잡는 동작을 끊고 쿨다운도 돌려준다.
+   - 거절은 지연 보정 뒤에도 실제로 먼 경우(벽 너머·조작)만 남는다.
+4. **AI 잡기도 같은 규칙** — GK4
+   - `EscapeAuthority.DecoyCatch`는 경로 위치로 잰다(§44.6). AI는 경로가 결정적이라 "괴물이 본 시각"의 경로 위치를 계산할 수 있다 → 같은 0.5초 되돌림을 쓴다(`DecoyRoute.Sample(route, 보낸 시각)`).
+5. **원격 쿠키를 덜 뒤처지게(선택)** — GK5
+   - 받는 쪽 보간을 "속도 + 받은 시각"으로 앞질러 그리는 방식(외삽 0.1초까지)으로 바꾸면 괴물 화면의 쿠키가 실제와 더 가깝다. 다만 방향을 확 틀 때 튀어 보일 수 있어 **GK0~GK3을 먼저 하고, 시험해 보고 필요하면** 한다.
+6. **진단 로그**: `[GrabKill] confirm/reject` 줄에 괴물이 본 거리, 방장 기록의 거리, 지연(ms)을 남긴다.
+
+### 46.3 스태미나 설계 — 쿠키(ST0~ST5)
+
+**지금**: 걷기 20 m/s, Shift 달리기 ×1.3(`HideOrSeekPlayer.Move`, `PlayerInput.RunHeld`)이 **무한**이다. 회피(×2, 0.5초)는 3초 쿨다운(`SkillHud`가 남은 시간을 보여 줌). 점프는 제한 없음.
+
+**규칙(값은 `GameSettingsSO` 새 묶음 `Stamina`, 코드 수정 없이 조정)**
+
+| 항목 | 기본값(제안) | 뜻 |
+|---|---|---|
+| 최대 | 100 | |
+| 달리기 소모 | 초당 20 | 가득 차 있으면 5초 달릴 수 있다 |
+| 회복 | 초당 25(달리기를 멈추고 0.8초 뒤부터) | 0 → 100이 4초 |
+| 걷는 중 회복 배율 | × 0.7 | 서 있으면 100%, 걸으면 70% |
+| 지침(바닥남) | 0이 되면 **35까지 찰 때까지 달릴 수 없다** | Shift를 눌러도 걷는다. 숨차는 소리 1번 |
+| 회피 | 25 소모, 25 미만이면 못 함 | 쿨다운 3초는 그대로 |
+| 점프 | 소모 없음(제안) | |
+
+- **계산은 본인 화면**(`PlayerStamina` 새 컴포넌트, Unit/): 달리기·회피 판단에 쓴다. 다른 사람은 몰라도 된다(움직임으로 보인다).
+- **방장 검사**: 지금 이동 속도 검사(`IsPlausibleMove`)가 최대 속도를 막는다. 스태미나 조작(무한 달리기)은 방장이 "달리기 속도로 움직인 시간"을 누적해 같은 규칙으로 추정하고, 크게 넘으면 경고 로그를 남긴다(1차는 로그만 — 정상 플레이를 잘못 막지 않게).
+- **화면**:
+  - 쿠키 발밑 또는 화면 아래 가운데에 가로 막대(가득 차면 1초 뒤 사라짐).
+  - 지치면 막대가 빨갛게 깜빡이고 숨소리가 난다.
+  - 스킬 칸(회피)은 스태미나가 모자라면 어둡게 표시한다.
+- **동작**: 지친 동안 달리기 대신 걷기 애니메이션을 쓴다(속도가 걷기라서). 숨찬 동작 클립은 이번 범위 밖(원하면 추가).
+- **괴물**: 이번에는 넣지 않는다(돌진은 쿨다운 15초가 이미 있다) — 아래 질문 Q4.
+
+### 46.4 스태미나 설계 — AI(ST6~ST7)
+
+- AI는 방장의 `DecoyBrain`이 경로(`DecoyRoute`)로 움직인다. AI마다 스태미나를 방장이 같은 규칙(같은 `GameSettingsSO` 값)으로 계산한다.
+  - 경로를 정할 때: 달리기(Run) 경로는 **지금 스태미나로 달릴 수 있는 거리까지만** 달리고, 그 뒤 구간은 걷는다.
+  - 경로 한 개에 속도가 하나뿐이라 **경로 데이터에 "달리기 끝 지점(m)"을 1개 더한다**(`DecoyRoute.RunUntil`, half 2 B — 부호화 크기 +2 B, 형식 번호 1 → 2). `Sample`은 그 거리까지는 달리기 속도, 그 뒤는 걷기 속도로 위치를 계산한다. 화면(`DecoyView`)도 그 지점에서 Run → Walk 애니메이션으로 바꾼다.
+  - 도망(Flee) 중 지치면 걸어서 도망가고, 35까지 찰 때까지 다시 달리지 않는다(진짜 쿠키와 같다). 지친 AI는 술래에게 잡히기 쉬워진다 — 진짜 쿠키와 구별되지 않게 하는 것이 목적.
+  - 회복: 경로의 걷기·쉬기·숨기·춤 시간 동안 같은 회복 규칙.
+- 방장 교체: 새 방장은 스태미나를 모르므로 경로의 남은 달리기 거리로 추정해 이어받는다(가득으로 시작하지 않고 50으로 시작 — 순간 회복 꼼수 방지).
+
+### 46.5 정할 것(기본값으로 진행 가능)
+
+| | 질문 | 기본값(제안) |
+|---|---|---|
+| Q1 | 스태미나 수치 | 위 표(5초 달리기, 4초 회복, 0이면 35까지 못 달림) |
+| Q2 | 회피도 스태미나를 쓰나 | 쓴다(25). 쿨다운 3초도 유지 |
+| Q3 | 점프도 쓰나 | 안 쓴다 |
+| Q4 | 괴물(술래)에도 스태미나 | 넣지 않는다(돌진 쿨다운으로 충분) |
+| Q5 | 스태미나 막대 위치 | 화면 아래 가운데 가로 막대(가득 차면 숨김) |
+| Q6 | 잡기 판정 기준 | 괴물 화면 기준(잡는 쪽 우선, 0.5초 안의 실제 위치로 확인) |
+| Q7 | 추격음 거리 | 30 m 적용함 — 실제로는 35 m에서 **줄인** 것이다. 더 늘리길 원하면 숫자를 알려 달라 |
+
+### 46.6 확인 방법
+
+- **EditMode**(`Request1031Tests`):
+  - `PositionHistory`: 시각으로 위치 찾기·사이 보간·1.5초 넘은 기록 버리기
+  - 잡기 판정: 괴물 화면 거리 OK + 기록과 맞음 → 확정 / 기록과 3 m 어긋난 주장 → 거절 / 0.6초 넘은 주장 → 거절 / 쿠키가 26 m/s로 달아나는 중 0.25초 지연 → 확정
+  - 스태미나: 5초 달리면 0, 0이면 35 전까지 달리기 불가, 회복 시작 0.8초 지연, 회피 25 소모·부족하면 불가
+  - AI 경로: 달리기 끝 지점에서 속도가 바뀌는 `Sample`, 부호화 왕복·크기(≤ 92 B), 지친 AI는 Run 경로를 만들지 않음
+- **Play Mode**(오프라인, 쿠키 + 괴물 생성 — §45와 같은 방식):
+  1. 괴물이 쿠키를 조준해 잡는 순간 쿠키를 26 m/s로 반대쪽에 달리게 한다(시험 코드) — 확정되는지, 연출과 결과가 같은지
+  2. 벽 너머·10 m 밖에서 강제로 보낸 잡기 → 즉시 거절, 쿠키 바로 움직임, 괴물 쿨다운 반환
+  3. Shift 달리기 5초 → 걷기로 바뀜, 막대·숨소리, 35까지 회복 뒤 다시 달림
+  4. 회피 연속 사용 → 스태미나 부족으로 막힘
+  5. AI 도망: 지치면 걷기로 바뀌는 지점(경로의 달리기 끝)에서 애니메이션도 Walk
+  6. Console 오류·경고 0
+- **멀티(사용자, 2명 이상)**: 실제 지연에서 "잡는 순간 도망" 상황이 잡힘으로 처리되는지, 거절될 때 바로 풀리는지, AI가 두 화면에서 같은 지점에서 걷기로 바뀌는지.
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| CA0 | 추격음 30 m(에셋 35 → 30, 코드 기본값·AI 대비값 30) | ✅ |
+| GK0 | `PositionHistory`(Core/, 방장 전용 기록기) + 순수 `PositionTrack`(원형 버퍼 30칸, 구간 안 길과의 최소 거리) | ✅ |
+| GK1 | 잡기 RPC `RequestGrabKill(viewId, seenMonster, seenCookie, ServerTimestamp)`, `GrabKillAuthority.GrabClaim`, `NetSecurityRules.GrabPreconditions`·`JudgeGrabClaim`(`GrabVerdict`) — 기록 없으면 옛 규칙 | ✅ |
+| GK2 | 연출 유지, `[GrabKill] Confirmed/Rejected (verdict)` 로그에 본 거리·지금 거리·길 오차·지연(ms) | ✅ |
+| GK3 | RPC `GrabKillRejected`(방장 → 모두): `CookieLifeStatePresenter.CancelGrabKill`(붙잡힌 자리·크기·충돌 복원), 본인 즉시 해제, `MonsterController.CancelGrabKill`(동작·쿨다운) | ✅ |
+| GK4 | AI 잡기 요청에 본 위치·ServerTimestamp(`EscapeRequest.Pos`·`B`), `DecoyRoute.MinDistance`로 [본 시각 − 0.5초, 지금] 경로와 비교 | ✅ |
+| GK6 | (사용자 추가 요청) 잡힌 AI도 진짜 쿠키와 같은 잡힌 동작(Held)을 재생 — `DecoyView.TickCaught` | ✅ |
+| GK5 | (필요하면) 원격 쿠키 외삽 보간 — 되돌림 판정으로 26 m/s·0.25초 지연도 확정되어 이번에는 하지 않음 | ➖ |
+| ST0 | `GameSettingsSO.Stamina`(`StaminaSettings` — 100·20/s·25/s·0.8 s·×0.7·35·회피 25) | ✅ |
+| ST1 | 순수 `StaminaModel`(Core/, 쿠키·AI 공용) + `HideOrSeekPlayer` 연결(지치면 Shift에도 걷기·Walk 동작, 회피 25 소모) | ✅ |
+| ST2 | `StaminaHud`(아래 가운데, 가득 차면 1초 뒤 사라짐, 지침 빨강 깜빡임) + 숨소리 `SoundId.CookieBreath`(218, 합성 클립 `10. Audio/SFX/Character/CookieBreath.wav`) | ✅ |
+| ST3 | `SkillHud` 회피 칸: 스태미나 < 25면 어둡게 덮음 | ✅ |
+| ST4 | `StaminaWatch` + `EscapeAuthority.WatchStamina`(TrackPositions 0.2초) — 지친 뒤 3초 넘게 달리면 `[NetGuard]` 경고 로그만 | ✅ |
+| ST5 | 쿠키 시험(EditMode·Play Mode) — §46.7 | ✅ |
+| ST6 | `DecoyBrain` AI마다 `StaminaModel`(경로대로 달리기→걷기→멈춤 시간만큼 진행), `DecoyRoute.RunUntil`(형식 2, +2 B, 0 = 끝까지), `Pose.Running`, `DecoyView` Run → Walk | ✅ |
+| ST7 | `DecoyBrain.AdoptedStamina` 50 — `AdoptRoutes`에서 시작 | ✅ |
+| T0 | EditMode `Request1031Tests` 17/17 + 기존 시험 전부(20개 클래스) 통과 | ✅ |
+| T1 | 컴파일·Console(예외·오류 0)·Play Mode 확인·문서 — §46.7 | ✅ |
+| T2 | 멀티 확인(사용자) | ⬜ |
+
+### 46.7 결과(2026-10-31)
+
+- **잡기 되돌림(GK0~GK2)**: 방장 `PositionHistory`가 캐릭터마다 0.05초 × 30칸을 기록한다. 괴물은 잡는 순간 자기 화면의 괴물·쿠키 위치와 `ServerTimestamp`를 함께 보내고, 방장은 (a) 그 두 위치가 잡기 거리 + 0.5 m 안, (b)(c) 두 위치가 [본 시각 − 0.5초, 지금] 동안 기록된 길에서 2 m 안, (d) 0.6초보다 오래되지 않았으면 확정한다. 기록이 없으면(입장 직후) 옛 규칙.
+  - EditMode: 쿠키가 26 m/s로 달아나 방장이 0.25초 뒤 받으면 옛 규칙은 거절(지금 거리 > 6.87 m), 새 규칙은 확정. 길에서 2.5 m 벗어난 주장 → `CookieMismatch`, 0.7초 전 → `ClaimTooOld`.
+  - Play Mode(실제 기록): 쿠키를 Shift로 달리게 하고 0.25초 전 위치로 판정 → `Confirmed`(본 3.2 m, 지금 5.0 m, 길 오차 0.0 m), 옆으로 2.5 m 비튼 주장 → `CookieMismatch`, 0.8초 전 → `ClaimTooOld`.
+- **거절 즉시 알림(GK3)**: Play Mode에서 거절되는 잡기(오프라인이라 `NotMonster`)를 보냄 → 같은 프레임에 쿠키 연출 취소(크기 1, 자리 그대로), 본인 잠금·키네마틱 해제, 괴물 잡는 동작 끝·쿨다운 반환. 처음에는 방장 자신에게 거절 RPC가 "확정 대기" 설정보다 먼저 실행돼 4초 동안 묶였다 → 본인 처리 뒤에 보내도록 고침.
+- **AI 잡기(GK4)**: 요청에 본 위치·시각(`EscapeRequest.Pos`·`B`), 방장은 경로를 0.05초 간격으로 되짚어 2 m 안인지 본다(`[GrabKill] Decoy … caught/rejected` 로그).
+- **잡힌 AI 동작(GK6, 사용자 추가 요청)**: Play Mode에서 AI를 잡힘 상태로 만들면 `DecoyView` 동작 상태 `Held`, Animator도 Held 상태 — 진짜 쿠키와 같은 매달림 동작.
+- **스태미나(ST0~ST4)**: Play Mode(Unity 시각으로 측정) — Shift 달리기 20/s 소모(2.08초에 41.6), 0이 되면 Walk 동작·걷기 속도, 걷는 중 0.8초 뒤 17.5/s 회복, 서 있으면 25/s, 35에서 다시 달림. 막대는 아래 가운데에 보이고(가득 차면 1초 뒤 사라짐) 지친 동안 빨강, 25 미만이면 회피 칸이 덮인다. 바닥나는 순간 숨소리(`CookieBreath` 218, 합성 클립). 방장 추정 검사는 정직한 플레이(자기 규칙대로 지침) 30초 동안 경고 0, 쉬지 않고 20초 달리면 경고(EditMode).
+- **AI 스태미나(ST6·ST7)**: Play Mode에서 AI 스태미나를 낮춘 뒤 도망시키면 경로 `RunUntil` 7.4 m(남은 0.95초 × 7.8 m/s) — 그 지점부터 `Pose.Running` false, 애니메이션 Run → Walk. 여유가 있으면 `RunUntil` 0(끝까지 달림). 경로 형식 2는 92 B 이하, 형식 1도 읽는다. 방장이 바뀌면 50에서 시작.
+- **Console**: 예외·오류 0. 오프라인 시험에서 `[NetGuard]` 경고가 나는 것은 한 사람이 쿠키와 괴물을 같이 가진 시험 구성 탓(두 캐릭터 위치가 같은 사람 칸에 번갈아 기록됨) — 실제 게임은 한 사람당 캐릭터 1개.
+- **시험**: `Request1031Tests` 17/17, 기존 20개 클래스 전부 통과(`DecoyAiTests` 경로 크기 기준 90 → 92 B로 갱신).
+- **후속(2026-10-31, 사용자 요청 3건)** — 모두 ✅
+  | 단계 | 내용 | 상태 |
+  |---|---|---|
+  | F1 | AI가 올라갈 수 없는 곳(문 기둥 위 들보 등)에 생김: 무작위 지점이 위에서 쏜 광선의 가장 높은 면에 놓였다 → `EscapeManager.IsWalkableFromSpawn` — AI NavMesh 위(0.6 m 안)이고 쿠키 스폰 자리에서 길이 이어지는 곳만(`TryRandomMapPoint` — AI 배치·AI 배회·호박마차 공통). 맵 5개 검사: 맵 안쪽에서 걸러진 곳은 전부 지붕·구조물 위(높이 3~14 m), Play Mode AI 10마리 모두 갈 수 있는 바닥 | ✅ |
+  | F2 | 스태미나 막대를 인벤토리 1~4칸 바로 위로(칸 줄 너비와 같게, `EscapeHud.HotbarTop`·`HotbarWidth`) — Play Mode 화면 확인 | ✅ |
+  | F3 | 대기실(GameLobbyScene — EscapeManager 없음)에서는 스태미나 무한(`HideOrSeekPlayer.Stamina`가 null → 달리기·회피 제한 없음) — Play Mode 8.7초 연속 달리기 확인 | ✅ |
+  - 시험: `Request1031Tests` 18/18, EscapeTests·DecoyAiTests 통과, Console 오류·경고 0.
+- **멀티 확인 후속(2026-10-31) — "잡는 순간 도망치면 간혹 안 잡힘"** ✅
+  - 증거: 빌드 Player-prev.log `[GrabKill] Decoy 3 rejected: path error 0.1 m, now 0.6 m apart, age 101 ms` — 대상 위치·지연은 정상인데 괴물 쪽 검사에서 거절.
+  - 원인: 방장 화면의 원격 괴물은 실제보다 (보낸 뒤 걸린 시간 + 보간 약 0.15초) 늦다. 달려와 잡은 괴물이 보낸 "지금 내 위치"는 방장이 아직 그리지 못한 앞쪽이라, 쿠키 잡기는 `MonsterMismatch`(2 m 초과), AI 잡기는 0.2초마다 잰 방장 화면 위치로 손 거리(6 m)를 재서 거절됐다. 괴물이 빨리 달리다 잡을 때만 생겨 "간혹".
+  - 고침: `PositionTrack.TryMinDistanceLeading` — 방장 기록의 끝을 마지막 속도(상한 60 m/s)로 `RemoteLead(age)` = 지연 + 0.15초만큼 앞으로 늘린 길까지 비교한다(괴물 본인이 방장이면 늘리지 않음). AI 잡기도 같은 방식(`EscapeAuthority.MonsterCouldReach`, 로그에 `monster gap`).
+  - 시험: `Request1031Tests` 19/19(20 m/s로 달리는 괴물·지연 0.12초 → 예전 거절, 이제 확정 / 10 m 넘게 앞선 주장은 여전히 거절), AuditFix·Rule·Escape·DecoyAi·RoomSync 통과, Play Mode 거절·되돌림 판정 정상, Console 오류 0.
+  - 참고: 한 컴퓨터에서 빌드 여러 개를 켜면 Player.log 하나에 섞여 써져 쿠키 잡기 줄이 남지 않았다 — 다음 멀티 확인은 방장 쪽 로그의 `[GrabKill] Rejected (…)` 줄로 남은 거절 원인을 볼 수 있다.
+- **멀티 확인 후속(2026-10-31) — "게임 시작 때 간혹 방장만 맵으로 안 넘어감"** ✅ (§43 SY 계열 보강)
+  - 증거(방장 Player.log): 방 씬이 CursedCandyCarnival → ChocolateFactory로 두 번 바뀜, `[NetGuard] … restoring: GameMapScene, PrepareEndTime`(방장이 두 번 쓴 값의 메아리), 이후 `Stranded in GameLobbyScene … Loading it` ↔ `Message queue was paused without a scene load` 무한 반복. 다른 사람은 두 맵을 차례로 불러 ChocolateFactory 도착, 방장 화면은 "모두 대기실에 들어오기를 기다리는 중… (3명 남음)".
+  - 원인: 첫 맵을 불러오는 동안 방장에서 시작이 한 번 더 처리됨(직전 맵을 피해 다른 맵 선택) → PUN `LoadLevel`이 방장일 때 진행 중이던 로드를 `allowSceneActivation = false`로 "취소"하고 참조를 버림(PhotonNetworkPart.SetLevelInPropsIfSynced) → Unity에서 그 로드가 90 %에서 영원히 대기하며 이후 모든 씬 로드를 막음. `RoomSceneFollower`는 대기 중 로드(진행도 0)를 "안 불러옴"으로 보고 큐 복구·재시도만 반복.
+  - Play Mode 재현: 씬 동기화를 켠 방장에서 `PhotonNetwork.LoadLevel`을 연달아 두 번 → 30초 뒤에도 옛 씬, 새 로드 0 %, 큐 멈춤, curScn은 새 맵(멀티와 동일).
+  - 고침:
+    - `PunSceneLoad`(Core/) — PUN 로드 상태(`IsBusy`: 대기 중 포함), `Load`(PhotonNetwork.LoadLevel 대신 — PUN이 취소한 옛 로드를 즉시 다시 허용), `RescueCancelled`(주기 검사). 모든 씬 로드가 이 경로를 거친다(시험으로 강제).
+    - `RoomSceneTransition.LoadLevelForRoom` — 로드 중이면 미뤘다가 끝나면 이어서(`TickDeferred`).
+    - `GameStartAuthority.TryStart` — 방 씬이 이미 대기실이 아니거나 로드 중이면 `AlreadyStarted`(`StartReadiness.IsRoomMoving`).
+    - `RoundStateResetter` — 방이 맵으로 옮겨지는 중이면 판 키를 지우지 않음(방장 교체로 다시 들어와 새 판의 맵·준비 시각을 지우던 구멍).
+    - `RoomSceneFollower.IsPunLoading` = `PunSceneLoad.IsBusy`(대기 중 로드를 큐 복구로 끊지 않음).
+  - 두 번 처리된 이유(사용자 확인): 시작을 눌렀는데 맵 로드가 몇 초 걸려 화면이 안 바뀌자 **시작 버튼을 한 번 더 누름**. → `GameLobbyController`: 시작을 누른 뒤 5초, 그리고 방이 맵으로 옮겨 가는 동안(`IsStarting` = 방 씬이 대기실이 아님·로드 중) 버튼 잠금, 상태 문구 `startingText`("게임을 시작하는 중...", GameLobbyScene에 저장). Play Mode: 맵 이동 시작 즉시 문구 바뀜·버튼 잠김, Console 오류·경고 0.
+  - 확인: Play Mode — 고친 경로로 연달아 두 번 불러도 마지막 씬 도착·큐 정상(rescue 1), 로드 중 방 이동은 미뤘다가 이어서 ChocolateFactory 도착, Console 오류 0. EditMode `Request1031Tests` 21/21, RoomSync·AuditFix·Rule·Request1011 통과.
+- **멀티 확인 후속(2026-11-02) — "술래가 나가 대기실로 돌아온 뒤 로비에서 3/4인데 입장 불가"** ✅
+  - 증상: 1회차(술래=방장) 시작 → 술래 나감 → 방장 교체 → 2회차 시작 → 술래 나감 → 대기실. 로비 목록에 3/4로 보이지만 입장 버튼 회색(방 `IsOpen = false`).
+  - 로그(방장 actor 2): `All monsters left` → `Moving the room to GameLobbyScene` → `Spawned cookie … IsMasterClient=True`(이미 대기실) → **그 뒤에** `Room scene changed to GameLobbyScene`. 로그 전체에 `[RoundStateResetter] Cleared … reopened the room.`이 없음. 빌드(11-02 18:51)는 §46 후속 수정 포함.
+  - 원인: 씬을 불러오는 동안 PUN이 메시지 큐를 멈춰, 방장이 보낸 curScn = 대기실의 서버 응답이 대기실 첫 프레임에는 아직 처리 전(캐시 = 옛 맵). `RoundStateResetter`가 지난 수정의 방어("방 씬이 맵이면 새 판 시작 → 지우지 않음")에 걸려 건너뛰고, 첫 프레임 한 번만 시도하는 구조라 다시 하지 않음 → 시작 때 닫은 방이 닫힌 채 남음. **지난 수정이 만든 회귀**(오프라인은 캐시가 바로 바뀌어 재현되지 않았음).
+  - 고침: `RoundStateResetter` — 될 때까지 매 프레임 재시도(`roomResetPending`), 방 씬이 대기실이 아니거나 로드 중이면 다음 프레임에(새 판이 시작된 경우는 씬이 바뀌며 사라짐).
+  - 확인: Play Mode에서 응답 지연을 흉내(대기실 첫 순간 curScn을 옛 맵으로, 1.5초 뒤 대기실로) — 옛 코드: 방 닫힌 채·흔적 남음(멀티와 동일), 새 코드: 응답 즉시 `Cleared 14 round room keys and reopened the room.`·방 열림. Console 오류 0. `Request1031Tests` 22/22, RoomSync·AuditFix·Rule·Request1011·Escape 통과.
+- **남은 것**: T2 멀티(2명 이상) — 실제 지연에서 "잡는 순간 도망"이 잡힘으로 처리되는지, 거절될 때 바로 풀리는지, AI가 두 화면에서 같은 지점에서 걷기로 바뀌는지, 스태미나 막대·숨소리.

@@ -8,4 +8,8 @@ public static class StartReadiness
     // 방장 교체가 진행 중이거나 막 끝났으면 시작을 미룬다 — 교체와 씬 변경이 서버에서 엇갈리지 않도록.
     public static bool IsSettling(bool switchPending, float secondsSinceLastSwitch, float settleSeconds) =>
         switchPending || secondsSinceLastSwitch < settleSeconds;
+
+    // 방이 이미 대기실 밖으로 옮겨지는 중인지(§46 후속): 방 씬이 정해져 있는데 대기실이 아니거나, 씬을 불러오는 중이면 다시 시작하지 않는다.
+    public static bool IsRoomMoving(string roomScene, string lobbyScene, bool loading) =>
+        loading || (!string.IsNullOrEmpty(roomScene) && roomScene != lobbyScene);
 }

@@ -423,6 +423,16 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         ChangeState(MonsterMoveState.GrabKill);
     }
 
+    // 방장이 잡기를 거절했다(§46.2 GK3, 괴물 본인만): 잡는 동작을 끊고 쿨다운을 돌려준다.
+    public void CancelGrabKill()
+    {
+        if (!pv.IsMine || !IsGrabKilling) return;
+        grabKillRemaining = 0f;
+        if (grabKillTrigger != null) grabKillTrigger.ResetTrigger();
+        ChangeState(MonsterMoveState.Idle);
+        Debug.Log("[MonsterController] Grab kill rejected by the master — cancelled.");
+    }
+
     // 상태가 바뀔 때(이전, 새) — 괴물 소리(MonsterAudio). 본인·원격 모두 이 경로로 상태가 바뀐다.
     public event System.Action<MonsterMoveState, MonsterMoveState> StateChanged;
     public MonsterMoveState CurrentMoveState => currentState;

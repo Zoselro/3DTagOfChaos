@@ -58,6 +58,8 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
     private Color[] crumbColors;          // 몸 표면 색(칠한 색 + 스킨 색), 비동기로 채워진다
     private bool crumbsSpawned;
     private bool squashPlayed;
+    private Vector3 preGrabPosition;      // 거절되면 돌아갈 자리(§46.2 GK3)
+    private Quaternion preGrabRotation;
 
     public bool IsBroken => appliedState == LifeState.Broken;
     public bool IsBeingGrabKilled { get; private set; }
@@ -93,6 +95,8 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
         if (IsBeingGrabKilled || visualsHidden || monster == null || monster.GrabSocket == null) return false;
 
         grabbingMonster = monster;
+        preGrabPosition = transform.position;
+        preGrabRotation = transform.rotation;
         grabKillEnteredAnimation = false;
         grabKillDeadline = Time.time + monster.GrabKillDuration + GrabKillTimeoutMargin;
         crumbColors = null;
@@ -114,6 +118,31 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
         FollowGrabSocket(Vector3.one);
         Debug.Log($"[CookieLife] view={pv.ViewID} grabbed by monster view={monster.View.ViewID}");
         return true;
+    }
+
+    // 방장이 잡기를 거절했다(§46.2 GK3): 붙잡힌 자리로 되돌리고 크기·충돌을 살린다. 이미 부서져 숨겨졌으면 주기적 맞춤(Reconcile)이 되돌린다.
+    public void CancelGrabKill()
+    {
+        if (!IsBeingGrabKilled) return;
+        IsBeingGrabKilled = false;
+        grabbingMonster = null;
+        transform.localScale = originalScale;
+        transform.SetPositionAndRotation(preGrabPosition, preGrabRotation);
+        if (TryGetComponent(out Rigidbody body) && !body.isKinematic) body.position = preGrabPosition;
+        if (!visualsHidden) RestoreCollision();
+        Debug.Log($"[CookieLife] view={pv.ViewID} grab kill cancelled");
+    }
+
+    // 콜라이더·레이어만 되돌린다(숨긴 표시물은 그대로).
+    private void RestoreCollision()
+    {
+        collisionDisabled = false;
+        foreach (var (col, enabled) in savedColliders)
+            if (col != null) col.enabled = enabled;
+        foreach (var (go, layer) in savedLayers)
+            if (go != null) go.layer = layer;
+        savedColliders.Clear();
+        savedLayers.Clear();
     }
 
     // Animator가 이번 프레임의 본을 움직인 뒤에 소켓을 따라간다. 원본 분쇄 연출 순서: 눌림 → (가루 터짐) → 작아지며 사라짐.

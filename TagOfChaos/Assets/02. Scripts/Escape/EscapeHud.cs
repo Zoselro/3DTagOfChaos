@@ -27,6 +27,9 @@ public class EscapeHud : MonoBehaviour
     private RectTransform hotbar;
     private CanvasGroup hotbarGroup;
     private const float HotbarY = 150f;
+    private const float HotbarHeight = 90f;
+    public const float HotbarWidth = 4 * 96f - 10f; // 칸 4개(86)와 사이 3개(10)
+    public const float HotbarTop = HotbarY + HotbarHeight * 0.5f; // 인벤토리 칸 윗변(스태미나 막대가 그 위에 놓인다)
     private TMP_Text toastText;
     private Coroutine toastRoutine;
     private GameObject spyBadge;
@@ -158,7 +161,7 @@ public class EscapeHud : MonoBehaviour
         }
 
         // 아래 가운데 인벤토리 4칸
-        var bar = NewRect("Hotbar", transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, HotbarY), new Vector2(4 * 96f, 90f));
+        var bar = NewRect("Hotbar", transform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, HotbarY), new Vector2(4 * 96f, HotbarHeight));
         hotbar = bar;
         hotbarGroup = bar.gameObject.AddComponent<CanvasGroup>();
         hotbarGroup.blocksRaycasts = false;
@@ -211,6 +214,7 @@ public class EscapeHud : MonoBehaviour
 
         // 오른쪽 아래 스킬 칸(§26 H9)
         gameObject.AddComponent<SkillHud>().Init(manager, texts);
+        gameObject.AddComponent<StaminaHud>().Init(HotbarWidth, HotbarTop); // 인벤토리 1~4칸 바로 위 스태미나 막대(§46.3)
 
         // 마녀 타이머(가운데 위, 빨강)
 

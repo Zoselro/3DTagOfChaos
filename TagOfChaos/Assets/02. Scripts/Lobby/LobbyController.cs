@@ -366,6 +366,6 @@ public class LobbyController : MonoBehaviourPunCallbacks
             }
         }
         if (PhotonNetwork.CurrentRoom.PlayerCount == 1)
-            PhotonNetwork.LoadLevel(SceneNames.GameLobby); // 방을 새로 만든 최초 1인만 로드, 나머지는 자동 동기화
+            PunSceneLoad.Load(SceneNames.GameLobby); // 방을 새로 만든 최초 1인만 로드, 나머지는 자동 동기화
     }
 }
