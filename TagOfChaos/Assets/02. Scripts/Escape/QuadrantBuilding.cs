@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
 
@@ -7,6 +8,8 @@ using UnityEngine;
 // - 스파이: 재료를 들고 있으면 어느 건물에서든 E가 뜨고, 맞지 않는 재료면 바로 "맞지 않는 재료"(§25 결정 2). 맞으면 쿠키와 같다.
 //   해체 도구를 들고 가동된 건물을 20초 누르면 재료를 빼낸다(§25.3 Q8).
 // - 필요한 재료(아이콘·꽂는 자리 색)는 쿠키에게만 보인다. 스파이·괴물에게는 어두운 받침과 "?"(§25 요청).
+// - 건물 겉모습 바꾸기(§50 B안): 자식 RuneVariants 아래 Var_<재료 ItemId>·Var_Neutral이 있으면, 쿠키에게는 이번 판 재료의 건물을,
+//   스파이·괴물(그리고 아직 재료가 정해지지 않았거나 쉬는 건물)에게는 Var_Neutral을 켠다. 충돌체·문·받침은 공통이라 바꾸지 않는다.
 public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartListener, IHoldEndListener, IHoldProgressDisplay, IInteractionLabel
 {
     [SerializeField, Min(0.5f)] private float interactionRange = 3.2f;
@@ -31,6 +34,9 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
     private bool dismantling;
     private float nextRetryTime;
     private int retries;
+    private readonly Dictionary<string, GameObject> variants = new Dictionary<string, GameObject>();
+    private GameObject neutralVariant;
+    private string shownVariant = "?";
 
     // 수리는 뗄 때까지 누르고 있고, 다 찼는지는 방장 Tick이 정한다(§26 H2) — 내 화면 시간으로 끝내지 않는다.
     private const float RepairHoldSeconds = 3600f;
@@ -52,8 +58,35 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
         Transform glowT = FindPrefix("ESC_Glow");
         glow = glowT != null ? glowT.gameObject : null;
         if (glow != null) glow.SetActive(false);
+        CollectVariants();
+        ShowVariant(null);
         BuildGauge();
         SetRegistered(true);
+    }
+
+    private void CollectVariants()
+    {
+        variants.Clear(); neutralVariant = null;
+        Transform root = FindPrefix("RuneVariants");
+        if (root == null) return;
+        foreach (Transform t in root)
+        {
+            if (!t.name.StartsWith("Var_")) continue;
+            string id = t.name.Substring(4);
+            if (id == "Neutral") neutralVariant = t.gameObject;
+            else variants[id] = t.gameObject;
+        }
+    }
+
+    // materialId == null → 기본(무채색) 건물
+    private void ShowVariant(string materialId)
+    {
+        if (variants.Count == 0 && neutralVariant == null) return;
+        string want = materialId != null && variants.ContainsKey(materialId) ? materialId : "Neutral";
+        if (want == shownVariant) return;
+        shownVariant = want;
+        foreach (KeyValuePair<string, GameObject> kv in variants) kv.Value.SetActive(kv.Key == want);
+        if (neutralVariant != null) neutralVariant.SetActive(want == "Neutral");
     }
 
     private Transform FindPrefix(string prefix)
@@ -93,6 +126,7 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
         ItemSO material = manager.Catalog.Find(b.MaterialId);
         bool repaired = b.Active && b.ItemIndex >= 0;
         if (glow != null && glow.activeSelf != b.Repaired) glow.SetActive(b.Repaired);
+        ShowVariant(LocalSeesMaterials && material != null && b.Active ? material.ItemId : null);
 
         // 받침 색: 쿠키에게는 재료 색(룬·캔디 꽂는 자리 색), 그 밖에는 어두운 받침
         if (socket != null)
