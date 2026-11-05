@@ -3,6 +3,7 @@ using UnityEngine;
 // AI 판단의 순수 계산(Request1009Plan.md §44.4) — 시험(DecoyAiTests)으로 확인한다. NavMesh·씬을 모른다.
 public static class DecoyRules
 {
+    public const float FleeRadius = 30f;              // 괴물이 이 거리 안이면 도망 판단 — 추격음(45 m, §59 CS2)과 떼어 예전 거리로 둔다
     public const float RunMultiplier = 1.3f;          // 진짜 쿠키 달리기(Shift)와 같다
     public const float FleeReleaseExtra = 5f;         // 도망 해제: 들리는 거리 + 5 m 밖에
     public const float FleeReleaseSeconds = 3f;       //   3초 머물면

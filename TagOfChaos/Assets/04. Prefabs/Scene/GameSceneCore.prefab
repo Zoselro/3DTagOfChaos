@@ -4402,7 +4402,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 27294681952927748, guid: 9548a94f9a87df244a9eb9ecd8da9caa, type: 3}
       propertyPath: actionLabels.Array.size
-      value: 22
+      value: 24
       objectReference: {fileID: 0}
     - target: {fileID: 27294681952927748, guid: 9548a94f9a87df244a9eb9ecd8da9caa, type: 3}
       propertyPath: 'actionLabels.Array.data[21]'

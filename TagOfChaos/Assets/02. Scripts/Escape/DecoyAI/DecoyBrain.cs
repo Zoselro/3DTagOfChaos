@@ -192,7 +192,7 @@ public class DecoyBrain : MonoBehaviour
         thinkCarry += order.Count * Time.deltaTime / ThinkCycle;
         int n = Mathf.Min(order.Count, Mathf.FloorToInt(thinkCarry));
         thinkCarry -= n;
-        float audible = ChaseAudioSettingsSO.Current != null ? ChaseAudioSettingsSO.Current.AudibleRadius : 30f;
+        float audible = DecoyRules.FleeRadius; // 추격음 반경(45 m)이 아니라 예전 30 m(§59 CS2)
         for (int k = 0; k < n; k++)
         {
             if (cursor >= order.Count) cursor = 0;

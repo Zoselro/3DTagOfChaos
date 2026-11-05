@@ -62,6 +62,7 @@ public class EscapeHud : MonoBehaviour
         instance.texts = EscapeTextsSO.Current;
         instance.Build();
         owner.StateChanged += instance.RefreshRequirements;
+        PlayerListHud.Create(); // Tab 참가자 목록(§59 PL) — 게임 맵에만 생긴다
     }
 
     private void OnDestroy()

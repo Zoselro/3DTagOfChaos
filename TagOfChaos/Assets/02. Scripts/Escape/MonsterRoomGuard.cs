@@ -32,9 +32,17 @@ public class MonsterRoomGuard : MonoBehaviour
         return false;
     }
 
-    // 순수 판정(시험용): 정사각 방 안쪽이고, 모든 문 면(문 → 방 가운데 방향) 안쪽인지.
+    // 방 높이 범위(방 바닥 = 루트 높이 기준): 바닥 아래 BelowFloor ~ 위 AboveFloor. 두 층 맵(진저브레드 지하 −36 m)에서
+    // 술래방 바로 밑 지하를 방 안으로 보고 쿠키를 지상으로 옮겼다(Request1009Plan.md §57).
+    public const float BelowFloor = 2f;
+    public const float AboveFloor = 12f;
+
+    public static bool WithinRoomHeight(float floorY, float y) => y > floorY - BelowFloor && y < floorY + AboveFloor;
+
+    // 순수 판정(시험용): 방 높이 안, 정사각 방 안쪽이고, 모든 문 면(문 → 방 가운데 방향) 안쪽인지.
     public static bool IsInside(Vector3 center, float half, Vector3[] doorPositions, Vector3 p)
     {
+        if (!WithinRoomHeight(center.y, p.y)) return false;
         Vector3 d = p - center;
         if (Mathf.Abs(d.x) >= half || Mathf.Abs(d.z) >= half) return false;
         foreach (Vector3 door in doorPositions)

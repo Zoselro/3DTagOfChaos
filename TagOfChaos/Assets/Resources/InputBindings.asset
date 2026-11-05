@@ -12,17 +12,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6c0cb583a853d64cbe7c7eca3f658a7, type: 3}
   m_Name: InputBindings
   m_EditorClassIdentifier: 
-  horizontalAxis: Horizontal
-  verticalAxis: Vertical
+  moveForwardKey: 119
+  moveBackKey: 115
+  moveLeftKey: 97
+  moveRightKey: 100
   runKey: 304
   jumpKey: 32
   dodgeKey: 306
   grabKey: 102
+  dropKey: 103
+  useToolButton: 0
   interactKey: 101
   tentacleDashKey: 304
+  skillKey: 113
   spectateNextKey: 32
   chatSubmitKey: 13
-  paintButton: 0
+  pushToTalkKey: 116
+  danceKey: 98
+  playerListKey: 9
+  showCursorKey: 308
   cameraRotateButton: 1
   mouseXAxis: Mouse X
   mouseYAxis: Mouse Y

@@ -133,7 +133,16 @@ public static class PlayerInput
     public static bool CameraRotateHeld => Held(KeyAction.CameraRotate);
     public static bool CameraRotatePressed => !IsMenuOpen && Down(KeyAction.CameraRotate);
     public static bool CameraRotateReleased => Up(KeyAction.CameraRotate);
-    public static Vector2 CameraRotateDelta => IsMenuOpen ? Vector2.zero : new Vector2(Input.GetAxis(Bindings.MouseXAxis), Input.GetAxis(Bindings.MouseYAxis));
+    public static Vector2 CameraRotateDelta => IsMenuOpen ? Vector2.zero : new Vector2(Input.GetAxis(Bindings.MouseXAxis), Input.GetAxis(Bindings.MouseYAxis)) + EditorLook;
+    public static Vector2 EditorLook; // 마우스를 움직인 것처럼(Play Mode 시점 시험, §59 CL5)
+
+    // 참가자 목록(§59 PL1): 누르고 있는 동안. 채팅 입력 중에는 열지 않는다.
+    public static bool PlayerListHeld => !chatSuppressed && (Held(KeyAction.PlayerList) || EditorPlayerListHeld);
+    public static bool EditorPlayerListHeld;
+    // 커서 보이기(§59 CL): 누르고 있는 동안 커서를 풀고 시점을 멈춘다(대기실 버튼 누르기).
+    public static bool ShowCursorHeld => Held(KeyAction.ShowCursor) || EditorShowCursorHeld;
+    public static bool EditorShowCursorHeld;
+    public static bool IsChatting => chatSuppressed;
 
     // 1인칭 시점 회전(GameFixPlan.md F6): 우클릭 없이 마우스 이동만으로 돌린다. 채팅 중에는 멈춘다.
     public static Vector2 LookDelta => IsGameplaySuppressed ? Vector2.zero : CameraRotateDelta;

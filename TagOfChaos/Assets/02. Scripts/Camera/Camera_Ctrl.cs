@@ -108,11 +108,14 @@ public class Camera_Ctrl : MonoBehaviour
         m_TargetPos = m_Player.transform.position;
         m_TargetPos.y += m_TargetHeight;
 
-        UpdateCursorLock();
+        // 마우스 자유 시점(§59 CL): 우클릭 없이 마우스 이동만으로 3인칭 카메라를 캐릭터 둘레로 돌린다(1인칭으로 바꾸지 않는다).
+        // 메뉴·채팅·결과 화면·확인창·커서 보이기 키(Alt)일 때는 커서를 풀고 멈춘다(CursorPolicy). 우클릭은 도구 조준(ToolUser)으로만 쓴다.
+        bool free = CursorPolicy.ShouldBeFree;
+        CursorPolicy.Apply(free);
 
-        if (PlayerInput.CameraRotateHeld) // 우클릭 드래그로 시점 회전(버튼은 InputBindings)
+        if (!free)
         {
-            Vector2 delta = PlayerInput.CameraRotateDelta;
+            Vector2 delta = PlayerInput.LookDelta;
             m_RotH += delta.x * hSpeed;
             m_RotV -= delta.y * vSpeed;
             m_RotV = ClampAngle(m_RotV, vMinLimit, vMaxLimit);
@@ -130,14 +133,6 @@ public class Camera_Ctrl : MonoBehaviour
         m_RestPos = m_BuffPos;
         m_HasRestPos = true;
         transform.position += CameraShake.Offset; // 흔들림은 위치를 다 정한 뒤에 더한다(research.md R4.7-9)
-    }
-
-    // 우클릭으로 시점을 돌리는 동안에만 커서를 잠근다(research.md §8.8). 잠그지 않으면 드래그 중 커서가 창
-    // 가장자리에 걸려 회전이 멈추거나 창 밖을 클릭하게 된다. 평소에는 풀어 둬야 UI를 조작할 수 있다.
-    void UpdateCursorLock()
-    {
-        if (PlayerInput.CameraRotatePressed) Cursor.lockState = CursorLockMode.Locked;
-        else if (PlayerInput.CameraRotateReleased) Cursor.lockState = CursorLockMode.None;
     }
 
     void OnDisable()

@@ -350,11 +350,13 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public ItemSO ItemDef(int index) =>
         State != null && index >= 0 && index < State.Items.Count ? catalog.Find(State.Items[index].Id) : null;
 
-    // 술래방 안인지(수평). 호박마차·AI는 술래방에 들어가지 않는다.
+    // 술래방 안인지(수평 + 방 높이). 호박마차·AI는 술래방에 들어가지 않는다.
+    // 높이도 본다(Request1009Plan.md §57): 두 층 맵(진저브레드 지하 −36 m)에서 술래방 바로 밑 지하가 방 안으로 판정됐다.
     public bool InMonsterRoom(Vector3 p)
     {
         Vector3 c = monsterRoom != null ? monsterRoom.position : Vector3.zero;
-        return Mathf.Abs(p.x - c.x) < monsterRoomHalfSize && Mathf.Abs(p.z - c.z) < monsterRoomHalfSize;
+        return MonsterRoomGuard.WithinRoomHeight(c.y, p.y)
+            && Mathf.Abs(p.x - c.x) < monsterRoomHalfSize && Mathf.Abs(p.z - c.z) < monsterRoomHalfSize;
     }
 
     // 술래방 안에서 문 바깥으로 내보내진 이동인지(MonsterRoomGuard, §28.15 E1) — 방장 이동 속도 검사 예외.

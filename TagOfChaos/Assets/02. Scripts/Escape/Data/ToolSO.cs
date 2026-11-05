@@ -35,6 +35,9 @@ public class ToolSO : ScriptableObject
     [SerializeField, Min(1f)] private float speedMultiplier = 2f;
 
     public ToolKind Kind => kind;
+    // 괴물을 맞힐 수 있는 도구는 스턴건뿐이다(Request1009Plan.md §59 AT1). 뿅망치·물풍선 등은 괴물을 건너뛴다 — 쓰는 쪽·방장·받는 쪽이 모두 이 규칙을 본다.
+    public bool CanHitMonster => CanHitMonsterKind(kind);
+    public static bool CanHitMonsterKind(ToolKind k) => k == ToolKind.StunGun;
     public int Charges => charges;
     public float Range => range;
     public float HitRadius => hitRadius;

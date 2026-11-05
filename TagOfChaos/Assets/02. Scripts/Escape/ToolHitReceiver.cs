@@ -101,6 +101,7 @@ public static class ToolHitReceiver
             if (character == null) continue;
 
             bool isMonster = character.Role == CharacterRole.Monster;
+            if (isMonster && !item.Tool.CanHitMonster) continue; // 스턴건만 괴물을 맞힌다(§59 AT4 — 옛 클라이언트·경합 대비)
             float seconds = isMonster ? item.Tool.StunSecondsMonster : item.Tool.StunSecondsCookie;
             StunReceiver stun = view.GetComponent<StunReceiver>();
             if (stun != null)

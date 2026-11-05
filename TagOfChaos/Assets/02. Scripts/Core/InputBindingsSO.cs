@@ -38,6 +38,8 @@ public class InputBindingsSO : ScriptableObject
     [Tooltip("대기실 음성 채팅 — 누르면서 말하기(§26 Q19).")]
     [SerializeField] private KeyCode pushToTalkKey = KeyCode.T;
     [SerializeField] private KeyCode danceKey = KeyCode.B; // 춤(Request1009Plan.md §44.9)
+    [SerializeField] private KeyCode playerListKey = KeyCode.Tab;      // 참가자 목록(§59 PL1)
+    [SerializeField] private KeyCode showCursorKey = KeyCode.LeftAlt;  // 커서 보이기(§59 CL)
 
     [Header("Mouse")]
     [Tooltip("0=왼쪽, 1=오른쪽, 2=가운데")]
@@ -51,6 +53,8 @@ public class InputBindingsSO : ScriptableObject
     public KeyCode MoveRightKey => moveRightKey;
     public KeyCode PushToTalkKey => pushToTalkKey;
     public KeyCode DanceKey => danceKey;
+    public KeyCode PlayerListKey => playerListKey;
+    public KeyCode ShowCursorKey => showCursorKey;
     public KeyCode RunKey => runKey;
     public KeyCode JumpKey => jumpKey;
     public KeyCode DodgeKey => dodgeKey;

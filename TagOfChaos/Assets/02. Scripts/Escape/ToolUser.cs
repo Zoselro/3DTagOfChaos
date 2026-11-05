@@ -65,7 +65,7 @@ public class ToolUser : MonoBehaviour
         if (preview == null) preview = BalloonAimPreview.Create();
         Vector3 origin = transform.position + Vector3.up * 1.1f;
         Vector3 aim = cam != null ? cam.transform.forward : transform.forward;
-        IGameCharacter target = PickTarget(aim, held.Tool.Range, ToolAim.BalloonHalfAngle);
+        IGameCharacter target = PickTarget(aim, held.Tool.Range, ToolAim.BalloonHalfAngle, held.Tool.CanHitMonster);
         Vector3 from = ToolShotFx.HandPosition(transform);
         Vector3 to = target != null ? WaterBubbleView.BodyBounds(target.gameObject.transform).center : GroundAhead(cam, origin, aim, held.Tool.Range);
         preview.Show(from, to, target != null ? target.gameObject.transform : null);
@@ -189,7 +189,7 @@ public class ToolUser : MonoBehaviour
             {
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
                 if (pose != null) pose.Play(PlayerActionPose.OneShot.Throw);
-                IGameCharacter target = PickTarget(aim, tool.Range, ToolAim.BalloonHalfAngle);
+                IGameCharacter target = PickTarget(aim, tool.Range, ToolAim.BalloonHalfAngle, tool.CanHitMonster);
                 if (target != null)
                 {
                     point = target.gameObject.transform.position;
@@ -211,7 +211,7 @@ public class ToolUser : MonoBehaviour
                 if (Physics.Raycast(point + Vector3.up * 2f, Vector3.down, out RaycastHit ground, 30f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
                     && ground.point.y < point.y + 0.1f)
                     point = ground.point;
-                CollectInSphere(point, tool.HitRadius, targets, 8);
+                CollectInSphere(point, tool.HitRadius, targets, 8, tool.CanHitMonster);
                 break;
             }
         }
@@ -228,13 +228,14 @@ public class ToolUser : MonoBehaviour
         Vector3 aim = cam != null ? cam.transform.forward : transform.forward;
         Vector3 flat = Vector3.ProjectOnPlane(aim, Vector3.up);
         if (flat.sqrMagnitude < 0.01f) flat = transform.forward;
-        IGameCharacter target = PickTarget(flat, tool.Range, ToolAim.HammerHalfAngle);
+        IGameCharacter target = PickTarget(flat, tool.Range, ToolAim.HammerHalfAngle, tool.CanHitMonster);
         Vector3 point = target != null ? target.gameObject.transform.position + Vector3.up : transform.position + Vector3.up + flat.normalized * tool.Range * 0.5f;
         manager.Request(EscapeOp.ToolUse, slot, 0, point, target != null ? new[] { target.View.ViewID } : new int[0]);
     }
 
     // 앞 부채꼴 안의 가장 가까운 캐릭터(나·부서진·나간 사람 제외). 몸 방향이 아니라 카메라가 보는 수평 방향 기준.
-    public IGameCharacter PickTarget(Vector3 aim, float range, float halfAngle)
+    // includeMonsters=false(스턴건이 아닌 도구, §59 AT2)면 괴물을 건너뛰어 그 뒤의 쿠키를 고른다.
+    public IGameCharacter PickTarget(Vector3 aim, float range, float halfAngle, bool includeMonsters = true)
     {
         candidates.Clear();
         candidatePoints.Clear();
@@ -242,6 +243,7 @@ public class ToolUser : MonoBehaviour
         {
             if (!CharacterRegistry.IsAlive(c) || c.gameObject == gameObject || c.View == null || c.View.Owner == null) continue;
             if (c is HideOrSeekPlayer cookie && cookie.IsBroken) continue;
+            if (!includeMonsters && c.Role == CharacterRole.Monster) continue;
             if (EscapeManager.HasLeftMap(c.View.Owner.ActorNumber)) continue;
             candidates.Add(c);
             candidatePoints.Add(c.gameObject.transform.position);
@@ -278,13 +280,14 @@ public class ToolUser : MonoBehaviour
         return hits;
     }
 
-    private void CollectInSphere(Vector3 center, float radius, List<int> targets, int max)
+    private void CollectInSphere(Vector3 center, float radius, List<int> targets, int max, bool includeMonsters)
     {
         int n = Physics.OverlapSphereNonAlloc(center, radius, overlap, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         for (int i = 0; i < n && targets.Count < max; i++)
         {
             IGameCharacter c = overlap[i].GetComponentInParent<IGameCharacter>();
             if (c == null || c.gameObject == gameObject || c.View == null || targets.Contains(c.View.ViewID)) continue;
+            if (!includeMonsters && c.Role == CharacterRole.Monster) continue;
             targets.Add(c.View.ViewID);
         }
     }

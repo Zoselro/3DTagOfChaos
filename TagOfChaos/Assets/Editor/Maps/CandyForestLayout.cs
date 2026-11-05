@@ -228,7 +228,8 @@ public static class CandyForestLayout
     };
 
     // 사분면 안 무작위 후보 중 isClear(점, 반지름)이 참이고 다른 표시와 떨어진 자리. 로켓은 6개만 쓴다.
-    public static List<(string name, Vector3 pos)> PlaceMarkers(System.Func<Vector3, float, bool> isClear)
+    // spread: 예전 80 m 맵 기준 거리에 곱할 값(기본 = 이 맵 155 m). 크기가 다른 맵(진저브레드 100 m, §58)은 자기 반지름 / 80을 준다.
+    public static List<(string name, Vector3 pos)> PlaceMarkers(System.Func<Vector3, float, bool> isClear, float spread = Spread)
     {
         var rng = new System.Random(2028);
         var result = new List<(string, Vector3)>();
@@ -242,7 +243,7 @@ public static class CandyForestLayout
                 int got = 0;
                 for (int tries = 0; tries < 4000 && got < want; tries++)
                 {
-                    float radius = Mathf.Lerp(spec.MinRadius, spec.MaxRadius, (float)rng.NextDouble()) * Spread;
+                    float radius = Mathf.Lerp(spec.MinRadius, spec.MaxRadius, (float)rng.NextDouble()) * spread;
                     float baseDeg = Mathf.Atan2(QuadrantDir[q].y, QuadrantDir[q].x) * Mathf.Rad2Deg;
                     Vector2 p2 = Polar(radius, baseDeg + Mathf.Lerp(-40f, 40f, (float)rng.NextDouble()));
                     float band = RowOffset + RowHalfDepth + spec.Clear + 1.5f;

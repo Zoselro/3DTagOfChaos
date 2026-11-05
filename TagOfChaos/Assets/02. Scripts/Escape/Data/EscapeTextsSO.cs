@@ -68,6 +68,13 @@ public class EscapeTextsSO : ScriptableObject
     public string skillDodge = "Dodge";
     public string skillUnknown = "TBD";        // 생존자 스킬(아직 미정)
 
+    [Header("Player list (§59 PL — Tab)")]
+    public string playerListTitle = "Players";
+    public string playerListMonster = "MONSTER";
+    public string playerListCookie = "COOKIE";
+    public string playerListYou = "(You)";
+    public string playerListHost = "HOST";
+
     [Header("Timers")]
     public string timeAttackFormat = "{0:00}:{1:00}";
 

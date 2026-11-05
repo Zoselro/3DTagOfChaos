@@ -97,5 +97,6 @@ public class MonsterFirstPersonCamera : MonoBehaviour
     public void SyncYaw(float worldYaw) => yaw = worldYaw;
 
     // 결과 화면이나 ESC 메뉴(나가기 확인창 포함)에서는 버튼을 눌러야 하므로 커서를 풀고 시점을 멈춘다(EscapeVisualPlan.md §1.2).
-    private static bool FreeCursor() => GamePhaseState.Current == GamePhase.Result || EscMenu.IsOpen;
+    // 채팅·확인창·커서 보이기 키도 같은 규칙(CursorPolicy, §59 CL).
+    private static bool FreeCursor() => CursorPolicy.ShouldBeFree;
 }

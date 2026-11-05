@@ -12,6 +12,12 @@ public class ConfirmDialog : MonoBehaviour
 
     private Action onYesConfirmed;
 
+    // 떠 있는 확인창 수 — 마우스 자유 시점이 커서를 풀어 둔다(CursorPolicy, Request1009Plan.md §59 CL).
+    private static int openCount;
+    public static bool AnyOpen => openCount > 0;
+    private void OnEnable() => openCount++;
+    private void OnDisable() => openCount = Mathf.Max(0, openCount - 1);
+
     private void Awake()
     {
         yesButton.onClick.AddListener(OnYesClicked);

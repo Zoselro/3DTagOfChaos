@@ -994,6 +994,7 @@ public sealed class EscapeAuthority
     private int[] ValidTargets(int sender, ToolSO tool, Vector3 point, int[] targets)
     {
         if (targets == null || targets.Length == 0) return new int[0];
+        if (!tool.CanHitMonster) targets = WithoutMonsters(targets); // 스턴건만 괴물을 맞힌다(§59 AT3 — 조작된 요청도 여기서 막힌다)
         if (!lastPositions.TryGetValue(sender, out Vector3 from)) return targets; // 위치를 아직 모르면 막지 않는다(입장 직후)
 
         bool area = IsBalloon(tool.Kind);
@@ -1017,6 +1018,18 @@ public sealed class EscapeAuthority
     }
 
     private const float ToolReachSlack = 3f;
+
+    private static int[] WithoutMonsters(int[] targets)
+    {
+        var kept = new List<int>(targets.Length);
+        foreach (int viewId in targets)
+        {
+            PhotonView view = PhotonView.Find(viewId);
+            IGameCharacter c = view != null ? view.GetComponent<IGameCharacter>() : null;
+            if (c == null || c.Role != CharacterRole.Monster) kept.Add(viewId);
+        }
+        return kept.ToArray();
+    }
 
     private static bool IsBalloon(ToolKind kind) => kind == ToolKind.WaterBalloon;
 

@@ -413,6 +413,15 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         Debug.Log($"[MonsterController] Respawned at {respawnPos} after falling out of the map.");
     }
 
+    // 괴물 엘리베이터(Request1009Plan.md §58): 본인 화면에서 순간이동. 쿠키(HideOrSeekPlayer.TeleportTo)와 같은 규칙 — 물리 위치도 옮긴다.
+    public void TeleportTo(Vector3 position)
+    {
+        if (rb == null || !IsLocallyControlled) return;
+        rb.linearVelocity = Vector3.zero;
+        rb.position = position;
+        transform.position = position;
+    }
+
     // MonsterGrabKillTrigger가 근접 자동 처형 순간 호출 — 전원에게 GrabKill 애니메이션 재생.
     public void PlayGrabKill()
     {

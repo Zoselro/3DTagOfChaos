@@ -6328,3 +6328,249 @@ v1 §S1~S8 그대로:
   - Play Mode 밖→안 88문: 모두 `OpenInward`. 83문은 드라이버로 통과했고, 5문(방앗간 Q1 뒷문·초코 Q4 앞문·홀리데이 Q1 앞문·지하 캔디케인 뒷문 2)은 직접 밀어 방 안 7.1~7.4 m까지 들어갔다.
   - 콘솔 오류 0(경고는 시험이 일부러 내는 `DecoyBrain` 1).
   - 사진: `scratchpad/door_dir_56.png`(닫힘 / 안에서 엶 → 바깥 / 밖에서 엶 → 안 / 안에서 연 문을 밖에서 봄).
+
+## 57 2026-11-05 버그: 진저브레드 지하 (0, −36, −4)에 가면 술래방에 들어간 것으로 보고 지상으로 옮김 ✅
+- 원인: 술래방 판정 두 곳이 수평(x·z)만 보고 높이를 보지 않았다. 진저브레드 마을은 두 층 맵이라, 지상 술래방(가운데, 바닥 y 0) 바로 밑 지하 −36 m도 방 안이었다.
+  - `MonsterRoomGuard.IsInside`(쿠키·스파이 내보내기, §28.15 E1): 지하에서 0.5초 머물면 지상 술래방 문 밖으로 순간이동했다.
+  - `EscapeManager.InMonsterRoom`(순간이동 자리·호박마차·AI 길 금지 구역, 반폭 13 m): 술래방 밑 지하 26 m 네모 안에는 순간이동·AI 길 자리가 생기지 않았다.
+- 고침: `MonsterRoomGuard.WithinRoomHeight` — 방 바닥(루트 높이) 아래 2 m ~ 위 12 m 안에서만 방 안이다. 두 판정이 같은 범위를 쓴다.
+- 맵 5개(유령 베이커리·캔디숲·저주받은 카니발·초콜릿 공장·진저브레드): 술래방 바닥이 모두 루트 높이(진저브레드 +0.11)이고 방 높이는 5~7.8 m라, 지상 판정은 그대로다(바닥 점 안 판정 5/5).
+- 시험:
+  - 새 EditMode `GingerbreadVillageMapTests.MonsterRoom_UndergroundBelowIsOutside`(지하 밑 = 밖, 방 바닥 = 안, 두 판정 모두). 맵 6/6, `Request1021Tests` 6/6, `DecoyAiTests` 14/14.
+  - Play Mode: 쿠키를 지하 (0, −36, −4)에 두면 4초 뒤에도 그 자리에 있다. 지상 방 안 (1.5, 0.3, −4)에 두면 문 밖 (−0.5, 0, −15.2)으로 나간다. 콘솔 오류 0(경고는 시험 순간이동에 대한 `NetGuard` 2).
+
+## 58 2026-11-05 진저브레드 마을 줄이기·건물 수 줄이기·룬 건물 층 나누기·괴물 엘리베이터 ✅
+- 사용자 요청: 맵을 절반으로 줄인다. 지상은 사분면마다 3채(룬 포함), 지하는 사분면마다 2채(룬 포함)로 줄인다. 룬 건물은 지상 Q2·Q3, 지하 UQ1·UQ4에 둔다. 술래방 자리에 지하로 가는 엘리베이터를 만든다.
+- 크기 결정(사용자 답):
+  - 정확히 절반(77.5 m)은 지금 건물 크기로 들어가지 않는다(룬 37 × 30 m; 시계탑을 빼도 9채가 남음, `scratchpad/lay/lay57.py`).
+  - 그래서 **약 0.65배**: 지상 155 → 100 m, 지하 134 → **105 m**(지하 건물 5종을 모두 넣는 A안).
+  - 시계탑 2개·나선은 유지한다. 탑은 반지름 40 m, 105°·285°로 옮겼다(지하 1·4사분면에 나선과 룬이 함께 들어가게).
+  - 엘리베이터는 **괴물 전용**이다.
+- 배치(`GingerbreadVillageMapBuilder` `GroundPlan`·`UgPlan`·`RuneGround`·`RuneUnderground`, 옆 1 m·문 앞뒤 4 m 여유 — `lay57.py`·`pair57.py`):
+  - Q1: 방앗간·캔디케인 집·숨는 건물 홀리데이 하이드어웨이
+  - Q2: **룬**·초코 집·숨는 건물 캔디 머그하우스
+  - Q3: **룬**·해골 가마솥·숨는 건물 진저브레드 풍차
+  - Q4: 캔디톱니 집·초코 집·숨는 건물 캔디 머그하우스
+  - UQ1: **룬**·마카롱 집
+  - UQ2: 글룸검 요새·비뚤어진 초코 집
+  - UQ3: 기어웍스 게이트·지하 캔디케인 집
+  - UQ4: **룬**·숨는 건물 마녀 찻주전자
+  - 지상 일반 건물 5종·지하 건물 5종이 모두 들어간다. 숨는 건물은 지상 4·지하 1이다(유령 풍차·유령 진저 하우스는 자리가 없어 뺐다).
+- 빌더 변경:
+  - 산책길 반지름 45 → 22 m, 바깥 배경 고리를 맵 반지름 기준으로 바꿨다.
+  - 표지판을 산책길 밖으로 옮겼다.
+  - 룬 건물 앞 광장은 지상 룬 건물에만 둔다.
+  - 상자·로켓·무지개·스폰 표시 자리를 맵 크기에 맞췄다(`CandyForestLayout.PlaceMarkers`·`RoundMapKit.Markers`에 `spread` 인자, 기본값은 그대로라 다른 맵은 같다).
+  - 탈출 판정 반지름은 `max(지상, 지하)` = 105 m다.
+  - 지하 룬 건물의 지붕 빛기둥(110 m)이 동굴 천장을 뚫고 지상에 섰다 → 천장 아래에서 끝나게 줄였다(`TrimRoofBeam`).
+- 엘리베이터(`Assets/02. Scripts/Escape/MonsterElevator.cs`, 새 파일):
+  - 술래방 가운데 `Elevator_Top` ↔ 지하 동굴 가운데 `Elevator_Bottom` 발판 한 쌍이다.
+  - 괴물이 발판에서 E를 누르면 빛기둥 1.2초 → 반대쪽 발판으로 옮긴다(`MonsterController.TeleportTo` 추가, 각자 화면이 자기 괴물만 옮긴다). 다시 타기까지 1.5초다.
+  - 쿠키·스파이는 쓸 수 없다. 괴물 스폰 자리는 가운데에서 5.5 m 남쪽으로 옮겼다.
+- 결과: 지상 건물 10 + 룬 2, 지하 건물 6 + 룬 2, 겹침 0, 상자 40·로켓 자리 6·무지개 8·탈출구 4, NavMesh 95 %·숨을 곳 25·메시 밖 점 0.
+- 시험:
+  - `GingerbreadVillageMapTests` 8/8. 새 시험 2개: 룬 층·사분면 3/2채, 엘리베이터 연결·도착 자리. 건물 수·문 40개도 고쳤다.
+  - `DecoyAiTests` 14/14, `Request1021Tests` 6/6.
+  - 괴물 캡슐 40문 양방향 통과(룬 방 가운데 제단만 걸림).
+  - Play Mode:
+    - 쿠키 안→밖 40/40.
+    - 밖→안 34문은 드라이버로 통과했다. 6문(울타리·동굴 벽 쪽 뒷문)은 드라이버 출발점(문 밖 6 m)이 울타리 너머라 막혔다. 문 밖 3.5 m에서 밀면 9.7 m 안까지 들어간다.
+    - 괴물이 엘리베이터로 지상 (0, 0.1, 0) → 지하 (0, −36, 0) → 지상으로 이동했다. 쿠키는 탈 수 없다.
+    - 콘솔 오류 0(경고는 시험에서 한 사람이 쿠키·괴물을 함께 가진 탓의 `NetGuard`).
+- 사진: `scratchpad/plan57A.png`(배치도), `scratchpad/top58.jpg`(Unity 위에서 본 지상·지하).
+
+## 59 2026-11-05 요청 4건 ✅
+1. 스턴건 말고는 술래(괴물)를 공격할 수 없게 한다.
+2. 게임 맵에서 Tab을 누르고 있는 동안 참여 플레이어 목록을 보이고, 떼면 숨긴다.
+3. 추격음이 들리는 거리를 1.5배로 늘리고, 음량을 15 % 낮춘다.
+4. 쿠키도 괴물처럼 우클릭 없이 마우스만으로 시점을 돌린다.
+
+### 59.1 지금 코드(읽은 곳)
+- **도구 명중**
+  - 쓰는 쪽 `Escape/ToolUser.cs`:
+    - 뿅망치 `HammerHit`(224행), 물풍선(188행)은 `PickTarget`(237행)으로 앞 부채꼴의 가장 가까운 캐릭터를 고른다. 괴물도 후보에 든다.
+    - 물풍선 조준선 `UpdateBalloonPreview`(60행)도 같은 함수로 괴물에 붙는다.
+    - 스턴건(156행)은 화면 가운데 광선에 처음 맞은 캐릭터를 고른다.
+    - 그 밖의 도구(`default`, 207행)는 `CollectInSphere`로 둘레 캐릭터를 모은다.
+  - 방장 `Escape/EscapeAuthority.cs`:
+    - `ToolUse`(926행) → `ValidTargets`(994행)는 거리만 보고 역할은 보지 않는다.
+  - 받는 쪽 `Escape/ToolHitReceiver.cs`:
+    - `Apply`(83행~)는 괴물에게 `StunSecondsMonster`만큼 기절을 주고, 물풍선이면 `Trap`으로 가둔다.
+  - 도구 종류 `Escape/Data/ToolSO.cs`: `Hammer`·`StunGun`·`WaterBalloon`·`Skates`·`Pumpkin`·`Recorder`·`Dismantle`·`HeliHat`·`NoiseBomb`.
+  - 남을 때리는 것은 뿅망치·스턴건·물풍선 셋이다(`NoiseBomb`는 괴물 쪽 기술의 기절 수치).
+- **Tab**
+  - 게임 맵(`CandyForest`·`CursedCandyCarnival`·`ChocolateFactory`·`GingerbreadVillage`·`Test_HauntedBakery`, `EscapeManager`가 있는 씬)에 플레이어 목록 화면이 없다.
+  - 키 설정은 `Core/KeyBindings.cs`다. `KeyAction` 순서가 설정 창 줄 순서이고, 새 항목은 끝에 붙인다.
+  - 기본 키는 `Core/InputBindingsSO.cs`, 조작 이름은 `UI/KeyBindingsPage.cs`의 `actionLabels`(프리팹에서 입력)다.
+  - HUD는 `Escape/EscapeHud.cs`가 코드로 만든다(Canvas 정렬 40, 문구는 `EscapeTextsSO`).
+- **추격음**
+  - `Resources/Audio/ChaseAudioSettings.asset`(`Audio/ChaseAudioSettingsSO.cs`): `audibleRadius` 30 m, `maxVolume` 0.8.
+  - 최대 음량 반경(×0.25)·북 단계(×1, ×0.25)는 반경에 대한 비율이라 반경만 바꾸면 함께 커진다.
+  - AI(미끼)도 이 반경을 도망 판단에 쓴다(`DecoyBrain.cs` 195행).
+- **쿠키 시점**
+  - `Camera/Camera_Ctrl.cs` 113행: `PlayerInput.CameraRotateHeld`(우클릭, `KeyAction.CameraRotate`)일 때만 마우스로 돈다.
+  - 커서는 우클릭을 누르는 동안만 잠근다(`UpdateCursorLock`, 139행).
+  - 괴물 1인칭(`Camera/MonsterFirstPersonCamera.cs`)은 늘 잠그고 `PlayerInput.LookDelta`로 돈다. 결과 화면·ESC 메뉴(`FreeCursor`)에서만 푼다.
+  - `Camera_Ctrl`은 쿠키·괴물 3인칭·관전·대기실(GameLobbyScene)이 함께 쓴다.
+  - 우클릭은 도구 조준(`ToolUser.Aiming`, 41행 — 확대·조준점)에도 쓰인다.
+
+### 59.2 바꿀 것
+**AT — 스턴건만 괴물을 맞힌다**
+- AT1 규칙 한 곳: `ToolSO`에 `public bool CanHitMonster => kind == ToolKind.StunGun;`을 둔다(자산 값이 아니라 규칙이라 코드로 고정).
+- AT2 쓰는 쪽(`ToolUser`):
+  - `PickTarget`에 `bool includeMonsters` 인자를 더한다. 뿅망치·물풍선·물풍선 조준선은 `tool.CanHitMonster`(false)를 넘겨 괴물을 건너뛴다. 괴물 뒤의 쿠키는 그대로 고를 수 있다.
+  - `CollectInSphere`도 같은 규칙으로 괴물을 뺀다.
+  - 스턴건은 그대로다.
+- AT3 방장(`EscapeAuthority.ValidTargets`): `!tool.CanHitMonster`이면 대상 중 괴물(`IGameCharacter.Role == Monster`)을 버린다. 조작된 요청도 막는다(신뢰 경계).
+- AT4 받는 쪽(`ToolHitReceiver.Apply`): 같은 규칙으로 괴물이면 기절·가둠을 건너뛴다(옛 클라이언트·경합 대비 이중 안전장치). 맞은 곳 효과·소리는 대상이 없을 때처럼 낸다.
+- AT5 문구 확인: 아이템 설명(`ItemSO`·`EscapeTextsSO`)에 "괴물을 기절" 같은 말이 있으면 고친다.
+- AT6 시험(EditMode `Request1105Tests`):
+  - `CanHitMonster`(StunGun만 true).
+  - `ValidTargets`가 뿅망치·물풍선의 괴물 대상을 지우고 스턴건은 남긴다.
+  - `PickTarget`이 괴물을 건너뛰고 뒤의 쿠키를 고른다.
+  - 기존 시험(`Request1029Tests` 뿅망치·물풍선이 괴물을 맞히는 경우가 있으면)을 고친다.
+
+**PL — Tab 플레이어 목록**
+- PL1 키:
+  - `KeyAction.PlayerList`를 맨 끝에 더한다(저장된 키 번호가 밀리지 않게).
+  - 기본 Tab(`InputBindingsSO.playerListKey = KeyCode.Tab`), 묶음 `KeyGroup.All`.
+  - `PlayerInput.PlayerListHeld`를 더한다(채팅 입력 중에는 false — 채팅 창 Tab과 겹치지 않게).
+  - `KeyBindingsPage` 프리팹 `actionLabels` 끝에 "플레이어 목록"을 넣는다.
+- PL2 화면(`Escape/PlayerListHud.cs`, 새 파일):
+  - `EscapeHud.Create`에서 함께 만든다(게임 맵에만 생김). Canvas 정렬 45, 화면 가운데 반투명 판.
+  - `PlayerListHeld`인 동안만 `CanvasGroup.alpha = 1`이고, 떼면 0이다.
+  - 열 때와 `OnPlayerEnteredRoom`·`OnPlayerLeftRoom`·`OnPlayerPropertiesUpdate`·`OnRoomPropertiesUpdate` 때만 다시 그린다(매 프레임 만들지 않음 — 줄은 미리 만든 10개를 재사용).
+- PL3 줄 내용(문구는 `EscapeTextsSO`):
+  - 닉네임(`Player.NickName`), 나 표시, 방장 표시.
+  - 역할: 괴물 / 쿠키. **스파이는 쿠키로 보인다** — 본인 화면과 판이 끝나 공개된 뒤(`RevealedSpies`)에만 스파이 표시.
+  - 상태(플레이 중·잡힘·탈출)는 **보여 주지 않는다**(59.3 결정 1, 사용자 답).
+  - 순서: 괴물 → 쿠키(액터 번호 순).
+- PL4 결과 화면·ESC 메뉴가 열려 있으면 띄우지 않는다. 관전 중에도 Tab으로 볼 수 있다.
+- PL5 시험:
+  - EditMode: 줄 정렬·스파이 숨김(순수 함수 `PlayerListRows.Build`).
+  - Play Mode: Tab 누름 → 보임, 뗌 → 숨김, 채팅 중 무시.
+
+**CS — 추격음**
+- CS1 `ChaseAudioSettings.asset`:
+  - `audibleRadius` 30 → **45 m**. 최대 음량 반경 7.5 → 11.25 m, 북 2단계 7.5 → 11.25 m가 비율대로 따라간다.
+  - `maxVolume` 0.8 → **0.68**(15 % 낮춤).
+  - 바꾸는 방법: `ChaseAudioSettingsSO.EditorSetRadius`와 새 `EditorSetMaxVolume` → 저장(직렬화 값 기록, 코드 기본값 주석도 고침).
+- CS2 AI 도망 거리: 지금은 추격음 반경을 같이 써서 45 m가 되면 AI가 훨씬 일찍 도망친다(맵이 100~155 m라 자주 달아남). **AI는 지금처럼 30 m로 둔다** — `DecoyRules.FleeRadius = 30f`를 따로 두고 `DecoyBrain` 195행을 바꾼다(59.3 결정 2).
+- CS3 시험: `DistanceFadeTests`(반경 비율), `Request1031Tests`(추격음 30 m 값을 보는 시험이 있으면 45로)를 고친다. 새 시험: 반경 45·음량 0.68.
+
+**CL — 쿠키 시점 우클릭 없이**
+- CL1 `Camera_Ctrl`에 "늘 마우스로 돌기" 상태를 둔다. 켜는 조건: 게임 맵(`EscapeManager.IsActive`)이고, 결과 화면·ESC 메뉴·채팅 입력 중이 아닐 때. 이때는 매 프레임 `PlayerInput.LookDelta`로 돌고 커서를 잠근다(괴물 1인칭과 같은 규칙 — `FreeCursor`를 같이 쓰도록 `PlayerInput.CursorShouldBeFree`로 옮긴다).
+- CL2 (B안으로 바뀜) 대기실도 자유 시점. Alt를 누르는 동안 커서 표시 — 아래 문장은 처음 안.
+- CL2(처음 안) 대기실(GameLobbyScene)은 그대로 우클릭 드래그로 돈다. 대기실에는 스킨·녹음·준비 버튼 등 마우스로 누르는 UI가 많다(59.3 결정 3).
+- CL3 우클릭(`KeyAction.CameraRotate`)은 게임 맵에서 **도구 조준(확대·조준점)** 으로만 남는다.
+  - `ToolUser.Aiming`은 그대로다.
+  - 설정 창 이름은 "시점 회전" → "시점 회전(대기실)·조준"으로 고친다.
+  - enum 이름은 저장 키 때문에 그대로 둔다.
+- CL4 관전(탈출·잡힌 뒤)도 같은 `Camera_Ctrl`이라 마우스로 돈다. 관전 대상 바꾸기는 키(`SpectateNext`)라 영향이 없다.
+- CL5 시험(Play Mode): 쿠키로 마우스 이동(`EditorLookDelta` 주입)만으로 `m_RotH`가 바뀐다. ESC 메뉴를 열면 커서가 풀리고 회전이 멈춘다. 결과 화면에서 커서가 풀린다. 대기실은 우클릭 없이는 돌지 않는다.
+
+### 59.3 정할 것(사용자)
+1. Tab 목록에 **상태(플레이 중/잡힘/탈출)** 를 보여 줄까? (추천: 보여 줌 — 잡힘·탈출은 이미 알림으로 모두에게 알려진다.) 스파이는 끝날 때까지 쿠키로 보인다.
+2. AI 도망 거리는 지금처럼 30 m로 두고 **추격음만 45 m** — 추천.
+3. 대기실(GameLobbyScene)은 지금처럼 우클릭으로 돌리기 — 추천(UI 버튼을 눌러야 함). 게임 맵만 마우스 자유 시점.
+
+- 사용자 답(2026-11-05): 1 → 상태를 보여 주지 않는다. 2 → 추천대로(AI 도망 30 m 유지, 추격음만 45 m). 3 → **B안**: 대기실도 자유 시점, Alt(바꿀 수 있는 키 `KeyAction.ShowCursor`)를 누르는 동안 커서를 보이고 시점을 멈춘다(그동안 버튼 클릭). 확인 창이 떠 있는 동안에도 커서를 푼다.
+  - 대기실에서 늘 보이는 클릭 UI: 게임 시작(방장), 스킨 선택 4칸, 참가자 목록(스크롤·방장 화면의 강퇴 버튼과 확인 창), 목소리 녹음 패널(녹음·들어보기), 채팅 기록 스크롤.
+  - ESC 메뉴·설정·방 설정은 ESC로 열고, 그때는 커서가 풀린다.
+
+### 59.4 단계
+| 단계 | 내용 |
+|---|---|
+| AT1~AT6 ✅ | 스턴건만 괴물 명중(쓰는 쪽·방장·받는 쪽·문구·시험) |
+| PL1~PL5 ✅ | Tab 플레이어 목록(키·HUD·줄 내용·시험) |
+| CS1~CS3 ✅ | 추격음 45 m·음량 0.68, AI 도망 30 m 유지 |
+| CL1~CL5 ✅ | 쿠키 마우스 자유 시점(3인칭 유지, 게임 맵·대기실), Alt = 커서, 우클릭은 조준 |
+| V ✅ | 컴파일·EditMode 전체·Play Mode(쿠키 뿅망치/물풍선 → 괴물 기절 안 함·스턴건 기절, Tab, 추격음 거리, 시점)·문서 |
+
+### 59.5 결과 ✅
+- **AT 스턴건만 괴물 명중**
+  - `ToolSO.CanHitMonster`(StunGun만 true) 규칙 하나를 세 곳이 본다.
+  - `ToolUser.PickTarget`·`CollectInSphere`: 뿅망치·물풍선·조준선이 괴물을 건너뛴다.
+  - `EscapeAuthority.ValidTargets` → `WithoutMonsters`: 위치를 모르는 입장 직후도 걸러진다.
+  - `ToolHitReceiver.Apply`가 한 번 더 막는다.
+  - 아이템 설명 문구에 괴물 기절 언급은 없었다(바꾼 것 없음).
+- **PL Tab 참가자 목록**
+  - 키: `KeyAction.PlayerList`(기본 Tab), `KeyAction.ShowCursor`(기본 왼쪽 Alt)를 맨 끝에 더했다(묶음 All). 기본값은 `InputBindingsSO`에 있다.
+  - 설정 창 이름: "참가자 목록"·"커서 보이기", 우클릭 줄은 "조준(도구)"로 바꿨다(`SettingsMenu`·`GameSceneCore` 프리팹, 씬 11개 24줄).
+  - 화면: `Escape/PlayerListHud.cs`(새, `EscapeHud.Create`가 만든다).
+    - 닉네임·(나)·방장·괴물/쿠키를 보여 준다. 상태는 보여 주지 않는다.
+    - 스파이는 본인과 공개 뒤에만 보인다.
+    - 인원수만큼 판이 늘어난다. 문구는 `EscapeTexts`: 참가자·괴물·쿠키·(나)·방장.
+- **CS 추격음**
+  - `ChaseAudioSettings` 반경 30 → 45 m(최대 음량 반경 11.25 m), 음량 0.8 → 0.68(`EditorSetMaxVolume` 추가).
+  - AI 도망은 `DecoyRules.FleeRadius` = 30 m로 떼었다.
+- **CL 자유 시점**
+  - `Core/CursorPolicy.cs`(새): 결과 화면·ESC 메뉴·채팅·확인창(`ConfirmDialog.AnyOpen`)·Alt를 누르는 동안 커서를 푼다.
+  - `Camera_Ctrl`(3인칭 그대로, 거리 3.2 m)은 우클릭 없이 `LookDelta`로 돈다. `MonsterFirstPersonCamera`도 같은 규칙을 쓴다.
+  - 우클릭은 도구 조준(`ToolUser.Aiming`)으로만 쓴다.
+- **시험**
+  - 새 `Request1105Tests` 5개. `DecoyAiTests`의 "춤이 맨 끝 키"를 "춤 = 21번"으로 고쳤다. EditMode 전체 **361/361**.
+  - Play Mode(진저브레드):
+    - 대상 목록을 조작해 보내도 뿅망치·물풍선은 괴물이 기절·갇힘 없음이고, 스턴건은 기절한다(0.25초·1.6초에 확인). `PickTarget`은 망치·풍선 규칙이면 괴물 없음, 스턴건 규칙이면 괴물을 고른다.
+    - Tab: 누르면 보이고(참가자 1 · "#1 (나)" · "방장 쿠키"), 채팅 중이면 숨고, 떼면 숨는다.
+    - 추격음: 괴물 60 m 무음, 40 m 들림(세기 0.06), 5 m 최대 0.68.
+    - 시점: 우클릭 없이 마우스만으로 회전하고 커서가 잠긴다. Alt·채팅이면 커서가 풀리고 멈춘다.
+  - Play Mode(대기실):
+    - 마우스만으로 회전한다.
+    - Alt를 누르면 커서가 풀린다. 스킨 버튼 위치의 UI 레이캐스트가 버튼에 닿고, 눌러서 스킨 2로 바뀌었다.
+    - ESC 메뉴에서는 풀리고, 닫으면 잠긴다.
+  - 콘솔 오류 0(시험 스크립트 자체의 NullReference 1건은 스크립트를 고친 뒤 없음).
+
+## 60 2026-11-05 진저브레드 건물 고르게 다시 배치 ✅
+- 사용자 요청(사진에 빈자리 동그라미): §58 배치는 건물이 바깥 둘레(r 80~90 m)에 몰려 가운데가 비었다 → 지상·지하를 고르게.
+- 방법(`scratchpad/lay/even60.py`): 사분면마다 **안쪽 고리 1채**(지상 r 50~60, 지하 r 46~62)와 **바깥 고리**(지상 2채 ±25° r 82~88, 지하 1채 r 82~88)를 둔다. 옆 1 m·문 앞뒤 4 m 여유는 그대로이고, 겹치지 않는 자리 중 목표 자리에 가깝고 서로 가장 떨어진 곳을 고른다.
+- 배치(건물 종류·룬 사분면은 §58과 같음, 자리만 바뀜):
+  - Q1: 안쪽 홀리데이 / 바깥 캔디케인·방앗간
+  - Q2: 안쪽 **룬** / 바깥 초코·캔디 머그하우스
+  - Q3: 안쪽 **룬** / 바깥 해골 가마솥·진저브레드 풍차
+  - Q4: 안쪽 캔디 머그하우스 / 바깥 캔디톱니·초코
+  - UQ1: 안쪽 마카롱 / 바깥 **룬**
+  - UQ2: 안쪽 비뚤어진 초코 / 바깥 글룸검 요새
+  - UQ3: 안쪽 캔디케인 / 바깥 기어웍스 게이트
+  - UQ4: 안쪽 마녀 찻주전자 / 바깥 **룬**
+- 빌더: `RuneGround`·`RuneUnderground`·`GroundPlan`·`UgPlan` 값을 바꿨다. 사분면 표지판은 안쪽 건물 문 앞이면 세우지 않는다(`placed.IsFree`).
+- 결과: 겹침 0(23채), 상자 40·로켓 6·무지개 8·탈출구 4, NavMesh 95 %·숨을 곳 25.
+- 시험:
+  - `GingerbreadVillageMapTests` 8/8(사분면 지상 3·지하 2, 지상 → 지하 출구 길).
+  - 괴물 캡슐 40문 양방향 통과(룬 방 제단만 걸림).
+  - Play Mode 안→밖 38문은 드라이버로 통과했다. 지하 룬 2문(UQ1 앞, UQ4 뒤)은 드라이버 출발점이 방 가운데 제단 쪽이라 막혔다. 직접 밀면 문 밖 9 m까지 나간다.
+  - 밖→안 35문은 드라이버로 통과했다. 울타리 쪽 뒷문 5문은 출발점(문 밖 6 m)이 울타리 너머라 막혔다. 문 밖 3.5 m에서 밀면 방 안 10 m까지 들어간다.
+  - 콘솔 오류 0(경고는 시험 순간이동 `NetGuard`).
+- 사진: `scratchpad/plan60.png`(배치도), `scratchpad/top60.jpg`(Unity 위에서 본 지상·지하).
+
+## 61 2026-11-05 아이템 시험(진저브레드, Play Mode) ✅
+- 방법: 오프라인 방(괴물 목록 [99]). 아이템을 손에 쥐어 주고 실제 요청(`EscapeManager.Request` → 방장 `EscapeAuthority`)을 보낸 뒤 효과를 확인했다. 대상은 같은 액터 소유의 시험용 쿠키·괴물이다.
+- 결과(모두 기대대로):
+
+| 아이템 | 확인 |
+|---|---|
+| 뿅망치 | 쿠키 기절(3초). 괴물에게는 효과 없음(§59) |
+| 스턴건 | 쿠키 기절(2초), 괴물 기절(1.5초) |
+| 물풍선 | 쿠키 물방울에 갇힘(5초). 괴물에게는 효과 없음(§59) |
+| 인라인 스케이트 | 이동 배율 2(5초), 1회 쓰면 사라짐 |
+| 호박 마차 | 1초 뒤 고른 지점으로 이동(오차 0 m) |
+| 접착 녹음기 | 목소리 녹음이 있으면 내 AI 하나가 말하기 시작(0 → 1) |
+| 헬리콥터 모자 | 떠오름 → 40 m → 가까운 맵 가장자리로 순항 → 맵 밖에서 탈출 처리(반지름 115 m), 판 끝 |
+| 재료(룬) 상자 열기·버리기·줍기 | 상자 열림·손 0 → 1, 버리면 바닥에, 다시 줍기 1 |
+| 괴물 소음 폭탄 | 건물 옆 폭탄이 수리 시작 때 터짐(소모), 수리하던 쿠키 기절 |
+| 해체 도구(스파이) | 가동된 건물을 20초 누르면 재료가 빠져 스파이 손으로, 도구는 사라짐 |
+| 수리키트(스파이) | 로켓 칸 0 → 0.5씩(두 칸) |
+| 로켓 재료(스파이) | §57 시험에서 확인(칸 채움·탑승·발사) |
+
+- 시험 중 알게 된 것(게임 버그 아님):
+  - 시험이 캐릭터를 순간이동시키면 방장 이동 감시(NetGuard)가 1초 동안 요청을 무시한다(정상 동작). 한 액터가 쿠키 두 개를 가진 시험 구조에서는 위치가 계속 튀어 무시가 이어졌다. 대상 쿠키를 지우거나 감시 표시를 지우고 다시 확인했다.
+- 콘솔 오류 0.
+
+## 62 2026-11-05 괴물 엘리베이터는 준비 시간에 막기 ✅
+- 사용자 요청: 술래가 준비 시간에는 엘리베이터를 타지 못하게.
+- `MonsterElevator.PhaseAllows(GamePhase)`: 사냥(Hunt)·타임어택(TimeAttack)에서만 탄다. 준비·결과·대기실에서는 타지 못한다.
+- `CanInteract`에서 막고, 1.2초 타는 연출 뒤 옮기기 직전에도 한 번 더 본다(연출 중 단계가 바뀌는 경우).
+- 시험:
+  - EditMode `Request1105Tests.MonsterElevator_ClosedDuringPrepare`.
+  - Play Mode(진저브레드): 준비 시간에 괴물이 술래방 발판에서 타면 `canRide=False`, 2초 뒤에도 지상(y 0.1)이다. 사냥 시간에는 `canRide=True`, 지하(y −36)로 내려갔다.
+  - 콘솔 오류 0.

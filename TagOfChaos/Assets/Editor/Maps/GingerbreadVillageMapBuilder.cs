@@ -24,25 +24,22 @@ public static class GingerbreadVillageMapBuilder
     private const string MenuRoot = "Tools/TagOfChaos/Maps/";
 
     // ---- 지상
-    public const float MapRadius = 155f;
+    public const float MapRadius = 100f;   // 155 → 100 m(§58, 약 0.65배)
     public const float RoadHalf = 5f, RoadRow = 7.5f;
-    public const float RingRadius = 45f, RingHalf = 3f;
-    public const float RuneRadius = 75f;
-    public const float GroundBuildingRadius = 118f, GroundBuildingSpread = 25f;
+    public const float RingRadius = 22f, RingHalf = 3f;
     // 시계탑 2(11시·5시, 2026-11-04 사용자 요청 — 처음 12시 술래방 뒤에서 옮김). 정문이 맵 가운데를 보고, 뒷벽 통로 뒤(바깥쪽)에 나선 내리막.
-    public const float TowerRadius = 70f;
-    public static readonly float[] TowerDeg = { 120f, 300f };
+    public const float TowerRadius = 40f;
+    public static readonly float[] TowerDeg = { 105f, 285f };   // §58: 지하 1·4사분면에 나선과 룬 건물이 함께 들어가게 큰길 쪽으로
     private const float FenceHeight = 6f, FenceThickness = 0.8f, FenceStep = 3.1f;
     private const float FloorHalf = MapRadius + 80f;
     private const float GroundUnderY = -0.3f;
     private const float WitchBeyondFence = 75f;
 
     // ---- 지하
-    public const float UgRadius = 134f;   // 108 → 134 m(§54: 사분면마다 숨는 건물 2채가 바깥 둘레에 들어가게)
+    public const float UgRadius = 105f;   // 134 → 105 m(§58: 지하 건물 5종 + 룬 2 + 숨는 건물 1)
     public const float UgY = -36f;
     public const float CeilingY = -0.35f;
     public const float UgRoadHalf = 3.5f;
-    public const float UgInnerRadius = 58f, UgOuterRadius = 86f, UgOuterSpread = 30f;
     private const float UgFloorHalf = UgRadius + 30f;
 
     // ---- 시계탑 계단·나선 내리막(시계탑 로컬: 앞 +Z, 계단 구멍 x ±2.3 · z −3.0~1.65, 뒷벽 통로 바깥 z −3.61 · 바닥 −3.6 m)
@@ -54,42 +51,29 @@ public static class GingerbreadVillageMapBuilder
 
     // 사분면(Q1 북서, Q2 북동, Q3 남서, Q4 남동) — 각도는 +x에서 +z 쪽
     public static readonly float[] QuadDeg = { 135f, 45f, 225f, 315f };
-    // 재료 건물 방향: Q1·Q4는 시계탑(11시 120°·5시 300°)을 비켜 15° 돌린다
-    public static readonly float[] RuneDeg = { 150f, 45f, 225f, 330f };
     public static readonly float[] AxisDeg = { 90f, 0f, 270f, 180f };          // N, E, S, W
     public static readonly string[] ExitNames = { "Exit_N", "Exit_E", "Exit_S", "Exit_W" };
-    // 지상 건물(사분면 2) · 지하 건물(사분면 3: 안쪽 1 + 바깥 2) — 큰 것은 안쪽, 작은 것은 동굴 벽 쪽
-    private static readonly string[][] GroundBuildings =
+    // 건물 배치(§58, 2026-11-05 사용자 요청): 지상 사분면마다 3채(룬 건물은 Q2·Q3), 지하 사분면마다 2채(룬 건물은 UQ1·UQ4).
+    // 자리는 큰길·산책길·시계탑·나선·출구 앞과 겹치지 않게(옆 1 m·문 앞뒤 4 m 여유) 찾은 값(scratchpad/lay/lay57.py·pair57.py). (이름, 반지름, 각도)
+    // 룬 건물은 Building_Q{사분면}(탈출 설정이 이 이름으로 찾는다).
+    private static readonly (int q, float r, float deg)[] RuneGround = { (2, 52f, 43f), (3, 50f, 225f) };
+    private static readonly (int q, float r, float deg)[] RuneUnderground = { (1, 84f, 149f), (4, 84f, 331f) };
+    // §60(사용자 사진): 사분면마다 안쪽 고리 1채 + 바깥 고리(지상 2·지하 1)로 고르게(scratchpad/lay/even60.py).
+    private static readonly (string name, float r, float deg)[][] GroundPlan =
     {
-        new[] { "GIN_BLD_CandyCaneCottage", "GIN_BLD_GingerbreadMill" }, new[] { "GIN_BLD_ChocoCottage", "GIN_BLD_CandyCogCottage" },
-        new[] { "GIN_BLD_SkullCauldron", "GIN_BLD_CandyCaneCottage" }, new[] { "GIN_BLD_GingerbreadMill", "GIN_BLD_ChocoCottage" },
+        new[] { ("GIN_HD_HolidayHideaway", 56f, 140f), ("GIN_BLD_CandyCaneCottage", 82f, 111f), ("GIN_BLD_GingerbreadMill", 82f, 162f) },
+        new[] { ("GIN_BLD_ChocoCottage", 82f, 16f), ("GIN_HD_CandyMughouse", 84f, 72f) },
+        new[] { ("GIN_BLD_SkullCauldron", 82f, 198f), ("GIN_HD_GingerbreadWindmill", 84f, 253f) },
+        new[] { ("GIN_HD_CandyMughouse", 60f, 321f), ("GIN_BLD_CandyCogCottage", 82f, 291f), ("GIN_BLD_ChocoCottage", 88f, 343f) },
     };
-    private static readonly string[][] UgBuildings =
+    private static readonly (string name, float r, float deg)[][] UgPlan =
     {
-        new[] { "GIN_UG_CrookedChocoCottage", "GIN_UG_MacaronCottage", "GIN_UG_GearworksGate" },
-        new[] { "GIN_UG_GloomgumFortress", "GIN_UG_MacaronCottage", "GIN_UG_CandyCaneCottage" },
-        new[] { "GIN_UG_GloomgumFortress", "GIN_UG_CandyCaneCottage", "GIN_UG_GearworksGate" },
-        new[] { "GIN_UG_CrookedChocoCottage", "GIN_UG_MacaronCottage", "GIN_UG_GearworksGate" },
+        new[] { ("GIN_UG_MacaronCottage", 48f, 144f) },
+        new[] { ("GIN_UG_CrookedChocoCottage", 62f, 31f), ("GIN_UG_GloomgumFortress", 82f, 66f) },
+        new[] { ("GIN_UG_CandyCaneCottage", 53f, 224f), ("GIN_UG_GearworksGate", 88f, 224f) },
+        new[] { ("GIN_HD_WitchTeapot", 46f, 323f) },
     };
-    // 숨는 건물(§54, 꾸밈 + 쿠키가 숨는 곳): 사분면마다 지상 3(밝은 3종) · 지하 2(어두운 3종 돌려 씀). (이름, 반지름, 각도)
-    // 자리는 기존 건물·길·시계탑·나선·출구 앞과 겹치지 않게(옆 1 m·문 앞뒤 4 m 여유) 찾은 값(scratchpad/lay/lay.py).
-    private static readonly (string name, float r, float deg)[][] HideGround =
-    {
-        new[] { ("GIN_HD_CandyMughouse", 136f, 144.5f), ("GIN_HD_GingerbreadWindmill", 137f, 126f), ("GIN_HD_HolidayHideaway", 139f, 170.5f) },
-        new[] { ("GIN_HD_CandyMughouse", 136f, 36f), ("GIN_HD_GingerbreadWindmill", 137f, 53f), ("GIN_HD_HolidayHideaway", 88f, 18f) },
-        new[] { ("GIN_HD_CandyMughouse", 136f, 216f), ("GIN_HD_GingerbreadWindmill", 137f, 234f), ("GIN_HD_HolidayHideaway", 87f, 252f) },
-        new[] { ("GIN_HD_CandyMughouse", 136f, 305.5f), ("GIN_HD_GingerbreadWindmill", 137f, 324f), ("GIN_HD_HolidayHideaway", 139f, 279.5f) },
-    };
-    private static readonly (string name, float r, float deg)[][] HideUnderground =
-    {
-        new[] { ("GIN_HD_HauntedGingerHouse", 118f, 102f), ("GIN_HD_WitchTeapot", 117f, 166.5f) },
-        new[] { ("GIN_HD_HauntedWindmill", 117f, 11f), ("GIN_HD_HauntedGingerHouse", 118f, 26.5f) },
-        new[] { ("GIN_HD_WitchTeapot", 117f, 256.5f), ("GIN_HD_HauntedWindmill", 117f, 213.5f) },
-        new[] { ("GIN_HD_HauntedGingerHouse", 118f, 282f), ("GIN_HD_WitchTeapot", 117f, 346.5f) },
-    };
-    private static IEnumerable<string> HideNames => HideGround.Concat(HideUnderground).SelectMany(x => x).Select(x => x.name).Distinct();
-    // 사진을 보고 사용자가 배치를 승인했다(2026-11-04 "배치해줘 알맞게").
-    public static bool PlaceHideBuildings = true;
+    private static IEnumerable<string> PlanNames => GroundPlan.Concat(UgPlan).SelectMany(x => x).Select(x => x.name).Distinct();
     private static readonly string[] KeepInMap = { "Background", WitchPath.FarBackdropName, "Ground", "Exits" };   // 술래방은 왕좌 방으로 새로 만든다(§52)
 
     // 조명
@@ -139,23 +123,22 @@ public static class GingerbreadVillageMapBuilder
 
         BuildClockTowers(map);
         BuildGround(map);
-        BuildRuneBuildings(map);
-        int groundBuildings = BuildGroundBuildings(map);
-        int hides = PlaceHideBuildings ? BuildHideBuildings(map) : 0;
+        Transform ug = Group(map, "Underground");
+        BuildRuneBuildings(map, ug);
+        int groundBuildings = BuildPlan(GroundPlan, map, 0f, "Q", placed);
         BuildFence(map);
         int groundDeco = BuildGroundRoads(map) + BuildGroundQuadrants(map, rng);
 
-        Transform ug = Group(map, "Underground");
         BuildCave(ug);
         for (int k = 0; k < towers.Count; k++) BuildHelix(ug, k);
-        int ugBuildings = BuildUgBuildings(ug);
-        if (PlaceHideBuildings) hides += BuildUgHideBuildings(ug);
+        int ugBuildings = BuildPlan(UgPlan, ug, UgY, "UQ", placedUg);
+        BuildElevator(map, ug);
         int exits = BuildExits(map, ug);
         int ugDeco = BuildUgDeco(ug, rng);
 
         Physics.SyncTransforms();
         int tiles = BuildTiles(map, ug, rng);
-        int markers = RoundMapKit.Markers(map, placed, RingRadius, RingHalf);
+        int markers = RoundMapKit.Markers(map, placed, RingRadius, RingHalf, MapRadius / 80f);
         int lights = BuildLights(scene, map, ug);
         SetAmbience(scene);
         MoveKillZone(scene);
@@ -169,7 +152,7 @@ public static class GingerbreadVillageMapBuilder
             EditorUtility.SetDirty(guard);
         }
         var manager = Object.FindFirstObjectByType<EscapeManager>();
-        if (manager != null) { manager.EditorSetMapRadius(MapRadius); EditorUtility.SetDirty(manager); }
+        if (manager != null) { manager.EditorSetMapRadius(Mathf.Max(MapRadius, UgRadius)); EditorUtility.SetDirty(manager); }   // 지하 동굴(105 m)이 지상(100 m)보다 넓다
         RoundMapKit.MoveSpawn(scene, SceneSpawnPoints.Cookie, map, "Spawn_Cookie_Q1");
         RoundMapKit.MoveWitchAnchor(scene, MapRadius, WitchBeyondFence);
 
@@ -177,7 +160,7 @@ public static class GingerbreadVillageMapBuilder
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         RoundMapKit.AddToBuildSettings(ScenePath, MapName);
-        LastReport = $"[GingerbreadMap] {ScenePath}: ground buildings {groundBuildings}, underground buildings {ugBuildings}, hide buildings {hides}, exits {exits}, " +
+        LastReport = $"[GingerbreadMap] {ScenePath}: ground buildings {groundBuildings}, underground buildings {ugBuildings}, rune buildings {RuneGround.Length + RuneUnderground.Length}, exits {exits}, " +
                      $"ground deco {groundDeco}, underground deco {ugDeco}, backdrop {backdrop}, tiles {tiles}, markers {markers}, lights {lights}, " +
                      $"towers {string.Join(" ", towers.Select(t => t.position.ToString("F0")))} | {overlaps} | {escape}";
         return LastReport;
@@ -309,7 +292,7 @@ public static class GingerbreadVillageMapBuilder
         }
         var spawn = new GameObject("Spawn_Monster").transform;
         spawn.SetParent(room, false);
-        spawn.localPosition = new Vector3(0f, 0.1f, -2f);
+        spawn.localPosition = new Vector3(0f, 0.1f, -5.5f);   // 가운데는 엘리베이터(§58)
         placed.Take(Vector3.zero, RoomRadius + 4f);
         // 방 둘레 가로등 8(문 사이)
         foreach (float b in QuadDeg)
@@ -318,6 +301,40 @@ public static class GingerbreadVillageMapBuilder
                 Vector3 p = Polar(RoomRadius + 3.5f, b + d);
                 if (SpawnProp("GIN_StreetLamp", room, p, Quaternion.identity) != null) placed.Take(p, 0.8f);
             }
+    }
+
+    // 괴물 전용 엘리베이터(§58): 술래방 가운데(지상)와 지하 동굴 가운데의 발판 한 쌍. 발판 위에서 E → 빛기둥 연출 → 반대쪽 발판.
+    private const float ElevatorRadius = 2.2f, ElevatorBeamHeight = 6f;
+
+    private static void BuildElevator(Transform map, Transform ug)
+    {
+        Transform room = map.Find("MonsterRoom");
+        MonsterElevator top = MakeElevatorPad(room != null ? room : map, "Elevator_Top", Vector3.zero);
+        MonsterElevator bottom = MakeElevatorPad(Group(ug, "Elevator"), "Elevator_Bottom", Vector3.up * UgY);
+        top.EditorBind(bottom, top.transform.Find("Beam"));
+        bottom.EditorBind(top, bottom.transform.Find("Beam"));
+        EditorUtility.SetDirty(top); EditorUtility.SetDirty(bottom);
+        placedUg.Take(Vector3.zero, ElevatorRadius + 4f);
+    }
+
+    private static MonsterElevator MakeElevatorPad(Transform parent, string name, Vector3 pos)
+    {
+        var root = new GameObject(name);
+        root.transform.SetParent(parent, false);
+        root.transform.position = pos;
+        Mesh cylinder = Resources.GetBuiltinResource<Mesh>("Cylinder.fbx");
+        var pad = new GameObject("Pad");
+        pad.transform.SetParent(root.transform, false);
+        pad.transform.localPosition = Vector3.up * 0.04f;
+        pad.transform.localScale = new Vector3(ElevatorRadius * 2f, 0.04f, ElevatorRadius * 2f);   // 8 cm 원판(걸을 수 있는 높이 — 충돌은 바닥이 맡는다)
+        pad.AddComponent<MeshFilter>().sharedMesh = cylinder;
+        pad.AddComponent<MeshRenderer>().sharedMaterial = Mat("stone_lilac");
+        RoundMapKit.BeaconPart(root.transform, "Glow", Resources.GetBuiltinResource<Mesh>("Quad.fbx"), RoundMapKit.BeaconMaterial(GeneratedFolder, "GIN_ElevatorGlow", RoomColor * 1.4f, 1f, 1.5f, 1f),
+            Vector3.up * 0.1f, Quaternion.Euler(90f, 0f, 0f), new Vector3(ElevatorRadius * 2.6f, ElevatorRadius * 2.6f, 1f));
+        RoundMapKit.BeaconPart(root.transform, "Beam", cylinder, RoundMapKit.BeaconMaterial(GeneratedFolder, "GIN_ElevatorBeam", RoomColor * 1.6f, 0f, 1.2f, 1.5f),
+            Vector3.up * (ElevatorBeamHeight / 2f), Quaternion.identity, new Vector3(ElevatorRadius * 1.8f, ElevatorBeamHeight / 2f, ElevatorRadius * 1.8f));
+        RoundMapKit.Point(root.transform, pos + Vector3.up * 3f, 8f, 2f, RoomColor);
+        return root.AddComponent<MonsterElevator>();
     }
 
     // ---------------------------------------------------------------- background
@@ -333,7 +350,7 @@ public static class GingerbreadVillageMapBuilder
             if (t.name.StartsWith("GIN_Terrain")) { Object.DestroyImmediate(t.gameObject); continue; }
             var flat = new Vector2(t.position.x, t.position.z);
             float deg = flat.sqrMagnitude > 1f ? Mathf.Atan2(flat.y, flat.x) * Mathf.Rad2Deg : rng.Next(360);
-            Vector3 p = Polar(172f + (float)rng.NextDouble() * 33f, deg);
+            Vector3 p = Polar(MapRadius + 17f + (float)rng.NextDouble() * 33f, deg);
             t.position = new Vector3(p.x, 0f, p.z);
             foreach (Collider c in t.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
             n++;
@@ -444,25 +461,45 @@ public static class GingerbreadVillageMapBuilder
     }
 
     // 재료 건물(룬 건물, B안): Building_Q1~Q4 루트(EscapeMapSetup → QuadrantBuilding) 아래 GIN_RuneBuilding, 정문이 술래방을 본다.
-    private static void BuildRuneBuildings(Transform map)
+    // 룬(재료) 건물 4: 지상 Q2·Q3, 지하 UQ1·UQ4(§58). 정문이 맵 가운데를 본다.
+    private static void BuildRuneBuildings(Transform map, Transform ug)
     {
-        Transform group = Group(map, "Buildings");
         GameObject asset = Building("GIN_RuneBuilding");
-        for (int q = 0; q < 4; q++)
+        foreach ((int q, float r, float deg, bool under) in RuneGround.Select(x => (x.q, x.r, x.deg, false)).Concat(RuneUnderground.Select(x => (x.q, x.r, x.deg, true))))
         {
-            Vector3 p = Polar(RuneRadius, RuneDeg[q]);
-            var root = new GameObject($"Building_Q{q + 1}").transform;
+            Transform group = Group(under ? ug : map, "Buildings");
+            Vector3 p = Polar(r, deg);
+            var root = new GameObject($"Building_Q{q}").transform;
             root.SetParent(group, false);
-            root.SetPositionAndRotation(p, FaceCenter(p));
-            GameObject bld = RoundMapKit.Spawn(asset, root, p, root.rotation);
+            root.SetPositionAndRotation(p + Vector3.up * (under ? UgY : 0f), FaceCenter(p));
+            GameObject bld = RoundMapKit.Spawn(asset, root, root.position, root.rotation);
             foreach (InteractableDoor d in bld.GetComponentsInChildren<InteractableDoor>(true))
             {
                 var so = new SerializedObject(d);
                 so.FindProperty("doorId").stringValue = $"{root.name}_{d.name.Replace("Door_", "")}";
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
-            Take(placed, bld.transform, 0.85f);
-            placed.MonsterSeeds.Add(p + Vector3.up * 0.2f);
+            if (under) TrimRoofBeam(bld.transform);
+            RoundMapKit.Placement pl = under ? placedUg : placed;
+            Take(pl, bld.transform, 0.85f);
+            pl.MonsterSeeds.Add(root.position + Vector3.up * 0.2f);
+        }
+    }
+
+    // 지하 룬 건물의 지붕 빛기둥(110 m)은 동굴 천장을 뚫고 지상에 섰다 — 천장 바로 아래에서 끝나게 줄인다(바닥 쪽 끝은 그대로).
+    private static void TrimRoofBeam(Transform building)
+    {
+        foreach (Transform beam in building.GetComponentsInChildren<Transform>(true).Where(t => t.name == "RoofBeam").ToList())
+        {
+            Renderer[] parts = beam.GetComponentsInChildren<Renderer>(true);
+            if (parts.Length == 0) continue;
+            float Min() => parts.Min(r => r.bounds.min.y);
+            float Max() => parts.Max(r => r.bounds.max.y);
+            float bottom = Min(), top = Max(), want = CeilingY - 0.3f;
+            if (top <= want || want <= bottom) continue;
+            Vector3 sc = beam.localScale;
+            beam.localScale = new Vector3(sc.x, sc.y * (want - bottom) / (top - bottom), sc.z);
+            beam.position += Vector3.up * (bottom - Min());
         }
     }
 
@@ -472,37 +509,17 @@ public static class GingerbreadVillageMapBuilder
         pl.Take(t.TransformPoint(new Vector3(b.center.x, 0f, b.center.z)), new Vector2(b.extents.x, b.extents.z).magnitude * k);
     }
 
-    // 지상 건물 8(사분면 2, 바깥 고리 ±25°). 정문이 술래방을 보고 뒷문은 울타리 쪽.
-    private static int BuildGroundBuildings(Transform map)
+    // 사분면별 건물(일반·숨는 건물). 숨는 건물(GIN_HD_)은 HideBuildings, 나머지는 지상 Landmarks·지하 Buildings에 둔다.
+    private static int BuildPlan((string name, float r, float deg)[][] plan, Transform parent, float y, string tag, RoundMapKit.Placement pl)
     {
-        Transform group = Group(map, "Landmarks");
         int n = 0;
-        for (int q = 0; q < 4; q++)
-            for (int k = 0; k < 2; k++)
+        for (int q = 0; q < plan.Length; q++)
+            for (int k = 0; k < plan[q].Length; k++)
             {
-                Vector3 p = Polar(GroundBuildingRadius, QuadDeg[q] + (k == 0 ? -GroundBuildingSpread : GroundBuildingSpread));
-                if (PlaceBuilding(GroundBuildings[q][k], group, p, $"Q{q + 1}_{k}", placed)) n++;
+                (string name, float r, float deg) = plan[q][k];
+                Transform group = Group(parent, name.StartsWith("GIN_HD_") ? "HideBuildings" : y < 0f ? "Buildings" : "Landmarks");
+                if (PlaceBuilding(name, group, Polar(r, deg) + Vector3.up * y, $"{tag}{q + 1}_{k}", pl)) n++;
             }
-        return n;
-    }
-
-    private static int BuildHideBuildings(Transform map)
-    {
-        Transform group = Group(map, "HideBuildings");
-        int n = 0;
-        for (int q = 0; q < 4; q++)
-            for (int k = 0; k < HideGround[q].Length; k++)
-                if (PlaceBuilding(HideGround[q][k].name, group, Polar(HideGround[q][k].r, HideGround[q][k].deg), $"Q{q + 1}_{k}", placed)) n++;
-        return n;
-    }
-
-    private static int BuildUgHideBuildings(Transform ug)
-    {
-        Transform group = Group(ug, "HideBuildings");
-        int n = 0;
-        for (int q = 0; q < 4; q++)
-            for (int k = 0; k < HideUnderground[q].Length; k++)
-                if (PlaceBuilding(HideUnderground[q][k].name, group, Polar(HideUnderground[q][k].r, HideUnderground[q][k].deg) + Vector3.up * UgY, $"UQ{q + 1}_{k}", placedUg)) n++;
         return n;
     }
 
@@ -571,8 +588,8 @@ public static class GingerbreadVillageMapBuilder
         {
             Vector3 p = Polar(RingRadius + RingHalf + 5f, QuadDeg[q]);   // 산책길에서 사분면으로 들어가는 아치
             if (SpawnProp("GIN_CandyArch", roads, p, FaceCenter(p)) != null) { n++; placed.Take(p + Polar(1.7f, QuadDeg[q] + 90f), 0.6f); placed.Take(p - Polar(1.7f, QuadDeg[q] + 90f), 0.6f); }
-            Vector3 s = Polar(22f, QuadDeg[q]);
-            if (SpawnProp("GIN_SignPost", roads, s, FaceCenter(s)) != null) { n++; placed.Take(s, 1f); }
+            Vector3 s = Polar(RingRadius + RingHalf + 9f, QuadDeg[q]);
+            if (placed.IsFree(s, 2f) && SpawnProp("GIN_SignPost", roads, s, FaceCenter(s)) != null) { n++; placed.Take(s, 1f); }   // 안쪽 건물 문 앞이면 세우지 않는다(§60)
         }
         return n;
     }
@@ -591,16 +608,18 @@ public static class GingerbreadVillageMapBuilder
         {
             float b = QuadDeg[q];
             Transform group = Group(map, $"Quadrant_Q{q + 1}");
-            float rb = RuneDeg[q];
-            Vector3 front = Polar(RuneRadius - 22f, rb);   // 재료 건물 앞 광장
-            foreach (float d in new[] { -1f, 1f })
+            foreach ((int rq, float rr, float rb) in RuneGround.Where(x => x.q == q + 1))
             {
-                Vector3 p = front + Polar(7f, rb + 90f * d);
-                if (placed.IsFree(p, 1.5f) && SpawnProp("GIN_CakeBench", group, p, FaceCenter(p)) != null) { n++; placed.Take(p, 1.3f); }
-                Vector3 c = front + Polar(10f, rb + 90f * d) + Polar(4f, rb);
-                if (placed.IsFree(c, 1f) && SpawnProp("GIN_CherryPillar", group, c, Quaternion.identity) != null) { n++; placed.Take(c, 0.6f); }
+                Vector3 front = Polar(rr - 22f, rb);   // 재료 건물 앞 광장
+                foreach (float d in new[] { -1f, 1f })
+                {
+                    Vector3 p = front + Polar(7f, rb + 90f * d);
+                    if (placed.IsFree(p, 1.5f) && SpawnProp("GIN_CakeBench", group, p, FaceCenter(p)) != null) { n++; placed.Take(p, 1.3f); }
+                    Vector3 c = front + Polar(10f, rb + 90f * d) + Polar(4f, rb);
+                    if (placed.IsFree(c, 1f) && SpawnProp("GIN_CherryPillar", group, c, Quaternion.identity) != null) { n++; placed.Take(c, 0.6f); }
+                }
             }
-            n += Scatter(group, b, list, rng, placed, 24f, MapRadius - 8f, RoadRow, RingRadius, RingHalf);
+            n += Scatter(group, b, list, rng, placed, RingRadius + RingHalf + 3f, MapRadius - 8f, RoadRow, RingRadius, RingHalf);
         }
         return n;
     }
@@ -781,24 +800,6 @@ public static class GingerbreadVillageMapBuilder
 
     public static IReadOnlyList<Vector3> HelixCentres => helixCentres;
     public static Vector3 HelixCentre => helixCentres.Count > 0 ? helixCentres[0] : Vector3.zero;
-
-    // 지하 건물 12(사분면 3: 안쪽 1 + 바깥 2), 정문이 동굴 가운데를 본다.
-    private static int BuildUgBuildings(Transform ug)
-    {
-        Transform group = Group(ug, "Buildings");
-        int n = 0;
-        for (int q = 0; q < 4; q++)
-        {
-            // 나선이 있는 사분면(Q1 11시·Q4 5시 — 나선은 사분면 방향 −15°)은 안쪽 1 + 나선 반대쪽 바깥 2
-            bool helixQuad = q == 0 || q == 3;
-            Vector3[] slots = helixQuad
-                ? new[] { Polar(52f, QuadDeg[q]), Polar(88f, QuadDeg[q] + 7f), Polar(UgOuterRadius, QuadDeg[q] + UgOuterSpread) }
-                : new[] { Polar(UgInnerRadius, QuadDeg[q]), Polar(UgOuterRadius, QuadDeg[q] - UgOuterSpread), Polar(UgOuterRadius, QuadDeg[q] + UgOuterSpread) };
-            for (int k = 0; k < 3; k++)
-                if (PlaceBuilding(UgBuildings[q][k], group, slots[k] + Vector3.up * UgY, $"UQ{q + 1}_{k}", placedUg)) n++;
-        }
-        return n;
-    }
 
     // 출구 4(지하 12·3·6·9시): 테스트 맵 탈출구(문틀·문·받침·트리거)를 동굴 벽 틈으로 옮기고, 받침 뒤를 굴(양옆·뒤 벽·천장)로 막는다.
     private static int BuildExits(Transform map, Transform ug)
@@ -1007,8 +1008,7 @@ public static class GingerbreadVillageMapBuilder
     // 건물끼리(같은 층)·지하 건물과 나선이 겹치지 않는지 — 겉모습 범위(로컬 상자)를 바닥에 그린 사각형끼리 잰다.
     private static string CheckOverlaps(Transform map)
     {
-        var names = new HashSet<string>(GroundBuildings.SelectMany(x => x).Concat(UgBuildings.SelectMany(x => x))) { "GIN_RuneBuilding", "GIN_ClockTower", "GIN_ThroneRoom" };
-        names.UnionWith(HideNames);
+        var names = new HashSet<string>(PlanNames) { "GIN_RuneBuilding", "GIN_ClockTower", "GIN_ThroneRoom" };
         var blds = map.GetComponentsInChildren<Transform>(true)
             .Where(t => PrefabUtility.IsAnyPrefabInstanceRoot(t.gameObject) && names.Contains(PrefabUtility.GetCorrespondingObjectFromSource(t.gameObject)?.name ?? ""))
             .Select(t => (t, poly: Footprint(t), y: t.position.y)).ToList();

@@ -22,7 +22,7 @@ public class ChaseAudioSettingsSO : ScriptableObject
 
     [Header("Distance")]
     [Tooltip("술래가 이 거리(m) 안에 들어오면 추격음이 들리기 시작한다")]
-    [SerializeField, Min(1f)] private float audibleRadius = 30f; // 2026-10-31 사용자 지시: 20 → 30 m
+    [SerializeField, Min(1f)] private float audibleRadius = 45f; // 2026-10-31 사용자 지시: 20 → 30 m, 2026-11-05: 30 → 45 m(§59 CS1)
     [Tooltip("audibleRadius × 이 비율 안에서는 최대 음량")]
     [SerializeField, Range(0f, 0.95f)] private float fullRadiusRatio = 0.25f;
     [Tooltip("가로 0 = 들리기 시작하는 거리, 1 = 최대 음량 거리 / 세로 = 음량 배율")]
@@ -40,7 +40,7 @@ public class ChaseAudioSettingsSO : ScriptableObject
     [SerializeField, Min(0.01f)] private float levelCrossfadeSeconds = 0.4f;
 
     [Header("Mix")]
-    [SerializeField, Range(0f, 1f)] private float maxVolume = 0.8f;
+    [SerializeField, Range(0f, 1f)] private float maxVolume = 0.68f; // 0.8 → 0.68(15 % 낮춤, §59 CS1)
     [SerializeField, Min(0.01f)] private float fadeInSeconds = 0.4f;
     [SerializeField, Min(0.01f)] private float fadeOutSeconds = 1.5f;
     [Tooltip("멀 때 먹먹하게(저역 통과)")]
@@ -87,6 +87,8 @@ public class ChaseAudioSettingsSO : ScriptableObject
         drumLevels = levels;
         OnValidate();
     }
+
+    public void EditorSetMaxVolume(float volume) => maxVolume = Mathf.Clamp01(volume);
 
     public void EditorSetRadius(float meters)
     {

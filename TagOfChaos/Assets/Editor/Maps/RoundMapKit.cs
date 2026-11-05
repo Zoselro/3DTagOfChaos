@@ -310,7 +310,7 @@ public static class RoundMapKit
     // ---------------------------------------------------------------- markers, lights, spawns
 
     // 상자·로켓·무지개·스폰 자리(캔디숲 규칙). 놓은 것과 떨어지고, 몸이 들어가며, 바로 아래가 땅인 자리만.
-    public static int Markers(Transform map, Placement placed, float ringRadius, float ringHalf)
+    public static int Markers(Transform map, Placement placed, float ringRadius, float ringHalf, float spread = CandyForestLayout.Spread)
     {
         Transform markers = Group(map, "Markers");
         bool Clear(Vector3 p, float radius)
@@ -321,7 +321,7 @@ public static class RoundMapKit
             return Physics.Raycast(p + Vector3.up * 3f, Vector3.down, out RaycastHit hit, 6f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) && hit.point.y < 0.3f;
         }
         int n = 0;
-        foreach ((string name, Vector3 pos) in CandyForestLayout.PlaceMarkers(Clear))
+        foreach ((string name, Vector3 pos) in CandyForestLayout.PlaceMarkers(Clear, spread))
         {
             var t = new GameObject(name).transform;
             t.SetParent(markers, false);

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12ee97426206d1445a2ef1a10d706235, type: 3}
   m_Name: ChaseAudioSettings
   m_EditorClassIdentifier: 
-  audibleRadius: 30
+  audibleRadius: 45
   fullRadiusRatio: 0.25
   intensityCurve:
     serializedVersion: 2
@@ -43,13 +43,13 @@ MonoBehaviour:
   drumLevels:
   - clip: {fileID: 8300000, guid: 45d8b035605346341848c3ff2e7464b2, type: 3}
     startRatio: 1
-    startMeters: 30
+    startMeters: 45
   - clip: {fileID: 8300000, guid: 39cacb21af41d144aa70594129f9d4cd, type: 3}
     startRatio: 0.25
-    startMeters: 7.5
+    startMeters: 11.2
   levelHysteresisRatio: 0.05
   levelCrossfadeSeconds: 0.4
-  maxVolume: 0.8
+  maxVolume: 0.68
   fadeInSeconds: 0.4
   fadeOutSeconds: 1.5
   muffleWhenFar: 1

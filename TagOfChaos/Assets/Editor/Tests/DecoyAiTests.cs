@@ -246,7 +246,7 @@ public class DecoyAiTests
         var keys = new Dictionary<KeyAction, KeyCode>();
         foreach (KeyAction a in KeyBindings.All) keys[a] = KeyBindings.Default(a);
         Assert.IsFalse(KeyBindings.HasConflict(KeyAction.Dance, x => keys[x]));
-        Assert.AreEqual(KeyAction.Dance, KeyBindings.All[KeyBindings.All.Length - 1], "appended so saved key numbers do not shift");
+        Assert.AreEqual(21, (int)KeyAction.Dance, "appended after PushToTalk so saved key numbers do not shift (§59 added more after it)");
     }
 
     // ---------------- 맵 NavMesh ----------------
