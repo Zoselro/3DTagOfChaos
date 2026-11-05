@@ -18,8 +18,8 @@ public static class SceneNames
 
     public static bool IsTestMap(string sceneName) => sceneName != null && sceneName.StartsWith(TestMapScenePrefix);
 
-    // 실제 모델 맵 씬은 맵 이름 그대로(예: CandyForest, Request1009Plan.md §28.11 Q11 · CursedCandyCarnival §36 · ChocolateFactory §42).
-    public static readonly string[] RealMapScenes = { "CandyForest", "CursedCandyCarnival", "ChocolateFactory" };
+    // 실제 모델 맵 씬은 맵 이름 그대로(예: CandyForest, Request1009Plan.md §28.11 Q11 · CursedCandyCarnival §36 · ChocolateFactory §42 · GingerbreadVillage §51).
+    public static readonly string[] RealMapScenes = { "CandyForest", "CursedCandyCarnival", "ChocolateFactory", "GingerbreadVillage" };
 
     // 판에 쓰는 맵 씬인가(Test_·실제 모델 맵).
     public static bool IsMapScene(string sceneName) =>

@@ -12,6 +12,26 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: M_GIN_box_pink
+    second: {fileID: 2100000, guid: 37aff18a8dfab0b45b320194f42bf061, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_GIN_box_purple
+    second: {fileID: 2100000, guid: 7d7d54a03b95b7842ba09bb0ff6b9b5e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_GIN_box_white
+    second: {fileID: 2100000, guid: 9918d3cb8893ac8478e59ae44704444f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_GIN_dark_void
+    second: {fileID: 2100000, guid: d829936078d76604a9ba4d4c0aef986e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: M_GIN_ginger_rough_light
     second: {fileID: 2100000, guid: 2e197cc26e014314da51ee5911d5624c, type: 2}
   - first:
@@ -52,8 +72,23 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: M_GIN_leaf_green
+    second: {fileID: 2100000, guid: 3097909dd25cdfa48ab14aedb60f0114, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_GIN_macaron_cream
+    second: {fileID: 2100000, guid: e74375b58a9c78b408e0d3436e03b78c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: M_GIN_stone_lilac_rough
     second: {fileID: 2100000, guid: 66954e9b5c11ebf44aea7a6b06778e7b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_GIN_stripe_red
+    second: {fileID: 2100000, guid: 25ef4f18a6ca21547a922cabbd17aaec, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule

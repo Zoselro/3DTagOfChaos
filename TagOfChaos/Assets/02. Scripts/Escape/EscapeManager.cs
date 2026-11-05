@@ -396,7 +396,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (!NavMesh.SamplePosition(feet, out NavMeshHit hit, 1.2f, NavMesh.AllAreas) || Mathf.Abs(hit.position.y - feet.y) > WalkableSnapHeight) return false;
         if (!TryReachAnchor(out Vector3 anchor)) return true;
         if (reachPath == null) reachPath = new NavMeshPath();
-        return NavMesh.CalculatePath(anchor, hit.position, NavMesh.AllAreas, reachPath) && reachPath.status == NavMeshPathStatus.PathComplete;
+        return NavPath.Reaches(anchor, hit.position, reachPath);   // 긴 길은 탐색 한도를 넘으므로 끝에서 이어 찾는다(§54)
     }
 
     private bool TryReachAnchor(out Vector3 anchor)

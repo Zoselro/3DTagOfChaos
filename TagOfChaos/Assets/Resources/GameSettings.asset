@@ -26,7 +26,7 @@ MonoBehaviour:
   characterCatalog: {fileID: 11400000, guid: 7f50eb2f81f0802428745357591b82ca, type: 2}
   gameMapScenes:
   - CandyForest
-  - Test_GingerbreadVillage
+  - GingerbreadVillage
   - ChocolateFactory
   - CursedCandyCarnival
   - Test_HauntedBakery
@@ -34,6 +34,7 @@ MonoBehaviour:
   maxTimeAttackMinutes: 10
   defaultTimeAttackMinutes: 1
   monsterDepartureReturnDelay: 5
+  monsterArrivalTimeout: 10
   tentacleDashDistance: 20
   tentacleDashDuration: 0.25
   tentacleDashCooldown: 15
@@ -42,6 +43,14 @@ MonoBehaviour:
   grabReachFromFront: 2
   grabAimRadius: 0.4
   maxGrabHeight: 6
+  stamina:
+    max: 100
+    runDrainPerSecond: 20
+    regenPerSecond: 25
+    regenDelay: 0.8
+    walkRegenMultiplier: 0.7
+    exhaustedRecoverAt: 35
+    dodgeCost: 25
   monsterDefaultView: 0
   characterSyncRate: 10
   cookieSpawnRange: 5

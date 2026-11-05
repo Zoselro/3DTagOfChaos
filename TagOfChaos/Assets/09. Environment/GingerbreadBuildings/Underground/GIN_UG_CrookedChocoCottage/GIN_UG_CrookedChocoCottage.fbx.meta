@@ -37,6 +37,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: M_GIN_dark_void
+    second: {fileID: 2100000, guid: d829936078d76604a9ba4d4c0aef986e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: M_GIN_frost_pink
     second: {fileID: 2100000, guid: 018d935971cb34a49a664df266ccf0fd, type: 2}
   - first:

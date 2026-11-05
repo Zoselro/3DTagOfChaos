@@ -23,10 +23,10 @@ public static class DecoyNavMeshBaker
         "Assets/Scenes/Maps/CandyForest.unity",
         "Assets/Scenes/Maps/CursedCandyCarnival.unity",
         "Assets/Scenes/Maps/ChocolateFactory.unity",
-        "Assets/Scenes/Maps/Test/Test_GingerbreadVillage.unity",
+        "Assets/Scenes/Maps/GingerbreadVillage.unity",
         "Assets/Scenes/Maps/Test/Test_HauntedBakery.unity",
     };
-    public static readonly string[] HidePrefixes = { "CHO_Shed", "MO_Tent", "CF_Tent" };
+    public static readonly string[] HidePrefixes = { "CHO_Shed", "MO_Tent", "CF_Tent", "GIN_HD_" };   // GIN_HD_ = 진저브레드 숨는 건물(§54)
     public const float PointReach = 2.5f;      // 확인 점에서 NavMesh까지 허용 거리
     private const float CoverageStep = 4f;
     private const int NotWalkableArea = 1;
@@ -78,7 +78,8 @@ public static class DecoyNavMeshBaker
         Transform room = new SerializedObject(manager).FindProperty("monsterRoom").objectReferenceValue as Transform;
         float roomHalf = new SerializedObject(manager).FindProperty("monsterRoomHalfSize").floatValue;
 
-        var bounds = new Bounds(new Vector3(area.Center.x, 20f, area.Center.y), new Vector3(area.Rect.width + 8f, 90f, area.Rect.height + 8f));
+        // 높이: 땅 위 65 m ~ 땅 아래 80 m(진저브레드 마을 지하 동굴 바닥 −36 m, §51)
+        var bounds = new Bounds(new Vector3(area.Center.x, -7.5f, area.Center.y), new Vector3(area.Rect.width + 8f, 145f, area.Rect.height + 8f));
         var sources = new List<NavMeshBuildSource>();
         NavMeshBuilder.CollectSources(bounds, Physics.DefaultRaycastLayers, NavMeshCollectGeometry.PhysicsColliders, 0, new List<NavMeshBuildMarkup>(), sources);
         int removed = sources.RemoveAll(IsExcluded);

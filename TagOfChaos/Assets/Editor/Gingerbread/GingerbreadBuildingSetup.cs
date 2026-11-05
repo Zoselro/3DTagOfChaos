@@ -62,7 +62,7 @@ public static class GingerbreadBuildingSetup
         return 1;
     }
 
-    private static string Group(string nm) => nm.StartsWith("GIN_RUNE_") ? "Rune" : nm.StartsWith("GIN_UG_") ? "Underground" : "Ground";
+    private static string Group(string nm) => nm.StartsWith("GIN_RUNE_") ? "Rune" : nm.StartsWith("GIN_UG_") ? "Underground" : nm.StartsWith("GIN_HD_") ? "Hide" : "Ground";   // GIN_HD_ = 숨는 건물(§54)
     private static string BuildingDir(string nm) => $"{RootDir}/{Group(nm)}/{nm}";
 
     // 거칠기(회색 JPG) → ms(PNG, R = 금속 0, A = 매끄러움 1 − 거칠기). 전송량을 줄이려고 Unity에서 만든다.
@@ -263,7 +263,233 @@ public static class GingerbreadBuildingSetup
         Vector3 centre = RoomCentre(inst, nm);
         MakeDoor(inst.transform, nm, "F", "Front", centre);
         MakeDoor(inst.transform, nm, "B", "Back", centre);
+        InwardOnly(inst.transform);
+        FixDoorways(inst.transform, nm);
         return root;
+    }
+
+    // ---------------- 문 통로 손질(§54, 2026-11-04 사용자 보고) ----------------
+    // ① 충돌 껍질(COL_*_Shell, 9k tris로 줄인 몸)에 문 통로를 가로지르는 얇은 조각이 남아 쿠키 몸(캡슐)이 걸렸다 — 광선은 빠져나가
+    //    Blender 통행 검사에서 못 잡았다. 문 통로 안(아치 아래, 바닥 0.3 m 위, 문 앞뒤 3.5 m)의 껍질 삼각형을 지운다.
+    // ② 문틀(아치 블록·문설주)의 안쪽 면이 몸을 깎은 통로 면과 같은 자리(반지름 3.3 m)에 있어 문을 열면 Z-Fighting이 보였다 —
+    //    문틀의 그 면 꼭짓점을 통로 쪽으로 5 cm 당긴다.
+    // 메시는 FBX 안 것이라 고칠 수 없으므로 고친 사본을 Generated/Doorways에 저장해 쓴다.
+    private const float DoorHalf = DoorWidth / 2f, DoorSpring = 0.12f + 7.6f - DoorWidth / 2f;   // 바닥(FLOOR_Z 0.12) + 문 높이 7.6 − 반폭 = 아치 시작 높이
+    private const string DoorwayMeshDir = RootDir + "/Generated/Doorways";
+
+    // 건물 문은 안쪽(방 쪽)으로만 연다(§55, 2026-11-04 사용자 보고): 문짝 3.3 m에 비해 문에서 방까지 통로가 0.5~2.5 m로 짧아,
+    // 안에서 열어 바깥으로 젖히면 문짝 대부분이 원본 아치·기둥 앞으로 튀어나와 기둥을 뚫고 보였다. 안쪽으로 열면 통로를 지나 방 안으로 들어간다.
+    // InteractableDoor는 Animator에 바깥 열림 파라미터가 없으면 항상 안쪽으로 연다 — 파라미터 이름을 비운다(런타임 코드는 그대로).
+    private static void InwardOnly(Transform inst)
+    {
+        foreach (InteractableDoor d in inst.GetComponentsInChildren<InteractableDoor>(true))
+        {
+            var so = new SerializedObject(d);
+            so.FindProperty("outwardParameter").stringValue = "";
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+    }
+
+    private static void FixDoorways(Transform inst, string nm)
+    {
+        var doors = inst.GetComponentsInChildren<InteractableDoor>(true).Select(d => d.transform).ToList();
+        if (doors.Count == 0) return;
+        foreach (Transform t in inst.GetComponentsInChildren<Transform>(true))
+        {
+            if (t.name.StartsWith("COL_") && t.name.EndsWith("_Shell"))
+            {
+                var mc = t.GetComponent<MeshCollider>();
+                if (mc != null && mc.sharedMesh != null) mc.sharedMesh = CleanShell(mc.sharedMesh, t, doors, nm);
+            }
+            else if (t.name == nm + "_Body")
+            {
+                var bf = t.GetComponent<MeshFilter>();
+                if (bf != null && bf.sharedMesh != null) bf.sharedMesh = StripPassageFloor(bf.sharedMesh, t, doors, nm);
+            }
+            else if (t.name == nm + "_Frame")
+            {
+                var mf = t.GetComponent<MeshFilter>();
+                if (mf == null || mf.sharedMesh == null) continue;
+                mf.sharedMesh = InsetFrame(mf.sharedMesh, t, doors, nm);
+                var own = doors.Where(d => HasOriginalArch(nm, d.name)).ToList();
+                if (own.Count > 0) mf.sharedMesh = StripFrame(mf.sharedMesh, t, own, nm);
+                SillLikeFrame(t.GetComponent<MeshRenderer>(), mf.sharedMesh);
+            }
+        }
+    }
+
+    // 문 좌표: x = 문 가운데에서 옆(−3.3..3.3), y = 바닥에서 높이, z = 문짝 선에서 앞뒤
+    private static Vector3 DoorLocal(Transform door, Vector3 world) { Vector3 l = door.InverseTransformPoint(world); return new Vector3(l.x - DoorHalf, l.y, l.z); }
+
+    private static Mesh CleanShell(Mesh src, Transform owner, List<Transform> doors, string nm)
+    {
+        Vector3[] v = src.vertices; int[] tri = src.triangles;
+        var keep = new List<int>(tri.Length); int removed = 0;
+        for (int i = 0; i < tri.Length; i += 3)
+        {
+            Vector3 w = owner.TransformPoint((v[tri[i]] + v[tri[i + 1]] + v[tri[i + 2]]) / 3f);
+            bool inTunnel = doors.Any(d =>
+            {
+                Vector3 l = DoorLocal(d, w);
+                if (Mathf.Abs(l.x) > DoorHalf - 0.12f || l.z * OutSign(d, owner) > 9f || l.z * OutSign(d, owner) < -3.5f || l.y < 0.3f) return false;   // 문짝 바깥 9 m(원본 아치 문은 문짝이 벽 속으로 들어가 있다, §55)
+                float top = DoorSpring + Mathf.Sqrt(Mathf.Max(0f, DoorHalf * DoorHalf - l.x * l.x));
+                return l.y < top - 0.1f;
+            });
+            if (inTunnel) { removed++; continue; }
+            keep.Add(tri[i]); keep.Add(tri[i + 1]); keep.Add(tri[i + 2]);
+        }
+        if (removed > 0) Debug.Log($"[GinBuildings] {nm}: removed {removed} collider triangles inside doorways");
+        var m = new Mesh { name = src.name + "_Doorways", indexFormat = src.indexFormat };
+        m.vertices = v; m.triangles = keep.ToArray(); m.RecalculateNormals(); m.RecalculateBounds();
+        return SaveGenerated(m);
+    }
+
+    private static Mesh InsetFrame(Mesh src, Transform owner, List<Transform> doors, string nm)
+    {
+        const float inset = 0.05f, band = 0.12f;
+        Vector3[] v = src.vertices; int moved = 0;
+        for (int i = 0; i < v.Length; i++)
+        {
+            Vector3 w = owner.TransformPoint(v[i]);
+            foreach (Transform d in doors)
+            {
+                Vector3 l = DoorLocal(d, w);
+                if (Mathf.Abs(l.z) > 1.6f) continue;
+                Vector3 nl = l;
+                if (l.y < DoorSpring && Mathf.Abs(Mathf.Abs(l.x) - DoorHalf) < band) nl.x -= Mathf.Sign(l.x) * inset;   // 문설주 안쪽 면
+                else if (l.y >= DoorSpring - 0.1f)
+                {
+                    var r = new Vector2(l.x, l.y - DoorSpring);
+                    if (Mathf.Abs(r.magnitude - DoorHalf) < band && r.sqrMagnitude > 1e-4f) { Vector2 n2 = r.normalized * (r.magnitude - inset); nl.x = n2.x; nl.y = n2.y + DoorSpring; }   // 아치 안쪽 면
+                }
+                if (nl == l) continue;
+                w = d.TransformPoint(new Vector3(nl.x + DoorHalf, nl.y, nl.z));
+                v[i] = owner.InverseTransformPoint(w); moved++;
+                break;
+            }
+        }
+        var m = Object.Instantiate(src); m.name = src.name + "_Inset"; m.vertices = v; m.RecalculateBounds();
+        if (moved > 0) Debug.Log($"[GinBuildings] {nm}: moved {moved} door-frame vertices off the doorway faces");
+        return SaveGenerated(m);
+    }
+
+    // 원본 모델에 아치 문 자리가 새겨진 문(§55): 새 아치·문설주 블록이 원본 아치 안쪽에 겹쳐 보인다 — 그 문은 새 문틀을 빼고 원본 아치를 문틀로 쓴다.
+    // 새 문틀을 남기는 문: 원본 문 둘레에 아치가 없는 방앗간·해골 가마솥 앞문(빼면 자른 자리가 들쭉날쭉), 원본에 문이 없던 뒷문(빼면 평평한 판만 남음).
+    private static readonly string[] OriginalArchFronts = { "GIN_HD_", "GIN_RUNE_", "GIN_UG_", "GIN_BLD_CandyCaneCottage", "GIN_BLD_CandyCogCottage", "GIN_BLD_ChocoCottage" };
+    private static readonly string[] OriginalArchBacks = { "GIN_RUNE_", "GIN_UG_CandyCaneCottage", "GIN_UG_CrookedChocoCottage", "GIN_UG_GearworksGate", "GIN_UG_MacaronCottage", "GIN_BLD_CandyCogCottage" };
+    private static bool HasOriginalArch(string nm, string door) =>
+        door == "Door_Front" ? OriginalArchFronts.Any(nm.StartsWith) : door == "Door_Back" && OriginalArchBacks.Any(nm.StartsWith);
+
+    // 문 로컬 z의 바깥 방향 부호(+1이면 로컬 +z가 건물 밖): 건물 뿌리(가운데) 쪽이 안
+    private static float OutSign(Transform door, Transform owner)
+    {
+        Transform root = owner; while (root.parent != null && root.parent.parent != null) root = root.parent;
+        return door.InverseTransformPoint(root.position).z > 0f ? -1f : 1f;
+    }
+
+    // 문짝 바깥 통로 바닥(§55.4): 원본 문 자리 홈 안에 깐 통로 바닥(밝은 문설주 재질)이 문 앞·옆으로 밝은 판처럼 보였다.
+    // 맵 바닥이 그 아래에 있으므로 문짝 바깥(0.2~12 m)·문 폭 ± 1.5 m 안의 위를 향한 낮은 면(높이 0.35 m 아래)을 지운다(충돌체는 따로라 그대로).
+    private static Mesh StripPassageFloor(Mesh src, Transform owner, List<Transform> doors, string nm)
+    {
+        Vector3[] v = src.vertices; int removed = 0;
+        var m = Object.Instantiate(src); m.name = src.name + "_Floorless";
+        Material[] mats = owner.GetComponent<MeshRenderer>() != null ? owner.GetComponent<MeshRenderer>().sharedMaterials : new Material[0];
+        for (int sub = 0; sub < src.subMeshCount; sub++)
+        {
+            int[] tri = src.GetTriangles(sub); var keep = new List<int>(tri.Length);
+            bool added = sub < mats.Length && mats[sub] != null && mats[sub].name.StartsWith("M_GIN_") && !mats[sub].name.Contains("Exterior");   // 덧댄 면만(원본 겉 재질은 건드리지 않는다)
+            if (!added) { m.SetTriangles(tri, sub); continue; }
+            for (int i = 0; i < tri.Length; i += 3)
+            {
+                Vector3 a = owner.TransformPoint(v[tri[i]]), b = owner.TransformPoint(v[tri[i + 1]]), c = owner.TransformPoint(v[tri[i + 2]]);
+                Vector3 w = (a + b + c) / 3f; Vector3 n = Vector3.Cross(b - a, c - a);
+                bool floor = n.sqrMagnitude > 1e-12f && Mathf.Abs(n.normalized.y) > 0.7f && w.y - owner.root.position.y < 0.35f;
+                if (floor && doors.Any(d => { Vector3 l = DoorLocal(d, w); float o = l.z * OutSign(d, owner); return Mathf.Abs(l.x) < DoorHalf + 1.5f && o > 0.2f && o < 12f; }))
+                { removed++; continue; }
+                keep.Add(tri[i]); keep.Add(tri[i + 1]); keep.Add(tri[i + 2]);
+            }
+            m.SetTriangles(keep, sub);
+        }
+        m.RecalculateBounds();
+        if (removed > 0) Debug.Log($"[GinBuildings] {nm}: removed {removed} passage-floor triangles in front of the doors");
+        return SaveGenerated(m);
+    }
+
+    // 새 문틀 아래 문턱 돌판(밝은 분홍 돌)이 둥근 벽 옆으로 밝게 보였다(§55.4) — 문턱 재질 칸을 문틀(가장 많이 쓴 재질)과 같게 한다
+    private static void SillLikeFrame(MeshRenderer r, Mesh m)
+    {
+        if (r == null || m == null) return;
+        Material[] mats = r.sharedMaterials;
+        int sill = System.Array.FindIndex(mats, x => x != null && x.name.Contains("stone_lilac"));
+        if (sill < 0) return;
+        int best = -1, most = -1;
+        for (int i = 0; i < mats.Length && i < m.subMeshCount; i++)
+        {
+            if (i == sill || mats[i] == null) continue;
+            int n = (int)m.GetIndexCount(i);
+            if (n > most) { most = n; best = i; }
+        }
+        if (best < 0) return;
+        mats[sill] = mats[best];
+        r.sharedMaterials = mats;
+    }
+
+    // 문 둘레(옆 5.4 m·앞뒤 3 m 안, 바닥 0.2 m 위)의 문틀 삼각형을 지운다 — 문턱 돌판(높이 0.14 m)은 남긴다
+    private static Mesh StripFrame(Mesh src, Transform owner, List<Transform> doors, string nm)
+    {
+        Vector3[] v = src.vertices; int removed = 0;
+        var m = Object.Instantiate(src); m.name = src.name.Replace("_Inset", "") + "_Strip";
+        for (int sub = 0; sub < src.subMeshCount; sub++)
+        {
+            int[] tri = src.GetTriangles(sub); var keep = new List<int>(tri.Length);
+            for (int i = 0; i < tri.Length; i += 3)
+            {
+                Vector3 w = owner.TransformPoint((v[tri[i]] + v[tri[i + 1]] + v[tri[i + 2]]) / 3f);
+                bool near = doors.Any(d => { Vector3 l = DoorLocal(d, w); float o = l.z * OutSign(d, owner); return Mathf.Abs(l.x) < 5.4f && o > -3f && o < 9f; });   // 문짝 바깥 9 m까지, 문턱 돌판도(통로 바닥이 있다 — 밝은 돌판이 원본 아치 옆 틈으로 보였다, §55.4)
+                if (near) { removed++; continue; }
+                keep.Add(tri[i]); keep.Add(tri[i + 1]); keep.Add(tri[i + 2]);
+            }
+            m.SetTriangles(keep, sub);
+        }
+        m.RecalculateBounds();
+        Debug.Log($"[GinBuildings] {nm}: removed {removed} new door-frame triangles where the original arch frames the door ({string.Join(", ", doors.Select(d => d.name))})");
+        return SaveGenerated(m);
+    }
+
+    private static Mesh SaveGenerated(Mesh m)
+    {
+        Directory.CreateDirectory(DoorwayMeshDir);
+        string path = $"{DoorwayMeshDir}/{m.name}.asset";
+        var old = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+        if (old == null) { AssetDatabase.CreateAsset(m, path); return m; }
+        EditorUtility.CopySerialized(m, old); Object.DestroyImmediate(m); EditorUtility.SetDirty(old);
+        return old;
+    }
+
+    // 재료 건물 빛기둥(§54): ESC_Glow(방 안 빛)는 지붕에 가려 밖에서 보이지 않는다 — 같은 ESC_Glow 아래에 지붕 위에서 하늘로 솟는
+    // 빛기둥(Beacon 셰이더, 안개 무시)을 붙인다. QuadrantBuilding이 ESC_Glow를 켜고 끄므로 함께 켜지고 꺼진다.
+    private static void AddRoofBeam(GameObject building)
+    {
+        Transform glow = FindDeep(building.transform, "ESC_Glow");
+        if (glow == null) return;
+        float top = 0f;
+        foreach (Renderer r in building.GetComponentsInChildren<Renderer>(true)) if (!r.transform.IsChildOf(glow)) top = Mathf.Max(top, r.bounds.max.y);
+        Transform old = glow.Find("RoofBeam");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        var beam = new GameObject("RoofBeam").transform;
+        beam.SetParent(glow, false);
+        beam.position = new Vector3(glow.position.x, building.transform.position.y + top - 1f, glow.position.z);
+        beam.rotation = Quaternion.identity;
+        Mesh cylinder = Resources.GetBuiltinResource<Mesh>("Cylinder.fbx");
+        string folder = RootDir + "/Generated";
+        Directory.CreateDirectory(folder);
+        var gold = new Color(1f, 0.82f, 0.35f);
+        const float h = 110f;
+        RoundMapKit.BeaconPart(beam, "Beam_Core", cylinder, RoundMapKit.BeaconMaterial(folder, "GIN_RuneBeamCore", gold * 1.6f, 0f, 1.2f, 1.2f), Vector3.up * h / 2f, Quaternion.identity, new Vector3(2.2f, h / 2f, 2.2f));
+        RoundMapKit.BeaconPart(beam, "Beam_Haze", cylinder, RoundMapKit.BeaconMaterial(folder, "GIN_RuneBeamHaze", gold * 0.55f, 0f, 0.8f, 2.5f), Vector3.up * h / 2f, Quaternion.identity, new Vector3(7f, h / 2f, 7f));
+        // 물체 크기 보정: 부모 축척이 있으면 나눈다
+        Vector3 ls = glow.lossyScale;
+        if (Mathf.Abs(ls.x - 1f) > 1e-3f || Mathf.Abs(ls.y - 1f) > 1e-3f) beam.localScale = new Vector3(1f / ls.x, 1f / ls.y, 1f / ls.z);
     }
 
     private static Vector3 RoomCentre(GameObject inst, string nm)
@@ -321,7 +547,13 @@ public static class GingerbreadBuildingSetup
         // 부모의 +X = 왼 경첩 → 오른 경첩(right = up × forward 이므로 forward = across × up)
         door.transform.rotation = Quaternion.LookRotation(Vector3.Cross(across.normalized, Vector3.up), Vector3.up);
         Transform leafL = MakeLeaf(door.transform, "Leaf_L", l, Vector3.zero);
-        MakeLeaf(door.transform, "Leaf_R", r, new Vector3(across.magnitude, 0f, 0f));
+        Transform leafR = MakeLeaf(door.transform, "Leaf_R", r, new Vector3(across.magnitude, 0f, 0f));
+        // 활짝 연 문짝이 통로 옆벽에 반쯤 묻혀 Z-Fighting이 보였다(§54) — 경첩을 문 안쪽으로 18 cm 옮기고 문짝 폭을 그만큼 줄인다
+        // (닫으면 문 폭을 그대로 채우고, 열면 벽에서 6 cm 떨어진다). 애니메이션은 회전만 바꾸므로 위치·축척은 그대로 남는다.
+        const float hingeIn = 0.18f;
+        float half = across.magnitude / 2f, k = (half - hingeIn) / half;
+        leafL.localPosition += Vector3.right * hingeIn; leafL.localScale = new Vector3(k, 1f, 1f);
+        leafR.localPosition -= Vector3.right * hingeIn; leafR.localScale = new Vector3(k, 1f, 1f);
         var anim = door.AddComponent<Animator>();
         anim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<AnimatorController>(DoorController);
         var rb = door.AddComponent<Rigidbody>(); rb.isKinematic = true; rb.useGravity = false;
@@ -400,6 +632,7 @@ public static class GingerbreadBuildingSetup
             else Object.DestroyImmediate(one);
         }
         foreach (Transform v in variants) v.gameObject.SetActive(v.name == "Var_Neutral");
+        AddRoofBeam(root);
         PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabDir}/GIN_RuneBuilding.prefab");
         Object.DestroyImmediate(root);
         AssetDatabase.SaveAssets();
