@@ -555,7 +555,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_GearworksGate_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 1751776302135047947}
   interactionRange: 3.4
@@ -1147,7 +1147,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_GearworksGate_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 2342825075553333694}
   interactionRange: 3.4

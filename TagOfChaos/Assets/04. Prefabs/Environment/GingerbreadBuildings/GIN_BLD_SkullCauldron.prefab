@@ -863,7 +863,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_BLD_SkullCauldron_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 7831649144379163187}
   interactionRange: 3.4
@@ -1462,7 +1462,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_BLD_SkullCauldron_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 2573924056258590798}
   interactionRange: 3.4

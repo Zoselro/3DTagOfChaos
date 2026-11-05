@@ -273,7 +273,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_RUNE_Yellow_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 5016763165183202742}
   interactionRange: 3.4
@@ -1622,7 +1622,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_RUNE_Yellow_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 8332490501878473224}
   interactionRange: 3.4

@@ -99,7 +99,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_CandyCaneCottage_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 3386435974783630375}
   interactionRange: 3.4
@@ -504,7 +504,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_CandyCaneCottage_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 1842165762758285308}
   interactionRange: 3.4

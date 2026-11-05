@@ -1331,7 +1331,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_CrookedChocoCottage_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 5522159784079221672}
   interactionRange: 3.4
@@ -1521,7 +1521,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_CrookedChocoCottage_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 912114259108239618}
   interactionRange: 3.4

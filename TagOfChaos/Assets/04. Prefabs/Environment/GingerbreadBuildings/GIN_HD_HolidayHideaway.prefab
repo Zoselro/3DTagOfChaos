@@ -899,7 +899,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_HolidayHideaway_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 7504457454017263827}
   interactionRange: 3.4
@@ -1002,7 +1002,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_HolidayHideaway_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 3315151725554949244}
   interactionRange: 3.4

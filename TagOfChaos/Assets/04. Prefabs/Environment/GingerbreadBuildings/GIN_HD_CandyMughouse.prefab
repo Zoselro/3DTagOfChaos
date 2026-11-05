@@ -567,7 +567,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_CandyMughouse_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 6763085277480745891}
   interactionRange: 3.4
@@ -1377,7 +1377,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_CandyMughouse_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 4767610448045812747}
   interactionRange: 3.4

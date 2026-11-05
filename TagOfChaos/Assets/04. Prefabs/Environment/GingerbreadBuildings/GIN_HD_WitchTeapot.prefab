@@ -99,7 +99,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_WitchTeapot_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 1688773208953159379}
   interactionRange: 3.4
@@ -648,7 +648,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_WitchTeapot_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 6068380560450370176}
   interactionRange: 3.4

@@ -90,4 +90,32 @@ public class GingerbreadVillageMapTests
         }
         finally { live.Remove(); }
     }
+    // 건물 문은 누른 사람 반대쪽으로 연다(§56): 바깥 열림 파라미터가 있고, 건물 안쪽 점은 "안"으로 판정된다(돌려 놓은 건물 포함).
+    [Test]
+    public void BuildingDoors_OpenAwayFromPresser()
+    {
+        var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var outwardField = typeof(InteractableDoor).GetField("outwardParameter", flags);
+        var compute = typeof(InteractableDoor).GetMethod("ComputeGeometry", flags);
+        var isInside = typeof(InteractableDoor).GetMethod("IsInside", flags);
+        int checkedDoors = 0;
+        foreach (var door in Object.FindObjectsByType<InteractableDoor>(FindObjectsSortMode.None))
+        {
+            Transform root = door.transform.parent;
+            while (root != null && root.parent != null && root.parent.name != "Buildings" && root.parent.name != "Landmarks" && root.parent.name != "HideBuildings") root = root.parent;
+            if (root == null || root.parent == null || root.name.StartsWith("GIN_ClockTower")) continue;
+            string label = root.name + "/" + door.name;
+            Assert.AreEqual(InteractableDoor.DefaultOutwardParameter, (string)outwardField.GetValue(door), label);
+            var controller = door.GetComponent<Animator>().runtimeAnimatorController as UnityEditor.Animations.AnimatorController;
+            Assert.IsTrue(controller != null && controller.parameters.Any(p => p.name == InteractableDoor.DefaultOutwardParameter && p.type == AnimatorControllerParameterType.Bool), label);
+            compute.Invoke(door, null);
+            Vector3 c = door.transform.TransformPoint(new Vector3(3.3f, 0f, 0f));
+            Vector3 toRoot = root.position - c; toRoot.y = 0f;
+            Vector3 axis = Vector3.Dot(door.transform.forward, toRoot) >= 0f ? door.transform.forward : -door.transform.forward;
+            Assert.IsTrue((bool)isInside.Invoke(door, new object[] { c + axis * 3f }), label + " inside point");
+            Assert.IsFalse((bool)isInside.Invoke(door, new object[] { c - axis * 3f }), label + " outside point");
+            checkedDoors++;
+        }
+        Assert.AreEqual(88, checkedDoors);
+    }
 }

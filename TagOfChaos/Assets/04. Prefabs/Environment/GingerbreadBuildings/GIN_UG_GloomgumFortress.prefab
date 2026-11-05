@@ -435,7 +435,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_GloomgumFortress_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 7390619326801015083}
   interactionRange: 3.4
@@ -538,7 +538,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_GloomgumFortress_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 7143308202155835777}
   interactionRange: 3.4

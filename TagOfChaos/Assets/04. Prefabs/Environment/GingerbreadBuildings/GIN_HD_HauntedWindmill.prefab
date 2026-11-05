@@ -703,7 +703,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_HauntedWindmill_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 3893189608955860416}
   interactionRange: 3.4
@@ -1277,7 +1277,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_HauntedWindmill_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 7998788530683822193}
   interactionRange: 3.4

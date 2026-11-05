@@ -419,7 +419,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_GingerbreadWindmill_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 571222670484020424}
   interactionRange: 3.4
@@ -576,7 +576,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_GingerbreadWindmill_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 3713806861639639422}
   interactionRange: 3.4

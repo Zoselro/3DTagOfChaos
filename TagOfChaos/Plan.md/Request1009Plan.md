@@ -6260,3 +6260,71 @@ v1 §S1~S8 그대로:
   - 맵 조건(건물 수·출구 4곳 `NavPath` 도달)은 직접 확인했다. 테스트 실행기는 "tests_running"으로 멈춰 있어 돌리지 못했다.
   - Play Mode 88문: 87문은 드라이버로, Q1 홀리데이 하이드어웨이 뒷문은 직접 밀어 7.5 m 밖까지 통과했다.
 - 남은 것: 문 앞 분홍 문턱·길 판(14 cm)이 옆으로 조금 보인다. 재료 건물 앞문 위 단면 텍스처가 정면에서 약간 모자이크로 보인다.
+
+## 55.4 2026-11-05 후속: 문턱·길 판·재료 건물 모자이크·새 문틀 문도 벽 속으로 ✅
+- 사용자 요청("두 개 다 고쳐줘"): 문 앞 분홍 문턱·길 판이 옆으로 보이는 것과, 재료 건물 앞문 위 단면이 모자이크로 보이는 것.
+- Blender `s2_interior`:
+  - 새 문틀 문(방앗간·해골 앞문, 원본에 문이 없던 뒷문)도 `leaf_line`(바깥 1.3 m 고리, 앞 0.95 m)으로 문틀과 문짝을 함께 벽 속에 넣었다.
+  - 원본 아치 문은 넓은 문턱(`frFsill`/`frBsill`)과 길 판(LINE_PATH)을 뺐다. 대신 문짝 아래에 좁은 안쪽 문턱(`sill_in`, 문 폭 − 0.1 m)만 둔다. 새 문틀 문턱은 문 폭 + 2 m로 줄였다.
+  - `texture_reveal`: 조각을 연결된 덩어리로 묶었다. 덩어리마다 가장 가까운 원본 점의 UV에 평면 투영(K = 0.0025)을 더해 한 장처럼 이어 붙인다. 모자이크가 사라졌다.
+- 전송: 업로드가 502로 자주 끊겨, FBX 20개·에디터 스크립트를 `GingerbreadBuildings_Fix55.zip`(81 MB)으로 만들었다. 사용자가 `F:\3DTagOfChaos\GingerbreadVillage\GingerbreadBuildings_Fix55`에 풀었고, 프로젝트 `GinStaging/Buildings`로 복사해 다시 가져왔다.
+- Unity `GingerbreadBuildingSetup.FixDoorways`:
+  - `StripFrame`: 원본 아치 문은 |x| < 5.4 m, 문 바깥 −3~9 m의 새 문틀을 문턱까지 모두 지운다(홀리데이 흰 바닥 판이 이것).
+  - `SillLikeFrame`: 새 문틀 문은 분홍 `stone_lilac` 슬롯을 문틀에서 가장 많이 쓰인 재질로 바꾼다.
+  - `StripPassageFloor`: 몸 메시의 `M_GIN_` 안쪽 재질(Exterior 제외)에서 문 앞 통로 바닥(|n.y| > 0.7, y < 0.35, 문 바깥 0.2~12 m)을 지운다. 사본은 `*_Floorless`로 저장한다.
+- 확인:
+  - 프리팹 17종 6방향 사진: 튀어나옴·흰 판 없음(`scratchpad/unity_doors_1.png`·`_2.png`).
+  - 캡슐 통과 34문 모두 통과(문 바깥 10 m부터).
+  - NavMesh 다시 구움: 98 %·숨을 곳 100·메시 밖 점 0.
+  - 맵 조건: 지상 건물 8·지하 12·시계탑 2·숨는 건물 지상 12·지하 8, 출구 4곳(r 134) 모두 `NavPath`로 도달.
+  - Play Mode 88문(닫힌 문, 안에서 열고 나감): 87문 드라이버로 통과. Q1 홀리데이 하이드어웨이 뒷문은 드라이버 한계로, 조정자를 끄고 문을 연 뒤 직접 밀어 문선 밖 8.7 m까지 나갔다.
+  - EditMode: `GingerbreadVillageMapTests` 4/4, `DecoyAiTests` 14/14. 콘솔 오류 0(경고는 MCP 재연결 2·시험이 일부러 내는 `DecoyBrain` 1).
+- 남은 것(작음): 해골 가마솥 앞문 단면이 원본 리본 색(붉은빛)을 받는다. 일부 문 아래쪽에 작은 어두운 틈이 보인다.
+
+## 56 2026-11-05 문제: 안에서 열어도 밖에서 연 것처럼 문짝이 안쪽(내 쪽)으로 열림 ✅
+### 56.1 원인 확인
+- 사용자 사진 2장(지하 건물 방 안, 닫힘 → E → 열림): 문짝 두 장이 방 안쪽, 곧 누른 쿠키 쪽으로 젖혀진다. 밖에서 열 때와 같은 방향이다.
+- `InteractableDoor` 규칙(파일 머리 주석): 여는 방향은 누른 캐릭터의 반대쪽이다. 밖에서 누르면 `OpenInward`, 안에서 누르면 `OpenOutward`. 단 `hasOutwardParameter`가 참일 때만 바깥으로 연다(`Interact` 119행, AI `OpenByAuthority` 128행도 같다).
+- §55.2 `GingerbreadBuildingSetup.InwardOnly`가 건물 문 34종(맵 88문)의 `outwardParameter`를 비웠다. 그래서 `hasOutwardParameter`가 거짓이 되어 안·밖 어디서 눌러도 `OpenInward`다. **이번 현상은 이 설정 때문이다.**
+- 예전 버그(§41.x, 2026-10): 45° 돌린 건물에서 문짝 두께 방향을 월드 범위로 재서 안·밖을 거꾸로 알았다. 그래서 캐릭터 쪽으로 열려 막혔다. 상자 자기 축으로 재도록 고쳐 지금 코드에 남아 있다(`ComputeGeometry`). 겉모습은 같지만 원인은 다르다.
+- 같이 생기는 문제:
+  - 안에서 열면 문짝(kinematic BoxCollider)이 쿠키 쪽으로 돌아 쿠키를 밀거나 막을 수 있다.
+  - AI도 안에서 안쪽으로 연다.
+- §55.2에서 안쪽 열기로 바꾼 이유: 바깥으로 90° 연 3.3 m 문짝이 원본 아치·기둥을 뚫고 건물 앞으로 튀어나왔다. 당시에는 문짝이 앞면 0.55 m 안에 있었다.
+- §55.3·§55.4에서 문짝을 벽 속 0.55~5.45 m로 넣었으므로 상황이 바뀌었다. 문짝 깊이(Blender 기록): 룬 4채 3.6~5.4 m, 지하 캔디케인 2.6~2.8 m, 지하 글룸검 앞 4.5 m, 다수 0.55~2.7 m. 깊이가 3.3 m를 넘는 문은 바깥으로 열어도 통로 안에 들어갈 수 있다.
+
+### 56.2 목표
+- 다시 "누른 사람 반대쪽으로 열기"(안 → 바깥, 밖 → 안쪽). 사람과 AI 모두.
+- 바깥으로 연 문짝이 원본 벽·아치·기둥을 뚫지 않고, 보기 싫게 튀어나오지 않는다.
+- 쿠키·괴물(0.9 m)이 열린 문 사이를 지나간다. 88문 Play Mode 통과.
+
+### 56.3 단계
+| 단계 | 내용 | 확인 |
+|---|---|---|
+| DR0 | 현재 상태 재기(Play Mode 아닐 때): 프리팹 34문의 `outwardParameter`·`hasOutwardParameter`, Play Mode에서 안에서 E → 상태가 `OpenInward`임을 로그로 확인 | 34문 표 |
+| DR1 | 바깥 열림 자리 재기(에디터 도구 `GingerbreadBuildingSetup.MeasureOutwardSwing`): 문마다 Leaf_L·R를 바깥으로 θ = 90°, 85°, …, 60° 돌린 상자를 건물 메시(Shell·Body·Frame 원본 메시, 문짝 자신 제외)와 겹침 검사(`Physics.ComputePenetration`, 임시 MeshCollider). 각 문의 "깨끗한 가장 큰 각도"와 앞면 밖으로 나오는 길이 기록 | 34문 표 + 문마다 위에서 본 사진 |
+| DR2 | 문마다 방법 고르기(규칙): ① 90° 깨끗 → 그대로 바깥 열기. ② 70° 이상에서 깨끗 → 그 각도로 바깥 열기(괴물 0.9 m 통과 폭 확인). ③ 둘 다 안 됨 → Blender에서 그 문의 통로를 넓히거나 문짝을 더 깊이(≥ 3.4 m) 넣기. 안 되면 접이식 두 칸 문짝(1.65 m × 2) | 표에 문마다 ①/②/③ |
+| DR3 | 코드: `InteractableDoor`에 `outwardOpenAngle`(기본 90°)을 더한다. 바깥 열기 각도를 문마다 정할 수 있게 `MapDoor.controller`의 `OpenOut` 클립을 각도별 `AnimatorOverrideController`(에디터 도구가 `Generated/DoorClips/OpenOut_<각도>.anim` 생성)로 바꾼다. 런타임 규칙(누른 사람 반대쪽)은 그대로 | 컴파일 0, EditMode 문 시험 추가: 안에서 누르면 OpenOutward, 밖에서 OpenInward(45° 돌린 건물 포함) |
+| DR4 | `InwardOnly` 대신 `ApplyDoorSwing`: ①·② 문은 `outwardParameter = "OpenOutward"` + 각도별 컨트롤러, ③ 문은 DR5 전까지 임시로 안쪽만(지금과 같음). 맵 빌더 재실행 없이 프리팹만 갱신(맵은 프리팹 인스턴스) | 프리팹 17종 |
+| DR5 | ③ 문만 Blender `s2_interior` 수정 → 해당 FBX만 다시 내보내기(압축 파일로 전달) → Unity 가져오기·`FixDoorways` | 해당 건물 6방향 사진 |
+| DR6 | 확인: 34문 바깥 열림 사진(위·옆·정면, 열린 상태)을 사용자에게 보여 줌 → 승인 뒤 적용. 캡슐 통과(열린 상태, 안→밖·밖→안), NavMesh 다시 굽기(문짝은 NavMesh에서 빠짐 — 바뀌는 것 없음 확인), Play Mode 88문: 닫힌 문을 **안에서** 열어 `OpenOutward` + 밖 6 m 도착, **밖에서** 열어 `OpenInward` + 방 안 도착, AI 문 열기 1회, 콘솔 오류 0 | 88 × 2 방향 |
+| DR7 | 문서 §56 결과·README 줄 갱신 | |
+
+### 56.4 위험·결정할 것
+- 바깥으로 연 문짝은 건물 앞 길을 일부 막는다(문짝 깊이가 3.3 m보다 얕은 문). 각도를 줄이면 덜 막지만 통로 폭이 줄어든다 → DR1 표로 문마다 판단.
+- 열린 문 방향이 섞이면(누가 안에서 열고 다른 사람이 밖에서 닫음) 지금처럼 방장이 상태를 확정하므로 네트워크 문제는 없다.
+- 사용자 결정: ③ 문을 Blender로 고칠지, 그 문은 안쪽 열기로 둘지.
+
+### 56.5 결과 ✅ (2026-11-05)
+- 사용자 결정: 바깥으로 연 문짝이 건물 앞 길을 조금 막아도 된다. 쿠키와 괴물이 지나갈 수만 있으면 된다. 그래서 DR2~DR5(문마다 각도 줄이기·Blender로 통로 넓히기)는 하지 않고, 34문 모두 90°로 바깥 열기를 되살렸다.
+- DR0: 프리팹 34문 모두 `outwardParameter = ''`(§55.2 `InwardOnly`)였다. 원인을 확인했다.
+- DR1: 바깥 90° 열림 사진 34문(`scratchpad/sw_sheet_1~4.png`). 문짝은 건물 앞으로 0~2.4 m 나온다. 겹침 검사로는 문틀 옆면·바닥에 0.05~0.25 m 닿는 정도이고, 안쪽 열림도 같은 수준이다.
+- 코드: `GingerbreadBuildingSetup.InwardOnly` → `OpenAwayFromPresser`(`outwardParameter = "OpenOutward"`). 다시 만들지 않고 프리팹만 고치는 메뉴 `Tools/TagOfChaos/Gingerbread/Doors Open Away From Presser`를 더했다. 런타임 `InteractableDoor`는 그대로다(누른 사람 반대쪽).
+- 적용: 프리팹 17종 34문, 맵 씬 90문(시계탑 2 포함)이 모두 `OpenOutward`다. 씬 덮어쓰기는 0이다.
+- 시험:
+  - 새 EditMode `GingerbreadVillageMapTests.BuildingDoors_OpenAwayFromPresser`: 88문에 바깥 열림 파라미터가 있고, 건물 안 3 m 점은 "안", 밖 3 m 점은 "밖"으로 판정된다(돌려 놓은 건물 포함). 맵 시험 5/5, `DecoyAiTests` 14/14.
+  - 괴물 캡슐(반지름 0.9 m): 88문을 바깥 열림·안쪽 열림 두 경우 모두 밖 10 m → 안 5.5 m로 쓸었다. 문 사이에서 막힌 곳은 없다. 룬 건물 방 가운데 제단(안 3.7 m)만 걸렸는데, 원래 있던 것이다.
+  - Play Mode 안→밖 88문: 모두 `OpenOutward`. 85문은 드라이버로 통과했고, 3문(Q1 홀리데이 뒷문·지하 캔디케인 뒷문 2)은 직접 밀어 문선 밖 8.8~9.7 m까지 나갔다.
+  - Play Mode 밖→안 88문: 모두 `OpenInward`. 83문은 드라이버로 통과했고, 5문(방앗간 Q1 뒷문·초코 Q4 앞문·홀리데이 Q1 앞문·지하 캔디케인 뒷문 2)은 직접 밀어 방 안 7.1~7.4 m까지 들어갔다.
+  - 콘솔 오류 0(경고는 시험이 일부러 내는 `DecoyBrain` 1).
+  - 사진: `scratchpad/door_dir_56.png`(닫힘 / 안에서 엶 → 바깥 / 밖에서 엶 → 안 / 안에서 연 문을 밖에서 봄).

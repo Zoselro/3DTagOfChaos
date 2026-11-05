@@ -666,7 +666,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_HauntedGingerHouse_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 4055518109441029170}
   interactionRange: 3.4
@@ -769,7 +769,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_HD_HauntedGingerHouse_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 7462335780482336262}
   interactionRange: 3.4

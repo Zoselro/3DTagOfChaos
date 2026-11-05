@@ -263,7 +263,7 @@ public static class GingerbreadBuildingSetup
         Vector3 centre = RoomCentre(inst, nm);
         MakeDoor(inst.transform, nm, "F", "Front", centre);
         MakeDoor(inst.transform, nm, "B", "Back", centre);
-        InwardOnly(inst.transform);
+        OpenAwayFromPresser(inst.transform);
         FixDoorways(inst.transform, nm);
         return root;
     }
@@ -277,17 +277,37 @@ public static class GingerbreadBuildingSetup
     private const float DoorHalf = DoorWidth / 2f, DoorSpring = 0.12f + 7.6f - DoorWidth / 2f;   // 바닥(FLOOR_Z 0.12) + 문 높이 7.6 − 반폭 = 아치 시작 높이
     private const string DoorwayMeshDir = RootDir + "/Generated/Doorways";
 
-    // 건물 문은 안쪽(방 쪽)으로만 연다(§55, 2026-11-04 사용자 보고): 문짝 3.3 m에 비해 문에서 방까지 통로가 0.5~2.5 m로 짧아,
-    // 안에서 열어 바깥으로 젖히면 문짝 대부분이 원본 아치·기둥 앞으로 튀어나와 기둥을 뚫고 보였다. 안쪽으로 열면 통로를 지나 방 안으로 들어간다.
-    // InteractableDoor는 Animator에 바깥 열림 파라미터가 없으면 항상 안쪽으로 연다 — 파라미터 이름을 비운다(런타임 코드는 그대로).
-    private static void InwardOnly(Transform inst)
+    // 건물 문은 누른 사람 반대쪽으로 연다(Request1009Plan.md §56): 밖에서 누르면 안쪽, 안에서 누르면 바깥쪽.
+    // §55.2에서 바깥 열림 파라미터를 비워 안쪽으로만 열게 했더니, 안에서 연 문짝이 누른 쿠키 쪽으로 젖혀져 "밖에서 연 것처럼" 보이고 길을 막았다.
+    // 바깥으로 연 문짝이 건물 앞 길을 조금 막는 것은 받아들인다(사용자 결정) — 문 사이 통로 폭은 그대로라 쿠키·괴물이 지나간다.
+    internal static void OpenAwayFromPresser(Transform inst)
     {
         foreach (InteractableDoor d in inst.GetComponentsInChildren<InteractableDoor>(true))
         {
             var so = new SerializedObject(d);
-            so.FindProperty("outwardParameter").stringValue = "";
+            so.FindProperty("outwardParameter").stringValue = InteractableDoor.DefaultOutwardParameter;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
+    }
+
+    // 다시 만들지 않고 기존 건물 프리팹 문만 고친다(§56).
+    [MenuItem("Tools/TagOfChaos/Gingerbread/Doors Open Away From Presser")]
+    public static void FixPrefabDoorDirection()
+    {
+        int n = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:Prefab GIN_", new[] { PrefabDir }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            GameObject root = PrefabUtility.LoadPrefabContents(path);
+            if (root.GetComponentsInChildren<InteractableDoor>(true).Length > 0)
+            {
+                OpenAwayFromPresser(root.transform);
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+                n++;
+            }
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+        Debug.Log($"[GingerbreadBuildingSetup] Doors open away from the presser in {n} prefabs.");
     }
 
     private static void FixDoorways(Transform inst, string nm)

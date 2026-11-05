@@ -1418,7 +1418,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_MacaronCottage_Front
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 5828802450283017225}
   interactionRange: 3.4
@@ -1521,7 +1521,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   doorId: GIN_UG_MacaronCottage_Back
   openParameter: IsOpen
-  outwardParameter: 
+  outwardParameter: OpenOutward
   inwardOpenAngle: -90
   leafCollider: {fileID: 4580792603633690195}
   interactionRange: 3.4
