@@ -6574,3 +6574,14 @@ v1 §S1~S8 그대로:
   - EditMode `Request1105Tests.MonsterElevator_ClosedDuringPrepare`.
   - Play Mode(진저브레드): 준비 시간에 괴물이 술래방 발판에서 타면 `canRide=False`, 2초 뒤에도 지상(y 0.1)이다. 사냥 시간에는 `canRide=True`, 지하(y −36)로 내려갔다.
   - 콘솔 오류 0.
+
+## 63 2026-11-06 나중에 쓸 몬스터 MixedMonster 텍스처 입히기 ✅
+- 사용자 요청: `Assets/Animation/Monster/NewAnimation/MixedMonster.fbx`(Idle·Walk 애니메이션 포함, 지금은 쓰지 않음)에 텍스처만 입힌다.
+- 텍스처 가져오기 설정(`MixedMonster_Rigged_textures/`):
+  - 색: 4096, sRGB.
+  - 노멀: 노멀 맵, 4096(그전에는 일반 색 텍스처 2048이었다).
+  - 메탈릭·러프니스(2048 흑백)는 선형으로 바꾸고, Standard 셰이더용 한 장 `…_metallicSmoothness.png`로 합쳤다(R = 메탈릭, A = 1 − 러프니스, 선형).
+- 재질 `M_MixedMonster_Body.mat`(Standard: 색·노멀·메탈릭/스무스니스 맵). FBX의 몸통 재질(`MixedMonster_Body`)을 이 재질로 연결했다(Remap).
+- 시럽 5개(`M_Syrup`·`_Pink`·`_Green`·`_Cream`·`_Cookie`)는 FBX에 들어 있던 색을 그대로 쓴다.
+- 애니메이션·리그·게임 코드·맵은 건드리지 않았다.
+- 확인: 정면·옆·뒤와 걷기 렌더(`scratchpad/mixed_monster.jpg`). 콘솔 오류 0.
