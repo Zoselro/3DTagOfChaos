@@ -28,6 +28,15 @@ public static class RoomState
         return true;
     }
 
+    public static bool TryGetBytes(string key, out byte[] value)
+    {
+        value = null;
+        if (!IsInRoom()) return false;
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(key, out object raw) || !(raw is byte[] v)) return false;
+        value = v;
+        return true;
+    }
+
     public static bool TryGetIntArray(string key, out int[] value)
     {
         value = null;

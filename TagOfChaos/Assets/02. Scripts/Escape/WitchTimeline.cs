@@ -18,6 +18,8 @@ public enum WitchShot
     FinaleLowAngle, // 도착 테이크 1: 검은 화면 → 땅 높이에서 쿠키·괴물 → 로우 앵글로 뒤로 빠지며 아래를 보는 마녀 얼굴까지
     FinaleStomp,    // 도착 테이크 2: 쿠키·괴물 뒤 땅에서 올려다봄 — 밑창이 서서히 내려와 화면을 덮음
     FinaleEnd,      // 도착 테이크 3: 검은 화면 뒤 정면 위에서 밟고 선 마녀와 박살 → 결과(End)
+    GiantCircle,    // 거대 괴물(§64): 나오는 곳 — 마법진이 그려짐(얼굴 다음, 복귀 앞)
+    GiantReveal,    // 거대 괴물: 마법진에서 서서히 나타나는 괴물을 올려다봄
 }
 
 // 마녀 시각표(Request1009Plan.md §19.2, §23.3). 마녀·카메라·방장 판정이 같은 계산을 쓴다. 시각은 모두 공통 시계(PhotonNetwork.Time)와
@@ -46,11 +48,17 @@ public static class WitchTimeline
 
     public static double RocketAppearAt(double launchedAt) => launchedAt + LeadShotSeconds;
     // 타임어택 끝: 시작 연출(조작이 멈추는 10초)만큼 더 준다
-    public static double TimeAttackEnd(double appearAt, int timeAttackSeconds) => appearAt + IntroSeconds + timeAttackSeconds;
+    public static double TimeAttackEnd(double appearAt, int timeAttackSeconds) => TimeAttackEnd(appearAt, timeAttackSeconds, false);
+    public static double TimeAttackEnd(double appearAt, int timeAttackSeconds, bool giant) => appearAt + IntroSecondsFor(giant) + timeAttackSeconds;
+
+    // 거대 괴물이 나오는 판(Room Prop NetKeys.Giant, §64)은 얼굴 다음에 마법진·등장(GiantRules.IntroSeconds)이 들어가 시작 연출이 그만큼 길다.
+    public static bool GiantComing => RoomState.TryGetBytes(NetKeys.Giant, out _);
+    public static float IntroSecondsFor(bool giant) => IntroSeconds + (giant ? GiantRules.IntroSeconds : 0f);
     public static double TurnStart(double appearAt) => appearAt + RevealSeconds;
 
     // 걷기: 복귀가 끝난 때부터 타임어택 끝까지. 걷는 속도는 따로 없다 — 걷는 시간이 바뀌면(방 설정) 속도가 바뀐다.
-    public static double WalkStart(double appearAt) => appearAt + IntroSeconds;
+    public static double WalkStart(double appearAt) => WalkStart(appearAt, GiantComing);
+    public static double WalkStart(double appearAt, bool giant) => appearAt + IntroSecondsFor(giant);
 
     public static float WalkProgress(double now, double start, double end)
     {
@@ -62,7 +70,7 @@ public static class WitchTimeline
     // 이 판의 걷기 끝 시각(타임어택은 방 속성, 없으면 기본 시간).
     public static double WalkEnd(double appearAt)
     {
-        double end = RoomState.TryGetDouble(NetKeys.TimeAttackEndTime, out double t) ? t : TimeAttackEnd(appearAt, RoomState.TimeAttackSeconds());
+        double end = RoomState.TryGetDouble(NetKeys.TimeAttackEndTime, out double t) ? t : TimeAttackEnd(appearAt, RoomState.TimeAttackSeconds(), GiantComing);
         return end;
     }
 
@@ -92,7 +100,7 @@ public static class WitchTimeline
     public static bool InFinale(double now, double walkEnd, bool resultDecided) => !resultDecided && FinaleShotAt(now - walkEnd) != WitchShot.None;
 
     // 지금 보여 줄 장면(순수 계산). 결과가 나왔으면 결과 화면이라 None.
-    public static WitchShot ShotAt(WitchMode mode, double now, bool hasLead, double leadStart, double appearAt, double walkEnd, bool resultDecided)
+    public static WitchShot ShotAt(WitchMode mode, double now, bool hasLead, double leadStart, double appearAt, double walkEnd, bool resultDecided, bool giant = false)
     {
         if (mode == WitchMode.None || resultDecided) return WitchShot.None;
         if (now < appearAt) return hasLead && now >= leadStart ? WitchShot.Lead : WitchShot.None;
@@ -104,6 +112,13 @@ public static class WitchTimeline
         t -= TurnSeconds;
         if (t < FaceSeconds) return WitchShot.Face;
         t -= FaceSeconds;
+        if (giant)
+        {
+            if (t < GiantRules.CircleSeconds) return WitchShot.GiantCircle;
+            t -= GiantRules.CircleSeconds;
+            if (t < GiantRules.RevealSeconds) return WitchShot.GiantReveal;
+            t -= GiantRules.RevealSeconds;
+        }
         return t < ReturnSeconds ? WitchShot.Return : WitchShot.None;
     }
 }

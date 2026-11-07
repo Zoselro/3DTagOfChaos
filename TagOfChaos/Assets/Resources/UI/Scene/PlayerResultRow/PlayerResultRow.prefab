@@ -361,4 +361,5 @@ MonoBehaviour:
   failedLabel: "\uD0C8\uCD9C \uC2E4\uD328"
   catchFormat: "\uC7A1\uC740 \uD69F\uC218 {0}\uD68C"
   witchKilledLabel: "\uB9C8\uB140\uC5D0 \uC758\uD574 \uC0AC\uB9DD"
+  giantKilledLabel: "\uAC70\uB300 \uAD34\uBB3C\uC5D0\uAC8C \uBC1F\uD798"
   statusSeparator: ' / '

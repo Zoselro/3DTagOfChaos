@@ -16,6 +16,10 @@ public class DecoyNavMesh : MonoBehaviour
     private NavMeshDataInstance instance;
 
     public static bool Ready { get; private set; }
+
+    // 쿠키 길만 찾는 조건(에이전트 종류 0). 거대 괴물 길(GiantNavMesh, 종류 "Giant", §64)도 함께 올라와 있으므로
+    // 쿠키·AI 길 찾기는 늘 이것을 넘긴다 — 종류를 정하지 않으면 두 길이 섞이고 Unity가 경고한다.
+    public static NavMeshQueryFilter Filter => new NavMeshQueryFilter { agentTypeID = 0, areaMask = NavMesh.AllAreas };
     public NavMeshData Data => data;
 
     private void OnEnable()

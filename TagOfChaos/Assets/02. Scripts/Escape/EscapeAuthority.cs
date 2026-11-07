@@ -757,14 +757,24 @@ public sealed class EscapeAuthority
         witchTimerRequested = true;
         double now = PhotonNetwork.Time;
         double appearAt = WitchTimeline.RocketAppearAt(now);
-        AuthorityProps.SetRoom(new Hashtable
+        // 거대 괴물(§64): 이때 한 번 정한다(오프라인 개발 방은 OfflineModeBootstrap 체크박스, 그 밖에는 30 %). 나오면 시작 연출이 5초 길다.
+        var rng = new System.Random(unchecked((int)(now * 1000)));
+        GiantState giantState = default;
+        bool giant = GiantBrain.RollSpawn(rng) && GiantBrain.TryPickSpawn(manager, rng, out giantState);
+        var props = new Hashtable
         {
             { NetKeys.FirstEscapeAt, now },
             { NetKeys.FirstEscapePoint, point },
             { NetKeys.WitchMode, (int)WitchMode.TimeAttack },
             { NetKeys.WitchAppearAt, appearAt },
-            { NetKeys.TimeAttackEndTime, WitchTimeline.TimeAttackEnd(appearAt, RoomState.TimeAttackSeconds()) },
-        });
+            { NetKeys.TimeAttackEndTime, WitchTimeline.TimeAttackEnd(appearAt, RoomState.TimeAttackSeconds(), giant) },
+        };
+        if (giant)
+        {
+            props[NetKeys.Giant] = giantState.Encode();
+            Debug.Log($"[EscapeAuthority] Giant monster will appear at {giantState.Spawn}.");
+        }
+        AuthorityProps.SetRoom(props);
         // 마녀 시간에는 AI가 모두 사라진다(등장 연출 전, §26 R13·Q16)
         if (State != null && State.Decoys.Count > 0)
         {

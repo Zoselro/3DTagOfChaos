@@ -19,23 +19,29 @@ public class PlayerResultRow : MonoBehaviour
     [SerializeField] private string failedLabel = "Failed to escape";
     [SerializeField] private string catchFormat = "Caught {0}";
     [SerializeField] private string witchKilledLabel = "Killed by the witch";
+    [SerializeField] private string giantKilledLabel = "Stomped by the giant"; // 거대 괴물에게 밟힘(Request1009Plan.md §64)
     [SerializeField] private string statusSeparator = " / ";
 
     // 닉네임(쿠키) 탈출 성공 / 탈출 실패, 닉네임(스파이) 탈출 성공 / 탈출 실패
-    public void SetEscaper(string nickname, bool isSpy, bool escaped)
+    public void SetEscaper(string nickname, bool isSpy, bool escaped, bool stomped = false)
     {
         if (nameText != null) nameText.text = nickname + (isSpy ? spyRoleLabel : cookieRoleLabel);
-        if (statusText != null) statusText.text = escaped ? escapedLabel : failedLabel;
+        if (statusText != null) statusText.text = escaped ? escapedLabel : stomped ? failedLabel + statusSeparator + giantKilledLabel : failedLabel;
     }
 
     // 닉네임(괴물) 잡은 횟수 n회 / 마녀에 의해 사망
-    public void SetMonster(string nickname, int catches, bool killedByWitch)
+    public void SetMonster(string nickname, int catches, bool killedByWitch, bool killedByGiant = false)
     {
         if (nameText != null) nameText.text = nickname + monsterRoleLabel;
         if (statusText == null) return;
         string caught = string.Format(catchFormat, catches);
-        statusText.text = killedByWitch ? caught + statusSeparator + witchKilledLabel : caught;
+        statusText.text = killedByWitch ? caught + statusSeparator + witchKilledLabel
+            : killedByGiant ? caught + statusSeparator + giantKilledLabel : caught;
     }
+
+#if UNITY_EDITOR
+    public void EditorSetGiantLabel(string label) => giantKilledLabel = label;
+#endif
 
     public void SetMonster(string nickname)
     {

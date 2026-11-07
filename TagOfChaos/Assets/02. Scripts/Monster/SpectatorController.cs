@@ -46,6 +46,9 @@ public class SpectatorController : MonoBehaviour
 
     public SpectatorKind Kind => kind;
 
+    // 코드로 붙일 때(판 도중 죽은 술래 — MonsterEscapeState, §64.6).
+    public void Init(PhotonView view) => pv = view;
+
     public void EnterSpectatorMode(SpectatorKind reason)
     {
         if (!pv.IsMine) return;

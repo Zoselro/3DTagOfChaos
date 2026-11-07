@@ -47,6 +47,7 @@ public static class NetKeys
     public const string RevealedSpies = "RevealedSpies";       // int[] — 게임이 끝난 뒤 결과 화면용으로 공개
     public const string FirstEscapeAt = "FirstEscapeAt";       // double — 첫 탈출 시각(마녀 타이머 시작, Request1009Plan.md §25.5 G)
     public const string FirstEscapePoint = "FirstEscapePoint"; // Vector3 — 첫 탈출 지점(마녀 연출 앞 샷)
+    public const string Giant = "Giant";                     // byte[] — 거대 괴물(GiantState, 방장만 쓴다 — Request1009Plan.md §64). 있으면 이번 판에 나온다
     public const string CharacterAssignments = "CharacterAssignments"; // int[] — [액터, 캐릭터 번호, …] 시작 때 방장이 정한 캐릭터(중복 없음, §25.5 B)
 
     // Player CustomProperties (GameRule.md §4.4 — hitCount는 0 또는 2만 실제로 쓰임, v3.6). HitCount·DeathCause는 방장이 처형·마녀를 확정할 때 쓴다.
@@ -54,7 +55,7 @@ public static class NetKeys
     public const string SkinIndex = "SkinIndex"; // int — SkinCatalogSO 인덱스, GameRule.md §1.5 (판이 바뀌어도 유지)
     public const string SelectedSlot = "SelectedSlot"; // int — 인벤토리에서 고른 칸(본인만 쓴다, EscapePlan.md §1.9)
     public const string CatchCount = "CatchCount";     // int — 괴물이 잡은 횟수(방장이 처형을 확정할 때 쓴다)
-    public const string DeathCause = "DeathCause";     // int — DeathCause(1 괴물, 2 마녀)
+    public const string DeathCause = "DeathCause";     // int — DeathCause(1 괴물, 2 마녀, 3 거대 괴물)
     public const string HasVoice = "HasVoice";         // bool — 대기실에서 목소리를 녹음했다(본인이 쓴다, Request1009Plan.md §26 Q11·Q26)
     public const string LoadedScene = "LoadedScene";   // string — 지금 들어와 있는 씬(본인이 쓴다, RoomSceneFollower — Request1009Plan.md §43)
 
@@ -112,6 +113,7 @@ public static class NetKeys
         new Scope(RevealedSpies, Target.Room, Lifetime.Round),
         new Scope(FirstEscapeAt, Target.Room, Lifetime.Round),
         new Scope(FirstEscapePoint, Target.Room, Lifetime.Round),
+        new Scope(Giant, Target.Room, Lifetime.Round),
         new Scope(CharacterAssignments, Target.Room, Lifetime.Round),
         new Scope(HitCount, Target.Player, Lifetime.Round),
         new Scope(SkinIndex, Target.Player, Lifetime.Session, Writer.Self),

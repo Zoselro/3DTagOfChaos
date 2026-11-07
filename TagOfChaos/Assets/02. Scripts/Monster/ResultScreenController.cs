@@ -147,14 +147,15 @@ public class ResultScreenController : MonoBehaviourPunCallbacks
             if (isMonster)
             {
                 int catches = RoomState.TryGetPlayerInt(p, NetKeys.CatchCount, out int c) ? c : 0;
-                bool witch = RoomState.TryGetPlayerInt(p, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Witch;
-                if (row != null) row.SetMonster(p.NickName, catches, witch);
+                RoomState.TryGetPlayerInt(p, NetKeys.DeathCause, out int cause);
+                if (row != null) row.SetMonster(p.NickName, catches, cause == (int)DeathCause.Witch, cause == (int)DeathCause.Giant);
                 totalCatches += catches;
                 jarEntries.Add(new MonsterJarTrophy.Entry { Name = p.NickName, Catches = catches });
                 continue;
             }
 
-            if (row != null) row.SetEscaper(p.NickName, isSpy, escaped);
+            bool stomped = RoomState.TryGetPlayerInt(p, NetKeys.DeathCause, out int escaperCause) && escaperCause == (int)DeathCause.Giant;
+            if (row != null) row.SetEscaper(p.NickName, isSpy, escaped, stomped);
             if (isSpy) continue;
             cookieCount++;
             if (escaped) escapedCookies++;

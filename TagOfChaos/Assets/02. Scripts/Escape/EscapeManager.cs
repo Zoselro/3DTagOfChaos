@@ -154,6 +154,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         gameObject.AddComponent<DecoyBrain>().Init(this);           // AI 판단 — 방장만 돈다(§44)
         gameObject.AddComponent<DecoyPresenter>().Init(this);       // 맵의 AI(§25.5 L)
         gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 소음폭탄(§25.5 K)
+        gameObject.AddComponent<GiantBrain>().Init(this);           // 거대 괴물 판단 — 방장만 돈다(§64)
+        gameObject.AddComponent<GiantPresenter>().Init(this);       // 거대 괴물 연출(§64)
         VoiceNet.SendLocalVoice();                                  // 대기실에서 녹음한 목소리를 방에 보낸다(§25.3 Q6)
         ReadStateFromRoom();
     }
@@ -395,7 +397,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public bool IsWalkableFromSpawn(Vector3 feet)
     {
         if (!DecoyNavMesh.Ready) return true;
-        if (!NavMesh.SamplePosition(feet, out NavMeshHit hit, 1.2f, NavMesh.AllAreas) || Mathf.Abs(hit.position.y - feet.y) > WalkableSnapHeight) return false;
+        if (!NavMesh.SamplePosition(feet, out NavMeshHit hit, 1.2f, DecoyNavMesh.Filter) || Mathf.Abs(hit.position.y - feet.y) > WalkableSnapHeight) return false;
         if (!TryReachAnchor(out Vector3 anchor)) return true;
         if (reachPath == null) reachPath = new NavMeshPath();
         return NavPath.Reaches(anchor, hit.position, reachPath);   // 긴 길은 탐색 한도를 넘으므로 끝에서 이어 찾는다(§54)
@@ -406,7 +408,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (!reachAnchorSet)
         {
             GameObject spawn = GameObject.Find(SceneSpawnPoints.Cookie);
-            if (spawn != null && NavMesh.SamplePosition(spawn.transform.position, out NavMeshHit hit, 6f, NavMesh.AllAreas))
+            if (spawn != null && NavMesh.SamplePosition(spawn.transform.position, out NavMeshHit hit, 6f, DecoyNavMesh.Filter))
             {
                 reachAnchor = hit.position;
                 reachAnchorSet = true;

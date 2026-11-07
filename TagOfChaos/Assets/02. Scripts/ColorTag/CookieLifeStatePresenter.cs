@@ -270,6 +270,7 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
         if (desired == LifeState.Broken)
         {
             if (reason == "callback" && DiedToWitch()) ShatterByWitch(); // 내리치는 순간 몸이 조각나며 가루로(Request1009Plan.md §23.5 X7)
+            else if (reason == "callback" && DiedToGiant()) StompedByGiant(); // 거대 괴물에게 밟힘(§64.6)
             ApplyBroken();
         }
         else if (appliedState == LifeState.Broken) RestoreAlive();
@@ -281,6 +282,25 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
 
     private bool DiedToWitch() =>
         RoomState.TryGetPlayerInt(pv.Owner, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Witch;
+
+    private bool DiedToGiant() =>
+        RoomState.TryGetPlayerInt(pv.Owner, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Giant;
+
+    // 거대 괴물에게 밟힘(Request1009Plan.md §64.6): 쿠키는 구르는 부스러기, 슬라임 캐릭터(에이드공주)는 부스러기 없이 분홍 슬라임.
+    private void StompedByGiant()
+    {
+        if (visualsHidden) return;
+        crumbsSpawned = true; // 처형용 가루는 터뜨리지 않는다
+        GiantSettingsSO settings = GiantSettingsSO.Current;
+        Vector3 feet = transform.position;
+        if (settings.OozesSlime(PlayerSkinApplier.CharacterIndexOf(pv.Owner)))
+        {
+            GiantDeathFx.Slime(feet, settings.SlimeColor);
+            return;
+        }
+        GameAudio.PlayAt(SoundId.CookieCrumble, feet);
+        GiantDeathFx.Crumbs(feet, CharacterCrumbColors(pv.Owner), fallbackCrumbColor);
+    }
 
     private void ShatterByWitch()
     {

@@ -15,7 +15,7 @@ public static class NavPath
         Vector3 at = from;
         for (int i = 0; i < MaxHops; i++)
         {
-            if (!NavMesh.CalculatePath(at, to, NavMesh.AllAreas, scratch)) return false;
+            if (!NavMesh.CalculatePath(at, to, DecoyNavMesh.Filter, scratch)) return false;
             if (scratch.status == NavMeshPathStatus.PathComplete) return true;
             if (scratch.status == NavMeshPathStatus.PathInvalid || scratch.corners.Length == 0) return false;
             Vector3 end = scratch.corners[scratch.corners.Length - 1];

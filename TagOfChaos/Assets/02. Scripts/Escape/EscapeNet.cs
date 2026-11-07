@@ -61,6 +61,7 @@ public enum DeathCause
     None = 0,
     Monster = 1,
     Witch = 2,
+    Giant = 3, // 거대 괴물에게 밟힘(Request1009Plan.md §64) — 쿠키·스파이·술래
 }
 
 public struct EscapeRequest

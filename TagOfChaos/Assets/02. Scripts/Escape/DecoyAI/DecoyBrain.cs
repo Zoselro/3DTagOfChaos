@@ -300,7 +300,7 @@ public class DecoyBrain : MonoBehaviour
             if (Claimed(b) >= DecoyRules.BuildingCapacity) continue;
             Vector3 repair = manager.BuildingRepairPoint(b);
             Vector2 jitter = Random2(a, 1.6f);
-            if (!NavMesh.SamplePosition(repair + new Vector3(jitter.x, 0f, jitter.y), out NavMeshHit hit, 2.5f, NavMesh.AllAreas)) continue;
+            if (!NavMesh.SamplePosition(repair + new Vector3(jitter.x, 0f, jitter.y), out NavMeshHit hit, 2.5f, DecoyNavMesh.Filter)) continue;
             Vector3 face = repair - hit.position;
             float yaw = face.sqrMagnitude > 0.01f ? Mathf.Atan2(face.x, face.z) * Mathf.Rad2Deg : float.NaN;
             if (!TryRoute(a, pos, hit.position, DecoyGait.Walk, now, (float)DecoyRules.Range(a.Rng.NextDouble(), 5, 12), yaw)) continue;
@@ -348,7 +348,7 @@ public class DecoyBrain : MonoBehaviour
             float dist = (float)DecoyRules.Range(a.Rng.NextDouble(), 15, 25);
             Vector3 c = pos + Quaternion.Euler(0f, angle, 0f) * away * dist;
             if (manager.IsOutsideMap(c, -3f) || manager.InMonsterRoom(c)) continue;
-            if (!NavMesh.SamplePosition(c, out NavMeshHit hit, 4f, NavMesh.AllAreas)) continue;
+            if (!NavMesh.SamplePosition(c, out NavMeshHit hit, 4f, DecoyNavMesh.Filter)) continue;
             float score = DecoyRules.FleeScore(pos, monster, hit.position, Openness(hit.position), Crowd(hit.position));
             if (score > bestScore) { bestScore = score; bestPoint = hit.position; }
         }
@@ -374,7 +374,7 @@ public class DecoyBrain : MonoBehaviour
             c = pos + new Vector3(r.x, 0f, r.y);
         }
         if (manager.IsOutsideMap(c, -4f) || manager.InMonsterRoom(c)) return false;
-        if (!NavMesh.SamplePosition(c, out NavMeshHit hit, 4f, NavMesh.AllAreas)) return false;
+        if (!NavMesh.SamplePosition(c, out NavMeshHit hit, 4f, DecoyNavMesh.Filter)) return false;
         point = hit.position;
         return (point - pos).sqrMagnitude > 16f;
     }
@@ -384,8 +384,8 @@ public class DecoyBrain : MonoBehaviour
     {
         if (pathsThisFrame >= PathBudget) { a.DecideAt = now + 0.1; return false; }
         pathsThisFrame++;
-        if (!NavMesh.SamplePosition(from, out NavMeshHit start, 3f, NavMesh.AllAreas)) return false;
-        if (!NavMesh.CalculatePath(start.position, to, NavMesh.AllAreas, path) || path.status != NavMeshPathStatus.PathComplete) return false;
+        if (!NavMesh.SamplePosition(from, out NavMeshHit start, 3f, DecoyNavMesh.Filter)) return false;
+        if (!NavMesh.CalculatePath(start.position, to, DecoyNavMesh.Filter, path) || path.status != NavMeshPathStatus.PathComplete) return false;
         Vector3[] corners = path.corners;
         if (corners.Length < 2) return false;
         int n = Mathf.Min(corners.Length, DecoyRoute.MaxPoints);
@@ -473,7 +473,7 @@ public class DecoyBrain : MonoBehaviour
         for (int k = 0; k < 8; k++)
         {
             Vector3 dir = Quaternion.Euler(0f, k * 45f, 0f) * Vector3.forward;
-            if (!NavMesh.Raycast(p, p + dir * 6f, out _, NavMesh.AllAreas)) open++;
+            if (!NavMesh.Raycast(p, p + dir * 6f, out _, DecoyNavMesh.Filter)) open++;
         }
         return open / 8f;
     }

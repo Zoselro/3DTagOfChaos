@@ -72,6 +72,26 @@ public class WitchRevealCamera : MonoBehaviour
         rotation = Quaternion.Slerp(ownRot, look, Mathf.Clamp01(w * 2f));
     }
 
+    // 거대 괴물 등장(§64.7): 나오는 곳 앞 위에서 마법진을 내려다보다가(GiantCircle), 땅 가까이로 내려와 솟아오르는 괴물을 올려다본다(GiantReveal).
+    public const float GiantCircleBack = 20f, GiantCircleUp = 13f;
+    public const float GiantRevealBack = 22f, GiantRevealEye = 3f;
+    public const float GiantMoveSeconds = 1f;
+
+    public static void GiantCirclePose(Vector3 spawn, float yaw, out Vector3 position, out Quaternion rotation)
+    {
+        Vector3 dir = GiantRules.Forward(yaw);
+        position = spawn + dir * GiantCircleBack + Vector3.up * GiantCircleUp;
+        rotation = Quaternion.LookRotation(spawn - position, Vector3.up);
+    }
+
+    public static void GiantRevealPose(Vector3 spawn, float yaw, float reveal, out Vector3 position, out Quaternion rotation)
+    {
+        Vector3 dir = GiantRules.Forward(yaw);
+        position = spawn + dir * GiantRevealBack + Vector3.up * GiantRevealEye;
+        Vector3 look = spawn + Vector3.up * Mathf.Lerp(1.5f, GiantRules.Height * 0.6f, Mathf.SmoothStep(0f, 1f, reveal));
+        rotation = Quaternion.LookRotation(look - position, Vector3.up);
+    }
+
     // 앞 샷으로 옮겨 간 정도(앞 샷 시작부터 초): LeadInSeconds 동안 0 → 1. 순수 계산.
     public static float LeadWeight(float t) => t < 0f ? 0f : Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / WitchTimeline.LeadInSeconds));
 
@@ -171,7 +191,7 @@ public class WitchRevealCamera : MonoBehaviour
         if (mode == WitchMode.None || !WitchTimeline.TryGetAppearAt(out appearAt)) { appearAt = 0; return WitchShot.None; }
         hasLead = WitchTimeline.TryGetLeadInStart(mode, out leadStart);
         walkEnd = WitchTimeline.WalkEnd(appearAt);
-        return WitchTimeline.ShotAt(mode, PhotonNetwork.Time, hasLead, leadStart, appearAt, walkEnd, RoomState.TryGetInt(NetKeys.GameResult, out _));
+        return WitchTimeline.ShotAt(mode, PhotonNetwork.Time, hasLead, leadStart, appearAt, walkEnd, RoomState.TryGetInt(NetKeys.GameResult, out _), WitchTimeline.GiantComing);
     }
 
     private void LateUpdate()
@@ -235,10 +255,31 @@ public class WitchRevealCamera : MonoBehaviour
                 pos = Vector3.Lerp(bodyPos, facePos, k); rot = Quaternion.Slerp(bodyRot, faceRot, k);
                 break;
             }
+            case WitchShot.GiantCircle:
+            case WitchShot.GiantReveal:
+            {
+                GiantState.TryGetCurrent(out GiantState giant);
+                double since = now - GiantRules.CircleStart(appearAt);
+                GiantCirclePose(giant.Spawn, giant.SpawnYaw, out Vector3 circlePos, out Quaternion circleRot);
+                if (shot == WitchShot.GiantCircle) { pos = circlePos; rot = circleRot; break; }
+                float k = GiantRules.RevealProgress(now, appearAt);
+                GiantRevealPose(giant.Spawn, giant.SpawnYaw, k, out Vector3 revealPos, out Quaternion revealRot);
+                float m = Smooth(since - GiantRules.CircleSeconds, GiantMoveSeconds);
+                pos = Vector3.Lerp(circlePos, revealPos, m); rot = Quaternion.Slerp(circleRot, revealRot, m);
+                break;
+            }
             case WitchShot.Return:
             {
-                double since = t - WitchTimeline.RevealSeconds - WitchTimeline.TurnSeconds - WitchTimeline.FaceSeconds;
-                BlendPose(basePos, baseRot, witch.FacePoint, witch.FaceForward, witch.Height, 1f - Smooth(since, WitchTimeline.ReturnSeconds), out pos, out rot);
+                bool giantIntro = WitchTimeline.GiantComing;
+                double since = t - WitchTimeline.RevealSeconds - WitchTimeline.TurnSeconds - WitchTimeline.FaceSeconds - (giantIntro ? GiantRules.IntroSeconds : 0f);
+                float w = 1f - Smooth(since, WitchTimeline.ReturnSeconds);
+                if (giantIntro && GiantState.TryGetCurrent(out GiantState giant))
+                {
+                    // 거대 괴물을 올려다보던 자리에서 내 시점으로
+                    GiantRevealPose(giant.Spawn, giant.SpawnYaw, 1f, out Vector3 fromPos, out Quaternion fromRot);
+                    pos = Vector3.Lerp(basePos, fromPos, w); rot = Quaternion.Slerp(baseRot, fromRot, w);
+                }
+                else BlendPose(basePos, baseRot, witch.FacePoint, witch.FaceForward, witch.Height, w, out pos, out rot);
                 break;
             }
             default: // 도착 3테이크

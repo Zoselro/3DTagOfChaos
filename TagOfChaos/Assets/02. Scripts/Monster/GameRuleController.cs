@@ -98,6 +98,7 @@ public class GameRuleController : MonoBehaviourPunCallbacks
             int actor = p.ActorNumber;
             if (System.Array.IndexOf(monsters, actor) >= 0)
             {
+                if (RoomState.TryGetPlayerInt(p, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Giant) continue; // 이미 거대 괴물에게 죽었다(§64)
                 AuthorityProps.SetPlayer(p, new Hashtable { { NetKeys.DeathCause, (int)DeathCause.Witch } });
                 continue;
             }

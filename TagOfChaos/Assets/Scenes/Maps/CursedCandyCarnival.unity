@@ -74791,6 +74791,51 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6397913554697936104, guid: 88cdb833b6de4184a8b9d968c11ad02a, type: 3}
   m_PrefabInstance: {fileID: 1247523016}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1248700284
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1248700286}
+  - component: {fileID: 1248700285}
+  m_Layer: 0
+  m_Name: GiantNavMesh
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1248700285
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248700284}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59f535dc1a17fc345bb5b93da5ec89e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  data: {fileID: 23800000, guid: 7ec2807b1b3b4ae46ae03224ac157598, type: 2}
+--- !u!4 &1248700286
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1248700284}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1249125765
 GameObject:
   m_ObjectHideFlags: 0
@@ -140946,3 +140991,4 @@ SceneRoots:
   - {fileID: 711587124}
   - {fileID: 64489904}
   - {fileID: 996811060}
+  - {fileID: 1248700286}
