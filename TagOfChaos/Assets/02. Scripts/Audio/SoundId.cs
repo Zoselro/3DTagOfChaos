@@ -38,6 +38,7 @@ public enum SoundId
     DoorOpen = 216,
     DoorClose = 217,
     CookieBreath = 218, // 스태미나가 바닥났을 때 숨차는 소리(Request1009Plan.md §46.3)
+    Cough = 219,        // 수색 폭탄 연기에 걸린 사람의 콜록콜록(§68 GP5)
 
     // 색칠(2D, 본인)
     PaintReset = 304,
@@ -63,6 +64,7 @@ public enum SoundId
     EscapeSuccessSelf = 515,
     WitchStep = 516,     // 마녀 발걸음(Request1009Plan.md §23.5 X4)
     WitchShatter = 517,  // 내리칠 때 맵이 무너지는 소리(§23.5 X7)
+    SirenAlarm = 518,    // 사이렌 함정: 철창에 갇힌 건물에서 울리는 두 음 사이렌(한 바퀴 1.4 s, 반복 재생 — §68 GP5)
 
     // 도구
     StunAimHum = 600,
@@ -72,6 +74,9 @@ public enum SoundId
     BalloonSplash = 604,
     HammerSwing = 605,
     HammerBonk = 606,
+    FlashBang = 607,  // 섬광탄 터지는 '펑' — 모두가 3D로 듣는다(§68 GP2)
+    FlashRing = 608,  // 섬광 맞은 사람 본인에게만 '삐~' 귀울림(2D, §68 GP2)
+    GlovePunch = 609, // 권투 글러브가 맞았을 때 '퍽'(§68 GP3)
 
     // 맵 연출(3D)
     CakeCrack = 701,

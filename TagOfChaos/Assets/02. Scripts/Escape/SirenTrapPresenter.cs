@@ -69,7 +69,7 @@ public class SirenTrapPresenter : MonoBehaviour
             {
                 nextSiren = Time.time + SirenInterval;
                 foreach (EscapeState.Bomb b in s.Bombs)
-                    if (b.Caged) GameAudio.PlayAt(SoundId.VikingBell, manager.BuildingRepairPoint(b.Building)); // 사이렌(임시 — 종소리, 전용 소리는 GP7)
+                    if (b.Caged) GameAudio.PlayAt(SoundId.SirenAlarm, manager.BuildingRepairPoint(b.Building)); // 두 음 사이렌(한 바퀴 1.4 s)
             }
             IGameCharacter me = LocalCookie();
             if (me != null)

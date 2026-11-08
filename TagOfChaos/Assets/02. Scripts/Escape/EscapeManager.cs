@@ -52,6 +52,36 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public static bool HasLeftMap(int actor) => Instance != null && Instance.State != null && Instance.State.HasLeftMap(actor);
     public static bool HasEscaped(int actor) => Instance != null && Instance.State != null && Instance.State.HasEscaped(actor);
 
+    // 호박 마차(§68.7): 탄 사람은 E를 누른 순간부터 도착할 때까지 이동이 잠기고, 문이 닫힌 뒤에는 잡히지 않는다.
+    public static bool IsRidingCarriage(int actor) => CarriageTimeCheck(actor, PumpkinCarriageRules.Riding);
+    public static bool IsCarriageProtected(int actor) => CarriageTimeCheck(actor, PumpkinCarriageRules.Protected);
+
+    // 개발용(OfflineModeBootstrap 아이템 시험): 오프라인 방의 방장일 때만 방장 판정 객체를 내준다. 온라인에서는 늘 null.
+    public EscapeAuthority OfflineAuthority => Photon.Pun.PhotonNetwork.OfflineMode && Photon.Pun.PhotonNetwork.IsMasterClient ? authority : null;
+
+    // 콜라 대포(§68.9): 탄 순간부터 착지까지 이동 잠금, 해치가 닫힌 뒤 착지까지 잡히지 않는다.
+    public static bool IsRidingCannon(int actor) => CannonTimeCheck(actor, ColaCannonRules.Riding);
+    public static bool IsCannonProtected(int actor) => CannonTimeCheck(actor, ColaCannonRules.Protected);
+    // 탈것(마차·대포) 공통 — 이동 잠금·잡기 보호가 묻는다.
+    public static bool IsRidingVehicle(int actor) => IsRidingCarriage(actor) || IsRidingCannon(actor);
+    public static bool IsVehicleProtected(int actor) => IsCarriageProtected(actor) || IsCannonProtected(actor);
+
+    private static bool CannonTimeCheck(int actor, System.Func<double, float, double, bool> rule)
+    {
+        if (Instance == null || Instance.State == null) return false;
+        int i = Instance.State.RiddenCannonOf(actor);
+        if (i < 0) return false;
+        EscapeState.Cannon c = Instance.State.Cannons[i];
+        return rule(c.BoardAt, c.Flight, Photon.Pun.PhotonNetwork.Time);
+    }
+
+    private static bool CarriageTimeCheck(int actor, System.Func<double, double, bool> rule)
+    {
+        if (Instance == null || Instance.State == null) return false;
+        int i = Instance.State.RiddenCarriageOf(actor);
+        return i >= 0 && rule(Instance.State.Carriages[i].BoardAt, Photon.Pun.PhotonNetwork.Time);
+    }
+
     // 쿠키가 모두 끝나 타임어택 없이 스파이 로켓만 떠나는 경우(D10): 발사 연출이 보이도록 잠시 끝 판정을 미룬다.
     public const float RocketLaunchShowSeconds = 6f;
     public bool IsDeparting(double now) =>
@@ -156,6 +186,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         gameObject.AddComponent<DecoyPresenter>().Init(this);       // 맵의 AI(§25.5 L)
         gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 사이렌 함정(옛 소음폭탄 §25.5 K)·수색 폭탄 입력(§68 GP5)
         gameObject.AddComponent<SirenTrapPresenter>().Init(this);   // 사이렌 철창(§68 GP5)
+        gameObject.AddComponent<PumpkinCarriagePresenter>().Init(this); // 호박 마차 탈것(§68.7)
+        gameObject.AddComponent<ColaCannonPresenter>().Init(this);      // 콜라 대포 탈것(§68.9)
         gameObject.AddComponent<DestructionNet>();                  // 거대 괴물이 부수는 물체 상태(§66)
         gameObject.AddComponent<DestructionPresenter>();            // 부서지는 연출(데칼·붕괴, §66)
         gameObject.AddComponent<GiantBrain>().Init(this);           // 거대 괴물 판단 — 방장만 돈다(§64)

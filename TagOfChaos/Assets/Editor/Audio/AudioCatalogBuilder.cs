@@ -188,6 +188,8 @@ public static class SoundDefaults
             case 6: // 도구
                 World(e, 20f, 4);
                 if (id == SoundId.StunAimHum) { Flat(e, SoundBus.Sfx); e.maxInstances = 1; }
+                else if (id == SoundId.FlashRing) { Flat(e, SoundBus.Sfx); e.maxInstances = 1; e.pitchRange = Vector2.one; e.importance = SoundImportance.Critical; } // 맞은 사람 본인만(§68 GP2)
+                else if (id == SoundId.FlashBang) { e.maxDistance = 35f; e.maxInstances = 2; e.importance = SoundImportance.High; }
                 break;
             case 7: // 맵 연출
                 World(e, 60f, 2);
@@ -269,6 +271,10 @@ public static class SoundDefaults
             case SoundId.BalloonSplash: falloff = SoundFalloff.Action; min = 2f; max = 22f; return;
             case SoundId.HammerSwing: falloff = SoundFalloff.Action; min = 1.5f; max = 12f; return;
             case SoundId.HammerBonk: falloff = SoundFalloff.Action; min = 2f; max = 20f; return;
+            case SoundId.FlashBang: falloff = SoundFalloff.Heavy; min = 3f; max = 35f; return;   // 섬광탄 — 반경(6 m)보다 훨씬 멀리
+            case SoundId.GlovePunch: falloff = SoundFalloff.Action; min = 2f; max = 18f; return;
+            case SoundId.Cough: falloff = SoundFalloff.Action; min = 1.5f; max = 14f; return;
+            case SoundId.SirenAlarm: falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return; // 사이렌 — 멀리서도 '어디가 갇혔다'를 알 수 있게
             case SoundId.CauldronBubble: falloff = SoundFalloff.Landmark; min = 3f; max = 15f; return;
             case SoundId.CauldronSplash: falloff = SoundFalloff.Action; min = 3f; max = 15f; return;
             case SoundId.DeviceComplete: case SoundId.RocketIgnite: case SoundId.RocketLiftoff:

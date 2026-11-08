@@ -69,6 +69,10 @@ public class EscapeTextsSO : ScriptableObject
     public string skillUnknown = "TBD";        // 생존자 스킬(아직 미정)
     public string skillSearch = "Search bomb"; // 술래 수색 폭탄(§68 GP5)
     public string cageMash = "Mash [{0}] to break the cage!"; // 사이렌 철창 안({0} = 점프 키)
+    public string carriageBoard = "Ride Pumpkin Carriage";   // 호박 마차 문 앞 E 안내(§68.7)
+    public string carriageNoRoom = "No room for the carriage"; // 소환할 빈 바닥이 없음
+    public string cannonBoard = "Ride Cola Cannon";          // 콜라 대포 뒤 계단 E 안내(§68.9)
+    public string cannonNoRoom = "No room for the cannon";   // 설치할 빈 바닥이 없음
 
     [Header("Player list (§59 PL — Tab)")]
     public string playerListTitle = "Players";

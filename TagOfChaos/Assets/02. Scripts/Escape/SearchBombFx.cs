@@ -55,7 +55,7 @@ public class SearchBombFx : MonoBehaviour
         puff.transform.SetPositionAndRotation(head, Quaternion.LookRotation(body.forward + Vector3.up * 0.3f));
         puff.Emit(8);
         Destroy(puff.gameObject, 1.2f);
-        GameAudio.PlayAt(SoundId.CookieBreath, head); // 기침 소리(임시 — 숨소리, 전용 소리는 GP7)
+        GameAudio.PlayAt(SoundId.Cough, head); // 콜록콜록
         StartCoroutineOn(body);
     }
 

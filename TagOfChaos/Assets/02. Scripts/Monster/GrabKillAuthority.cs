@@ -49,7 +49,7 @@ public static class GrabKillAuthority
         GamePhase phase = GamePhaseState.Current;
         bool hunt = phase == GamePhase.Hunt || phase == GamePhase.TimeAttack;
         bool alive = !RoomState.IsBroken(victim) && !RoomState.IsMonster(victim.ActorNumber);
-        bool onMap = !EscapeManager.HasLeftMap(victim.ActorNumber);
+        bool onMap = !EscapeManager.HasLeftMap(victim.ActorNumber) && !EscapeManager.IsVehicleProtected(victim.ActorNumber); // 문 닫힌 호박 마차 안·해치 닫힌 콜라 대포 안·비행 중은 잡히지 않는다(§68.7·§68.9)
         float since = lastConfirmAt.TryGetValue(monsterActor, out float at) ? Time.time - at : float.MaxValue;
         var trigger = monster.GetComponent<MonsterGrabKillTrigger>();
         GameSettingsSO settings = GameSettings.Current;

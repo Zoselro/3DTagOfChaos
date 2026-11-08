@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: Dismantle
   displayName: "\uD574\uCCB4 \uB3C4\uAD6C"
   icon: {fileID: 21300000, guid: 9ad555a45081eba4cb4be3b49f2b50ad, type: 3}
-  modelPrefab: {fileID: 0}
+  modelPrefab: {fileID: 919132149155446097, guid: ce0f16c05b2315845aa244d0326b0c12, type: 3}
   tint: {r: 0.55, g: 0.55, b: 0.6, a: 1}
   holdType: 0
   category: 1

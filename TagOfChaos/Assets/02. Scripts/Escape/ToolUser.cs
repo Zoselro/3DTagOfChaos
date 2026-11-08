@@ -90,6 +90,7 @@ public class ToolUser : MonoBehaviour
             case ToolKind.StunGun: return SoundId.StunFire;
             case ToolKind.Skates: return SoundId.CookieDodge;   // 임시음(Request1009Plan.md §25.6 소리)
             case ToolKind.Pumpkin: return SoundId.PortalOpen;
+            case ToolKind.ColaCannon: return SoundId.PortalOpen;
             case ToolKind.Recorder: return SoundId.UiConfirm;
             case ToolKind.NoiseBomb: return SoundId.UiToastAlert;
             default: return SoundId.BalloonThrow;
@@ -198,9 +199,30 @@ public class ToolUser : MonoBehaviour
                 break;
             case ToolKind.Pumpkin:
             {
-                // 맵 안 무작위 지점(바닥 있고 끼지 않는 곳, §25.3 Q7) — 방장은 그 점이 맞는지만 확인한다
-                if (!manager.TryRandomMapPoint(new System.Random(), out point)) return;
-                break;
+                // 호박 마차 소환(§68.7): 보는 쪽 앞 빈 바닥(막히면 옆·뒤)에 문이 나를 보게 — 방장은 자리만 다시 확인한다.
+                // 순간이동할 곳은 탄 뒤 방장이 정한다(맵 안 무작위, §25.3 Q7 그대로).
+                if (!PumpkinCarriagePresenter.TryFindSummonSpot(manager, transform.position, aim, out point, out float yaw))
+                {
+                    EscapeHud.Toast(EscapeTextsSO.Current.carriageNoRoom);
+                    UiSoundCues.Error();
+                    readyAt = 0f;
+                    return;
+                }
+                manager.Request(EscapeOp.ToolUse, slot, Mathf.RoundToInt(yaw), point, new int[0]);
+                return;
+            }
+            case ToolKind.ColaCannon:
+            {
+                // 콜라 대포 설치(§68.9): 보는 쪽 앞 빈 바닥에 뒤 계단이 나를 보게. 날아갈 곳은 E로 탈 때 그 방향으로 방장이 정한다.
+                if (!ColaCannonPresenter.TryFindSummonSpot(manager, transform.position, aim, out point, out float yaw))
+                {
+                    EscapeHud.Toast(EscapeTextsSO.Current.cannonNoRoom);
+                    UiSoundCues.Error();
+                    readyAt = 0f;
+                    return;
+                }
+                manager.Request(EscapeOp.ToolUse, slot, Mathf.RoundToInt(yaw), point, new int[0]);
+                return;
             }
             case ToolKind.WaterBalloon:
             {

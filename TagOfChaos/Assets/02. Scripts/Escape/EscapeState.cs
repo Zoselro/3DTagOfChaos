@@ -21,9 +21,11 @@ public enum RainbowState : byte { None = 0, Closed = 1, Opened = 2, Broken = 3 }
 // 스파이 로켓 자리, 무지개 상자·헬리콥터 모자 비행, 괴물 소음폭탄, AI(미끼) 추가.
 // v6(§26): 로켓 칸의 수리키트 50%(KitHalf), 괴물에게 잡히는 중인 AI(CaughtBy·CaughtAt).
 // v7(§68 GP5): 소음폭탄 → 사이렌 함정 — 갇힌 건물(Building)·갇힌 시각(CagedAt)·연타 수(Mash).
+// v8(§68.7): 호박 마차 탈것(Carriages) — 소환 자리·방향·시각, 탄 시각, 도착 지점.
+// v9(§68.9): 콜라 대포 탈것(Cannons) — 설치 자리·방향·시각, 탄 시각·겨눈 방향, 착지 지점·비행 시간.
 public sealed class EscapeState
 {
-    public const byte FormatVersion = 7;
+    public const byte FormatVersion = 9;
     public const int BuildingCount = 4;
     public const int ExitCount = 4;
     public const float RepairSeconds = 10f;      // 재료 넣기(수리) 게이지가 다 차는 시간(§25.5 E)
@@ -151,6 +153,38 @@ public sealed class EscapeState
         public bool Caught => CaughtBy != 0;
     }
 
+    // 호박 마차 탈것(§68.7): 주인이 쓰면 Pos에 Yaw 방향으로 소환된다. 주인이 E를 누르면 BoardAt, 그때 방장이 도착 지점(Dest)을 정한다.
+    // 시간표는 PumpkinCarriageRules(문 열림 → 들어감 → 닫힘 → 사라짐·도착). 타지 않으면 IdleSeconds 뒤, 탔으면 RemoveAt 뒤 방장이 지운다.
+    public struct Carriage
+    {
+        public int Id;
+        public int Owner;
+        public Vector3 Pos;
+        public float Yaw;
+        public double SummonedAt;
+        public double BoardAt;   // 0 = 아직 안 탐
+        public Vector3 Dest;
+
+        public bool Boarded => BoardAt > 0;
+    }
+
+    // 콜라 대포 탈것(§68.9): 주인이 쓰면 Pos에 Yaw 방향으로 설치된다. 주인이 E를 누르면 BoardAt·AimYaw(그때 보던 방향),
+    // 방장이 착지 지점(Dest)과 비행 시간(Flight)을 정한다. 시간표는 ColaCannonRules.
+    public struct Cannon
+    {
+        public int Id;
+        public int Owner;
+        public Vector3 Pos;
+        public float Yaw;
+        public double SummonedAt;
+        public double BoardAt;   // 0 = 아직 안 탐
+        public float AimYaw;
+        public Vector3 Dest;
+        public float Flight;
+
+        public bool Boarded => BoardAt > 0;
+    }
+
     public int Revision; // 방장이 커밋할 때마다 1씩 오른다 — 방장 화면은 늦게 도착한 옛 상태를 무시한다(F-18)
     public readonly List<Item> Items = new List<Item>();
     public readonly List<Chest> Chests = new List<Chest>();
@@ -166,7 +200,9 @@ public sealed class EscapeState
     public readonly List<Flight> Flights = new List<Flight>();
     public readonly List<Bomb> Bombs = new List<Bomb>();
     public readonly List<Decoy> Decoys = new List<Decoy>();
-    public int NextId = 1; // 폭탄·AI 번호(지워져도 요청이 엉뚱한 것을 가리키지 않게)
+    public readonly List<Carriage> Carriages = new List<Carriage>();
+    public readonly List<Cannon> Cannons = new List<Cannon>();
+    public int NextId = 1; // 폭탄·AI·마차·대포 번호(지워져도 요청이 엉뚱한 것을 가리키지 않게)
 
     public int ActiveBuildingCount
     {
@@ -233,6 +269,32 @@ public sealed class EscapeState
     public int DecoyIndex(int id)
     {
         for (int i = 0; i < Decoys.Count; i++) if (Decoys[i].Id == id) return i;
+        return -1;
+    }
+
+    public int CarriageIndex(int id)
+    {
+        for (int i = 0; i < Carriages.Count; i++) if (Carriages[i].Id == id) return i;
+        return -1;
+    }
+
+    // 이 사람이 탄 마차(BoardAt이 있는 것) 번호, 없으면 -1.
+    public int RiddenCarriageOf(int actor)
+    {
+        for (int i = 0; i < Carriages.Count; i++) if (Carriages[i].Owner == actor && Carriages[i].Boarded) return i;
+        return -1;
+    }
+
+    public int CannonIndex(int id)
+    {
+        for (int i = 0; i < Cannons.Count; i++) if (Cannons[i].Id == id) return i;
+        return -1;
+    }
+
+    // 이 사람이 탄 대포(BoardAt이 있는 것) 번호, 없으면 -1.
+    public int RiddenCannonOf(int actor)
+    {
+        for (int i = 0; i < Cannons.Count; i++) if (Cannons[i].Owner == actor && Cannons[i].Boarded) return i;
         return -1;
     }
 
@@ -307,6 +369,10 @@ public sealed class EscapeState
             foreach (Bomb b in Bombs) { w.Write(b.Id); w.Write(b.Owner); WriteVector(w, b.Pos); w.Write(b.Spent); w.Write(b.SpentAt); w.Write(b.Building); w.Write(b.CagedAt); w.Write(b.Mash); }
             w.Write(Decoys.Count);
             foreach (Decoy d in Decoys) { w.Write(d.Id); w.Write(d.Owner); WriteVector(w, d.Pos); w.Write(d.Yaw); w.Write(d.VoiceAt); w.Write(d.Seed); w.Write(d.CaughtBy); w.Write(d.CaughtAt); }
+            w.Write(Carriages.Count);
+            foreach (Carriage c in Carriages) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); WriteVector(w, c.Dest); }
+            w.Write(Cannons.Count);
+            foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); }
             w.Flush();
             return ms.ToArray();
         }
@@ -367,6 +433,12 @@ public sealed class EscapeState
                 int decoys = r.ReadInt32();
                 for (int i = 0; i < decoys; i++)
                     s.Decoys.Add(new Decoy { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), VoiceAt = r.ReadDouble(), Seed = r.ReadInt32(), CaughtBy = r.ReadInt32(), CaughtAt = r.ReadDouble() });
+                int carriages = r.ReadInt32();
+                for (int i = 0; i < carriages; i++)
+                    s.Carriages.Add(new Carriage { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), Dest = ReadVector(r) });
+                int cannons = r.ReadInt32();
+                for (int i = 0; i < cannons; i++)
+                    s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle() });
                 return s;
             }
         }

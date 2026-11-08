@@ -30,6 +30,8 @@ public enum EscapeOp : byte
     DecoyCatch = 23,    // A = AI 번호(괴물이 AI를 잡음)
     SearchBomb = 24,    // Pos = 던진 자리(괴물 수색 폭탄, §68 GP5)
     CageMash = 25,      // A = 함정 번호(사이렌 철창 안에서 점프 키 연타, §68 GP5)
+    CarriageBoard = 26, // A = 마차 번호(주인이 문 앞에서 E — 문 열림·탑승·순간이동, §68.7)
+    CannonBoard = 27,   // A = 대포 번호, B = 보는 방향(도) — 주인이 뒤 계단에서 E(해치·탑승·겨눔·발사, §68.9)
 }
 
 public enum EscapeNoticeKind : byte

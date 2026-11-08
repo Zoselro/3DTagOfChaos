@@ -331,8 +331,8 @@ public class EscapeTests
         Assert.NotNull(c.HeliHat, "heli hat");
         Assert.NotNull(c.NoiseBomb, "noise bomb");
         Assert.AreEqual(3, c.SpyRandomTools.Count, "stun gun, hammer, water balloon (jail balloon merged, §45.8 Q1)");
-        Assert.AreEqual(5, c.CookieItems.Count, "skates, pumpkin, recorder + flashbang, boxing glove (Request1009Plan.md §68 GP2·GP3)");
-        CollectionAssert.AreEqual(new[] { 5, 3, 5, 3, 4 }, c.CookieItemWeights.ToArray());
+        Assert.AreEqual(6, c.CookieItems.Count, "skates, pumpkin, recorder + flashbang, boxing glove (§68 GP2·GP3) + cola cannon (§68.9)");
+        CollectionAssert.AreEqual(new[] { 5, 3, 5, 3, 4, 3 }, c.CookieItemWeights.ToArray());
         foreach (ItemSO item in new[] { c.RepairKit, c.DismantleTool, c.HeliHat, c.NoiseBomb }.Concat(c.SpyRandomTools).Concat(c.CookieItems))
             Assert.IsTrue(item.DisplayName.Any(ch => ch >= '가' && ch <= '힣'), item.ItemId + " name");
         foreach (string map in MapScenes.MapNames)
@@ -383,17 +383,15 @@ public class EscapeTests
         Assert.AreEqual(1f, WitchPresenter.FadeAlpha(100, 110, 5f), 1e-4f);
     }
 
-    // 예전부터 쓰던 아이템은 Blender 모델이 연결돼 있다(새 아이템 모델은 사용자가 만든다 — §25 G17).
+    // 모든 아이템에 Blender 모델이 연결돼 있다(임시 상자·원통 모델 7종도 §68.7 GP10에서 Blender 모델로 바꿈).
     [Test]
-    public void Items_ExistingHaveBlenderModels()
+    public void Items_AllHaveBlenderModels()
     {
-        var pending = new HashSet<string> { "Dismantle", "Skates", "Pumpkin", "Recorder", "HeliHat", "NoiseBomb", "SearchBomb" }; // 수색 폭탄 = 술래 스킬(손에 들지 않음, §68 GP5)
         string[] guids = AssetDatabase.FindAssets("t:ItemSO", new[] { "Assets/03. SO/Escape/Items" });
         Assert.Greater(guids.Length, 0);
         foreach (string guid in guids)
         {
             var item = AssetDatabase.LoadAssetAtPath<ItemSO>(AssetDatabase.GUIDToAssetPath(guid));
-            if (pending.Contains(item.ItemId)) continue;
             Assert.NotNull(item.ModelPrefab, item.ItemId);
         }
     }

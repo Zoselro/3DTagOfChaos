@@ -319,6 +319,22 @@ public sealed class EscapeAuthority
             if (bomb.Spent && now >= bomb.SpentAt + BombCooldown) { State.Bombs.RemoveAt(i); changed = true; }
         }
 
+        // 호박 마차(§68.7): 타지 않고 IdleSeconds가 지났거나, 탄 뒤 도착이 끝났거나, 주인이 더는 뛰지 않으면 지운다
+        for (int i = State.Carriages.Count - 1; i >= 0; i--)
+        {
+            EscapeState.Carriage c = State.Carriages[i];
+            bool done = c.Boarded ? now >= c.BoardAt + PumpkinCarriageRules.RemoveAt : now >= c.SummonedAt + PumpkinCarriageRules.IdleSeconds;
+            if (done || (!IsActiveEscaper(c.Owner) && !(c.Boarded && now < c.BoardAt + PumpkinCarriageRules.TeleportAt))) { State.Carriages.RemoveAt(i); changed = true; }
+        }
+
+        // 콜라 대포(§68.9): 타지 않고 IdleSeconds가 지났거나, 착지가 끝났거나, 주인이 타기 전에 더는 뛰지 않으면 지운다
+        for (int i = State.Cannons.Count - 1; i >= 0; i--)
+        {
+            EscapeState.Cannon c = State.Cannons[i];
+            bool done = c.Boarded ? now >= c.BoardAt + ColaCannonRules.LandAt(c.Flight) + ColaCannonRules.LandGrace : now >= c.SummonedAt + ColaCannonRules.IdleSeconds;
+            if (done || (!IsActiveEscaper(c.Owner) && !(c.Boarded && now < c.BoardAt + ColaCannonRules.LandAt(c.Flight)))) { State.Cannons.RemoveAt(i); changed = true; }
+        }
+
         // 괴물에게 잡힌 AI: 잡는 동작이 끝나면 지운다(§26 R10)
         for (int i = State.Decoys.Count - 1; i >= 0; i--)
             if (State.Decoys[i].Caught && now >= State.Decoys[i].CaughtAt + DecoyCatchSeconds) { State.Decoys.RemoveAt(i); changed = true; }
@@ -460,6 +476,8 @@ public sealed class EscapeAuthority
             case EscapeOp.DecoyCatch: changed = DecoyCatch(r.Sender, r.A, r.Pos, r.B); break;
             case EscapeOp.SearchBomb: changed = SearchBomb(r.Sender, r.Pos); break;
             case EscapeOp.CageMash: changed = CageMash(r.Sender, r.A); break;
+            case EscapeOp.CarriageBoard: changed = CarriageBoard(r.Sender, r.A); break;
+            case EscapeOp.CannonBoard: changed = CannonBoard(r.Sender, r.A, r.B); break;
             default: changed = false; break;
         }
         if (changed) Commit();
@@ -912,6 +930,140 @@ public sealed class EscapeAuthority
         return broken || bomb.Mash % 3 == 0; // 게이지는 3번마다 보낸다(상태 전송 줄이기)
     }
 
+    // ---------------- 호박 마차(§68.7) ----------------
+
+    // 소환할 수 있는지: 뛰는 중인 쿠키·스파이, 이미 소환한 마차가 없고, 쓴 사람 가까이, 맵 안·술래방 밖·빈 바닥.
+    private bool CanSummonCarriage(int actor, Vector3 pos)
+    {
+        if (!IsActiveEscaper(actor) || RoomState.IsMonster(actor)) return false;
+        foreach (EscapeState.Carriage c in State.Carriages) if (c.Owner == actor) return false;
+        return IsNear(actor, pos, PumpkinCarriageRules.SummonReach) && manager.IsValidTeleport(pos);
+    }
+
+    // 주인이 문 앞에서 E: 문이 열리고 들어가 닫힌 뒤 도착 지점(방장이 정함, 지금 호박마차 규칙 — 맵 안 무작위·걸어 갈 수 있는 곳)으로 간다.
+    private bool CarriageBoard(int actor, int id)
+    {
+        int i = State.CarriageIndex(id);
+        if (i < 0) return false;
+        EscapeState.Carriage c = State.Carriages[i];
+        double now = PhotonNetwork.Time;
+        if (c.Owner != actor || c.Boarded || !IsActiveEscaper(actor)) return false;
+        if (PumpkinCarriageRules.StageAt(c.SummonedAt, 0, now) != PumpkinCarriageRules.Stage.Waiting) return false;
+        if (!IsNear(actor, PumpkinCarriageRules.DoorPoint(c.Pos, c.Yaw), PumpkinCarriageRules.BoardReach + 1f)) return false;
+        if (!manager.TryRandomMapPoint(new System.Random(rng.Next()), out Vector3 dest)) return false;
+        c.BoardAt = now;
+        c.Dest = dest;
+        State.Carriages[i] = c;
+        moveExemptUntil[actor] = Time.realtimeSinceStartup + PumpkinCarriageRules.TeleportAt + 3f; // 들어감·순간이동은 이동 검사에서 뺀다
+        Debug.Log($"[EscapeAuthority] Actor {actor} boarded pumpkin carriage {id} -> {dest}.");
+        return true;
+    }
+
+    // ---------------- 개발용: 오프라인 아이템 시험(OfflineModeBootstrap) ----------------
+    // EscapeManager.OfflineAuthority로만 닿는다(오프라인 방 방장 = 혼자). 온라인 판에서는 쓰이지 않는다.
+
+    // 그 칸에 아이템을 새로 쥐여 준다(칸에 있던 것은 없앤다). 도구면 횟수를 가득, 쿨타임은 초기화.
+    public bool DevGive(int actor, string itemId, int slot)
+    {
+        ItemSO def = catalog.Find(itemId);
+        if (State == null || def == null || slot < 0 || slot >= InventorySlots) return false;
+        int old = State.HeldItemAt(actor, slot);
+        if (old >= 0) { EscapeState.Item gone = State.Items[old]; gone.Loc = ItemLocation.Gone; State.Items[old] = gone; }
+        State.Items.Add(new EscapeState.Item { Id = def.ItemId, Loc = ItemLocation.Held, A = actor, B = slot, Charges = def.IsTool ? def.Tool.Charges : 0 });
+        toolReadyAt.Remove(actor);
+        Commit();
+        return true;
+    }
+
+    // 들고 있는 도구의 횟수를 가득 채우고 쿨타임을 없앤다.
+    public bool DevRefill(int actor)
+    {
+        if (State == null) return false;
+        for (int i = 0; i < State.Items.Count; i++)
+        {
+            EscapeState.Item it = State.Items[i];
+            if (it.Loc != ItemLocation.Held || it.A != actor) continue;
+            ItemSO def = catalog.Find(it.Id);
+            if (def != null && def.IsTool) { it.Charges = def.Tool.Charges; State.Items[i] = it; }
+        }
+        toolReadyAt.Remove(actor);
+        Commit();
+        return true;
+    }
+
+    // 들고 있는 것을 모두 없앤다.
+    public bool DevClear(int actor)
+    {
+        if (State == null) return false;
+        for (int i = 0; i < State.Items.Count; i++)
+        {
+            EscapeState.Item it = State.Items[i];
+            if (it.Loc != ItemLocation.Held || it.A != actor) continue;
+            it.Loc = ItemLocation.Gone;
+            State.Items[i] = it;
+        }
+        Commit();
+        return true;
+    }
+
+    // ---------------- 콜라 대포(§68.9) ----------------
+
+    private bool CanSummonCannon(int actor, Vector3 pos)
+    {
+        if (!IsActiveEscaper(actor) || RoomState.IsMonster(actor)) return false;
+        foreach (EscapeState.Cannon c in State.Cannons) if (c.Owner == actor) return false;
+        return IsNear(actor, pos, ColaCannonRules.SummonReach) && manager.IsValidTeleport(pos);
+    }
+
+    // 주인이 뒤 계단에서 E: 그 순간 보던 방향(aimYaw)으로 맵 끝까지 — 끝에서 가장 가까운 내릴 수 있는 곳을 방장이 정한다(도망용 — 맵 밖으로는 안 감).
+    private bool CannonBoard(int actor, int id, int aimYaw)
+    {
+        int i = State.CannonIndex(id);
+        if (i < 0) return false;
+        EscapeState.Cannon c = State.Cannons[i];
+        double now = PhotonNetwork.Time;
+        if (c.Owner != actor || c.Boarded || !IsActiveEscaper(actor)) return false;
+        if (ColaCannonRules.StageAt(c.SummonedAt, 0, 0f, now) != ColaCannonRules.Stage.Waiting) return false;
+        if (!IsNear(actor, ColaCannonRules.StepsPoint(c.Pos, c.Yaw), ColaCannonRules.BoardReach + 1f)) return false;
+        if (!TryCannonLanding(c.Pos, aimYaw, out Vector3 dest, out float flight)) return false;
+        c.BoardAt = now;
+        c.AimYaw = aimYaw;
+        c.Dest = dest;
+        c.Flight = flight;
+        State.Cannons[i] = c;
+        moveExemptUntil[actor] = Time.realtimeSinceStartup + ColaCannonRules.LandAt(flight) + 3f; // 들어감·비행은 이동 검사에서 뺀다
+        Debug.Log($"[EscapeAuthority] Actor {actor} fired cola cannon {id} toward {aimYaw}° -> {dest} ({flight:F1}s).");
+        return true;
+    }
+
+    // 입구에서 보는 방향으로 맵 끝(경계에서 EdgeMargin 안쪽)을 찾고, 그 끝에서부터 RangeStep씩 안쪽으로:
+    // 바닥이 있고, 맵 안·술래방 밖·빈 곳이고, 걸어서 이어진 첫 곳.
+    private bool TryCannonLanding(Vector3 pos, float aimYaw, out Vector3 dest, out float flight)
+    {
+        Vector3 mouth = ColaCannonRules.Mouth(pos, aimYaw, ColaCannonRules.FirePitch);
+        Vector3 dir = ColaCannonRules.Rotation(aimYaw) * Vector3.forward;
+        float edge = ColaCannonRules.MinRange;
+        for (float d = ColaCannonRules.MinRange; d <= ColaCannonRules.MaxRange; d += ColaCannonRules.EdgeStep)
+        {
+            if (manager.IsOutsideMap(mouth + dir * d, -ColaCannonRules.EdgeMargin)) break;
+            edge = d;
+        }
+        for (float d = edge; d >= ColaCannonRules.MinRange; d -= ColaCannonRules.RangeStep)
+        {
+            Vector3 probe = mouth + dir * d;
+            probe.y = mouth.y + 40f;
+            Vector3 ground = manager.SnapToGround(probe);
+            if (ground.y >= probe.y - 0.01f || ground.y > mouth.y + 20f) continue; // 바닥 없음·너무 높은 곳
+            if (!manager.IsValidTeleport(ground) || !manager.IsWalkableFromSpawn(ground)) continue;
+            dest = ground;
+            flight = ColaCannonRules.FlightSeconds(Flat(ground - mouth));
+            return true;
+        }
+        dest = default;
+        flight = 0f;
+        return false;
+    }
+
     // 술래 수색 폭탄(§68 GP5): 던진 자리 둘레의 진짜 사람(쿠키·스파이 — AI는 캐릭터가 아니라 빠진다)만 기침한다. 상태는 바꾸지 않는다.
     private bool SearchBomb(int actor, Vector3 pos)
     {
@@ -999,9 +1151,16 @@ public sealed class EscapeAuthority
                 targets = SelfView(r.Sender);
                 break;
             case ToolKind.Pumpkin:
-                if (!manager.IsValidTeleport(r.Pos)) return false; // 이동할 곳이 맵 안·술래방 밖·빈 곳이어야 한다(§25.3 Q7)
-                moveExemptUntil[r.Sender] = Time.realtimeSinceStartup + 3f;
-                targets = SelfView(r.Sender);
+                // 호박 마차 소환(§68.7): 쓴 사람 앞 자리(Pos)에 Yaw(B) 방향으로. 순간이동은 E로 탄 뒤(CarriageBoard)
+                if (!CanSummonCarriage(r.Sender, r.Pos)) return false;
+                State.Carriages.Add(new EscapeState.Carriage { Id = State.NextId++, Owner = r.Sender, Pos = r.Pos, Yaw = r.B, SummonedAt = PhotonNetwork.Time });
+                targets = new int[0];
+                break;
+            case ToolKind.ColaCannon:
+                // 콜라 대포 설치(§68.9): 쓴 사람 앞 자리(Pos)에 Yaw(B) 방향으로. 발사는 E로 탄 뒤(CannonBoard)
+                if (!CanSummonCannon(r.Sender, r.Pos)) return false;
+                State.Cannons.Add(new EscapeState.Cannon { Id = State.NextId++, Owner = r.Sender, Pos = r.Pos, Yaw = r.B, SummonedAt = PhotonNetwork.Time });
+                targets = new int[0];
                 break;
             case ToolKind.Recorder:
                 if (!AttachRecorder(r.Sender)) return false; // 내 AI가 없으면 쓸 수 없다(§25.3.2 S2)

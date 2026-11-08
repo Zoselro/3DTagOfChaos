@@ -47,9 +47,7 @@ public static class ToolHitReceiver
         Apply(item, targets, point, color, hitAt, knock);
     }
 
-    private const float PumpkinDelay = 1f; // 호박마차: 연기 뒤 1초 만에 이동(§25.3 Q7)
-
-    // 나에게 쓰는 아이템(스케이트·호박마차): 대상 목록의 쿠키에게(모든 화면 — 빠르기는 방장 이동 검사도 알아야 한다).
+    // 나에게 쓰는 아이템(스케이트): 대상 목록의 쿠키에게(모든 화면 — 빠르기는 방장 이동 검사도 알아야 한다).
     private static void ApplySelf(int[] targets, System.Action<HideOrSeekPlayer> apply)
     {
         foreach (int viewId in targets)
@@ -86,18 +84,11 @@ public static class ToolHitReceiver
                 return;
             case ToolKind.Flashbang:
                 FlashbangFx.Burst(point, item.Tool.HitRadius);
-                GameAudio.PlayAt(SoundId.PortalFlash, point); // 섬광음(임시)
+                GameAudio.PlayAt(SoundId.FlashBang, point); // '펑' — 모두(3D). '삐~'는 맞은 사람 본인만(FlashbangFx.Blind)
                 break;
             case ToolKind.Skates: ApplySelf(targets, c => c.ApplySpeedBoost(item.Tool.SpeedMultiplier, item.Tool.EffectSeconds)); return;
-            case ToolKind.Pumpkin:
-                ApplySelf(targets, c =>
-                {
-                    ToolFx.Play(ToolKind.WaterBalloon, c.transform.position, item.Tint); // 출발 자리 연기(임시 연출)
-                    ToolFx.Play(ToolKind.WaterBalloon, point, item.Tint);
-                    GameAudio.PlayAt(SoundId.PortalFlash, point);
-                    c.TeleportAfter(point, PumpkinDelay);
-                });
-                return;
+            case ToolKind.Pumpkin: return; // 마차 소환·탑승·순간이동은 상태(Carriages)로 모든 화면이 그린다(PumpkinCarriagePresenter, §68.7)
+            case ToolKind.ColaCannon: return; // 대포 설치·탑승·발사도 상태(Cannons)로(ColaCannonPresenter, §68.9)
             case ToolKind.Recorder: return; // 걷기·목소리는 상태(Decoys)로 모든 화면이 그린다
             case ToolKind.NoiseBomb:
                 GameAudio.PlayAt(SoundId.StunHit, point);
@@ -112,7 +103,7 @@ public static class ToolHitReceiver
             case ToolKind.WaterBalloon: GameAudio.PlayAt(SoundId.BalloonSplash, point); break;
             case ToolKind.StunGun: if (targets.Length > 0) GameAudio.PlayAt(SoundId.StunHit, point); break;
             case ToolKind.Hammer: if (targets.Length > 0) GameAudio.PlayAt(SoundId.HammerBonk, point); break;
-            case ToolKind.BoxingGlove: if (targets.Length > 0) GameAudio.PlayAt(knock ? SoundId.HammerBonk : SoundId.CookieLand, point); break;
+            case ToolKind.BoxingGlove: if (targets.Length > 0) GameAudio.PlayAt(SoundId.GlovePunch, point); break;
         }
 
         foreach (int viewId in targets)

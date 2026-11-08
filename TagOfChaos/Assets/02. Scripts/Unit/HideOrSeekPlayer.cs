@@ -100,7 +100,8 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     // 탈출·로켓 탑승한 몸은 숨겨지고 물리가 멈추므로(EscapeCharacterState) 이동도 잠근다.
     public bool IsMovementLocked => IsBroken || awaitingDeathUntil > 0f || (carryFollower != null && carryFollower.IsCarried) || (stun != null && stun.IsStunned)
                                     || (pv != null && pv.Owner != null && EscapeManager.HasLeftMap(pv.Owner.ActorNumber))
-                                    || IsFlying; // 헬리콥터 모자 비행은 HatFlight가 움직인다(§25.5 H)
+                                    || IsFlying // 헬리콥터 모자 비행은 HatFlight가 움직인다(§25.5 H)
+                                    || (pv != null && pv.Owner != null && EscapeManager.IsRidingVehicle(pv.Owner.ActorNumber)); // 호박 마차·콜라 대포에 타는 중(§68.7·§68.9)
     private StunReceiver stun; // 도구에 맞아 기절(EscapePlan.md §1.8)
     private PlayerActionPose actionPose;
 

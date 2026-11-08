@@ -84,7 +84,7 @@ public class Request1108GpTests
         Assert.AreEqual(12, d.Bombs[0].Mash);
         Assert.IsTrue(d.Bombs[0].Caged);
         Assert.IsFalse(d.Bombs[1].Caged, "placed, not triggered yet");
-        Assert.AreEqual(7, EscapeState.FormatVersion);
+        Assert.GreaterOrEqual(EscapeState.FormatVersion, 7, "v7 added the cage fields (v8 §68.7 carriages)");
     }
 
     // ---------------- 수색 폭탄 키 ----------------

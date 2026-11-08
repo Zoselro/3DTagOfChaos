@@ -48,6 +48,7 @@ public class FlashbangFx : MonoBehaviour
         fx.cover.raycastTarget = false;
         fx.cover.color = Color.white;
         fx.life = Mathf.Max(BlindHold + 0.1f, seconds);
+        GameAudio.Play(SoundId.FlashRing); // 귀울림 '삐~' — 맞은 사람 본인에게만(2D)
     }
 
     private void Update()

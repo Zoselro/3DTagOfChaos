@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: HeliHat
   displayName: "\uD5EC\uB9AC\uCF65\uD130 \uBAA8\uC790"
   icon: {fileID: 21300000, guid: da59a3d858f4f2b4f909b27688d70af2, type: 3}
-  modelPrefab: {fileID: 0}
+  modelPrefab: {fileID: 919132149155446097, guid: 5c1dc238b7e35b74ebbd92727342e9c4, type: 3}
   tint: {r: 1, g: 0.45, b: 0.75, a: 1}
   holdType: 0
   category: 1

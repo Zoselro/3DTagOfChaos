@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: SearchBomb
   displayName: "\uC218\uC0C9 \uD3ED\uD0C4"
   icon: {fileID: 21300000, guid: be30e5ee6bc5eb54b954aab33095a446, type: 3}
-  modelPrefab: {fileID: 0}
+  modelPrefab: {fileID: 919132149155446097, guid: ad549964f14faea4abdb955b048191d0, type: 3}
   tint: {r: 0.55, g: 0.3, b: 0.75, a: 1}
   holdType: 0
   category: 1
