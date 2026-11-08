@@ -11,6 +11,10 @@ using UnityEngine.AI;
 //   대상이 건물 안이면 목표점 = 대상에게 가장 가까운 문 앞(쿠키 길로 잰다) → 문 쪽을 보고 기다린다(사용자 결정 A).
 //   목표점까지 걸어갈 길이 없으면(다른 층·떨어진 구역) 마법진으로 가라앉았다가 목표점 둘레에서 솟아오른다(WarpCooldown마다 한 번).
 // - 밟기: 대상이 앞발 자리에서 StompTriggerRange 안이면 빠르게 내리찍고, 발이 닿는 순간(StompImpactSeconds) 판정 원 안의 사람을 죽인다.
+// - 부수기(§66): 걷는 동안 몸 앞에 닿은 소품은 바로 부서지고, 앞을 막는 텐트·건물은 멈춰 밟아 한 단계씩 부순다(GiantDestruction).
+//   서 있는 텐트·건물 안의 사람은 살고(붕괴 밟기도 판정이 먼저), 대상이 숨은 건물은 남은 단계만큼 쫓는 비용이 붙는다.
+// - 계단(§68 GP6): 대상이 시계탑 계단 구역에 있으면 그 위로 가서 계단을 10번 밟아 부순다(지상·지하가 끊겨도 된다).
+// - 10초 포기(§65): 갈 수도 부술 것도 없이 목표점에서 10초 기다리면 그 사람을 잠시 빼고 다른 사람을 쫓는다(GiantPatience).
 // 상태는 Room Prop NetKeys.Giant(GiantState) 하나 — 방장이 바뀌면 새 방장이 거기서 이어 받는다.
 public class GiantBrain : MonoBehaviour
 {
@@ -23,6 +27,7 @@ public class GiantBrain : MonoBehaviour
     private const float IndoorGap = 4f;            // 목표점이 대상에서 이만큼 넘게 떨어져 있으면 건물 안
     private const float DoorSearch = 30f;
     private const int SpawnTries = 40, WarpTries = 16;
+    private const float SweepSeconds = 0.1f;        // 걸으며 소품 부수기 검사 주기
 
     private EscapeManager manager;
     private GiantState state;
@@ -34,6 +39,13 @@ public class GiantBrain : MonoBehaviour
     private readonly List<IGameCharacter> targets = new List<IGameCharacter>();
     private NavMeshPath path;
     private InteractableDoor[] doors;
+    private readonly Collider[] overlap = new Collider[128];
+    private readonly List<DestructibleUnit> hitProps = new List<DestructibleUnit>();
+    private int stompUnit = -1;                    // 이번 밟기가 때리는 텐트·건물(방장만 기억)
+    private float nextSweep;
+    private readonly GiantPatience patience = new GiantPatience();
+    private bool waitingNow;                       // 이번 생각에서 목표점에 서서 기다리기만 했는지
+    private Vector3 targetPos;
 
     public void Init(EscapeManager owner) => manager = owner;
 
@@ -62,23 +74,36 @@ public class GiantBrain : MonoBehaviour
             Judge(state.StompCenter);
         }
 
+        if (now >= walkStart && Time.time >= nextSweep)
+        {
+            nextSweep = Time.time + SweepSeconds;
+            SweepProps(now, walkStart);
+        }
+
         if (now < walkStart || Time.time < nextThink) return;
         nextThink = Time.time + ThinkSeconds;
         if (state.WarpAt > 0 && now < state.WarpAt + GiantRules.WarpSeconds) return;
         if (state.StompAt > 0 && now < state.StompAt + GiantRules.StompSeconds + GiantRules.StompCooldown) return;
         Think(now, walkStart);
+        if (targetActor >= 0 && patience.Tick(targetActor, waitingNow, targetPos, Time.time))
+        {
+            Debug.Log($"[Giant] Gave up on actor {targetActor} after {GiantPatience.GiveUpSeconds:F0} s (unreachable at {targetPos}).");
+            targetActor = -1;
+        }
     }
 
     private void Think(double now, double walkStart)
     {
+        waitingNow = false;
         GiantState.Pose pose = state.Sample(now, walkStart, RoomState.TimeAttackSeconds());
-        IGameCharacter target = PickTarget(pose.Position);
+        IGameCharacter target = PickTarget(pose.Position, pose.Speed);
         if (target == null)
         {
             if (pose.Speed > 0f) Stand(now, pose, pose.Yaw); // 쫓을 사람이 없으면 선다
             return;
         }
         Vector3 t = target.gameObject.transform.position;
+        targetPos = t;
 
         // 밟기: 같은 높이(층)에서 앞발 자리 가까이
         if (GiantRules.ShouldStomp(pose.Position, t))
@@ -87,8 +112,27 @@ public class GiantBrain : MonoBehaviour
             Stand(now, pose, yaw, commit: false);
             state.StompAt = now;
             state.StompCenter = GiantRules.StompCenter(pose.Position, yaw); // 높이 = 거대 괴물이 선 바닥(판정 ±StompHeight)
+            stompUnit = GiantDestruction.ShelterOf(t, Units)?.Id ?? -1;    // 대상이 숨은 텐트·건물을 함께 때린다
             Commit();
             return;
+        }
+
+        // 계단 구역에 숨은 대상: 그 위로 가서 계단을 밟는다
+        DestructibleUnit stairs = GiantDestruction.StairsOf(t, Units);
+        if (stairs != null)
+        {
+            if (GiantDestruction.CanHitStairs(pose.Position, stairs))
+            {
+                StompUnit(now, pose, stairs);
+                return;
+            }
+            if (StairsGoal(pose.Position, stairs, out Vector3 sg) && ReachableOnFoot(pose.Position, sg))
+            {
+                bool still = !state.Moves || pose.Speed <= 0f;
+                if (still && GiantRules.FlatDistance(pose.Position, sg) < 1f) { waitingNow = true; return; } // 더 가까이 못 감
+                if (still || GiantRules.FlatDistance(state.End, sg) > RetargetDistance) Walk(now, pose, sg, GiantRules.YawTo(sg, stairs.Zone.center, state.Yaw));
+                return;
+            }
         }
 
         if (!TryGoal(t, out Vector3 goal, out float faceYaw)) return;
@@ -97,9 +141,19 @@ public class GiantBrain : MonoBehaviour
             if (state.WarpAt <= 0 || now >= state.WarpAt + GiantRules.WarpSeconds + WarpCooldown) StartWarp(now, pose, goal, t);
             return;
         }
+        // 앞을 막는 텐트·건물: 멈춰서 밟아 부순다(걷던 방향, 서 있으면 길의 첫 꺾임 쪽)
+        Vector3[] corners = path.corners;
+        float moveYaw = pose.Speed > 0f ? pose.Yaw : corners.Length > 1 ? GiantRules.YawTo(pose.Position, corners[1], pose.Yaw) : pose.Yaw;
+        DestructibleUnit block = GiantDestruction.Sweep(Catalog, pose.Position, moveYaw, GiantDestruction.Ahead(Mathf.Max(pose.Speed, GiantRules.BaseSpeed)), overlap, null);
+        if (block != null)
+        {
+            StompUnit(now, pose, block);
+            return;
+        }
         bool idle = !state.Moves || pose.Speed <= 0f;
         if (idle && GiantRules.FlatDistance(pose.Position, goal) < 1f)
         {
+            waitingNow = true; // 대상에게 더 못 감(부서지지 않는 곳) — 10초 뒤 포기
             if (Mathf.Abs(Mathf.DeltaAngle(state.Yaw, faceYaw)) > 10f) Stand(now, pose, faceYaw); // 문 앞: 문 쪽을 본다
             return;
         }
@@ -107,7 +161,7 @@ public class GiantBrain : MonoBehaviour
     }
 
     // 대상 고르기(같은 사람 TargetHoldSeconds 유지, 절반 거리보다 가까운 사람이 생기면 바꿈).
-    private IGameCharacter PickTarget(Vector3 from)
+    private IGameCharacter PickTarget(Vector3 from, float speed)
     {
         CollectTargets(targets);
         IGameCharacter nearest = null, current = null;
@@ -115,7 +169,9 @@ public class GiantBrain : MonoBehaviour
         foreach (IGameCharacter c in targets)
         {
             Vector3 p = c.gameObject.transform.position;
-            float d = GiantRules.FlatDistance(from, p) + (GiantRules.OtherFloor(from.y, p.y) ? 1000f : 0f); // 같은 층 먼저
+            if (patience.IsIgnored(c.View.Owner.ActorNumber, p, Time.time)) continue; // 10초 포기한 사람(잠시)
+            float d = GiantRules.FlatDistance(from, p) + (GiantRules.OtherFloor(from.y, p.y) ? 1000f : 0f) // 같은 층 먼저
+                      + GiantDestruction.AggroExtra(p, Units, speed);                                // 숨은 건물을 부수는 시간
             if (d < nearestD) { nearestD = d; nearest = c; }
             if (c.View.Owner.ActorNumber == targetActor) { current = c; currentD = d; }
         }
@@ -167,6 +223,41 @@ public class GiantBrain : MonoBehaviour
             faceYaw = GiantRules.YawTo(outside, d, state.Yaw);
         }
         return best < float.MaxValue;
+    }
+
+    private static DestructibleCatalog Catalog => DestructionNet.Instance != null ? DestructionNet.Instance.Catalog : null;
+    private static IReadOnlyList<DestructibleUnit> Units => Catalog?.Units;
+
+    // 걷는 동안 몸 앞에 닿은 소품은 바로 부서진다(멈추지 않음, §66.4).
+    private void SweepProps(double now, double walkStart)
+    {
+        DestructionNet net = DestructionNet.Instance;
+        if (net == null || (state.WarpAt > 0 && now < state.WarpAt + GiantRules.WarpSeconds)) return;
+        GiantState.Pose pose = state.Sample(now, walkStart, RoomState.TimeAttackSeconds());
+        if (pose.Speed <= 0f) return;
+        GiantDestruction.Sweep(net.Catalog, pose.Position, pose.Yaw, 0.5f, overlap, hitProps);
+        foreach (DestructibleUnit u in hitProps) net.Hit(u.Id);
+    }
+
+    // 텐트·건물 하나를 밟는다(그쪽을 보고, 발이 닿는 순간 Judge가 한 단계 올린다).
+    private void StompUnit(double now, GiantState.Pose pose, DestructibleUnit unit)
+    {
+        Vector3 aim = unit.Bounds.ClosestPoint(pose.Position);
+        float yaw = GiantRules.FlatDistance(aim, pose.Position) > 0.5f ? GiantRules.YawTo(pose.Position, aim, pose.Yaw) : pose.Yaw;
+        Stand(now, pose, yaw, commit: false);
+        state.StompAt = now;
+        state.StompCenter = GiantRules.StompCenter(pose.Position, yaw);
+        stompUnit = unit.Id;
+        Commit();
+        Debug.Log($"[Giant] Stomp {unit.Grade} {unit.Root.name} (#{unit.Id}, {unit.Level + 1}/{unit.HitsToBreak}).");
+    }
+
+    // 계단 구역에서 가장 가까운, 지금 층의 거대 괴물 길 위 점
+    private static bool StairsGoal(Vector3 body, DestructibleUnit stairs, out Vector3 goal)
+    {
+        Vector3 near = stairs.Zone.ClosestPoint(body);
+        near.y = body.y;
+        return GiantNavMesh.Sample(near, GiantDestruction.StairsReach + 8f, out goal) && !GiantRules.OtherFloor(goal.y, body.y);
     }
 
     private bool ReachableOnFoot(Vector3 from, Vector3 goal)
@@ -240,6 +331,11 @@ public class GiantBrain : MonoBehaviour
         {
             Vector3 p = c.gameObject.transform.position;
             if (!GiantRules.InStompRange(center, p)) continue;
+            if (GiantDestruction.IsProtected(p, Units, out DestructibleUnit shelter))
+            {
+                Debug.Log($"[Giant] Actor {c.View.Owner.ActorNumber} survived inside {shelter.Root.name} ({shelter.Level}/{shelter.HitsToBreak}).");
+                continue; // 아직 서 있는 벽이 막아 준다
+            }
             Player owner = c.View.Owner;
             if (c.Role == CharacterRole.Monster)
                 AuthorityProps.SetPlayer(owner, new Hashtable { { NetKeys.DeathCause, (int)DeathCause.Giant } });
@@ -249,6 +345,14 @@ public class GiantBrain : MonoBehaviour
             Debug.Log($"[Giant] Stomped actor {owner.ActorNumber} ({c.Role}) at {GiantRules.FlatDistance(center, p):F1} m from {center}.");
         }
         if (killed == 0) Debug.Log($"[Giant] Stomp at {center} hit nobody.");
+
+        // 사람 판정 뒤에 물체: 때린 텐트·건물 한 단계 + 밟은 자리 둘레 소품(무너질 때 안의 사람은 살아서 드러난다 — 결정 3)
+        DestructionNet net = DestructionNet.Instance;
+        if (net == null) return;
+        if (stompUnit >= 0) net.Hit(stompUnit);
+        stompUnit = -1;
+        GiantDestruction.PropsAround(net.Catalog, center, hitProps);
+        foreach (DestructibleUnit u in hitProps) net.Hit(u.Id);
     }
 
     private void Commit()

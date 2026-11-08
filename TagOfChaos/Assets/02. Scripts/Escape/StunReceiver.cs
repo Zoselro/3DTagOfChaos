@@ -63,9 +63,11 @@ public class StunReceiver : MonoBehaviour
         headHeight = characterHeight;
     }
 
-    public void Stun(float seconds)
+    // stars = false: 별 없이 잠깐 멈칫만(권투 글러브 한 대, §68 GP3).
+    public void Stun(float seconds, bool stars = true)
     {
         if (seconds <= 0f) return;
+        if (!stars) { stunnedUntil = Mathf.Max(stunnedUntil, Time.time + seconds); return; }
         if (!IsStunned && TryGetComponent(out IGameCharacter character)) GameAudio.PlayCharacter(SoundId.StunStars, character); // 별이 도는 순간(S4)
         stunnedUntil = Mathf.Max(stunnedUntil, Time.time + seconds);
         EnsureStars();

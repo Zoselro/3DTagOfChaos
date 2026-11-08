@@ -4402,11 +4402,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 27294681952927748, guid: 9548a94f9a87df244a9eb9ecd8da9caa, type: 3}
       propertyPath: actionLabels.Array.size
-      value: 24
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: 27294681952927748, guid: 9548a94f9a87df244a9eb9ecd8da9caa, type: 3}
       propertyPath: 'actionLabels.Array.data[21]'
       value: "\uCDA4"
+      objectReference: {fileID: 0}
+    - target: {fileID: 27294681952927748, guid: 9548a94f9a87df244a9eb9ecd8da9caa, type: 3}
+      propertyPath: 'actionLabels.Array.data[24]'
+      value: "\uC218\uC0C9 \uD3ED\uD0C4 (\uC220\uB798)"
       objectReference: {fileID: 0}
     - target: {fileID: 1198822601733444391, guid: 9548a94f9a87df244a9eb9ecd8da9caa, type: 3}
       propertyPath: m_Pivot.x

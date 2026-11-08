@@ -47,6 +47,7 @@ public static class NetKeys
     public const string RevealedSpies = "RevealedSpies";       // int[] — 게임이 끝난 뒤 결과 화면용으로 공개
     public const string FirstEscapeAt = "FirstEscapeAt";       // double — 첫 탈출 시각(마녀 타이머 시작, Request1009Plan.md §25.5 G)
     public const string FirstEscapePoint = "FirstEscapePoint"; // Vector3 — 첫 탈출 지점(마녀 연출 앞 샷)
+    public const string Destruction = "GD";                  // byte[] — 거대 괴물이 부순 물체마다 맞은 횟수(DestructionState, 방장만 쓴다 — Request1009Plan.md §66)
     public const string Giant = "Giant";                     // byte[] — 거대 괴물(GiantState, 방장만 쓴다 — Request1009Plan.md §64). 있으면 이번 판에 나온다
     public const string CharacterAssignments = "CharacterAssignments"; // int[] — [액터, 캐릭터 번호, …] 시작 때 방장이 정한 캐릭터(중복 없음, §25.5 B)
 
@@ -114,6 +115,7 @@ public static class NetKeys
         new Scope(FirstEscapeAt, Target.Room, Lifetime.Round),
         new Scope(FirstEscapePoint, Target.Room, Lifetime.Round),
         new Scope(Giant, Target.Room, Lifetime.Round),
+        new Scope(Destruction, Target.Room, Lifetime.Round),
         new Scope(CharacterAssignments, Target.Room, Lifetime.Round),
         new Scope(HitCount, Target.Player, Lifetime.Round),
         new Scope(SkinIndex, Target.Player, Lifetime.Session, Writer.Self),

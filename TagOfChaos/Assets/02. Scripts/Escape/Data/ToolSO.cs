@@ -11,7 +11,10 @@ public enum ToolKind
     Recorder = 6,    // 접착 목소리 녹음기: 내 AI 하나가 내 목소리를 내며 걷는다
     Dismantle = 7,   // 해체 도구: 가동된 건물에서 재료를 뺀다(누르기, 왼쪽 클릭으로 쓰지 않음)
     HeliHat = 8,     // 헬리콥터 모자: 들고 E — 떠올라 맵 밖으로(§25.5 H)
-    NoiseBomb = 9,   // 괴물 소음폭탄이 터질 때의 기절 수치(아이템으로 줍지 않는다)
+    NoiseBomb = 9,   // 괴물 사이렌 함정(옛 소음폭탄 — §68 GP5에서 기절 대신 빼빼로 철창). 아이템으로 줍지 않는다
+    Flashbang = 10,  // 섬광탄(§68 GP2): 던져 터진 둘레 모두(술래 포함) 흰 화면 + 기절
+    BoxingGlove = 11,// 권투 글러브(§68 GP3): 쿠키끼리만, 맞을 때마다 멈칫, 3초 안에 3번이면 쓰러져 기절
+    SearchBomb = 12, // 술래 수색 폭탄(§68 GP5): 둘레의 진짜 사람만 기침(AI는 기침하지 않음). 아이템으로 줍지 않는다
 }
 
 // 도구 하나의 수치(EscapePlan.md §1.8, D23). 코드를 고치지 않고 에셋 값만 바꿔 밸런스를 테스트한다.
@@ -35,9 +38,12 @@ public class ToolSO : ScriptableObject
     [SerializeField, Min(1f)] private float speedMultiplier = 2f;
 
     public ToolKind Kind => kind;
-    // 괴물을 맞힐 수 있는 도구는 스턴건뿐이다(Request1009Plan.md §59 AT1). 뿅망치·물풍선 등은 괴물을 건너뛴다 — 쓰는 쪽·방장·받는 쪽이 모두 이 규칙을 본다.
+    // 괴물을 맞힐 수 있는 도구는 스턴건(§59 AT1)과 섬광탄(§68 GP2)뿐이다. 뿅망치·물풍선·권투 글러브 등은 괴물을 건너뛴다 — 쓰는 쪽·방장·받는 쪽이 모두 이 규칙을 본다.
     public bool CanHitMonster => CanHitMonsterKind(kind);
-    public static bool CanHitMonsterKind(ToolKind k) => k == ToolKind.StunGun;
+    public static bool CanHitMonsterKind(ToolKind k) => k == ToolKind.StunGun || k == ToolKind.Flashbang;
+    // 떨어진 자리 둘레를 맞히는 던지는 도구(물풍선 — 한 명, 섬광탄 — 둘레 모두).
+    public bool IsThrown => kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
+    public bool HitsArea => kind == ToolKind.Flashbang;
     public int Charges => charges;
     public float Range => range;
     public float HitRadius => hitRadius;
@@ -49,7 +55,7 @@ public class ToolSO : ScriptableObject
     public float SpeedMultiplier => speedMultiplier;
 
     // 왼쪽 클릭으로 쓰는 도구인지(해체 도구는 누르기, 모자는 E, 소음폭탄은 괴물 스킬).
-    public bool UsedByClick => kind != ToolKind.Dismantle && kind != ToolKind.HeliHat && kind != ToolKind.NoiseBomb;
+    public bool UsedByClick => kind != ToolKind.Dismantle && kind != ToolKind.HeliHat && kind != ToolKind.NoiseBomb && kind != ToolKind.SearchBomb;
 
 #if UNITY_EDITOR
     public void EditorSetup(ToolKind toolKind, int count, float rangeMeters, float radius, float cookieStun, float monsterStun, float cooldown, bool paints,

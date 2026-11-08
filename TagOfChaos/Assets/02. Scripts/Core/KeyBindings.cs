@@ -28,6 +28,7 @@ public enum KeyAction
     Dance,      // 춤(Request1009Plan.md §44.9) — 끝에 붙여 저장된 키 번호가 밀리지 않게 한다
     PlayerList, // 누르고 있는 동안 참가자 목록(§59 PL1)
     ShowCursor, // 누르고 있는 동안 커서 보이기·시점 멈춤(§59 CL — 대기실 버튼 누르기)
+    MonsterSearch, // 술래 수색 폭탄(§68 GP5)
 }
 
 // 같은 때 쓰이는 조작끼리의 묶음 — 겹침(빨간 경고)은 같은 묶음 안에서만 본다(쿠키 달리기와 괴물 돌진은 같은 Shift여도 된다).
@@ -93,6 +94,7 @@ public static class KeyBindings
                 return KeyGroup.Cookie | KeyGroup.Monster;
             case KeyAction.MonsterDash:
             case KeyAction.MonsterSkill:
+            case KeyAction.MonsterSearch:
                 return KeyGroup.Monster;
             case KeyAction.SpectateNext:
                 return KeyGroup.Spectate;
@@ -149,6 +151,7 @@ public static class KeyBindings
             case KeyAction.Dance: return b.DanceKey;
             case KeyAction.PlayerList: return b.PlayerListKey;
             case KeyAction.ShowCursor: return b.ShowCursorKey;
+            case KeyAction.MonsterSearch: return KeyCode.R;
             default: return KeyCode.None;
         }
     }

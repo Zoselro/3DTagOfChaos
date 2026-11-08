@@ -26,6 +26,8 @@ public class EscapeCatalogSO : ScriptableObject
     [SerializeField] private ItemSO heliHat;
     [Tooltip("괴물 소음폭탄이 터질 때의 기절 수치(ToolSO).")]
     [SerializeField] private ItemSO noiseBomb;
+    [Tooltip("술래 수색 폭탄의 범위·연출 수치(ToolSO, §68 GP5). 아이템으로 줍지 않는다.")]
+    [SerializeField] private ItemSO searchBomb;
 
     [Header("Shared models (EscapeVisualPlan.md §3)")]
     [Tooltip("탈것에 타는 순간·좌석에 앉은 쿠키 인형")]
@@ -46,6 +48,7 @@ public class EscapeCatalogSO : ScriptableObject
     public IReadOnlyList<int> CookieItemWeights => cookieItemWeights;
     public ItemSO HeliHat => heliHat;
     public ItemSO NoiseBomb => noiseBomb;
+    public ItemSO SearchBomb => searchBomb;
     public ItemSO Hammer => hammer;
     public GameObject PassengerModel => passengerModel;
     public GameObject JarModel => jarModel;
@@ -90,6 +93,16 @@ public class EscapeCatalogSO : ScriptableObject
         cookieItemWeights = cookieWeights;
         heliHat = hat;
         noiseBomb = bomb;
+    }
+
+    // §68: 새 아이템(섬광탄·권투 글러브는 쿠키 상자, 수색 폭탄은 술래 스킬 수치)을 목록에 더한다.
+    public void EditorSetRequest1108(ItemSO[] allItems, ItemSO[] cookie, int[] cookieWeights, ItemSO search)
+    {
+        items = allItems;
+        cookieItems = cookie;
+        cookieItemWeights = cookieWeights;
+        searchBomb = search;
+        byId = null;
     }
 
     public void EditorSetup(ItemSO[] allItems, EscapeRecipeSO[] allRecipes, ItemSO hammerItem)

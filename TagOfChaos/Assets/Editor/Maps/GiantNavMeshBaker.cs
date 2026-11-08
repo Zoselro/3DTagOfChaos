@@ -9,7 +9,8 @@ using UnityEngine.SceneManagement;
 
 // 거대 괴물이 걷는 NavMesh를 맵마다 굽는다(Request1009Plan.md §64.4 GM3).
 // - 거대 괴물 몸(GiantNavMesh.Agent*, 에이전트 종류 "Giant")으로 물리 충돌체를 모아 굽는다.
-// - 건물·벽·술래방은 막는다. 작은 소품(가로·세로 모두 PropFootprint 미만, 높이 PropHeight 미만)은 빼서 밟고 지나가게 한다.
+// - 부서지지 않는 것(술래방·탈출구·시계탑·동굴 벽·바닥 등)만 막는다. 부서지는 물체(소품·텐트·건물 — DestructibleCatalog, §66.4)는
+//   빼서 가로질러 걷게 한다(가는 길에 서 있으면 GiantBrain이 멈춰 밟아 부순다). 작은 충돌체(PropFootprint 미만)도 뺀다.
 //   문 잎·트리거·캐릭터 몸도 뺀다.
 // - 결과는 Assets/Maps/GiantNavMesh/<씬>.asset, 씬 맨 위 "GiantNavMesh" 오브젝트가 들고 있다.
 // - 확인 그림(위에서 본 층별 지도): 초록 = 거대 괴물이 걸어서 가는 곳, 노랑 = 거대 괴물 길이지만 따로 떨어진 구역(마법진 이동),
@@ -70,7 +71,10 @@ public static class GiantNavMeshBaker
         var sources = new List<NavMeshBuildSource>();
         NavMeshBuilder.CollectSources(bounds, Physics.DefaultRaycastLayers, NavMeshCollectGeometry.PhysicsColliders, 0, new List<NavMeshBuildMarkup>(), sources);
         sources.RemoveAll(s => !InScene(s, scene));
-        int props = sources.RemoveAll(IsPassable);
+        var destructible = new HashSet<Collider>();
+        foreach (DestructibleUnit u in DestructibleCatalog.Build(DestructibleCatalog.FindMap(scene), DestructionRulesSO.Current).Units)
+            if (u.Grade != DestructibleGrade.Stairs) foreach (Collider c in u.Colliders) destructible.Add(c); // 계단은 거대 괴물을 막는다(위에서 밟아 부숨)
+        int props = sources.RemoveAll(s => IsPassable(s) || (s.component is Collider col && destructible.Contains(col)));
 
         NavMeshData data = NavMeshBuilder.BuildNavMeshData(Settings(), sources, bounds, Vector3.zero, Quaternion.identity);
         if (data == null) return $"[GiantNavMesh] {scene.name}: build failed.";

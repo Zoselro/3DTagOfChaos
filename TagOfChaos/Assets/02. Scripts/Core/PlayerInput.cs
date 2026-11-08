@@ -106,6 +106,9 @@ public static class PlayerInput
     private const bool EditorRunHeld = false;
 #endif
     public static bool TentacleDashPressed => !IsGameplaySuppressed && Down(KeyAction.MonsterDash);
+    public static bool SearchBombPressed => !IsGameplaySuppressed && (Down(KeyAction.MonsterSearch) || EditorTakeSearchPress()); // 술래 수색 폭탄(§68 GP5)
+    public static bool EditorSearchPress;
+    private static bool EditorTakeSearchPress() { bool p = EditorSearchPress; EditorSearchPress = false; return p; }
     // 인벤토리(EscapePlan.md §1.9): G키로 떨어뜨리기, 숫자키 1~4로 칸 고르기, 마우스로 도구 쓰기.
     public static bool DancePressed => !IsGameplaySuppressed && Down(KeyAction.Dance); // 춤(§44.9)
     public static bool DropPressed => !IsGameplaySuppressed && Down(KeyAction.Drop);

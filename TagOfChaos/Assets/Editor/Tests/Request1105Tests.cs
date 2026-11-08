@@ -10,7 +10,7 @@ public class Request1105Tests
     public void OnlyStunGunCanHitMonster()
     {
         foreach (ToolKind k in System.Enum.GetValues(typeof(ToolKind)))
-            Assert.AreEqual(k == ToolKind.StunGun, ToolSO.CanHitMonsterKind(k), k.ToString());
+            Assert.AreEqual(k == ToolKind.StunGun || k == ToolKind.Flashbang, ToolSO.CanHitMonsterKind(k), k.ToString()); // 섬광탄은 술래 포함(§68 GP2)
     }
 
     [Test]
@@ -38,7 +38,8 @@ public class Request1105Tests
     {
         Assert.AreEqual(KeyCode.Tab, KeyBindings.Default(KeyAction.PlayerList));
         Assert.AreEqual(KeyCode.LeftAlt, KeyBindings.Default(KeyAction.ShowCursor));
-        Assert.AreEqual(KeyAction.ShowCursor, KeyBindings.All[KeyBindings.All.Length - 1]);
+        Assert.AreEqual(KeyAction.ShowCursor, KeyBindings.All[KeyBindings.All.Length - 2]); // 뒤에 수색 폭탄(§68 GP5)이 붙었다
+        Assert.AreEqual(KeyAction.MonsterSearch, KeyBindings.All[KeyBindings.All.Length - 1]);
         Assert.AreEqual(KeyGroup.All, KeyBindings.GroupOf(KeyAction.PlayerList));
         Assert.AreEqual(KeyGroup.All, KeyBindings.GroupOf(KeyAction.ShowCursor));
         Assert.IsFalse(KeyBindings.HasConflict(KeyAction.PlayerList, KeyBindings.Default), "Tab is free");

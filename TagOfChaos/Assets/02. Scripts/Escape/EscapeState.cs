@@ -20,9 +20,10 @@ public enum RainbowState : byte { None = 0, Closed = 1, Opened = 2, Broken = 3 }
 // v5(Request1009Plan.md §25): 탈출 장치 1개 → 사분면 건물 4곳(수리 게이지), 탈것 → 동서남북 탈출구 4개(그중 2개 열림),
 // 스파이 로켓 자리, 무지개 상자·헬리콥터 모자 비행, 괴물 소음폭탄, AI(미끼) 추가.
 // v6(§26): 로켓 칸의 수리키트 50%(KitHalf), 괴물에게 잡히는 중인 AI(CaughtBy·CaughtAt).
+// v7(§68 GP5): 소음폭탄 → 사이렌 함정 — 갇힌 건물(Building)·갇힌 시각(CagedAt)·연타 수(Mash).
 public sealed class EscapeState
 {
-    public const byte FormatVersion = 6;
+    public const byte FormatVersion = 7;
     public const int BuildingCount = 4;
     public const int ExitCount = 4;
     public const float RepairSeconds = 10f;      // 재료 넣기(수리) 게이지가 다 차는 시간(§25.5 E)
@@ -118,7 +119,8 @@ public sealed class EscapeState
         public double StartAt;
     }
 
-    // 괴물 소음폭탄(§25.5 K): 놓인 자리. 터지거나 치우면 Spent, 그 뒤 쿨타임이 지나면 목록에서 빠진다.
+    // 괴물 사이렌 함정(옛 소음폭탄, §25.5 K·§68 GP5): 놓인 자리. 누가 근처 건물 수리를 시작하면 그 건물이 철창에 갇히고(CagedAt·Building),
+    // 안의 사람들이 연타(Mash)로 부수거나 시간이 지나면 Spent, 그 뒤 쿨타임이 지나면 목록에서 빠진다. 치워도 Spent.
     public struct Bomb
     {
         public int Id;
@@ -126,6 +128,11 @@ public sealed class EscapeState
         public Vector3 Pos;
         public bool Spent;
         public double SpentAt;
+        public int Building;     // 갇힌 건물(-1 = 아직)
+        public double CagedAt;   // 철창이 선 시각(0 = 아직)
+        public int Mash;         // 철창 연타 수
+
+        public bool Caged => CagedAt > 0 && !Spent;
     }
 
     // 맵에 깔린 AI(미끼, §25.5 L): 그 사람 모습으로 서 있다. 녹음기가 붙으면 VoiceAt부터 5~20초마다 주인의 녹음 목소리를 낸다(간격 = Seed, §26).
@@ -297,7 +304,7 @@ public sealed class EscapeState
             w.Write(Flights.Count);
             foreach (Flight f in Flights) { w.Write(f.Actor); w.Write(f.StartAt); }
             w.Write(Bombs.Count);
-            foreach (Bomb b in Bombs) { w.Write(b.Id); w.Write(b.Owner); WriteVector(w, b.Pos); w.Write(b.Spent); w.Write(b.SpentAt); }
+            foreach (Bomb b in Bombs) { w.Write(b.Id); w.Write(b.Owner); WriteVector(w, b.Pos); w.Write(b.Spent); w.Write(b.SpentAt); w.Write(b.Building); w.Write(b.CagedAt); w.Write(b.Mash); }
             w.Write(Decoys.Count);
             foreach (Decoy d in Decoys) { w.Write(d.Id); w.Write(d.Owner); WriteVector(w, d.Pos); w.Write(d.Yaw); w.Write(d.VoiceAt); w.Write(d.Seed); w.Write(d.CaughtBy); w.Write(d.CaughtAt); }
             w.Flush();
@@ -356,7 +363,7 @@ public sealed class EscapeState
                 for (int i = 0; i < flights; i++) s.Flights.Add(new Flight { Actor = r.ReadInt32(), StartAt = r.ReadDouble() });
                 int bombs = r.ReadInt32();
                 for (int i = 0; i < bombs; i++)
-                    s.Bombs.Add(new Bomb { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Spent = r.ReadBoolean(), SpentAt = r.ReadDouble() });
+                    s.Bombs.Add(new Bomb { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Spent = r.ReadBoolean(), SpentAt = r.ReadDouble(), Building = r.ReadInt32(), CagedAt = r.ReadDouble(), Mash = r.ReadInt32() });
                 int decoys = r.ReadInt32();
                 for (int i = 0; i < decoys; i++)
                     s.Decoys.Add(new Decoy { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), VoiceAt = r.ReadDouble(), Seed = r.ReadInt32(), CaughtBy = r.ReadInt32(), CaughtAt = r.ReadDouble() });

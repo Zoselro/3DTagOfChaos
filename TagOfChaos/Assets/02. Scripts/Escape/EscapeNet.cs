@@ -28,6 +28,8 @@ public enum EscapeOp : byte
     PlaceBomb = 21,     // Pos = 놓을 자리(괴물)
     RemoveBomb = 22,    // A = 폭탄 번호(괴물이 자기 폭탄을 치움)
     DecoyCatch = 23,    // A = AI 번호(괴물이 AI를 잡음)
+    SearchBomb = 24,    // Pos = 던진 자리(괴물 수색 폭탄, §68 GP5)
+    CageMash = 25,      // A = 함정 번호(사이렌 철창 안에서 점프 키 연타, §68 GP5)
 }
 
 public enum EscapeNoticeKind : byte
@@ -41,7 +43,7 @@ public enum EscapeNoticeKind : byte
     ExitsOpened = 7,      // 모든 건물이 가동돼 탈출구 2개가 열렸다
     RainbowAppeared = 8,  // 마녀 시간에 무지개 상자가 나타났다(§25.5 H)
     RainbowBroken = 9,    // 괴물이 무지개 상자를 부쉈다
-    NoiseBomb = 10,       // 소음폭탄이 터졌다(비상벨). 내용: 건물 번호(문자열)
+    NoiseBomb = 10,       // 사이렌 함정에 걸렸다(옛 소음폭탄 — 비상벨, 건물이 철창에 갇힘). 내용: 건물 번호(문자열)
     MaterialRestored = 11, // 닿는 곳에 하나도 없던 재료를 방장이 다시 만들었다(§26 D). 내용: 아이템 ID, 아이템 번호, 보여 줄 시각 — 괴물 제외
     AllDecoysGone = 12,    // 마녀 시간이 시작돼 AI가 모두 사라졌다(§26 Q16)
     CookieCaught = 13,     // 괴물이 진짜 쿠키(스파이 포함)를 잡았다. 내용: 잡힌 사람 액터 번호(문자열)

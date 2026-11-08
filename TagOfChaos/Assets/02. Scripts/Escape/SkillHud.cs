@@ -3,8 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 오른쪽 아래 스킬 칸 2개(Request1009Plan.md §26 H9 — 임시 모양): 이름 · 키 · 쿨타임(어둡게 덮고 남은 초).
-//   괴물: 돌진(15초) · 소음폭탄(20초, 깔려 있으면 "설치됨")   쿠키·스파이: 회피(3초) · 생존자 스킬("미정")
+// 오른쪽 아래 스킬 칸(Request1009Plan.md §26 H9 — 임시 모양): 이름 · 키 · 쿨타임(어둡게 덮고 남은 초).
+//   괴물: 돌진(15초) · 사이렌 함정(20초, 깔려 있으면 "설치됨", §68 GP5) · 수색 폭탄(25초, §68 GP5)   쿠키·스파이: 회피(3초) · 생존자 스킬("미정")
 // 내 캐릭터가 없거나(관전 등) 탈출했으면 숨긴다. EscapeHud가 붙인다. 키 이름은 KeyBindings(설정에서 바꾸면 바로 바뀐다).
 public class SkillHud : MonoBehaviour
 {
@@ -16,14 +16,14 @@ public class SkillHud : MonoBehaviour
     private EscapeManager manager;
     private EscapeTextsSO texts;
     private RectTransform root;
-    private readonly Slot[] slots = new Slot[2];
+    private readonly Slot[] slots = new Slot[3];
     private float nextRefresh;
 
     public void Init(EscapeManager owner, EscapeTextsSO t)
     {
         manager = owner;
         texts = t;
-        root = EscapeHud.NewRect("Skills", transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-24f, 24f), new Vector2(SlotSize * 2f + 12f, SlotSize));
+        root = EscapeHud.NewRect("Skills", transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-24f, 24f), new Vector2(SlotSize * 3f + 24f, SlotSize));
         root.pivot = new Vector2(1f, 0f);
         for (int i = 0; i < slots.Length; i++) slots[i] = BuildSlot(i);
     }
@@ -67,6 +67,8 @@ public class SkillHud : MonoBehaviour
             Set(slots[0], texts.skillDash, KeyAction.MonsterDash, monster.DashCooldownLeft, GameSettings.Current.TentacleDashCooldown, null);
             BombState(out float left, out bool placed);
             Set(slots[1], texts.skillBomb, KeyAction.MonsterSkill, left, EscapeAuthority.BombCooldown, placed ? texts.skillBombPlaced : null);
+            if (!slots[2].Root.activeSelf) { slots[2].Root.SetActive(true); Width(3); }
+            Set(slots[2], texts.skillSearch, KeyAction.MonsterSearch, NoiseBombPresenter.SearchReadyAt - Time.time, EscapeAuthority.SearchCooldown, null);
         }
         else if (me is HideOrSeekPlayer cookie)
         {
@@ -74,6 +76,7 @@ public class SkillHud : MonoBehaviour
             // 스태미나가 회피 비용보다 적으면 칸을 어둡게 덮는다(쿨타임 숫자는 그대로, §46.3 ST3).
             if (cookie.DodgeCooldownLeft <= 0.05f && cookie.Stamina != null && !cookie.Stamina.CanDodge) slots[0].Cover.fillAmount = 1f;
             Set(slots[1], texts.skillUnknown, null, 0f, 1f, null, disabled: true);
+            if (slots[2].Root.activeSelf) { slots[2].Root.SetActive(false); Width(2); } // 쿠키는 칸 2개
         }
     }
 
@@ -92,6 +95,9 @@ public class SkillHud : MonoBehaviour
             else left = Mathf.Max(left, (float)(b.SpentAt + EscapeAuthority.BombCooldown - now));
         }
     }
+
+    // 오른쪽 끝에 붙인 채 칸 수만큼 폭을 맞춘다.
+    private void Width(int count) => root.sizeDelta = new Vector2(SlotSize * count + 12f * (count - 1), SlotSize);
 
     private static void Set(Slot slot, string name, KeyAction? key, float left, float total, string overlay, bool disabled = false)
     {

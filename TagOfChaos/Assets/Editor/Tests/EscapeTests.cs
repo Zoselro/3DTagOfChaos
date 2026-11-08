@@ -331,8 +331,8 @@ public class EscapeTests
         Assert.NotNull(c.HeliHat, "heli hat");
         Assert.NotNull(c.NoiseBomb, "noise bomb");
         Assert.AreEqual(3, c.SpyRandomTools.Count, "stun gun, hammer, water balloon (jail balloon merged, §45.8 Q1)");
-        Assert.AreEqual(3, c.CookieItems.Count, "skates, pumpkin, recorder");
-        CollectionAssert.AreEqual(new[] { 5, 3, 5 }, c.CookieItemWeights.ToArray());
+        Assert.AreEqual(5, c.CookieItems.Count, "skates, pumpkin, recorder + flashbang, boxing glove (Request1009Plan.md §68 GP2·GP3)");
+        CollectionAssert.AreEqual(new[] { 5, 3, 5, 3, 4 }, c.CookieItemWeights.ToArray());
         foreach (ItemSO item in new[] { c.RepairKit, c.DismantleTool, c.HeliHat, c.NoiseBomb }.Concat(c.SpyRandomTools).Concat(c.CookieItems))
             Assert.IsTrue(item.DisplayName.Any(ch => ch >= '가' && ch <= '힣'), item.ItemId + " name");
         foreach (string map in MapScenes.MapNames)
@@ -387,7 +387,7 @@ public class EscapeTests
     [Test]
     public void Items_ExistingHaveBlenderModels()
     {
-        var pending = new HashSet<string> { "Dismantle", "Skates", "Pumpkin", "Recorder", "HeliHat", "NoiseBomb" };
+        var pending = new HashSet<string> { "Dismantle", "Skates", "Pumpkin", "Recorder", "HeliHat", "NoiseBomb", "SearchBomb" }; // 수색 폭탄 = 술래 스킬(손에 들지 않음, §68 GP5)
         string[] guids = AssetDatabase.FindAssets("t:ItemSO", new[] { "Assets/03. SO/Escape/Items" });
         Assert.Greater(guids.Length, 0);
         foreach (string guid in guids)

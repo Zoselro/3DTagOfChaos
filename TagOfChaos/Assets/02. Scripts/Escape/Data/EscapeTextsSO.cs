@@ -67,6 +67,8 @@ public class EscapeTextsSO : ScriptableObject
     public string skillBombPlaced = "Placed";
     public string skillDodge = "Dodge";
     public string skillUnknown = "TBD";        // 생존자 스킬(아직 미정)
+    public string skillSearch = "Search bomb"; // 술래 수색 폭탄(§68 GP5)
+    public string cageMash = "Mash [{0}] to break the cage!"; // 사이렌 철창 안({0} = 점프 키)
 
     [Header("Player list (§59 PL — Tab)")]
     public string playerListTitle = "Players";

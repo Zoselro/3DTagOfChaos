@@ -39,6 +39,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 30757bd4e11a5fa4d8199c8442177109, type: 2}
   - {fileID: 11400000, guid: 42ed759c32a74df40851e7e1326f4f77, type: 2}
   - {fileID: 11400000, guid: 6e0aff05b48051e4eab1d4c1536d4395, type: 2}
+  - {fileID: 11400000, guid: 86bf4bee6db549643af8f1c5903be929, type: 2}
+  - {fileID: 11400000, guid: 00a245e1f4dba6f4295b7252b57d8585, type: 2}
+  - {fileID: 11400000, guid: 59c2b4ca9f6f1a745b51f37b7f0c7f25, type: 2}
   recipes:
   - {fileID: 11400000, guid: 5ec41f19bf1fe8240a2d5e33037ae0f7, type: 2}
   - {fileID: 11400000, guid: 7d23371b31031bb48b3d0444964e31e9, type: 2}
@@ -56,9 +59,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: afa0b1df432c7374597be7cb7c6036b2, type: 2}
   - {fileID: 11400000, guid: 9061988fd76e3e241b1db616f03c11e7, type: 2}
   - {fileID: 11400000, guid: 30757bd4e11a5fa4d8199c8442177109, type: 2}
-  cookieItemWeights: 050000000300000005000000
+  - {fileID: 11400000, guid: 86bf4bee6db549643af8f1c5903be929, type: 2}
+  - {fileID: 11400000, guid: 00a245e1f4dba6f4295b7252b57d8585, type: 2}
+  cookieItemWeights: 0500000003000000050000000300000004000000
   heliHat: {fileID: 11400000, guid: 42ed759c32a74df40851e7e1326f4f77, type: 2}
   noiseBomb: {fileID: 11400000, guid: 6e0aff05b48051e4eab1d4c1536d4395, type: 2}
+  searchBomb: {fileID: 11400000, guid: 59c2b4ca9f6f1a745b51f37b7f0c7f25, type: 2}
   passengerModel: {fileID: 919132149155446097, guid: 31dbe311b4f0e0e45ba19387847dc847, type: 3}
   jarModel: {fileID: 919132149155446097, guid: 653091ba224def64c827011f161be866, type: 3}
   jarCookieModel: {fileID: 919132149155446097, guid: 2404403b270534c449950b66f78bacc5, type: 3}

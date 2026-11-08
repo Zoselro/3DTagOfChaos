@@ -41,6 +41,26 @@ public class ToolShotFx : MonoBehaviour
         go.transform.position = start;
     }
 
+    // 섬광탄(§68 GP2): 물풍선과 같은 포물선·시각표로 작은 흰 통이 날아간다.
+    public static void ThrowCanister(Transform thrower, Vector3 point, double hitAt, Action onArrive)
+    {
+        var go = new GameObject("FlashbangShot");
+        var fx = go.AddComponent<ToolShotFx>();
+        fx.thrower = thrower;
+        fx.to = point + Vector3.up * 0.3f;
+        fx.onArrive = onArrive;
+        fx.hitTime = Time.time + (float)(hitAt - Photon.Pun.PhotonNetwork.Time);
+        Vector3 start = thrower != null ? HandPosition(thrower) : point;
+        fx.releaseAt = fx.hitTime - ToolAim.FlightSeconds(start, fx.to);
+        fx.from = start;
+        GameObject can = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        Destroy(can.GetComponent<Collider>());
+        can.transform.SetParent(go.transform, false);
+        can.transform.localScale = new Vector3(0.14f, 0.12f, 0.14f);
+        EscapeVisuals.Tint(can, new Color(0.92f, 0.92f, 0.95f), 0.6f);
+        go.transform.position = start;
+    }
+
     private Vector3 TargetPoint()
     {
         if (target == null) return to;

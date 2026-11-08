@@ -20,6 +20,6 @@ MonoBehaviour:
   holdType: 1
   category: 0
   tool: {fileID: 0}
-  fitsAnyRocketSlot: 0
   holdOffset: {x: 0, y: 0, z: 0}
   holdEuler: {x: 0, y: 0, z: 0}
+  heldScale: 1

@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: Item_NoiseBomb
   m_EditorClassIdentifier: 
   itemId: NoiseBomb
-  displayName: "\uC18C\uC74C \uD3ED\uD0C4"
+  displayName: "\uC0AC\uC774\uB80C \uD568\uC815"
   icon: {fileID: 21300000, guid: 3dbe384b16ccad34caa9f97eb2aa63a2, type: 3}
   modelPrefab: {fileID: 0}
   tint: {r: 0.3, g: 0.1, b: 0.1, a: 1}
   holdType: 0
   category: 1
   tool: {fileID: 11400000, guid: 46fe4437da1297847882531e732d59ce, type: 2}
-  fitsAnyRocketSlot: 0
   holdOffset: {x: 0, y: 0, z: 0}
   holdEuler: {x: 0, y: 0, z: 0}
+  heldScale: 1

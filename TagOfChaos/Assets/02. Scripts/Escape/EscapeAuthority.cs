@@ -23,6 +23,8 @@ public sealed class EscapeAuthority
     public const float BombCooldown = 20f;
     public const float BombBuildingRadius = 12f;       // 폭탄이 이 거리 안 건물에 붙는다(수리 시작 때 터짐)
     public const float BombBlastRadius = 4f;
+    public const float SearchCooldown = 25f;           // 술래 수색 폭탄(§68 GP5)
+    public const float SearchThrowRange = 10f;
     public const float HatRiseSeconds = 20f;           // 모자: 40 m까지 떠오르는 시간(§25.3.1 R6)
     private const float DecoyPlaceAttempts = 40;
     public const float DecoyCatchSeconds = 2.63f;      // 괴물 잡는 동작(GrabKill 클립 길이) 뒤 AI를 지운다(§26 R10)
@@ -33,6 +35,9 @@ public sealed class EscapeAuthority
     private readonly EscapeRecipeSO recipe;
     private readonly System.Random rng = new System.Random();
     private readonly Dictionary<int, float> toolReadyAt = new Dictionary<int, float>();
+    private readonly GloveCombo gloveCombo = new GloveCombo();                  // 권투 글러브 연타(§68 GP3)
+    private readonly Dictionary<int, float> searchReadyAt = new Dictionary<int, float>(); // 수색 폭탄 쿨타임(§68 GP5)
+    private readonly Dictionary<int, float> mashAt = new Dictionary<int, float>();       // 사이렌 철창 연타 간격(§68 GP5)
     private readonly Dictionary<int, Vector3> lastPositions = new Dictionary<int, Vector3>();
     private readonly Dictionary<int, HoldStart> dismantleStarts = new Dictionary<int, HoldStart>();
     private readonly Dictionary<int, int> repairSlots = new Dictionary<int, int>(); // 수리 중인 사람이 든 인벤토리 칸
@@ -301,7 +306,18 @@ public sealed class EscapeAuthority
         }
 
         for (int i = State.Bombs.Count - 1; i >= 0; i--)
-            if (State.Bombs[i].Spent && now >= State.Bombs[i].SpentAt + BombCooldown) { State.Bombs.RemoveAt(i); changed = true; }
+        {
+            EscapeState.Bomb bomb = State.Bombs[i];
+            if (bomb.Caged && SirenCage.ShouldRelease(bomb.Mash, bomb.CagedAt, now)) // 사이렌 철창: 시간이 다 되면 저절로 풀림(§68 GP5)
+            {
+                bomb.Spent = true;
+                bomb.SpentAt = now;
+                State.Bombs[i] = bomb;
+                changed = true;
+                continue;
+            }
+            if (bomb.Spent && now >= bomb.SpentAt + BombCooldown) { State.Bombs.RemoveAt(i); changed = true; }
+        }
 
         // 괴물에게 잡힌 AI: 잡는 동작이 끝나면 지운다(§26 R10)
         for (int i = State.Decoys.Count - 1; i >= 0; i--)
@@ -442,6 +458,8 @@ public sealed class EscapeAuthority
             case EscapeOp.PlaceBomb: changed = PlaceBomb(r.Sender, r.Pos); break;
             case EscapeOp.RemoveBomb: changed = RemoveBomb(r.Sender, r.A); break;
             case EscapeOp.DecoyCatch: changed = DecoyCatch(r.Sender, r.A, r.Pos, r.B); break;
+            case EscapeOp.SearchBomb: changed = SearchBomb(r.Sender, r.Pos); break;
+            case EscapeOp.CageMash: changed = CageMash(r.Sender, r.A); break;
             default: changed = false; break;
         }
         if (changed) Commit();
@@ -843,14 +861,14 @@ public sealed class EscapeAuthority
     {
         if (!RoomState.IsMonster(actor) || !IsNear(actor, pos, 4f)) return false;
         if (State.BombChargesLeft(actor, BombMaxCharges, PhotonNetwork.Time, BombCooldown) <= 0) return false;
-        State.Bombs.Add(new EscapeState.Bomb { Id = State.NextId++, Owner = actor, Pos = manager.SnapToGround(pos) });
+        State.Bombs.Add(new EscapeState.Bomb { Id = State.NextId++, Owner = actor, Pos = manager.SnapToGround(pos), Building = -1 });
         return true;
     }
 
     private bool RemoveBomb(int actor, int id)
     {
         int i = State.BombIndex(id);
-        if (i < 0 || State.Bombs[i].Owner != actor || State.Bombs[i].Spent || !IsNear(actor, State.Bombs[i].Pos, InteractReach)) return false;
+        if (i < 0 || State.Bombs[i].Owner != actor || State.Bombs[i].Spent || State.Bombs[i].Caged || !IsNear(actor, State.Bombs[i].Pos, InteractReach)) return false;
         EscapeState.Bomb bomb = State.Bombs[i];
         bomb.Spent = true;
         bomb.SpentAt = PhotonNetwork.Time; // 치워도 같은 쿨타임(§25.3.1 R7)
@@ -858,29 +876,61 @@ public sealed class EscapeAuthority
         return true;
     }
 
-    // 누군가 이 건물 수리를 시작했다: 근처에 놓인 소음폭탄이 터진다 — 폭탄 둘레·수리하는 사람이 기절, 비상벨, 괴물 화면에 위치 표시.
+    // 누군가 이 건물 수리를 시작했다: 근처에 놓인 사이렌 함정이 걸린다(§68 GP5 — 옛 소음폭탄의 기절 대신) — 사이렌·비상벨,
+    // 건물 둘레가 빼빼로 철창에 갇히고(안의 사람은 연타로 부숨, SirenCage), 괴물 화면에 위치 표시.
     private void DetonateBombsAt(int building, int repairer, double now)
     {
         Vector3 point = manager.BuildingRepairPoint(building);
         for (int i = 0; i < State.Bombs.Count; i++)
         {
             EscapeState.Bomb bomb = State.Bombs[i];
-            if (bomb.Spent || Flat(bomb.Pos - point) > BombBuildingRadius) continue;
-            bomb.Spent = true;
-            bomb.SpentAt = now;
+            if (bomb.Spent || bomb.Caged || Flat(bomb.Pos - point) > BombBuildingRadius) continue;
+            bomb.Building = building;
+            bomb.CagedAt = now;
+            bomb.Mash = 0;
             State.Bombs[i] = bomb;
-            var targets = new List<int>();
-            foreach (IGameCharacter c in CharacterRegistry.All)
-            {
-                if (c.Role != CharacterRole.Cookie || c.View == null || c.View.Owner == null) continue;
-                int owner = c.View.Owner.ActorNumber;
-                if (owner == repairer || Vector3.Distance(c.gameObject.transform.position, bomb.Pos) <= BombBlastRadius) targets.Add(c.View.ViewID);
-            }
-            if (catalog.NoiseBomb != null)
-                PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, new object[] { catalog.NoiseBomb.ItemId, bomb.Owner, targets.ToArray(), bomb.Pos, 0 },
-                    new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
             Notice(EscapeNoticeKind.NoiseBomb, building.ToString());
+            Debug.Log($"[EscapeAuthority] Siren trap {bomb.Id} caged building {building} (repair by actor {repairer}).");
+            break; // 한 건물에 철창 하나
         }
+    }
+
+    // 사이렌 철창 안의 사람이 점프 키를 눌렀다(§68 GP5): 철창 안(방장 기록 위치)이고 너무 빠르지 않으면 한 번 센다. 다 차면 부서진다.
+    private bool CageMash(int actor, int id)
+    {
+        int i = State.BombIndex(id);
+        if (i < 0 || !State.Bombs[i].Caged || RoomState.IsMonster(actor) || !IsActiveEscaper(actor)) return false;
+        if (!lastPositions.TryGetValue(actor, out Vector3 at)) return false;
+        EscapeState.Bomb bomb = State.Bombs[i];
+        if (!SirenCage.Ring(manager.BuildingTransform(bomb.Building), out Vector3 c, out float r) || !SirenCage.Inside(at, c, r + 1f)) return false;
+        if (mashAt.TryGetValue(actor, out float last) && Time.time - last < SirenCage.MashMinInterval) return false;
+        mashAt[actor] = Time.time;
+        bomb.Mash++;
+        bool broken = SirenCage.ShouldRelease(bomb.Mash, bomb.CagedAt, PhotonNetwork.Time);
+        if (broken) { bomb.Spent = true; bomb.SpentAt = PhotonNetwork.Time; }
+        State.Bombs[i] = bomb;
+        return broken || bomb.Mash % 3 == 0; // 게이지는 3번마다 보낸다(상태 전송 줄이기)
+    }
+
+    // 술래 수색 폭탄(§68 GP5): 던진 자리 둘레의 진짜 사람(쿠키·스파이 — AI는 캐릭터가 아니라 빠진다)만 기침한다. 상태는 바꾸지 않는다.
+    private bool SearchBomb(int actor, Vector3 pos)
+    {
+        ItemSO def = catalog.SearchBomb;
+        if (def == null || !def.IsTool || !RoomState.IsMonster(actor) || !IsNear(actor, pos, SearchThrowRange + 4f)) return false;
+        if (searchReadyAt.TryGetValue(actor, out float ready) && Time.time < ready) return false;
+        searchReadyAt[actor] = Time.time + SearchCooldown;
+        var targets = new List<int>();
+        foreach (IGameCharacter c in CharacterRegistry.All)
+        {
+            if (c.Role == CharacterRole.Monster || !CharacterRegistry.IsAlive(c) || c.View == null || c.View.Owner == null) continue;
+            int owner = c.View.Owner.ActorNumber;
+            if (EscapeManager.HasLeftMap(owner) || RoomState.IsBroken(c.View.Owner)) continue;
+            if (Vector3.Distance(c.gameObject.transform.position, pos) <= def.Tool.HitRadius) targets.Add(c.View.ViewID);
+        }
+        PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, new object[] { def.ItemId, actor, targets.ToArray(), pos, 0, PhotonNetwork.Time },
+            new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
+        Debug.Log($"[EscapeAuthority] Search bomb by actor {actor} at {pos}: {targets.Count} real player(s) cough.");
+        return false;
     }
 
     // seen·seenStamp: 괴물 화면이 잡은 순간의 AI 위치와 PhotonNetwork.ServerTimestamp(§46.2 GK4, 0이면 옛 클라이언트).
@@ -969,9 +1019,10 @@ public sealed class EscapeAuthority
 
         // 물풍선: 맞는 시각(PhotonNetwork.Time)을 방장이 정해 모두가 같은 순간에 가둔다 — 손을 떠나는 0.35초 + 거리로 정한 비행 시간(§45.7).
         double hitAt = PhotonNetwork.Time;
-        if (IsBalloon(def.Tool.Kind) && lastPositions.TryGetValue(r.Sender, out Vector3 thrower))
+        if (def.Tool.IsThrown && lastPositions.TryGetValue(r.Sender, out Vector3 thrower)) // 물풍선·섬광탄
             hitAt += PlayerActionPose.ThrowRelease + ToolAim.FlightSeconds(thrower + Vector3.up * 1.3f, r.Pos + Vector3.up);
-        var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B, hitAt };
+        bool knock = def.Tool.Kind == ToolKind.BoxingGlove && targets.Length > 0 && gloveCombo.Register(targets[0], PhotonNetwork.Time); // 3초 안 3대 = 쓰러짐(§68 GP3)
+        var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B, hitAt, knock };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
         return true;
     }
@@ -1007,10 +1058,10 @@ public sealed class EscapeAuthority
         if (!tool.CanHitMonster) targets = WithoutMonsters(targets); // 스턴건만 괴물을 맞힌다(§59 AT3 — 조작된 요청도 여기서 막힌다)
         if (!lastPositions.TryGetValue(sender, out Vector3 from)) return targets; // 위치를 아직 모르면 막지 않는다(입장 직후)
 
-        bool area = IsBalloon(tool.Kind);
+        bool area = tool.IsThrown; // 물풍선·섬광탄: 떨어진 자리 둘레
         if (area && Flat(point - from) > tool.Range + ToolReachSlack) return new int[0];
 
-        int max = area || tool.Kind == ToolKind.Hammer ? 1 : targets.Length; // 물풍선·뿅망치는 한 명(§45.5·§45.7)
+        int max = tool.HitsArea ? targets.Length : area || tool.Kind == ToolKind.Hammer || tool.Kind == ToolKind.BoxingGlove ? 1 : targets.Length; // 물풍선·뿅망치·글러브는 한 명, 섬광탄은 둘레 모두
         var kept = new List<int>(targets.Length);
         foreach (int viewId in targets)
         {
@@ -1040,8 +1091,6 @@ public sealed class EscapeAuthority
         }
         return kept.ToArray();
     }
-
-    private static bool IsBalloon(ToolKind kind) => kind == ToolKind.WaterBalloon;
 
     private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 

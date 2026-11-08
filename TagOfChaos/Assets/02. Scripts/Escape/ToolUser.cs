@@ -7,6 +7,8 @@ using UnityEngine;
 // - 스턴건: 카메라가 보는 방향 사거리(20 m, §45.6) 안 첫 대상. 우클릭을 누르고 있는 동안만 조준(조준점 + 약간 확대 + 조준 자세)되고, 그때 좌클릭해야 쏜다.
 // - 물풍선(§45.7): 전방 10 m·45° 안에서 가장 가까운 대상 한 명을 향해 위로 던진다(포물선 높이는 거리로 그때그때 계산). 들고 있는 동안
 //   대상 표시와 예상 궤적이 보인다(BalloonAimPreview). 대상이 없으면 보는 곳 앞 땅에 떨어진다.
+// - 섬광탄(§68 GP2): 물풍선처럼 앞으로 던져(대상이 있으면 그쪽) 떨어진 자리 둘레 HitRadius 안 모두(술래 포함)를 맞힌다.
+// - 권투 글러브(§68 GP3): 뿅망치처럼 휘둘러 주먹이 닿는 순간 앞 짧은 부채꼴 안 가장 가까운 쿠키 한 명(술래 제외).
 // 괴물은 충돌 캡슐(반지름 약 0.31 m)이 몸 겉모습보다 훨씬 작으므로, 몸 크기의 트리거(잡기 범위 구)도 맞힘 판정에 넣는다.
 public class ToolUser : MonoBehaviour
 {
@@ -84,6 +86,7 @@ public class ToolUser : MonoBehaviour
         switch (kind)
         {
             case ToolKind.Hammer: return SoundId.HammerSwing;
+            case ToolKind.BoxingGlove: return SoundId.CookieDodge; // 주먹 휘두르는 소리(임시)
             case ToolKind.StunGun: return SoundId.StunFire;
             case ToolKind.Skates: return SoundId.CookieDodge;   // 임시음(Request1009Plan.md §25.6 소리)
             case ToolKind.Pumpkin: return SoundId.PortalOpen;
@@ -152,8 +155,22 @@ public class ToolUser : MonoBehaviour
                 // 휘두르기 동작을 먼저 하고, 망치가 닿는 순간에 대상을 골라 보낸다
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
                 if (pose != null) pose.Play(PlayerActionPose.OneShot.Swing);
-                StartCoroutine(HammerHit(slot, tool));
+                StartCoroutine(HammerHit(slot, tool, PlayerActionPose.SwingHit, ToolAim.HammerHalfAngle));
                 return;
+            case ToolKind.BoxingGlove:
+                if (pose == null) pose = GetComponent<PlayerActionPose>();
+                if (pose != null) pose.Play(PlayerActionPose.OneShot.Swing);
+                StartCoroutine(HammerHit(slot, tool, GloveHitDelay, GloveHalfAngle));
+                return;
+            case ToolKind.Flashbang:
+            {
+                if (pose == null) pose = GetComponent<PlayerActionPose>();
+                if (pose != null) pose.Play(PlayerActionPose.OneShot.Throw);
+                IGameCharacter aimed = PickTarget(aim, tool.Range, ToolAim.BalloonHalfAngle, true);
+                point = aimed != null ? aimed.gameObject.transform.position : GroundAhead(cam, origin, aim, tool.Range);
+                CollectInSphere(point, tool.HitRadius, targets, 16, true); // 둘레 모두(술래 포함, 던진 사람 제외)
+                break;
+            }
             case ToolKind.StunGun:
             {
                 Ray ray = cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)) : new Ray(origin, aim);
@@ -220,15 +237,18 @@ public class ToolUser : MonoBehaviour
         manager.Request(EscapeOp.ToolUse, slot, color, point, targets.ToArray());
     }
 
-    // 뿅망치: 망치가 닿는 순간 전방 부채꼴에서 가장 가까운 한 명을 골라 보낸다(§45.5 HM1).
-    private System.Collections.IEnumerator HammerHit(int slot, ToolSO tool)
+    private const float GloveHitDelay = 0.15f;  // 주먹이 닿는 순간(뿅망치보다 빠름)
+    private const float GloveHalfAngle = 45f;
+
+    // 뿅망치·권투 글러브: 휘두른 것이 닿는 순간 전방 부채꼴에서 가장 가까운 한 명을 골라 보낸다(§45.5 HM1, §68 GP3).
+    private System.Collections.IEnumerator HammerHit(int slot, ToolSO tool, float delay, float halfAngle)
     {
-        yield return new WaitForSeconds(PlayerActionPose.SwingHit);
+        yield return new WaitForSeconds(delay);
         Camera cam = Camera.main;
         Vector3 aim = cam != null ? cam.transform.forward : transform.forward;
         Vector3 flat = Vector3.ProjectOnPlane(aim, Vector3.up);
         if (flat.sqrMagnitude < 0.01f) flat = transform.forward;
-        IGameCharacter target = PickTarget(flat, tool.Range, ToolAim.HammerHalfAngle, tool.CanHitMonster);
+        IGameCharacter target = PickTarget(flat, tool.Range, halfAngle, tool.CanHitMonster);
         Vector3 point = target != null ? target.gameObject.transform.position + Vector3.up : transform.position + Vector3.up + flat.normalized * tool.Range * 0.5f;
         manager.Request(EscapeOp.ToolUse, slot, 0, point, target != null ? new[] { target.View.ViewID } : new int[0]);
     }

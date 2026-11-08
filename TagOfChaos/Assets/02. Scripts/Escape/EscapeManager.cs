@@ -81,6 +81,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public Vector3 ChestPosition(int anchor) => anchor >= 0 && anchor < chestAnchors.Length ? chestAnchors[anchor].position : transform.position;
     public Vector3 ChestFront(int anchor) =>
         anchor >= 0 && anchor < chestAnchors.Length ? chestAnchors[anchor].position + chestAnchors[anchor].forward * 1.2f : transform.position;
+    public Transform BuildingTransform(int b) => b >= 0 && b < buildings.Length && buildings[b] != null ? buildings[b].transform : null;
     public Vector3 BuildingRepairPoint(int b) => b >= 0 && b < buildings.Length && buildings[b] != null ? buildings[b].RepairPoint : transform.position;
     public Vector3 ExitPosition(int k) => k >= 0 && k < exits.Length && exits[k] != null ? exits[k].TriggerPoint : transform.position;
     public Vector3 RainbowPosition(int anchor) => anchor >= 0 && anchor < rainbowAnchors.Length ? rainbowAnchors[anchor].position : transform.position;
@@ -153,7 +154,10 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         gameObject.AddComponent<EscapeAudioPresenter>().Init(this); // 탈출 모드 소리(상태 차이, SoundPlan.md S5)
         gameObject.AddComponent<DecoyBrain>().Init(this);           // AI 판단 — 방장만 돈다(§44)
         gameObject.AddComponent<DecoyPresenter>().Init(this);       // 맵의 AI(§25.5 L)
-        gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 소음폭탄(§25.5 K)
+        gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 사이렌 함정(옛 소음폭탄 §25.5 K)·수색 폭탄 입력(§68 GP5)
+        gameObject.AddComponent<SirenTrapPresenter>().Init(this);   // 사이렌 철창(§68 GP5)
+        gameObject.AddComponent<DestructionNet>();                  // 거대 괴물이 부수는 물체 상태(§66)
+        gameObject.AddComponent<DestructionPresenter>();            // 부서지는 연출(데칼·붕괴, §66)
         gameObject.AddComponent<GiantBrain>().Init(this);           // 거대 괴물 판단 — 방장만 돈다(§64)
         gameObject.AddComponent<GiantPresenter>().Init(this);       // 거대 괴물 연출(§64)
         VoiceNet.SendLocalVoice();                                  // 대기실에서 녹음한 목소리를 방에 보낸다(§25.3 Q6)
