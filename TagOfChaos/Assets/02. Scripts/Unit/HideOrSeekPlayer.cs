@@ -139,7 +139,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         && (!RoomState.IsBroken(pv.Owner) || (lifePresenter != null && lifePresenter.IsBeingGrabKilled));
     public bool CanInteract => !IsMovementLocked; // 파괴·들림 중에는 상호작용 불가(채팅 중에는 InteractPressed가 억제된다)
     public float CameraTargetHeight => Camera_Ctrl.CookieTargetHeight;
-    public const float CookieCameraDistance = 4.5f; // 쿠키 3인칭 카메라 거리(§69 C1 — 3.2 → 4.5 m)
+    public const float CookieCameraDistance = 5.4f; // 쿠키 3인칭 카메라 거리(§69 C1 — 3.2 → 4.5 m)
     public float CameraDistance => CookieCameraDistance;
 
     // 파괴됐는지 — 방장이 처형·마녀를 확정해 쓴 HitCount로만 정한다(AuditFixPlan.md §8.1). 예전에는 본인이 자기 값을 써서
