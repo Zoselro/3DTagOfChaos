@@ -56,6 +56,30 @@ public class MaterialChest : MonoBehaviour, IHoldInteractable, IInteractionLabel
         else if (chest.Opened) { lidCloseStart = -1f; SetLid(1f); }
         else if (lidCloseStart < 0f) SetLid(0f); // 닫는 중이면 그대로 둔다
         SetRegistered(!chest.Opened);
+        ApplyColor(chest.Spy);
+    }
+
+    // 상자 색(§69 D1 — 사용자): 일반 = 파랑, 스파이 상자 = 다크레드. 뚜껑까지 같은 색, 재질은 공유한 채 MaterialPropertyBlock으로.
+    public static readonly Color NormalColor = new Color(0.25f, 0.5f, 0.95f);
+    public static readonly Color SpyColor = new Color(0.45f, 0.05f, 0.07f);
+    private MaterialPropertyBlock block;
+    private int coloredSpy = -1;
+
+    private void ApplyColor(bool spy)
+    {
+        int key = spy ? 1 : 0;
+        if (coloredSpy == key) return;
+        coloredSpy = key;
+        if (block == null) block = new MaterialPropertyBlock();
+        Color c = spy ? SpyColor : NormalColor;
+        foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+        {
+            if (r is ParticleSystemRenderer) continue;
+            r.GetPropertyBlock(block);
+            block.SetColor("_Color", c);
+            block.SetColor("_BaseColor", c);
+            r.SetPropertyBlock(block);
+        }
     }
 
     public void Hide()

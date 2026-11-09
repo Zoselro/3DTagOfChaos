@@ -50,6 +50,12 @@ public static class GrabKillAuthority
         bool hunt = phase == GamePhase.Hunt || phase == GamePhase.TimeAttack;
         bool alive = !RoomState.IsBroken(victim) && !RoomState.IsMonster(victim.ActorNumber);
         bool onMap = !EscapeManager.HasLeftMap(victim.ActorNumber) && !EscapeManager.IsVehicleProtected(victim.ActorNumber); // 문 닫힌 호박 마차 안·해치 닫힌 콜라 대포 안·비행 중은 잡히지 않는다(§68.7·§68.9)
+        if (onMap && cookie.IsDodgeInvulnerable) // 구르는 중에는 잡히지 않는다(§69 C3) — 방장 화면에서 본 회피 상태
+        {
+            LastVerdict = NetSecurityRules.GrabVerdict.OffMap;
+            Debug.LogWarning($"[GrabKill] Rejected (dodging): monster actor {sender.ActorNumber} -> actor {victim.ActorNumber}.");
+            return false;
+        }
         float since = lastConfirmAt.TryGetValue(monsterActor, out float at) ? Time.time - at : float.MaxValue;
         var trigger = monster.GetComponent<MonsterGrabKillTrigger>();
         GameSettingsSO settings = GameSettings.Current;

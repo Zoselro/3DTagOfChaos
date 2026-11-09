@@ -61,6 +61,8 @@ MonoBehaviour:
   skillDash: "\uB3CC\uC9C4"
   skillBomb: "\uC0AC\uC774\uB80C \uD568\uC815"
   skillBombPlaced: "\uC124\uCE58\uB428"
+  bombNeedsBuilding: "\uC7AC\uB8CC \uAC74\uBB3C \uAC00\uAE4C\uC774\uC5D0\uB9CC \uC124\uCE58\uD560
+    \uC218 \uC788\uC5B4\uC694"
   skillDodge: "\uD68C\uD53C"
   skillUnknown: "\uBBF8\uC815"
   skillSearch: "\uC218\uC0C9 \uD3ED\uD0C4"
@@ -69,6 +71,10 @@ MonoBehaviour:
   carriageNoRoom: "\uB9C8\uCC28\uB97C \uC138\uC6B8 \uBE48 \uACF3\uC774 \uC5C6\uB2E4"
   cannonBoard: "\uCF5C\uB77C \uB300\uD3EC \uD0C0\uAE30"
   cannonNoRoom: "\uB300\uD3EC\uB97C \uC138\uC6B8 \uBE48 \uACF3\uC774 \uC5C6\uB2E4"
+  hostChanged: "{0}\uC774(\uAC00) \uBC29\uC7A5\uC774 \uB418\uC5C8\uC2B5\uB2C8\uB2E4."
+  recorderAim: "\uB0B4 AI\uB97C \uC870\uC900\uD558\uACE0 \uC4F0\uC138\uC694"
+  carryStruggle: "\uC88C\uC6B0 \uD0A4\uB97C \uBC88\uAC08\uC544 \uC5F0\uD0C0\uD574
+    \uBE60\uC838\uB098\uAC00\uAE30"
   playerListTitle: "\uCC38\uAC00\uC790"
   playerListMonster: "\uAD34\uBB3C"
   playerListCookie: "\uCFE0\uD0A4"

@@ -36,11 +36,11 @@ MonoBehaviour:
   monsterDepartureReturnDelay: 5
   monsterArrivalTimeout: 10
   tentacleDashDistance: 20
-  tentacleDashDuration: 0.25
-  tentacleDashCooldown: 15
+  tentacleDashDuration: 0.294
+  tentacleDashCooldown: 5
   tentacleDashMaxSlope: 45
   tentacleDashGroundSnap: 0.6
-  grabReachFromFront: 2
+  grabReachFromFront: 3
   grabAimRadius: 0.4
   maxGrabHeight: 6
   stamina:

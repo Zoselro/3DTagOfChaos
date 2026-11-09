@@ -47,8 +47,7 @@ public class CharacterInteractor : MonoBehaviour
             Refresh();
         }
 
-        // 괴물이 조준한 쿠키가 있으면 E키는 잡기가 우선이다 — 문 등 다른 상호작용보다 먼저(GameFixPlan.md F1-1).
-        if (PlayerInput.InteractPressed && localCharacter is MonsterController monster && monster.TryGrabAimTarget()) return;
+        // 술래 잡기는 따로 잡기 키(기본 마우스 왼쪽, §69 F3)로 한다 — MonsterGrabKillTrigger가 받는다. E는 문 등 상호작용만.
 
         if (hold.Active)
         {
@@ -96,9 +95,7 @@ public class CharacterInteractor : MonoBehaviour
             : null;
 
         if (prompt == null) return;
-        // 괴물이 쿠키를 조준 중이면 E키는 잡기로 쓰이므로(F1-1) 사물 아이콘을 띄우지 않는다. 잡기에는 아이콘이 없다(F4).
-        bool grabAiming = localCharacter is MonsterController monster && monster.HasGrabAimTarget;
-        if (focused != null && !grabAiming)
+        if (focused != null)
             prompt.Show(KeyBindings.Get(KeyAction.Interact), focused.InteractionPoint, (focused as IInteractionLabel)?.GetLabel(localCharacter));
         else prompt.Hide();
         if (!hold.Active) prompt.SetProgress(0f);

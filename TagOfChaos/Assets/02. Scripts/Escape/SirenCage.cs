@@ -5,7 +5,7 @@ using UnityEngine;
 // 오래 갇혀 있지 않게 MaxSeconds가 지나면 저절로 풀린다. 규칙·모양 계산만 둔다(방장·화면이 같이 쓴다).
 public static class SirenCage
 {
-    public const int MashNeeded = 30;           // 안의 사람들이 함께 누른 횟수
+    public const int MashNeeded = 25;           // 안의 사람들이 함께 누른 횟수(2026-11-09 사용자: 25번, 예전 30)
     public const float MaxSeconds = 20f;        // 이만큼 지나면 저절로 풀림
     public const float MashMinInterval = 0.06f; // 한 사람이 이보다 빨리 누른 것은 세지 않는다
     public const float Margin = 1.5f;           // 건물 경계 밖으로 이만큼 띄워 두른다

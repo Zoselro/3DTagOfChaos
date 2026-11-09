@@ -123,7 +123,7 @@ public class ColaCannonView : MonoBehaviour, IHoldInteractable, IInteractionLabe
         else
         {
             Vector3 mouth = ColaCannonRules.Mouth(data.Pos, worldYaw, ColaCannonRules.FirePitch) + Vector3.down * 0.9f;
-            target = ColaCannonRules.FlightPoint(mouth, data.Dest, t - ColaCannonRules.FireAt, data.Flight);
+            target = ColaCannonRules.FlightPoint(mouth, data.Dest, t - ColaCannonRules.FireAt, data.Flight, data.Ceiling);
         }
         me.TeleportTo(target);
     }
@@ -148,6 +148,8 @@ public class ColaCannonView : MonoBehaviour, IHoldInteractable, IInteractionLabe
     }
 
     // 탄 사람 몸 보이기·숨기기(모든 화면). 대포가 사라질 때 늘 되돌린다.
+    // enabled는 건드리지 않는다 — 캐릭터 모델 교체(CharacterModelBinder)가 꺼 둔 기본 쿠키 몸까지 다시 켜져 두 몸이 겹치던 문제(§69 B5).
+    // 그리기만 끄는 forceRenderingOff를 쓴다.
     private void ShowRider(bool show)
     {
         if (bodyHidden == !show) return;
@@ -159,7 +161,7 @@ public class ColaCannonView : MonoBehaviour, IHoldInteractable, IInteractionLabe
         }
         bodyHidden = !show;
         if (riderRenderers == null) return;
-        foreach (Renderer r in riderRenderers) if (r != null) r.enabled = show;
+        foreach (Renderer r in riderRenderers) if (r != null) r.forceRenderingOff = !show;
         if (show) riderRenderers = null;
     }
 

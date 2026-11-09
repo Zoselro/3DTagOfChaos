@@ -216,6 +216,8 @@ public class EscapeHud : MonoBehaviour
         // 오른쪽 아래 스킬 칸(§26 H9)
         gameObject.AddComponent<SkillHud>().Init(manager, texts);
         gameObject.AddComponent<StaminaHud>().Init(HotbarWidth, HotbarTop); // 인벤토리 1~4칸 바로 위 스태미나 막대(§46.3)
+        gameObject.AddComponent<SpeedBoostHud>().Init(HotbarWidth, HotbarTop); // 그 위 스케이트 남은 시간(§69 B4)
+        gameObject.AddComponent<CarryStruggleHud>().Init(); // 들렸을 때 좌우 연타 안내(§69 C2)
 
         // 마녀 타이머(가운데 위, 빨강)
 

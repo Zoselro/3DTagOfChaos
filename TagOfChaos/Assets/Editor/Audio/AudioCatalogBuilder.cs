@@ -273,7 +273,7 @@ public static class SoundDefaults
             case SoundId.HammerBonk: falloff = SoundFalloff.Action; min = 2f; max = 20f; return;
             case SoundId.FlashBang: falloff = SoundFalloff.Heavy; min = 3f; max = 35f; return;   // 섬광탄 — 반경(6 m)보다 훨씬 멀리
             case SoundId.GlovePunch: falloff = SoundFalloff.Action; min = 2f; max = 18f; return;
-            case SoundId.Cough: falloff = SoundFalloff.Action; min = 1.5f; max = 14f; return;
+            case SoundId.Cough: falloff = SoundFalloff.Action; min = 2f; max = 35f; return; // 술래(던진 자리 10 m 앞 + 반경 12 m)에게 들리게(§69 F6)
             case SoundId.SirenAlarm: falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return; // 사이렌 — 멀리서도 '어디가 갇혔다'를 알 수 있게
             case SoundId.CauldronBubble: falloff = SoundFalloff.Landmark; min = 3f; max = 15f; return;
             case SoundId.CauldronSplash: falloff = SoundFalloff.Action; min = 3f; max = 15f; return;

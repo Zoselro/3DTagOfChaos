@@ -54,6 +54,63 @@ public class ToolUser : MonoBehaviour
         if (Aiming && crosshair == null) crosshair = CreateCrosshair();
         if (crosshair != null && crosshair.activeSelf != Aiming) crosshair.SetActive(Aiming);
         UpdateBalloonPreview(held, cam);
+        UpdateFlashbangPreview(held, cam);
+        UpdateRecorderTarget(held, cam);
+    }
+
+    // ---------------- 섬광탄 고각 점선(§69 B6) ----------------
+    private BalloonAimPreview flashPreview;
+    private static readonly Color FlashPreviewColor = new Color(1f, 0.95f, 0.6f, 0.85f);
+
+    private void UpdateFlashbangPreview(ItemSO held, Camera cam)
+    {
+        bool flash = held != null && held.IsTool && held.Tool.Kind == ToolKind.Flashbang && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
+        if (!flash) { if (flashPreview != null) flashPreview.Hide(); return; }
+        if (flashPreview == null) flashPreview = BalloonAimPreview.Create(dotted: true);
+        Vector3 origin = transform.position + Vector3.up * 1.1f;
+        Vector3 aim = cam != null ? cam.transform.forward : transform.forward;
+        IGameCharacter aimed = PickTarget(aim, held.Tool.Range, ToolAim.BalloonHalfAngle, true);
+        Vector3 to = aimed != null ? aimed.gameObject.transform.position : GroundAhead(cam, origin, aim, held.Tool.Range); // Use()와 같은 떨어질 자리
+        flashPreview.ShowArea(ToolShotFx.HandPosition(transform), to, held.Tool.HitRadius, FlashPreviewColor);
+    }
+
+    // ---------------- 녹음기: 조준한 내 AI(§69 B3) ----------------
+    public const float RecorderAimRange = 20f;
+    private const float RecorderAimAngle = 12f;
+    private BalloonAimPreview recorderMarker;
+    private int recorderTarget = -1;
+    private static readonly Color RecorderColor = new Color(0.45f, 1f, 0.55f, 0.9f);
+
+    private void UpdateRecorderTarget(ItemSO held, Camera cam)
+    {
+        bool recorder = held != null && held.IsTool && held.Tool.Kind == ToolKind.Recorder && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
+        recorderTarget = -1;
+        DecoyView picked = recorder ? PickOwnDecoy(cam) : null;
+        if (picked == null) { if (recorderMarker != null) recorderMarker.Hide(); return; }
+        recorderTarget = picked.Id;
+        if (recorderMarker == null) recorderMarker = BalloonAimPreview.Create();
+        recorderMarker.ShowRingOnly(picked.transform, RecorderColor);
+    }
+
+    // 화면 가운데에 가장 가까운(각도) 내 AI — RecorderAimRange 안, 녹음기가 아직 없고, 잡히지 않은 것.
+    private DecoyView PickOwnDecoy(Camera cam)
+    {
+        EscapeState s = manager != null ? manager.State : null;
+        if (s == null || cam == null || Photon.Pun.PhotonNetwork.LocalPlayer == null) return null;
+        int me = Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber;
+        Vector3 eye = cam.transform.position, fwd = cam.transform.forward;
+        DecoyView best = null;
+        float bestAngle = RecorderAimAngle;
+        foreach (DecoyView v in FindObjectsByType<DecoyView>(FindObjectsSortMode.None))
+        {
+            int i = s.DecoyIndex(v.Id);
+            if (i < 0 || s.Decoys[i].Owner != me || s.Decoys[i].Caught || s.Decoys[i].VoiceAt > 0) continue;
+            Vector3 body = v.transform.position + Vector3.up * 1f;
+            if (Flat(body - transform.position) > RecorderAimRange) continue;
+            float angle = Vector3.Angle(fwd, body - eye);
+            if (angle < bestAngle) { bestAngle = angle; best = v; }
+        }
+        return best;
     }
 
     // 물풍선을 들고 있으면 맞을 대상·예상 궤적(§45.7 WB0).
@@ -191,8 +248,11 @@ public class ToolUser : MonoBehaviour
             }
             case ToolKind.Recorder:
                 // 녹음한 목소리가 없으면 쓸 수 없다(§26 H7 — 방장도 HasVoice로 다시 확인한다)
-                if (!VoiceStore.HasLocal) { EscapeHud.Toast(EscapeTextsSO.Current.noRecording); UiSoundCues.Error(); return; }
+                if (!VoiceStore.HasLocal) { EscapeHud.Toast(EscapeTextsSO.Current.noRecording); UiSoundCues.Error(); readyAt = 0f; return; }
+                // 조준한 내 AI에 붙인다(§69 B3). 조준한 AI가 없으면 안내만.
+                if (recorderTarget < 0) { EscapeHud.Toast(EscapeTextsSO.Current.recorderAim); UiSoundCues.Error(); readyAt = 0f; return; }
                 point = transform.position;
+                targets.Add(recorderTarget);
                 break;
             case ToolKind.Skates:
                 point = transform.position; // 나에게 쓰는 아이템 — 대상은 방장이 정한다(§25.5 I)

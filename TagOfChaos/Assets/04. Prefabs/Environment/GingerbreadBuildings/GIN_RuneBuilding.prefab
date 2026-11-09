@@ -1377,7 +1377,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a7d60db8ee6cb1d4f93cb6f34ef4a6ac, type: 2}
+  - {fileID: 2100000, guid: 45311d4b1a20e104996e11f4aae926dc, type: 2}
   - {fileID: 2100000, guid: c14abe60a7ba0214393939419e40f902, type: 2}
   - {fileID: 2100000, guid: 2253acbc5ee07fa4dadd368c63f53235, type: 2}
   - {fileID: 2100000, guid: 6e028d84cf9680d44a1a891fccc6c0c6, type: 2}
@@ -2353,7 +2353,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8984004460883614994}
   m_Layer: 0
-  m_Name: Var_Rune_Pink
+  m_Name: Var_Rune_Green
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

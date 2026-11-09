@@ -54,6 +54,7 @@ public class VoiceChat : MonoBehaviour
         source.maxDistance = settings.SilentDistance;
         source.dopplerLevel = 0f;
         source.playOnAwake = false;
+        speakerTemplate.AddComponent<VoiceGain>(); // 3배·사람별 음량(§69 A2·A3)
         speakerTemplate.AddComponent<Speaker>();
 
         recorder = gameObject.AddComponent<Recorder>();
@@ -119,6 +120,7 @@ public class VoiceChat : MonoBehaviour
             if (s.TryGetComponent(out AudioSource source) && source.mute != muted) source.mute = muted;
             if (s.RemoteVoice == null) continue;
             int actor = PunActorOf(s.RemoteVoice.PlayerId);
+            if (s.TryGetComponent(out VoiceGain gain)) gain.Gain = VoiceChatSettingsSO.Current.RemoteGain * VoiceVolumes.Get(PunPlayer(actor));
             Transform body = BodyOf(actor);
             if (body != null) s.transform.position = body.position + Vector3.up * mouth;
         }
@@ -130,6 +132,9 @@ public class VoiceChat : MonoBehaviour
         var p = room != null ? room.GetPlayer(voicePlayerId) : null;
         return p != null && int.TryParse(p.NickName, out int actor) ? actor : -1;
     }
+
+    private static Photon.Realtime.Player PunPlayer(int actor) =>
+        actor >= 0 && RoomState.IsInRoom() ? PhotonNetwork.CurrentRoom.GetPlayer(actor) : null;
 
     private static Transform BodyOf(int actor)
     {

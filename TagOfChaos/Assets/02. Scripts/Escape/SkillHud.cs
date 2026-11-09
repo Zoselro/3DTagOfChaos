@@ -65,8 +65,8 @@ public class SkillHud : MonoBehaviour
         if (me is MonsterController monster)
         {
             Set(slots[0], texts.skillDash, KeyAction.MonsterDash, monster.DashCooldownLeft, GameSettings.Current.TentacleDashCooldown, null);
-            BombState(out float left, out bool placed);
-            Set(slots[1], texts.skillBomb, KeyAction.MonsterSkill, left, EscapeAuthority.BombCooldown, placed ? texts.skillBombPlaced : null);
+            BombState(out float left, out int charges);
+            Set(slots[1], texts.skillBomb, KeyAction.MonsterSkill, left, EscapeAuthority.BombCooldown, charges > 0 ? charges + "/" + EscapeAuthority.BombMaxCharges : null);
             if (!slots[2].Root.activeSelf) { slots[2].Root.SetActive(true); Width(3); }
             Set(slots[2], texts.skillSearch, KeyAction.MonsterSearch, NoiseBombPresenter.SearchReadyAt - Time.time, EscapeAuthority.SearchCooldown, null);
         }
@@ -81,19 +81,19 @@ public class SkillHud : MonoBehaviour
     }
 
     // 소음폭탄: 깔아 둔 폭탄이 있으면 "설치됨", 치웠거나 터진 뒤에는 20초 쿨타임.
-    private void BombState(out float left, out bool placed)
+    // 사이렌 함정(§69 F5): 남은 개수(최대 BombMaxCharges). 다 썼으면 가장 먼저 돌아오는 칸의 쿨타임(놓아 둔 것만 있으면 0 — 치우거나 풀려야 돌아온다).
+    private void BombState(out float left, out int charges)
     {
-        left = 0f; placed = false;
+        left = 0f;
+        charges = NoiseBombPresenter.LocalChargesLeft(manager);
         EscapeState s = manager != null ? manager.State : null;
-        if (s == null || PhotonNetwork.LocalPlayer == null) return;
+        if (charges > 0 || s == null || PhotonNetwork.LocalPlayer == null) return;
         int me = PhotonNetwork.LocalPlayer.ActorNumber;
         double now = PhotonNetwork.Time;
+        float soonest = float.MaxValue;
         foreach (EscapeState.Bomb b in s.Bombs)
-        {
-            if (b.Owner != me) continue;
-            if (!b.Spent) placed = true;
-            else left = Mathf.Max(left, (float)(b.SpentAt + EscapeAuthority.BombCooldown - now));
-        }
+            if (b.Owner == me && b.Spent) soonest = Mathf.Min(soonest, (float)(b.SpentAt + EscapeAuthority.BombCooldown - now));
+        if (soonest < float.MaxValue) left = Mathf.Max(0f, soonest);
     }
 
     // 오른쪽 끝에 붙인 채 칸 수만큼 폭을 맞춘다.

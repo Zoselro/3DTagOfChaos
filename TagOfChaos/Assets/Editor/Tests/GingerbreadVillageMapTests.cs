@@ -23,7 +23,7 @@ public class GingerbreadVillageMapTests
         var so = new SerializedObject(manager);
         Assert.AreEqual(4, so.FindProperty("buildings").arraySize);
         Assert.AreEqual(4, so.FindProperty("exits").arraySize);
-        Assert.AreEqual(EscapeMapSetup.ChestSlotCount, so.FindProperty("chestAnchors").arraySize);
+        Assert.AreEqual(EscapeMapSetup.ChestSlotCount + 8, so.FindProperty("chestAnchors").arraySize); // 지하 상자 자리 8곳 추가(§69 D2, CHEST_Slot_40~47)
         Assert.NotNull(so.FindProperty("monsterRoom").objectReferenceValue);
         for (int q = 1; q <= 4; q++)
         {

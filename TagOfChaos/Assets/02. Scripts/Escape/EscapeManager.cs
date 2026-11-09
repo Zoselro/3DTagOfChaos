@@ -41,6 +41,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     public EscapeState State { get; private set; }
     public EscapeCatalogSO Catalog => catalog;
+    public float MapRadius => mapRadius; // 원 맵의 반지름(0 = Ground 사각형) — 마녀 위치도 이것으로(§69 E1)
     public EscapeRecipeSO Recipe => recipe;
     public SpyRocket Rocket => rocket;
     public WitchPresenter Witch => witch;
@@ -112,6 +113,25 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public Vector3 ChestFront(int anchor) =>
         anchor >= 0 && anchor < chestAnchors.Length ? chestAnchors[anchor].position + chestAnchors[anchor].forward * 1.2f : transform.position;
     public Transform BuildingTransform(int b) => b >= 0 && b < buildings.Length && buildings[b] != null ? buildings[b].transform : null;
+    // 재료 건물 둘레인지(사이렌 함정 설치 자리, §69 F5): 수리 지점에서 수평 radius 안이고 같은 층(높이 차 FloorGap 안).
+    public const float FloorGap = 8f;
+    public bool IsNearMaterialBuilding(Vector3 pos, float radius) => NearestMaterialBuilding(pos, out _) <= radius;
+
+    public float NearestMaterialBuilding(Vector3 pos, out Vector3 repairPoint)
+    {
+        float best = float.MaxValue;
+        repairPoint = pos;
+        for (int b = 0; b < buildings.Length; b++)
+        {
+            if (buildings[b] == null) continue;
+            Vector3 p = buildings[b].RepairPoint;
+            if (Mathf.Abs(p.y - pos.y) > FloorGap) continue;
+            float d = Vector2.Distance(new Vector2(p.x, p.z), new Vector2(pos.x, pos.z));
+            if (d < best) { best = d; repairPoint = p; }
+        }
+        return best;
+    }
+
     public Vector3 BuildingRepairPoint(int b) => b >= 0 && b < buildings.Length && buildings[b] != null ? buildings[b].RepairPoint : transform.position;
     public Vector3 ExitPosition(int k) => k >= 0 && k < exits.Length && exits[k] != null ? exits[k].TriggerPoint : transform.position;
     public Vector3 RainbowPosition(int anchor) => anchor >= 0 && anchor < rainbowAnchors.Length ? rainbowAnchors[anchor].position : transform.position;
@@ -518,6 +538,31 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
             if (IsClearForCharacter(p)) return p;
         }
         return SnapToGround(center + dir * 2.5f + Vector3.up * 2f);
+    }
+
+    // pos 위로 천장(막힌 면)까지의 월드 높이, 없으면 0(§69 E3 — 지하 동굴에서 콜라 대포 비행 한계).
+    public float CeilingAbove(Vector3 pos, float maxUp)
+    {
+        float best = 0f;
+        foreach (RaycastHit h in Physics.RaycastAll(pos + Vector3.up * 0.5f, Vector3.up, maxUp, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            if (h.collider.GetComponentInParent<IGameCharacter>() != null || h.collider.GetComponentInParent<DecoyView>() != null) continue;
+            if (best <= 0f || h.point.y < best) best = h.point.y;
+        }
+        return best;
+    }
+
+    // from에서 아래로 처음 닿는 바닥(캐릭터·AI 몸은 건너뜀). SnapToGround와 달리 시작 높이 위는 보지 않는다 — 천장 위층 바닥이 잡히지 않게.
+    public bool TryGroundBelow(Vector3 from, float maxDown, out Vector3 ground)
+    {
+        float best = float.NegativeInfinity;
+        foreach (RaycastHit h in Physics.RaycastAll(from, Vector3.down, maxDown, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            if (h.collider.GetComponentInParent<IGameCharacter>() != null || h.collider.GetComponentInParent<DecoyView>() != null) continue;
+            if (h.point.y > best) best = h.point.y;
+        }
+        ground = new Vector3(from.x, best, from.z);
+        return !float.IsNegativeInfinity(best);
     }
 
     public Vector3 SnapToGround(Vector3 pos)

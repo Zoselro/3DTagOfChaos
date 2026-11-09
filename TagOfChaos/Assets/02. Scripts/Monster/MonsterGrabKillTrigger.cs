@@ -43,6 +43,15 @@ public class MonsterGrabKillTrigger : MonoBehaviour
         AimTarget = null;
         AimDecoy = null;
         if (!onCooldown && monsterController.CanInteract) FindAimTarget();
+        if (PlayerInput.MonsterGrabPressed) TryGrabAimTarget(); // 잡기 키(기본 마우스 왼쪽, §69 F3)
+    }
+
+    // 돌진하다 몸이 닿았다(§69 F2 — 25번): 조준과 상관없이 그 쿠키(스파이 포함)나 AI를 같은 잡기 동작으로 잡는다. 방장은 보통 잡기와 같이 판정한다.
+    public bool TryCatchOnContact(HideOrSeekPlayer cookie, DecoyView decoy)
+    {
+        if (onCooldown || monsterPv == null || !monsterPv.IsMine) return false;
+        if (cookie != null) return IsCatchable(cookie) && TryGrabKill(cookie);
+        return decoy != null && TryGrabDecoy(decoy);
     }
 
     // 화면 가운데에서 앞으로 구를 쏘아, 벽보다 가깝고 몸 앞면에서 잡기 거리 안에 있는 가장 가까운 쿠키를 고른다.
@@ -127,6 +136,7 @@ public class MonsterGrabKillTrigger : MonoBehaviour
     {
         PhotonView view = cookie.View;
         if (view == null || view.Owner == null || RoomState.IsBroken(view.Owner) || cookie.IsBroken) return false;
+        if (cookie.IsDodgeInvulnerable) return false; // 구르는 중(§69 C3)
         // 감옥 풍선 안의 쿠키는 잡지 못한다(Request1009Plan.md §25.5 J). 헬리콥터 모자로 높이 오른 쿠키는 잡기 높이 검사가 막는다.
         return !cookie.TryGetComponent(out StunReceiver stun) || !stun.IsJailed;
     }
@@ -134,7 +144,7 @@ public class MonsterGrabKillTrigger : MonoBehaviour
     // 상호작용 키로 조준 대상을 잡는다. 잡기를 시작했으면 true(CharacterInteractor가 문 등보다 먼저 호출, F1-1).
     public bool TryGrabAimTarget()
     {
-        if (!monsterController.CanInteract) return false;
+        if (!monsterController.CanInteract || onCooldown) return false;
         if (AimDecoy != null) return TryGrabDecoy(AimDecoy);
         HideOrSeekPlayer target = AimTarget;
         return target != null && TryGrabKill(target);

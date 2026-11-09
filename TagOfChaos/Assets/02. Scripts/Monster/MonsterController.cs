@@ -17,6 +17,8 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     [SerializeField] private float cameraTargetHeight = 2.2f; // eyeSocket이 비어 있을 때만 쓰는 대체값
     [SerializeField] private float cameraDistance = 4.5f;
     [SerializeField] private float speed = 4f;
+    [Tooltip("점프 높이(m, §69 F1). 거대한 몸이라 쿠키보다 조금 낮게 뛰어오른다.")]
+    [SerializeField, Min(0f)] private float jumpHeight = 1.3f;
     [Tooltip("딛고 설 수 있는 면의 레이어(접지·돌진 지면 따라가기·벽 판정). 예전 obstructionMask(돌진 시작 장애물 검사)의 값을 이어받는다.")]
     [SerializeField, FormerlySerializedAs("obstructionMask")] private LayerMask groundLayer = 1;
     [SerializeField] private MonsterGrabKillTrigger grabKillTrigger;
@@ -99,7 +101,17 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     private int cookieLayerMask;
     private readonly RaycastHit[] dashSweepHits = new RaycastHit[8];
 
-    public bool IsTentacleDashing => tentacleDashAnimRemaining > 0f;
+    // 돌진 준비 자세(§69 F2): 키를 누르면 DashWindupSeconds 동안 제자리에서 방향을 고정했다가 나간다. 후딜: 이동이 끝나고 DashRecoverSeconds 뒤부터
+    // 움직이거나 잡을 수 있다(동작은 움직이지 않으면 끝까지 이어진다). 예전에는 클립 길이(약 2초) 내내 묶였다.
+    public const float DashWindupSeconds = 0.35f;
+    public const float DashRecoverSeconds = 0.4f;
+    private float dashWindupRemaining;
+    private Vector3 dashWindupForward;
+    private float dashRecoverAt = -1f;
+    private bool jumpRequested;
+
+    public bool IsDashWindingUp => dashWindupRemaining > 0f;
+    public bool IsTentacleDashing => IsDashWindingUp || tentacleDash.IsDashing || (tentacleDashAnimRemaining > 0f && (dashRecoverAt < 0f || Time.time < dashRecoverAt));
     public float DashCooldownLeft => tentacleDash.CooldownLeft; // 스킬 칸(SkillHud, §26 H9)
 
     // 괴물 체격에 맞는 3인칭 카메라 설정 — 본인 조작 카메라와 관전 카메라(SpectatorController)가 같은 값을 쓴다.
@@ -227,12 +239,34 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
             ChangeState(MonsterMoveState.Idle);
         }
 
-        if (IsTentacleDashing)
+        if (IsDashWindingUp)
         {
-            // 돌진 동작이 끝날 때까지 TentacleDash 상태를 유지한다(이동 구간은 FixedUpdate의 돌진 이동이 맡음).
+            // 준비 자세: 제자리에서 방향을 고정한다. 끝나면 고정한 방향으로 나간다(§69 F2).
             moveInput = Vector3.zero;
+            dashWindupRemaining -= Time.deltaTime;
+            if (dashWindupRemaining > 0f) return;
+            dashWindupRemaining = 0f;
+            if (!IsStunned && tentacleDash.TryStartDash(dashWindupForward))
+            {
+                tentacleDashAnimRemaining = Mathf.Max(tentacleDashAnimDuration, GameSettings.Current.TentacleDashDuration);
+                dashRecoverAt = -1f;
+                ChangeState(MonsterMoveState.TentacleDash);
+                return;
+            }
+        }
+
+        if (tentacleDashAnimRemaining > 0f)
+        {
+            // 돌진 동작(이동 구간은 FixedUpdate의 돌진 이동이 맡음). 이동이 끝나고 DashRecoverSeconds가 지나면 입력이 있을 때 동작을 끊고 움직인다.
             tentacleDashAnimRemaining -= Time.deltaTime;
-            if (tentacleDashAnimRemaining > 0f) return;
+            if (!tentacleDash.IsDashing && dashRecoverAt < 0f) dashRecoverAt = Time.time + DashRecoverSeconds;
+            bool recovered = !tentacleDash.IsDashing && Time.time >= dashRecoverAt;
+            bool wantsAction = ReadCameraRelativeMoveInput() != Vector3.zero || PlayerInput.JumpPressed || PlayerInput.TentacleDashPressed;
+            if (tentacleDashAnimRemaining > 0f && !(recovered && wantsAction))
+            {
+                moveInput = Vector3.zero;
+                return;
+            }
             tentacleDashAnimRemaining = 0f;
         }
 
@@ -245,13 +279,17 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         }
 
         moveInput = ReadCameraRelativeMoveInput();
+        if (PlayerInput.JumpPressed && groundDetector.IsGrounded(transform.position)) jumpRequested = true; // 점프(§69 F1)
 
         // 입력 키는 좌Shift로 확정(사용자 확인, GameRule.md v3.4) — InputBindings의 TentacleDashKey에서 바꿀 수 있다.
         // 쿠키의 Shift(질주)와는 서로 다른 캐릭터 클래스에서 각자 로컬로 읽는 입력이라 충돌 없음.
-        if (PlayerInput.TentacleDashPressed && tentacleDash.TryStartDash(transform.forward))
+        // 누르면 바로 나가지 않고 준비 자세(DashWindupSeconds) 뒤에 그때 보던 방향으로 나간다(§69 F2).
+        if (PlayerInput.TentacleDashPressed && tentacleDash.CooldownLeft <= 0f && !tentacleDash.IsDashing)
         {
-            tentacleDashAnimRemaining = Mathf.Max(tentacleDashAnimDuration, GameSettings.Current.TentacleDashDuration);
-            ChangeState(MonsterMoveState.TentacleDash);
+            dashWindupRemaining = DashWindupSeconds;
+            dashWindupForward = viewSwitcher != null && viewSwitcher.IsFirstPerson ? viewSwitcher.YawRotation * Vector3.forward : transform.forward;
+            moveInput = Vector3.zero;
+            ChangeState(MonsterMoveState.TentacleDashWindup);
         }
         else if (moveInput != Vector3.zero && !tentacleDash.IsDashing)
             ChangeState(MonsterMoveState.Walk);
@@ -265,8 +303,20 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         if (!pv.IsMine) return;
 
         if (tentacleDash.IsDashing && FixedUpdateDash()) return;
+        if (IsDashWindingUp)
+        {
+            // 준비 자세 동안 제자리·방향 고정(1인칭 시점을 돌려도 몸은 돌지 않는다)
+            rb.linearVelocity = new Vector3(0f, Mathf.Min(rb.linearVelocity.y, 0f), 0f);
+            rb.MoveRotation(Quaternion.LookRotation(dashWindupForward));
+            return;
+        }
 
         float verticalVelocity = rb.linearVelocity.y;
+        if (jumpRequested)
+        {
+            jumpRequested = false;
+            verticalVelocity = Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * jumpHeight);
+        }
         if (wasDashing)
         {
             // 돌진이 끝난 첫 스텝: 오르막 돌진의 위 속도가 이어져 튀어 오르지 않게 한다(아래 속도는 중력에 맡긴다).
@@ -320,15 +370,19 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
             velocity.y = Mathf.Min(rb.linearVelocity.y, 0f);
         }
 
-        bool stopBeforeCookie = TryStopBeforeCookieOnDashPath(velocity * dt, out float travel);
+        bool stopBeforeCookie = TryStopBeforeCookieOnDashPath(velocity * dt, out float travel, out HideOrSeekPlayer hitCookie, out DecoyView hitDecoy);
         if (stopBeforeCookie)
-            velocity = velocity.normalized * (travel / dt); // 쿠키 앞까지만 움직인다(처형하지 않음, GameFixPlan.md F1)
+            velocity = velocity.normalized * (travel / dt); // 쿠키 앞까지 움직이고 그 자리에서 잡는다(§69 F2 — 25번, 예전에는 멈추기만)
 
         rb.linearVelocity = velocity;
         lastDashPosition = position;
         lastDashExpected = velocity.magnitude * dt;
         tentacleDash.TickDash(dt);
-        if (stopBeforeCookie) tentacleDash.Cancel(); // 돌진 이동만 끝낸다 — 애니메이션 마무리는 그대로 이어진다
+        if (stopBeforeCookie)
+        {
+            tentacleDash.Cancel(); // 돌진 이동만 끝낸다 — 애니메이션 마무리는 그대로 이어진다
+            if (grabKillTrigger != null) grabKillTrigger.TryCatchOnContact(hitCookie, hitDecoy); // 닿으면 잡는다(구르는 쿠키·감옥 풍선은 빠진다)
+        }
         return true;
     }
 
@@ -359,9 +413,11 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     // (GameFixPlan.md F1). 초속 80m라 한 스텝에 1m 넘게 움직여, 그대로 부딪히면 물리 엔진이 쿠키를 튕겨 날릴 수 있다.
     private const float DashStopMargin = 0.1f;
 
-    private bool TryStopBeforeCookieOnDashPath(Vector3 step, out float travel)
+    private bool TryStopBeforeCookieOnDashPath(Vector3 step, out float travel, out HideOrSeekPlayer hitCookie, out DecoyView hitDecoy)
     {
         travel = 0f;
+        hitCookie = null;
+        hitDecoy = null;
         float distance = step.magnitude;
         if (cookieLayerMask == 0 || distance <= 0f) return false;
 
@@ -379,8 +435,12 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         for (int i = 0; i < count; i++)
         {
             var cookie = dashSweepHits[i].collider.GetComponentInParent<HideOrSeekPlayer>();
-            if (cookie == null || cookie.gameObject == gameObject || cookie.IsBroken) continue;
-            nearest = Mathf.Min(nearest, dashSweepHits[i].distance);
+            DecoyView decoy = cookie == null ? dashSweepHits[i].collider.GetComponentInParent<DecoyView>() : null;
+            if (cookie != null ? (cookie.gameObject == gameObject || cookie.IsBroken) : (decoy == null || !decoy.IsCatchable)) continue;
+            if (dashSweepHits[i].distance >= nearest) continue;
+            nearest = dashSweepHits[i].distance;
+            hitCookie = cookie;
+            hitDecoy = decoy;
         }
         if (nearest == float.MaxValue) return false;
 
@@ -405,6 +465,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
 
         tentacleDash.Cancel();
         tentacleDashAnimRemaining = 0f;
+        dashWindupRemaining = 0f;
         wasDashing = false;
         rb.linearVelocity = Vector3.zero;
         // 비키네마틱 Rigidbody는 transform만 바꾸면 다음 물리 스텝에 되돌아가므로 rb.position도 함께 바꾼다.
@@ -428,6 +489,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         // 돌진 중이거나 돌진 마무리 동작 중에 처형이 시작되면 돌진을 끊고 GrabKill을 우선한다(§34).
         tentacleDash.Cancel();
         tentacleDashAnimRemaining = 0f;
+        dashWindupRemaining = 0f;
         grabKillRemaining = grabKillDuration;
         ChangeState(MonsterMoveState.GrabKill);
     }

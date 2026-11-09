@@ -6,6 +6,13 @@ public class SearchBombFx : MonoBehaviour
 {
     public const int CoughCount = 3;
     public const float CoughInterval = 0.8f;
+    public const float MonsterHearAt = 30f; // 이보다 멀면 술래 화면에서 2D로도 낸다(Cough 3D 최대 35 m)
+
+    private static Vector3 AudioListenerPosition()
+    {
+        AudioListener l = FindAnyObjectByType<AudioListener>();
+        return l != null ? l.transform.position : Vector3.zero;
+    }
 
     private Transform body;
     private float next;
@@ -55,7 +62,9 @@ public class SearchBombFx : MonoBehaviour
         puff.transform.SetPositionAndRotation(head, Quaternion.LookRotation(body.forward + Vector3.up * 0.3f));
         puff.Emit(8);
         Destroy(puff.gameObject, 1.2f);
-        GameAudio.PlayAt(SoundId.Cough, head); // 콜록콜록
+        GameAudio.PlayAt(SoundId.Cough, head); // 콜록콜록(35 m까지)
+        // 술래 본인은 멀리서도 듣는다(§69 F6) — 3D 소리가 닿지 않는 거리면 화면 소리로 함께.
+        if (RoomState.IsLocalMonster() && Vector3.Distance(AudioListenerPosition(), head) > MonsterHearAt) GameAudio.Play(SoundId.Cough);
         StartCoroutineOn(body);
     }
 

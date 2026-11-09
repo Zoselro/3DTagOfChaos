@@ -17,7 +17,7 @@ public static class EscapeModelBuilder
     // 발광해야 하는 머티리얼(Blender 팔레트의 발광 값과 같다). FBX 기본 임포트가 발광을 빼먹어도 여기서 맞춘다.
     private static readonly Dictionary<string, float> Emission = new Dictionary<string, float>
     {
-        { "ME_Button_Red", 0.6f }, { "ME_Battery_Green", 0.4f }, { "ME_Rune_Red", 1f }, { "ME_Rune_Pink", 1f },
+        { "ME_Button_Red", 0.6f }, { "ME_Battery_Green", 0.4f }, { "ME_Rune_Red", 1f }, { "ME_Rune_Green", 1f },
         { "ME_Rune_Blue", 1f }, { "ME_Rune_Yellow", 1f }, { "ME_Cell_Red", 0.6f }, { "ME_Cell_Orange", 0.6f },
         { "ME_Cell_Yellow", 0.6f }, { "ME_Cell_Green", 0.6f }, { "ME_Stun_Spark", 4f }, { "ME_Rocket_Window", 1.5f },
         { "ME_Rocket_Flame", 4f }, { "ME_Altar_Glow", 4f }, { "ME_Witch_Eye", 6f },

@@ -73,6 +73,7 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
 
         if (currentCount != lastKnownPlayerCount || currentHost != lastKnownHostActor)
         {
+            if (lastKnownHostActor > 0 && currentHost > 0 && currentHost != lastKnownHostActor) AnnounceHost(currentHost);
             lastKnownPlayerCount = currentCount;
             lastKnownHostActor = currentHost;
             RefreshPlayerList();
@@ -180,6 +181,7 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
             item.SetNickname(p.NickName, RoomState.HasVoice(p));
             Player target = p;
             item.SetKick(LobbyKick.LocalCanKick(target), () => ConfirmKick(target));
+            item.SetVolume(target, p.IsLocal); // 사람별 목소리 음량(§69 A3)
         }
     }
 
@@ -222,6 +224,14 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
         RoomExitController exit = FindFirstObjectByType<RoomExitController>();
         if (exit != null) exit.OnClickBackBtn();
         else PhotonNetwork.LeaveRoom();
+    }
+
+    // 방장(호스트)이 바뀌었다 — 먼저 들어온 사람이 나가 다음 사람이 이어받음(§69 A4). 모두의 화면에 같은 문구.
+    private static void AnnounceHost(int actor)
+    {
+        Player host = PhotonNetwork.CurrentRoom != null ? PhotonNetwork.CurrentRoom.GetPlayer(actor) : null;
+        if (host == null) return;
+        ScreenToast.Show(string.Format(EscapeTextsSO.Current.hostChanged, host.NickName));
     }
 
     // 시작 버튼은 호스트에게만 보이고(사용자 요구: "시작 버튼이 보이는 사람은 항상 방장(방을 만든 사람)"), 시작 조건을

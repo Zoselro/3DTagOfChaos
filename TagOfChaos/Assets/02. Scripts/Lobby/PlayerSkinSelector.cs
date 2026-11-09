@@ -32,6 +32,7 @@ public class PlayerSkinSelector : MonoBehaviourPunCallbacks
             button.name = $"SkinButton{i}";
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => SelectSkin(index));
+            button.navigation = new Navigation { mode = Navigation.Mode.None }; // 방향키(WASD)로 선택이 옮겨 가지 않게(§69 A5)
 
             var label = button.GetComponentInChildren<TMP_Text>(true);
             if (label != null) label.text = catalog.GetLabel(i);
@@ -73,6 +74,8 @@ public class PlayerSkinSelector : MonoBehaviourPunCallbacks
 
     private void SelectSkin(int index)
     {
+        // 누른 버튼이 UI 선택으로 남으면 스페이스(= UI 확인)가 다시 누른다 — 고르자마자 선택을 푼다(§69 A5)
+        if (UnityEngine.EventSystems.EventSystem.current != null) UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
         if (IsTakenByOther(index)) return;
         PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable { { NetKeys.SkinIndex, index } });
     }

@@ -26,6 +26,7 @@ public class MonsterElevator : MonoBehaviour, IInteractable
 
     private void Awake()
     {
+        if (GetComponent<MonsterElevatorMarker>() == null) gameObject.AddComponent<MonsterElevatorMarker>(); // 괴물에게만 보이는 표지판·고리·방향 표시(§69 D4)
         if (beam != null) { beamScale = beam.localScale; SetBeam(0f); }
     }
 

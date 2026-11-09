@@ -13,18 +13,54 @@ public static class WitchPath
     public const float FallbackStrikeDistance = 155f; // Ground가 없는 맵: 예전 앵커 거리
 
     // 씬의 Ground 범위(수평, x·z). 맵 루트 "Map" 아래를 먼저, 없으면 씬 전체에서 이름이 Ground인 오브젝트.
+    // 놀이 공간 사각형. 맵이 원(EscapeManager.MapRadius)이면 그 원을 감싸는 사각형을 쓰고, 아니면 Ground 아래 메시·충돌체의 범위.
+    // 맵 가장자리 밖을 덮는 깔개(GroundUnder… — 진저브레드 360 m)는 빼야 한다: 넣으면 마녀가 맵 밖 먼 곳에 서서 마을이 부서지는 장면이
+    // 안 보이고 서 있기만 하는 것처럼 보였다(Request1009Plan.md §69 E1).
+    public const string UnderlayPrefix = "GroundUnder";
+
     public static bool TryGetGroundRect(Scene scene, out Rect rect)
     {
         rect = default;
+        if (TryGetMapRadius(scene, out float radius))
+        {
+            rect = Rect.MinMaxRect(-radius, -radius, radius, radius);
+            return true;
+        }
         Transform ground = FindGround(scene);
         if (ground == null) return false;
         bool any = false;
         Bounds b = default;
-        foreach (Renderer r in ground.GetComponentsInChildren<Renderer>(true)) Grow(ref b, ref any, r.bounds);
-        foreach (Collider c in ground.GetComponentsInChildren<Collider>(true)) Grow(ref b, ref any, c.bounds);
+        foreach (Renderer r in ground.GetComponentsInChildren<Renderer>(true)) if (!IsUnderlay(r.transform, ground)) Grow(ref b, ref any, r.bounds);
+        foreach (Collider c in ground.GetComponentsInChildren<Collider>(true)) if (!IsUnderlay(c.transform, ground)) Grow(ref b, ref any, c.bounds);
         if (!any || b.size.x < 1f || b.size.z < 1f) return false;
         rect = Rect.MinMaxRect(b.min.x, b.min.z, b.max.x, b.max.z);
         return true;
+    }
+
+    // 그 씬 EscapeManager에 원 맵 반지름(가운데 = 원점)이 있으면 true. Awake 순서와 상관없이 씬에서 직접 찾는다(Instance는 아직 비었을 수 있다).
+    public static bool TryGetMapRadius(Scene scene, out float radius)
+    {
+        radius = 0f;
+        if (!scene.IsValid()) return false;
+        foreach (GameObject root in scene.GetRootGameObjects())
+        {
+            EscapeManager m = root.GetComponentInChildren<EscapeManager>(true);
+            if (m != null && m.MapRadius > 0f) { radius = m.MapRadius; return true; }
+        }
+        return false;
+    }
+
+    // 원 맵: 발끝이 원 경계(반지름)에 닿고 몸은 그 바깥 footReach.
+    public static Vector3 StrikePointCircle(Vector3 center, float radius, Vector3 outward, float footReach, out Vector3 contact)
+    {
+        contact = center + outward * radius;
+        return contact + outward * footReach;
+    }
+
+    private static bool IsUnderlay(Transform t, Transform ground)
+    {
+        for (; t != null && t != ground; t = t.parent) if (t.name.StartsWith(UnderlayPrefix)) return true;
+        return false;
     }
 
     public static Transform FindGround(Scene scene)

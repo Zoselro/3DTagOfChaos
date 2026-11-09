@@ -53,7 +53,7 @@ public static class EscapeAssetsBuilder
             Mat("Rune_Red", "Rune", new Color(1f, 0.15f, 0.2f)),
             Mat("Rune_Blue", "Rune", new Color(0.2f, 0.45f, 1f)),
             Mat("Rune_Yellow", "Rune", new Color(1f, 0.9f, 0.15f)),
-            Mat("Rune_Pink", "Rune", new Color(1f, 0.35f, 0.8f)),
+            Mat("Rune_Green", "Rune", new Color(0.25f, 0.9f, 0.35f)), // 예전 분홍 룬(§69 D5)
         };
         ItemSO[] cells =
         {

@@ -22,7 +22,8 @@ public static class ColaCannonRules
     public const float BarrelBack = 1.5f;       // 핀 → 뒤 끝(해치)
     public const float MaxRange = 400f;         // 맵 끝을 찾는 한도(맵 지름보다 크게)
     public const float EdgeStep = 2f;           // 맵 끝을 찾을 때 나아가는 간격
-    public const float EdgeMargin = 4f;         // 맵 경계에서 이만큼 안쪽이 "끝"(TryRandomMapPoint의 MapInset과 같게)
+    public const float EdgeMargin = 4f;
+    public const float CeilingClearance = 2f;  // 천장에서 이만큼 아래가 비행 꼭대기 한계         // 맵 경계에서 이만큼 안쪽이 "끝"(TryRandomMapPoint의 MapInset과 같게)
     public const float MinRange = 6f;
     public const float RangeStep = 3f;
     public const float BoardReach = 2.4f;
@@ -96,11 +97,14 @@ public static class ColaCannonRules
     public static Vector3 Inside(Vector3 pos, float worldYaw, float pitch) => Pivot(pos) - BarrelDirection(worldYaw, pitch) * 0.6f + Vector3.down * 0.9f;
 
     // 발사 뒤 t초의 위치: 입구 → Dest 포물선(꼭대기 = 둘 중 높은 쪽 + ApexHeight).
-    public static Vector3 FlightPoint(Vector3 mouth, Vector3 dest, float t, float flightSeconds)
+    // ceiling > 0이면(지하 등 위가 막힘) 꼭대기를 천장 CeilingClearance 아래로 낮춘다(§69 E3).
+    public static Vector3 FlightPoint(Vector3 mouth, Vector3 dest, float t, float flightSeconds, float ceiling = 0f)
     {
         float k = Mathf.Clamp01(t / Mathf.Max(0.01f, flightSeconds));
         float dist = Vector2.Distance(new Vector2(mouth.x, mouth.z), new Vector2(dest.x, dest.z));
-        float apex = Mathf.Max(mouth.y, dest.y) + ApexHeight(dist);
+        float low = Mathf.Max(mouth.y, dest.y);
+        float apex = low + ApexHeight(dist);
+        if (ceiling > 0f) apex = Mathf.Max(low + 1f, Mathf.Min(apex, ceiling - CeilingClearance));
         Vector3 flat = Vector3.Lerp(mouth, dest, k);
         // 세 점(입구, 꼭대기, 도착)을 지나는 2차 곡선: y(k) = (1-k)²·a + 2k(1-k)·c + k²·b, c는 k=0.5에서 apex가 되게
         float c = 2f * apex - 0.5f * (mouth.y + dest.y);

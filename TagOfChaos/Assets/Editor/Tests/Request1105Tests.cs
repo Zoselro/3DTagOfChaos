@@ -38,8 +38,9 @@ public class Request1105Tests
     {
         Assert.AreEqual(KeyCode.Tab, KeyBindings.Default(KeyAction.PlayerList));
         Assert.AreEqual(KeyCode.LeftAlt, KeyBindings.Default(KeyAction.ShowCursor));
-        Assert.AreEqual(KeyAction.ShowCursor, KeyBindings.All[KeyBindings.All.Length - 2]); // 뒤에 수색 폭탄(§68 GP5)이 붙었다
-        Assert.AreEqual(KeyAction.MonsterSearch, KeyBindings.All[KeyBindings.All.Length - 1]);
+        Assert.AreEqual(KeyAction.ShowCursor, KeyBindings.All[KeyBindings.All.Length - 3]); // 뒤에 수색 폭탄(§68 GP5)·술래 잡기(§69 F3)가 붙었다
+        Assert.AreEqual(KeyAction.MonsterSearch, KeyBindings.All[KeyBindings.All.Length - 2]);
+        Assert.AreEqual(KeyAction.MonsterGrab, KeyBindings.All[KeyBindings.All.Length - 1]);
         Assert.AreEqual(KeyGroup.All, KeyBindings.GroupOf(KeyAction.PlayerList));
         Assert.AreEqual(KeyGroup.All, KeyBindings.GroupOf(KeyAction.ShowCursor));
         Assert.IsFalse(KeyBindings.HasConflict(KeyAction.PlayerList, KeyBindings.Default), "Tab is free");

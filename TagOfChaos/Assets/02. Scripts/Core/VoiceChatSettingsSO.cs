@@ -11,10 +11,13 @@ public class VoiceChatSettingsSO : ScriptableObject
     [SerializeField] private List<string> enabledScenes = new List<string> { SceneNames.GameLobby };
     [Tooltip("말하는 사람 머리 위치(캐릭터 바닥 기준 높이)")]
     [SerializeField] private float mouthHeight = 1.5f;
+    [Tooltip("상대 목소리 이득(1 = 그대로). AudioSource 최대 음량 위로 키운다(§69 A2 — 사용자: 3배).")]
+    [SerializeField, Min(0f)] private float remoteGain = 3f;
 
     public float FullVolumeDistance => fullVolumeDistance;
     public float SilentDistance => Mathf.Max(silentDistance, fullVolumeDistance + 0.1f);
     public float MouthHeight => mouthHeight;
+    public float RemoteGain => remoteGain;
     public bool IsEnabledIn(string sceneName) => enabledScenes.Contains(sceneName);
 
     private static VoiceChatSettingsSO current;

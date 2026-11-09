@@ -11,6 +11,7 @@ using UnityEngine;
 public sealed class EscapeAuthority
 {
     public const int InventorySlots = 4;
+    public const float ChestShowHeight = 1.1f; // 연 상자 위로 아이템이 떠 있는 높이(§69 B2)
     private const float PickUpReach = 3.5f;       // 바닥 아이템을 줍는 최대 거리(m, 요청 검증)
     private const float InteractReach = 6f;       // 상자·로켓·무지개 상자 요청 검증 거리(m, 여유 포함)
     private const float RepairReach = 5.5f;       // 건물 수리 자리까지(건물 반 크기 7 m 안쪽)
@@ -19,13 +20,13 @@ public sealed class EscapeAuthority
     private const float RepairFinishTolerance = 0.1f; // 누르는 사람 화면과 방장 계산의 차이(요청 왕복 지연)
     private const float HoldTolerance = 0.5f;          // 해체 20초 검사 여유
     public const int DecoysPerPlayer = 10;             // 쿠키·스파이 1인당 맵에 깔리는 AI(§25.5 L)
-    public const int BombMaxCharges = 1;               // 소음폭탄은 한 번에 하나(§26 R4) — 치우거나 터진 뒤 BombCooldown
+    public const int BombMaxCharges = 3;               // 사이렌 함정은 세 개까지(§69 F5 — 예전 하나) — 하나씩 치우거나 풀린 뒤 BombCooldown
     public const float BombCooldown = 20f;
     public const float BombBuildingRadius = 12f;       // 폭탄이 이 거리 안 건물에 붙는다(수리 시작 때 터짐)
     public const float BombBlastRadius = 4f;
-    public const float SearchCooldown = 25f;           // 술래 수색 폭탄(§68 GP5)
+    public const float SearchCooldown = 3f;            // 술래 수색 폭탄(§68 GP5, §69 F6 — 예전 25초)
     public const float SearchThrowRange = 10f;
-    public const float HatRiseSeconds = 20f;           // 모자: 40 m까지 떠오르는 시간(§25.3.1 R6)
+    public const float HatRiseSeconds = HatFlight.CruiseHeight / HatFlight.RiseSpeed; // 모자: 40 m까지 떠오르는 시간(§25.3.1 R6, §69 B7 — 속도와 같은 값에서)
     private const float DecoyPlaceAttempts = 40;
     public const float DecoyCatchSeconds = 2.63f;      // 괴물 잡는 동작(GrabKill 클립 길이) 뒤 AI를 지운다(§26 R10)
     private const float MaterialCheckSeconds = 2f;      // D 안전장치 검사 간격(§26 R1)
@@ -513,7 +514,13 @@ public sealed class EscapeAuthority
         c.Opened = true;
         State.Chests[chest] = c;
         int item = State.ItemInChest(chest);
-        if (item >= 0) Give(actor, item, manager.ChestFront(c.Anchor));
+        if (item < 0) return true;
+        if (c.Spy) { Give(actor, item, manager.ChestFront(c.Anchor)); return true; } // 스파이 상자 재료는 스파이 손에(쿠키가 주워 가지 못하게)
+        // 일반 상자: 열린 상자 위에 떠서 무엇인지 보이고, 원하면 E로 줍고 아니면 그대로 둔다 — 누구나 주울 수 있다(§69 B2, 사용자 확정)
+        EscapeState.Item shown = State.Items[item];
+        shown.Loc = ItemLocation.Ground;
+        shown.Pos = manager.ChestPosition(c.Anchor) + Vector3.up * ChestShowHeight;
+        State.Items[item] = shown;
         return true;
     }
 
@@ -879,6 +886,7 @@ public sealed class EscapeAuthority
     {
         if (!RoomState.IsMonster(actor) || !IsNear(actor, pos, 4f)) return false;
         if (State.BombChargesLeft(actor, BombMaxCharges, PhotonNetwork.Time, BombCooldown) <= 0) return false;
+        if (!manager.IsNearMaterialBuilding(pos, BombBuildingRadius)) return false; // 재료 건물 둘레에서만(§69 F5 — 밖에 놓으면 끼워도 안 걸렸다)
         State.Bombs.Add(new EscapeState.Bomb { Id = State.NextId++, Owner = actor, Pos = manager.SnapToGround(pos), Building = -1 });
         return true;
     }
@@ -1025,11 +1033,12 @@ public sealed class EscapeAuthority
         if (c.Owner != actor || c.Boarded || !IsActiveEscaper(actor)) return false;
         if (ColaCannonRules.StageAt(c.SummonedAt, 0, 0f, now) != ColaCannonRules.Stage.Waiting) return false;
         if (!IsNear(actor, ColaCannonRules.StepsPoint(c.Pos, c.Yaw), ColaCannonRules.BoardReach + 1f)) return false;
-        if (!TryCannonLanding(c.Pos, aimYaw, out Vector3 dest, out float flight)) return false;
+        if (!TryCannonLanding(c.Pos, aimYaw, out Vector3 dest, out float flight, out float ceiling)) return false;
         c.BoardAt = now;
         c.AimYaw = aimYaw;
         c.Dest = dest;
         c.Flight = flight;
+        c.Ceiling = ceiling;
         State.Cannons[i] = c;
         moveExemptUntil[actor] = Time.realtimeSinceStartup + ColaCannonRules.LandAt(flight) + 3f; // 들어감·비행은 이동 검사에서 뺀다
         Debug.Log($"[EscapeAuthority] Actor {actor} fired cola cannon {id} toward {aimYaw}° -> {dest} ({flight:F1}s).");
@@ -1038,10 +1047,13 @@ public sealed class EscapeAuthority
 
     // 입구에서 보는 방향으로 맵 끝(경계에서 EdgeMargin 안쪽)을 찾고, 그 끝에서부터 RangeStep씩 안쪽으로:
     // 바닥이 있고, 맵 안·술래방 밖·빈 곳이고, 걸어서 이어진 첫 곳.
-    private bool TryCannonLanding(Vector3 pos, float aimYaw, out Vector3 dest, out float flight)
+    // 위가 막힌 곳(진저브레드 지하 동굴)에서는 입구 위 천장을 재어 그 아래에서만 바닥을 찾는다 — 예전에는 40 m 위(= 지상층)에서 찾아
+    // 지상 바닥이 잡혀 모두 걸러지고 탑승이 거절됐다(§69 E3).
+    private bool TryCannonLanding(Vector3 pos, float aimYaw, out Vector3 dest, out float flight, out float ceiling)
     {
         Vector3 mouth = ColaCannonRules.Mouth(pos, aimYaw, ColaCannonRules.FirePitch);
         Vector3 dir = ColaCannonRules.Rotation(aimYaw) * Vector3.forward;
+        ceiling = manager.CeilingAbove(mouth, 80f);
         float edge = ColaCannonRules.MinRange;
         for (float d = ColaCannonRules.MinRange; d <= ColaCannonRules.MaxRange; d += ColaCannonRules.EdgeStep)
         {
@@ -1051,9 +1063,8 @@ public sealed class EscapeAuthority
         for (float d = edge; d >= ColaCannonRules.MinRange; d -= ColaCannonRules.RangeStep)
         {
             Vector3 probe = mouth + dir * d;
-            probe.y = mouth.y + 40f;
-            Vector3 ground = manager.SnapToGround(probe);
-            if (ground.y >= probe.y - 0.01f || ground.y > mouth.y + 20f) continue; // 바닥 없음·너무 높은 곳
+            probe.y = ceiling > 0f ? Mathf.Min(mouth.y + 40f, ceiling - 0.6f) : mouth.y + 40f;
+            if (!manager.TryGroundBelow(probe, 100f, out Vector3 ground) || ground.y > mouth.y + 20f) continue; // 바닥 없음·너무 높은 곳
             if (!manager.IsValidTeleport(ground) || !manager.IsWalkableFromSpawn(ground)) continue;
             dest = ground;
             flight = ColaCannonRules.FlightSeconds(Flat(ground - mouth));
@@ -1163,7 +1174,8 @@ public sealed class EscapeAuthority
                 targets = new int[0];
                 break;
             case ToolKind.Recorder:
-                if (!AttachRecorder(r.Sender)) return false; // 내 AI가 없으면 쓸 수 없다(§25.3.2 S2)
+                // 좌클릭으로 고른 내 AI(Targets[0] = AI 번호, §69 B3 — 사용자: 내 AI만)
+                if (!AttachRecorder(r.Sender, r.Targets != null && r.Targets.Length > 0 ? r.Targets[0] : -1)) return false;
                 targets = new int[0];
                 break;
             default:
@@ -1187,15 +1199,17 @@ public sealed class EscapeAuthority
     }
 
     // 녹음기: 그 사람의 AI 중 무작위 하나가 목소리를 내며 걷기 시작한다.
-    private bool AttachRecorder(int actor)
+    public const float RecorderReach = 25f; // 녹음기를 붙일 AI까지 거리(쓴 사람 화면 조준 20 m + 동기화 여유)
+
+    private bool AttachRecorder(int actor, int decoyId)
     {
         Player owner = FindPlayer(actor);
         if (owner == null || !RoomState.TryGetPlayerBool(owner, NetKeys.HasVoice, out bool hasVoice) || !hasVoice) return false; // 녹음하지 않은 사람은 쓸 수 없다(§26 Q11)
-        var mine = new List<int>();
-        for (int i = 0; i < State.Decoys.Count; i++)
-            if (State.Decoys[i].Owner == actor && State.Decoys[i].VoiceAt <= 0 && !State.Decoys[i].Caught) mine.Add(i);
-        if (mine.Count == 0) return false;
-        int pick = mine[rng.Next(mine.Count)];
+        int pick = State.DecoyIndex(decoyId);
+        if (pick < 0) return false;
+        EscapeState.Decoy target = State.Decoys[pick];
+        if (target.Owner != actor || target.VoiceAt > 0 || target.Caught) return false; // 내 AI이고, 아직 녹음기가 없고, 안 잡힘
+        if (lastPositions.TryGetValue(actor, out Vector3 at) && Flat(manager.Routes.PoseOf(target, PhotonNetwork.Time).Position - at) > RecorderReach) return false;
         EscapeState.Decoy d = State.Decoys[pick];
         d.VoiceAt = PhotonNetwork.Time;
         d.Seed = rng.Next();
@@ -1228,6 +1242,7 @@ public sealed class EscapeAuthority
             if (kept.Contains(viewId)) continue;
             PhotonView view = PhotonView.Find(viewId);
             if (view == null) continue;
+            if (view.TryGetComponent(out HideOrSeekPlayer dodger) && dodger.IsDodgeInvulnerable) continue; // 구르는 중(§69 C3)
             Vector3 at = view.transform.position;
             float distance = area ? Vector3.Distance(at, point) : Vector3.Distance(at, from);
             float limit = (area ? tool.HitRadius : tool.Range) + ToolReachSlack;

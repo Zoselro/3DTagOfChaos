@@ -70,8 +70,8 @@ public class GameSettingsSO : ScriptableObject
 
     [Header("Monster Tentacle Dash (GameRule.md §4.3)")]
     [SerializeField, Min(0f)] private float tentacleDashDistance = 20f;
-    [SerializeField, Min(0.01f)] private float tentacleDashDuration = 0.25f;
-    [SerializeField, Min(0f)] private float tentacleDashCooldown = 15f;
+    [SerializeField, Min(0.01f)] private float tentacleDashDuration = 0.294f; // 20 m를 0.294초 — 예전 0.25초보다 15 % 느리게(§69 F2)
+    [SerializeField, Min(0f)] private float tentacleDashCooldown = 5f; // §69 F2 (예전 15초)
     [Tooltip("돌진이 따라 올라가거나 내려가는 최대 경사(도). 더 가파른 면은 벽처럼 막혀 돌진 이동이 끝난다(Bug-fix-plan.md §41 ㊳).")]
     [SerializeField, Range(0f, 89f)] private float tentacleDashMaxSlope = 45f;
     [Tooltip("돌진 중 지면 붙이기 여유(m). 한 스텝 동안 최대 경사(TentacleDashMaxSlope)로 떨어질 수 있는 높이에 이 값을 더한 거리 안에 지면이 있으면 붙이고(언덕 꼭대기·내리막), 더 먼 낭떠러지는 그대로 떨어진다.")]
@@ -79,7 +79,7 @@ public class GameSettingsSO : ScriptableObject
 
     [Header("Monster Grab (GameFixPlan.md F1)")]
     [Tooltip("괴물 몸 앞면에서 조준한 쿠키를 잡을 수 있는 거리(m). 몸 앞면은 중심에서 약 1.87m(MonsterPlayer 프리팹 측정).")]
-    [SerializeField, Min(0.5f)] private float grabReachFromFront = 2f;
+    [SerializeField, Min(0.5f)] private float grabReachFromFront = 3f; // §69 F3 (예전 2 m)
     [Tooltip("조준 판정 구의 반지름(m). 조준이 조금 빗나가도 잡히게 한다.")]
     [SerializeField, Min(0.05f)] private float grabAimRadius = 0.4f;
     [Tooltip("괴물 발에서 잡을 수 있는 쿠키 발까지의 최대 높이(m). 구조물 위에 올라간 쿠키도 이 높이까지는 잡는다(Request1009Plan.md §11).")]

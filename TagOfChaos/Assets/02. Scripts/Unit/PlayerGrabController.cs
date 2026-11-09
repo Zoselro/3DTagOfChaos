@@ -21,6 +21,11 @@ public class PlayerGrabController : MonoBehaviour
     private readonly Collider[] overlapBuffer = new Collider[16]; // OverlapSphere 할당 제거
 
     public bool IsCarrying => carriedPlayer != null;
+    public HideOrSeekPlayer CarriedPlayer => carriedPlayer;
+
+    // 들린 쪽이 좌우 연타로 빠져나간 뒤 바로 다시 들지 못하게(§69 C2).
+    private const float RegrabBlockSeconds = 1.5f;
+    private float grabBlockedUntil = -1f;
     public float GrabRange => grabRange;
 
     // 들고 있던 쿠키가 방을 나가 파괴되면 Unity의 == null 비교는 true가 되지만 참조는 남아 있다. 정리가 필요한지는
@@ -43,6 +48,7 @@ public class PlayerGrabController : MonoBehaviour
 
         if (carriedPlayer == null)
         {
+            if (Time.time < grabBlockedUntil) return;
             if (PlayerInventory.Local != null && PlayerInventory.Local.HeldItem != null) return; // 물건을 든 손으로는 쿠키를 들 수 없다
             TryGrab();
         }
@@ -99,6 +105,12 @@ public class PlayerGrabController : MonoBehaviour
 
         carriedPlayer = null;
         if (self != null) self.SetCarry(CarryReason.Cookie, false);
+    }
+
+    public void ReleaseAfterBreakFree()
+    {
+        Release();
+        grabBlockedUntil = Time.time + RegrabBlockSeconds;
     }
 
     private IEnumerator RestoreCollisionLater(GameObject released)

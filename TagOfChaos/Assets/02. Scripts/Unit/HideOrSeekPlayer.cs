@@ -29,10 +29,15 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     private float speedBoostUntil = -1f;
     public float SpeedBoost => Time.time < speedBoostUntil ? speedBoost : 1f;
 
+    private float speedBoostSeconds = 1f;
+    public bool IsSpeedBoosted => Time.time < speedBoostUntil;
+    public float SpeedBoostRemaining01 => IsSpeedBoosted ? Mathf.Clamp01((speedBoostUntil - Time.time) / speedBoostSeconds) : 0f; // 스케이트 게이지(§69 B4)
+
     public void ApplySpeedBoost(float multiplier, float seconds)
     {
         speedBoost = Mathf.Max(1f, multiplier);
         speedBoostUntil = Time.time + seconds;
+        speedBoostSeconds = Mathf.Max(0.01f, seconds);
     }
 
     // 호박마차(§25.5 I): 본인 화면에서 순간이동. 물리 위치로 옮겨야 Rigidbody가 되돌리지 않는다.
@@ -91,6 +96,22 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     public const string RpcRequestGrabKill = nameof(RequestGrabKill);
     public const string RpcOnGrabRejected = nameof(OnGrabRejected);
     public const string RpcGrabKillRejected = nameof(GrabKillRejected);
+    public const string RpcRequestBreakFree = nameof(RequestBreakFree);
+
+    // 회피 무적(§69 C3): 구르는 동안과 끝난 직후 잠깐은 괴물 잡기·도구 명중이 통하지 않는다. 남의 화면은 동기화된 Dodge 상태로 본다.
+    private const float DodgeGrace = 0.25f;
+    private float dodgeSeenUntil = -1f;
+    public bool IsDodgeInvulnerable => isDodge || Time.time < dodgeSeenUntil;
+
+    // 들린 채 좌우 연타로 빠져나가기(§69 C2): StruggleWindow 안에 좌·우를 번갈아 StrugglePresses번 누르면 드는 쪽에 내려 달라고 한다.
+    public const int StrugglePresses = 10;
+    public const float StruggleWindow = 2.5f;
+    private const float BreakFreeRetry = 1f;
+    private readonly System.Collections.Generic.Queue<float> strugglePressTimes = new System.Collections.Generic.Queue<float>();
+    private int struggleLastSide;
+    private float breakFreeSentAt = -10f;
+    public float StruggleProgress01 => Mathf.Clamp01(strugglePressTimes.Count / (float)StrugglePresses);
+    public bool IsCarriedByCookie => pv != null && pv.IsMine && carryFollower != null && carryFollower.IsCarried && !IsBroken && awaitingDeathUntil <= 0f;
 
     // 이 쿠키가 다른 쿠키를 들고 있는지(본인은 자기 상태, 원격은 동기화 값) — 들기 대상 고르기·거절에 쓴다.
     public bool IsCarryingSomeone => pv != null && pv.IsMine ? grabController != null && grabController.IsCarrying : networkSync != null && networkSync.RemoteIsCarrying;
@@ -118,7 +139,8 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         && (!RoomState.IsBroken(pv.Owner) || (lifePresenter != null && lifePresenter.IsBeingGrabKilled));
     public bool CanInteract => !IsMovementLocked; // 파괴·들림 중에는 상호작용 불가(채팅 중에는 InteractPressed가 억제된다)
     public float CameraTargetHeight => Camera_Ctrl.CookieTargetHeight;
-    public float CameraDistance => -1f; // Camera_Ctrl 인스펙터 기본 거리
+    public const float CookieCameraDistance = 4.5f; // 쿠키 3인칭 카메라 거리(§69 C1 — 3.2 → 4.5 m)
+    public float CameraDistance => CookieCameraDistance;
 
     // 파괴됐는지 — 방장이 처형·마녀를 확정해 쓴 HitCount로만 정한다(AuditFixPlan.md §8.1). 예전에는 본인이 자기 값을 써서
     // 조작된 클라이언트는 잡혀도 죽지 않을 수 있었다.
@@ -281,6 +303,38 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         if (monsterView != null && monsterView.IsMine && monsterView.TryGetComponent(out MonsterController monster)) monster.CancelGrabKill();
     }
 
+    // 들린 본인: 좌·우를 번갈아 누른 시각을 모은다(같은 쪽을 거듭 누르면 세지 않는다). 다 모이면 드는 쪽 주인에게 내려 달라고 한다.
+    private void TickStruggle()
+    {
+        if (!IsCarriedByCookie)
+        {
+            strugglePressTimes.Clear();
+            struggleLastSide = 0;
+            return;
+        }
+        while (strugglePressTimes.Count > 0 && Time.time - strugglePressTimes.Peek() > StruggleWindow) strugglePressTimes.Dequeue();
+        int side = PlayerInput.MoveLeftPressed ? -1 : PlayerInput.MoveRightPressed ? 1 : 0;
+        if (side == 0 || side == struggleLastSide) return;
+        struggleLastSide = side;
+        strugglePressTimes.Enqueue(Time.time);
+        if (strugglePressTimes.Count < StrugglePresses || Time.time - breakFreeSentAt < BreakFreeRetry) return;
+        PhotonView carrierView = PhotonView.Find(carryFollower.CarrierViewId);
+        if (carrierView == null || carrierView.Owner == null) return;
+        breakFreeSentAt = Time.time;
+        strugglePressTimes.Clear();
+        carrierView.RPC(RpcRequestBreakFree, carrierView.Owner, pv.ViewID);
+    }
+
+    // 드는 쪽 주인: 들고 있는 쿠키의 주인이 빠져나갔다고 알렸다 — 그 쿠키를 들고 있을 때만 내려놓는다(남이 보낸 요청은 무시).
+    [PunRPC]
+    private void RequestBreakFree(int carriedViewId, PhotonMessageInfo info)
+    {
+        if (pv == null || !pv.IsMine || grabController == null) return;
+        HideOrSeekPlayer carried = grabController.CarriedPlayer;
+        if (carried == null || carried.View == null || carried.View.ViewID != carriedViewId || carried.View.Owner != info.Sender) return;
+        grabController.ReleaseAfterBreakFree();
+    }
+
     // 처형 확정이 오지 않았다(방장이 거절했거나 방장이 바뀌는 사이 사라짐): 다시 움직일 수 있게 되돌린다.
     private void CancelAwaitedDeath(bool rejected = false)
     {
@@ -305,6 +359,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         animator = GetComponent<Animator>();
         animationDriver = new PlayerAnimationDriver(animator, jumpFreezeNormalizedTime);
         gameObject.AddComponent<CookieAudio>().Init(this, animationDriver); // 캐릭터 소리(SoundPlan.md S4)
+        gameObject.AddComponent<SkateFeetView>().Init(this); // 스케이트를 쓰는 동안 발에(§69 B1, 모든 화면)
         groundDetector = new CharacterGroundDetector(groundLayer, groundCheckOffset);
         rb = GetComponent<Rigidbody>();
         grabController = GetComponent<PlayerGrabController>();
@@ -321,7 +376,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
         Camera_Ctrl camCtrl = Camera.main != null ? Camera.main.GetComponent<Camera_Ctrl>() : null;
         if (camCtrl != null)
-            camCtrl.InitCamera(gameObject);
+            camCtrl.InitCamera(gameObject, CameraTargetHeight, CameraDistance);
     }
 
     private void Start()
@@ -375,7 +430,6 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         gameObject.AddComponent<EscapeCharacterState>().Init(escape, this);
         hatFlight = gameObject.AddComponent<HatFlight>();
         hatFlight.Init(escape, this, rb);
-        gameObject.AddComponent<SkateVisual>().Init(this);
         if (pv.IsMine) gameObject.AddComponent<PlayerInventory>().Init(this, escape);
     }
 
@@ -411,6 +465,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
             runningNow = false;
             TickStamina(false, false);
             OnLocalMovementLocked();
+            TickStruggle();
             return;
         }
 
@@ -428,6 +483,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     // 위치를 맡으므로 보간하지 않는다(R4.7-6).
     private void UpdateRemote()
     {
+        if (networkSync.RemoteState == PlayerMoveState.Dodge) dodgeSeenUntil = Time.time + DodgeGrace;
         // 들린 몸은 CarriedBodyPresenter가 이 화면의 그랩버 손 위에 놓으므로 보간하지 않는다(이중 지연 제거, Request1009Plan.md §16.3).
         if ((lifePresenter == null || !lifePresenter.IsBeingGrabKilled) && CurrentCarrierViewId < 0)
             networkSync.Interpolate(transform, Time.deltaTime);
@@ -603,6 +659,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
     private void DodgeOut()
     {
+        if (isDodge) dodgeSeenUntil = Time.time + DodgeGrace;
         isDodge = false;
         keepMovingAfterDodge = false;
         rotation = rotation_value;

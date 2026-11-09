@@ -34,6 +34,12 @@ public class DecoyBrain : MonoBehaviour
         public System.Random Rng;
         public StaminaModel Stamina; // 진짜 쿠키와 같은 규칙(§46.4) — 방장만 계산한다
         public double StaminaAt;     // Stamina를 이 시각까지 진행했다
+        // 길이 경로 한 개에 담을 수 있는 점(DecoyRoute.MaxPoints)보다 길어 중간에서 잘렸다 — 그 끝에서 쉬지 않고 같은 목표로 이어 간다(§69 E2).
+        // 진저브레드 시계탑 나선 내리막처럼 꺾임이 많은 길에서 잘린 자리에 멈춰 쉬던 문제.
+        public bool Continue;
+        public Vector3 ContinueTo;
+        public DecoyGait ContinueGait;
+        public float ContinueRest, ContinueYaw;
     }
 
     public const float AdoptedStamina = 50f; // 방장이 바뀌면 남은 값을 모르므로 50에서 시작(순간 회복 꼼수 방지, §46.4 ST7)
@@ -225,6 +231,11 @@ public class DecoyBrain : MonoBehaviour
                 }
             }
             if (now < a.DecideAt) continue;
+            if (a.Continue)
+            {
+                a.Continue = false;
+                if (TryRoute(a, pos, a.ContinueTo, a.ContinueGait, now, a.ContinueRest, a.ContinueYaw)) continue;
+            }
             if (a.Act == DecoyRules.Activity.Flee) a.Act = DecoyRules.Activity.Wander; // 준비 시간·술래 없음
             Next(a, pos, now, prepare);
         }
@@ -389,6 +400,9 @@ public class DecoyBrain : MonoBehaviour
         Vector3[] corners = path.corners;
         if (corners.Length < 2) return false;
         int n = Mathf.Min(corners.Length, DecoyRoute.MaxPoints);
+        bool truncated = corners.Length > DecoyRoute.MaxPoints;
+        a.Continue = truncated;
+        if (truncated) { a.ContinueTo = to; a.ContinueGait = gait; a.ContinueRest = rest; a.ContinueYaw = faceYaw; rest = 0f; }
         var points = new Vector3[n];
         points[0] = from; // 지금 자리에서 이어서(순간이동 없음)
         for (int i = 1; i < n; i++) points[i] = DecoyRoute.Quantize(corners[i]);

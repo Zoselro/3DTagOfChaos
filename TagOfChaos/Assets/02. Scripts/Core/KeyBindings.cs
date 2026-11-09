@@ -29,6 +29,7 @@ public enum KeyAction
     PlayerList, // 누르고 있는 동안 참가자 목록(§59 PL1)
     ShowCursor, // 누르고 있는 동안 커서 보이기·시점 멈춤(§59 CL — 대기실 버튼 누르기)
     MonsterSearch, // 술래 수색 폭탄(§68 GP5)
+    MonsterGrab,   // 술래 잡기(§69 F3 — 예전에는 E)
 }
 
 // 같은 때 쓰이는 조작끼리의 묶음 — 겹침(빨간 경고)은 같은 묶음 안에서만 본다(쿠키 달리기와 괴물 돌진은 같은 Shift여도 된다).
@@ -91,7 +92,9 @@ public static class KeyBindings
             case KeyAction.MoveLeft:
             case KeyAction.MoveRight:
             case KeyAction.Interact:
+            case KeyAction.Jump: // 술래도 점프한다(§69 F1)
                 return KeyGroup.Cookie | KeyGroup.Monster;
+            case KeyAction.MonsterGrab:
             case KeyAction.MonsterDash:
             case KeyAction.MonsterSkill:
             case KeyAction.MonsterSearch:
@@ -152,6 +155,7 @@ public static class KeyBindings
             case KeyAction.PlayerList: return b.PlayerListKey;
             case KeyAction.ShowCursor: return b.ShowCursorKey;
             case KeyAction.MonsterSearch: return KeyCode.R;
+            case KeyAction.MonsterGrab: return KeyCode.Mouse0;
             default: return KeyCode.None;
         }
     }

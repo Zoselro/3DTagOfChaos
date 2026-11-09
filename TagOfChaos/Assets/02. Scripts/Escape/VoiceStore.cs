@@ -35,6 +35,29 @@ public static class VoiceStore
 
     public static void ClearRemote() => clips.Clear();
 
+    // 방을 나가면(강퇴 포함) 내 녹음을 지운다(Request1009Plan.md §69 A1) — 새 방에서는 다시 녹음해야 한다.
+    // PUN은 나간 뒤에도 내 플레이어 속성을 들고 있다가 다음 방에 그대로 보내므로 HasVoice도 지운다(목록의 녹음 표시가 남던 원인).
+    public static void ClearLocal()
+    {
+        localSamples = null;
+        clips.Clear();
+        if (PhotonNetwork.LocalPlayer != null) PhotonNetwork.LocalPlayer.CustomProperties.Remove(NetKeys.HasVoice);
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void WatchRoomExit() => PhotonNetwork.AddCallbackTarget(new RoomExitWatcher());
+
+    private sealed class RoomExitWatcher : IMatchmakingCallbacks
+    {
+        public void OnLeftRoom() => ClearLocal();
+        public void OnFriendListUpdate(List<FriendInfo> friendList) { }
+        public void OnCreatedRoom() { }
+        public void OnCreateRoomFailed(short returnCode, string message) { }
+        public void OnJoinedRoom() { }
+        public void OnJoinRoomFailed(short returnCode, string message) { }
+        public void OnJoinRandomFailed(short returnCode, string message) { }
+    }
+
     // 그 사람의 목소리(녹음이 없으면 null — 기본 합성 목소리는 없앴다, §26 H7).
     public static AudioClip ClipFor(int actor)
     {

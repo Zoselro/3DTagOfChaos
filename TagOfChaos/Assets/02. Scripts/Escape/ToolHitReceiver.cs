@@ -123,7 +123,7 @@ public static class ToolHitReceiver
                 if (balloon) stun.Trap(hitAt, seconds); // 5 m 공중의 물방울에 갇힘(§45.7)
                 else stun.Stun(seconds, stars: !glove || knock); // 모든 화면에 별 이펙트(글러브 멈칫은 별 없이), 본인은 움직임도 막힌다
             }
-            if (item.Tool.Kind == ToolKind.Flashbang && view.IsMine) FlashbangFx.Blind(seconds); // 맞은 사람 본인 화면이 하얗게
+            if (item.Tool.Kind == ToolKind.Flashbang && view.IsMine) FlashbangFx.Blind(FlashbangFx.BlindSeconds); // 맞은 사람 본인 화면이 5초 하얗게(기절은 seconds 그대로, §69 B6)
 
             if (!view.IsMine || isMonster) continue;
             if (glove && !knock) continue; // 멈칫만으로는 손에 든 것을 떨어뜨리지 않는다

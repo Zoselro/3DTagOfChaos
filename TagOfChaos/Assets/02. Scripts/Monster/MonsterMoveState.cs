@@ -6,4 +6,5 @@ public enum MonsterMoveState
     Walk,
     TentacleDash,
     GrabKill,
+    TentacleDashWindup, // 돌진 준비 자세(§69 F2) — MonsterWindupClipBuilder가 상태·트리거를 넣는다
 }

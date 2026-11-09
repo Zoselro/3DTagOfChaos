@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 575d048a53780e746ade97300dfe473a, type: 3}
-  m_Name: Item_Rune_Pink
+  m_Name: Item_Rune_Green
   m_EditorClassIdentifier: 
-  itemId: Rune_Pink
-  displayName: "\uBD84\uD64D \uB8EC"
-  icon: {fileID: 21300000, guid: 8bba9ab31695c7f469600aa58cd31ba8, type: 3}
-  modelPrefab: {fileID: 919132149155446097, guid: 17a860742c5464d42a455203e87b10bb, type: 3}
-  tint: {r: 1, g: 0.35, b: 0.8, a: 1}
+  itemId: Rune_Green
+  displayName: "\uCD08\uB85D \uB8EC"
+  icon: {fileID: 21300000, guid: 26e235d630830fd4c9a93f6298e8ab11, type: 3}
+  modelPrefab: {fileID: 919132149155446097, guid: 6ff99c1fb9fa61447b10bff629aa5b1a, type: 3}
+  tint: {r: 0.25, g: 0.9, b: 0.35, a: 1}
   holdType: 1
   category: 0
   tool: {fileID: 0}

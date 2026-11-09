@@ -20,8 +20,9 @@ public class Request1016Tests
         Assert.IsTrue(KeyBindings.HasConflict(KeyAction.Interact, x => keys[x]));
         Assert.IsFalse(KeyBindings.HasConflict(KeyAction.MonsterSkill, x => keys[x]));
 
-        keys[KeyAction.Jump] = KeyCode.Q; // 괴물 스킬과 같지만 쿠키 전용 키라 괜찮다
-        Assert.IsFalse(KeyBindings.HasConflict(KeyAction.Jump, x => keys[x]));
+        keys[KeyAction.Jump] = KeyCode.Space;
+        keys[KeyAction.Dance] = KeyCode.Q; // 괴물 스킬과 같지만 쿠키 전용 키라 괜찮다(점프는 §69 F1부터 괴물도 쓰므로 춤으로 본다)
+        Assert.IsFalse(KeyBindings.HasConflict(KeyAction.Dance, x => keys[x]));
         keys[KeyAction.SpectateNext] = KeyCode.Mouse1; // 관전에서는 카메라 회전과 겹친다
         Assert.IsTrue(KeyBindings.HasConflict(KeyAction.SpectateNext, x => keys[x]));
     }

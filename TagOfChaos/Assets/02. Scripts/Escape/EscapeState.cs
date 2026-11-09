@@ -23,9 +23,10 @@ public enum RainbowState : byte { None = 0, Closed = 1, Opened = 2, Broken = 3 }
 // v7(§68 GP5): 소음폭탄 → 사이렌 함정 — 갇힌 건물(Building)·갇힌 시각(CagedAt)·연타 수(Mash).
 // v8(§68.7): 호박 마차 탈것(Carriages) — 소환 자리·방향·시각, 탄 시각, 도착 지점.
 // v9(§68.9): 콜라 대포 탈것(Cannons) — 설치 자리·방향·시각, 탄 시각·겨눈 방향, 착지 지점·비행 시간.
+// v10(§69 E3): 대포 비행 천장(Ceiling — 지하처럼 위가 막힌 곳에서 포물선이 천장을 넘지 않게).
 public sealed class EscapeState
 {
-    public const byte FormatVersion = 9;
+    public const byte FormatVersion = 10;
     public const int BuildingCount = 4;
     public const int ExitCount = 4;
     public const float RepairSeconds = 10f;      // 재료 넣기(수리) 게이지가 다 차는 시간(§25.5 E)
@@ -181,6 +182,7 @@ public sealed class EscapeState
         public float AimYaw;
         public Vector3 Dest;
         public float Flight;
+        public float Ceiling;    // 비행 꼭대기 한계(월드 y, 0 = 위가 열림)
 
         public bool Boarded => BoardAt > 0;
     }
@@ -372,7 +374,7 @@ public sealed class EscapeState
             w.Write(Carriages.Count);
             foreach (Carriage c in Carriages) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); WriteVector(w, c.Dest); }
             w.Write(Cannons.Count);
-            foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); }
+            foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); w.Write(c.Ceiling); }
             w.Flush();
             return ms.ToArray();
         }
@@ -438,7 +440,7 @@ public sealed class EscapeState
                     s.Carriages.Add(new Carriage { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), Dest = ReadVector(r) });
                 int cannons = r.ReadInt32();
                 for (int i = 0; i < cannons; i++)
-                    s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle() });
+                    s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle(), Ceiling = r.ReadSingle() });
                 return s;
             }
         }

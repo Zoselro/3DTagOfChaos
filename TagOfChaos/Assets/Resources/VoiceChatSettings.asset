@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 87d85392b04b0bd4eb150b117cae8e61, type: 3}
   m_Name: VoiceChatSettings
   m_EditorClassIdentifier: 
-  fullVolumeDistance: 3
+  fullVolumeDistance: 5
   silentDistance: 25
   enabledScenes:
   - GameLobbyScene
   mouthHeight: 1.5
+  remoteGain: 3

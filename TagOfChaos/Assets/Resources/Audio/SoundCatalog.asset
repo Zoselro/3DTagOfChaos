@@ -415,8 +415,8 @@ MonoBehaviour:
     pitchRange: {x: 0.95, y: 1.05}
     space: 1
     bus: 1
-    maxDistance: 14
-    minDistance: 1.5
+    maxDistance: 35
+    minDistance: 2
     falloff: 2
     cooldown: 0.05
     maxInstances: 4

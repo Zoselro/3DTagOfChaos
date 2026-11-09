@@ -191,7 +191,7 @@ public class EscapeTests
         Assert.AreEqual(1, s.BombChargesLeft(1, 3, 110, 20f));
         Assert.AreEqual(2, s.BombChargesLeft(1, 3, 120, 20f));
         Assert.AreEqual(2, s.BombChargesLeft(2, 3, 0, 20f), "other monster's bombs do not count");
-        Assert.AreEqual(1, EscapeAuthority.BombMaxCharges, "one bomb at a time (§26 H6)");
+        Assert.AreEqual(3, EscapeAuthority.BombMaxCharges, "up to three siren traps (§69 F5 — was one, §26 H6)");
         Assert.AreEqual(20f, EscapeAuthority.BombCooldown);
     }
 

@@ -63,7 +63,7 @@ public class Request1108GpTests
         Assert.IsFalse(SirenCage.ShouldRelease(SirenCage.MashNeeded - 1, 10.0, 12.0));
         Assert.IsTrue(SirenCage.ShouldRelease(SirenCage.MashNeeded, 10.0, 12.0), "mashed through");
         Assert.IsTrue(SirenCage.ShouldRelease(0, 10.0, 10.0 + SirenCage.MaxSeconds), "never stuck forever");
-        Assert.AreEqual(0.5f, SirenCage.Progress(SirenCage.MashNeeded / 2), 0.02f);
+        Assert.AreEqual(0.5f, SirenCage.Progress(SirenCage.MashNeeded / 2), 0.5f / SirenCage.MashNeeded + 1e-4f); // 홀수(25)면 절반이 정확히 0.5가 아니다
         Vector3 c = new Vector3(10, 0, 10);
         Assert.IsTrue(SirenCage.Inside(new Vector3(14, 0.5f, 10), c, 5f));
         Assert.IsFalse(SirenCage.Inside(new Vector3(16, 0.5f, 10), c, 5f), "outside the ring");

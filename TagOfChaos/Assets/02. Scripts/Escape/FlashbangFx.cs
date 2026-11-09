@@ -5,7 +5,8 @@ using UnityEngine.UI;
 // 맞은 사람 본인 화면: 화면 전체가 하얗게 BlindHold초 덮였다가 남은 시간 동안 서서히 걷힌다(시야 방해).
 public class FlashbangFx : MonoBehaviour
 {
-    public const float BlindHold = 0.8f;
+    public const float BlindHold = 2f;      // 완전히 하얀 시간(§69 B6: 0.8 → 2초)
+    public const float BlindSeconds = 5f;   // 흰 화면 전체(사용자 확정: 5초, 기절은 3초 그대로)
 
     private float age, life;
     private Light flash;

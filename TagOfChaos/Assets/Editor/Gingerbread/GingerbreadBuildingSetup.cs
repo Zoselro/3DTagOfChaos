@@ -24,7 +24,7 @@ public static class GingerbreadBuildingSetup
     private const float DoorWidth = 6.6f;          // Blender cfg.DOOR_W (양문 전체 폭)
     private const float DoorInteractRange = 3.4f;  // 맵 문과 같음
 
-    private static readonly string[] RuneColors = { "Yellow", "Red", "Pink", "Blue" };
+    private static readonly string[] RuneColors = { "Yellow", "Red", "Pink", "Blue" }; // 파일 이름(GIN_RUNE_Pink). 초록 룬 변형은 RuneGreenSetup이 Var_Rune_Green으로 바꾼다(§69 D5)
 
     // ---------------- 1. 가져오기 ----------------
 

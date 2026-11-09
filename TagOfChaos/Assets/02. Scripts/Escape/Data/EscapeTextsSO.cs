@@ -65,6 +65,7 @@ public class EscapeTextsSO : ScriptableObject
     public string skillDash = "Dash";         // 스킬 칸 이름(§26 H9)
     public string skillBomb = "Noise bomb";
     public string skillBombPlaced = "Placed";
+    public string bombNeedsBuilding = "Place it near a material building"; // 사이렌 함정: 재료 건물 둘레 밖(§69 F5)
     public string skillDodge = "Dodge";
     public string skillUnknown = "TBD";        // 생존자 스킬(아직 미정)
     public string skillSearch = "Search bomb"; // 술래 수색 폭탄(§68 GP5)
@@ -73,6 +74,9 @@ public class EscapeTextsSO : ScriptableObject
     public string carriageNoRoom = "No room for the carriage"; // 소환할 빈 바닥이 없음
     public string cannonBoard = "Ride Cola Cannon";          // 콜라 대포 뒤 계단 E 안내(§68.9)
     public string cannonNoRoom = "No room for the cannon";   // 설치할 빈 바닥이 없음
+    public string hostChanged = "{0} is now the host.";       // 대기실 방장이 바뀜(§69 A4, {0} = 닉네임)
+    public string recorderAim = "Aim at your own AI";         // 녹음기: 조준한 내 AI가 없음(§69 B3)
+    public string carryStruggle = "Mash Left / Right to break free"; // 들린 쿠키: 좌우 연타로 빠져나가기(§69 C2)
 
     [Header("Player list (§59 PL — Tab)")]
     public string playerListTitle = "Players";

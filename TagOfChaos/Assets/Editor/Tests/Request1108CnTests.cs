@@ -101,7 +101,7 @@ public class Request1108CnTests
         s.Cannons.Add(new EscapeState.Cannon { Id = 6, Owner = 3, SummonedAt = 11 });
         EscapeState d = EscapeState.Decode(s.Encode());
         Assert.IsNotNull(d);
-        Assert.AreEqual(9, EscapeState.FormatVersion);
+        Assert.GreaterOrEqual(EscapeState.FormatVersion, 9, "v9 added cannons");
         Assert.AreEqual(2, d.Cannons.Count);
         Assert.AreEqual(-60f, d.Cannons[0].AimYaw);
         Assert.AreEqual(2.4f, d.Cannons[0].Flight, 1e-5f);

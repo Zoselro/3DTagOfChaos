@@ -118,7 +118,8 @@ public class WitchPresenter : MonoBehaviour
         outward = WitchPath.OutwardDirection(mapCenter, anchor);
         startPoint = mapCenter + outward * WitchPath.StartDistance;
         float foot = height * WitchPath.FootReachRatio;
-        if (hasGround) strikePoint = WitchPath.StrikePoint(ground, startPoint, outward, foot, out groundContact);
+        if (WitchPath.TryGetMapRadius(gameObject.scene, out float radius)) strikePoint = WitchPath.StrikePointCircle(mapCenter, radius, outward, foot, out groundContact); // 원 맵은 원 경계에(§69 E1)
+        else if (hasGround) strikePoint = WitchPath.StrikePoint(ground, startPoint, outward, foot, out groundContact);
         else
         {
             strikePoint = mapCenter + outward * WitchPath.FallbackStrikeDistance;

@@ -37,6 +37,7 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
     private readonly Dictionary<string, GameObject> variants = new Dictionary<string, GameObject>();
     private GameObject neutralVariant;
     private string shownVariant = "?";
+    private RoofMarker roof;           // 지붕 위 재료 아이콘·빛기둥(§69 D3)
 
     // 수리는 뗄 때까지 누르고 있고, 다 찼는지는 방장 Tick이 정한다(§26 H2) — 내 화면 시간으로 끝내지 않는다.
     private const float RepairHoldSeconds = 3600f;
@@ -61,6 +62,7 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
         CollectVariants();
         ShowVariant(null);
         BuildGauge();
+        roof = RoofMarker.Create(this);
         SetRegistered(true);
     }
 
@@ -117,6 +119,8 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
 
     // 쿠키(스파이 제외)에게만 필요한 재료가 보인다.
     private static bool LocalSeesMaterials => !RoomState.IsLocalMonster() && !RoomState.IsLocalSpy();
+    // 지붕 표시는 쿠키와 술래 모두에게(§69 D3 — 술래도 어디를 지킬지 안다). 스파이 화면에는 보이지 않는다.
+    private static bool LocalSeesRoof => !RoomState.IsLocalSpy();
 
     // ---------------- view ----------------
 
@@ -126,6 +130,7 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
         ItemSO material = manager.Catalog.Find(b.MaterialId);
         bool repaired = b.Active && b.ItemIndex >= 0;
         if (glow != null && glow.activeSelf != b.Repaired) glow.SetActive(b.Repaired);
+        if (roof != null) roof.Show(LocalSeesRoof && b.Active && material != null, material, b.Repaired);
         ShowVariant(LocalSeesMaterials && material != null && b.Active ? material.ItemId : null);
 
         // 받침 색: 쿠키에게는 재료 색(룬·캔디 꽂는 자리 색), 그 밖에는 어두운 받침

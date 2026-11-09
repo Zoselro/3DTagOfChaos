@@ -8,9 +8,9 @@ using UnityEngine;
 //   위치는 지금 캐릭터 동기화로 다른 화면에 보인다.
 public class HatFlight : MonoBehaviour
 {
-    public const float RiseSpeed = 2f;
+    public const float RiseSpeed = 5f;      // 2 → 5 m/s: 40 m까지 8초(§69 B7 — 사용자: 더 빠르게)
     public const float CruiseHeight = 40f;
-    public const float CruiseSpeed = 10f;
+    public const float CruiseSpeed = 18f;   // 10 → 18 m/s
     public const float EscapeMargin = 10f;
     private const float RequestInterval = 1f;
 

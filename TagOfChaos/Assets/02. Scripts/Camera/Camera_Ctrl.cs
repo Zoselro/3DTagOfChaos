@@ -58,6 +58,7 @@ public class Camera_Ctrl : MonoBehaviour
         m_Player = target;
         m_TargetHeight = targetHeight;
         m_Distance = distance;
+        m_CamDistance = -1f;
         if (!keepRotation) ResetToDefaultView(); // InitCamera가 Awake든 Start든 언제 호출되든 상관없이 항상 정확히 초기화됨
     }
 
@@ -85,6 +86,40 @@ public class Camera_Ctrl : MonoBehaviour
         m_BuffPos = m_TargetPos + (m_CurrentRotation * m_BasicPos);
         transform.position = m_BuffPos;
         transform.LookAt(m_TargetPos);
+    }
+
+    // 벽 막힘(Request1009Plan.md §69 추가 — 진저브레드 지하에서 카메라가 동굴 벽 밖으로 나가 벽 뒷면이 검은 판처럼 보이고 바깥 하늘이 비쳤다):
+    // 대상에서 카메라 쪽으로 구를 쏘아 벽·지형에 막히면 그 앞까지 당긴다. 캐릭터·AI·트리거는 무시한다. 다시 트이면 천천히 원래 거리로 돌아간다.
+    const float CamRadius = 0.3f;
+    const float CamMinDistance = 0.6f;
+    const float CamWallGap = 0.15f;
+    const float CamReturnSpeed = 5f;
+    readonly RaycastHit[] m_CamHits = new RaycastHit[16];
+    float m_CamDistance = -1f;
+
+    float ObstacleFreeDistance(Vector3 from, Vector3 dir, float want)
+    {
+        int n = Physics.SphereCastNonAlloc(from, CamRadius, dir, m_CamHits, want, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        float best = want;
+        for (int i = 0; i < n; i++)
+        {
+            RaycastHit h = m_CamHits[i];
+            if (h.distance <= 0f || h.distance >= best) continue; // 시작부터 겹친 것(대상 몸 안 등)은 무시
+            Transform t = h.collider.transform;
+            if (m_Player != null && t.IsChildOf(m_Player.transform)) continue;
+            if (h.collider.GetComponentInParent<IGameCharacter>() != null || h.collider.GetComponentInParent<DecoyView>() != null) continue;
+            best = h.distance;
+        }
+        return best;
+    }
+
+    float CameraDistanceAvoidingWalls(Vector3 dir)
+    {
+        float want = CurrentDistance;
+        float free = Mathf.Max(CamMinDistance, ObstacleFreeDistance(m_TargetPos, dir, want) - CamWallGap);
+        if (m_CamDistance < 0f || free < m_CamDistance) m_CamDistance = free; // 막히면 바로 당긴다
+        else m_CamDistance = Mathf.MoveTowards(m_CamDistance, free, CamReturnSpeed * Time.deltaTime);
+        return m_CamDistance;
     }
 
     // 흔들림이 없을 때의 카메라 위치. 따라갈 대상이 없어도(마녀가 내리쳐 모두 쓰러진 뒤의 관전 등) 이 자리에서 흔들린다.
@@ -125,7 +160,8 @@ public class Camera_Ctrl : MonoBehaviour
         m_CurrentRotation = Quaternion.Slerp(m_CurrentRotation, m_TargetRotation,
                              Mathf.Clamp(Time.deltaTime / rotationSmoothTime, 0.0f, 1.0f));
 
-        m_BasicPos.z = -CurrentDistance; // 고정 거리, 더 이상 보간 불필요
+        Vector3 back = m_CurrentRotation * Vector3.back;
+        m_BasicPos.z = -CameraDistanceAvoidingWalls(back); // 고정 거리 — 벽에 막히면 그 앞까지
 
         m_BuffPos = m_TargetPos + (m_CurrentRotation * m_BasicPos);
         transform.position = m_BuffPos;

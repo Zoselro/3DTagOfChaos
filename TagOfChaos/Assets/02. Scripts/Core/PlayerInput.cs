@@ -63,6 +63,10 @@ public static class PlayerInput
         return (forward * move.y + right * move.x).normalized;
     }
 
+    // 들린 채 좌우 연타로 빠져나가기(§69 C2) — 설정한 좌우 키 + 방향키.
+    public static bool MoveLeftPressed => !IsGameplaySuppressed && (Down(KeyAction.MoveLeft) || Input.GetKeyDown(KeyCode.LeftArrow));
+    public static bool MoveRightPressed => !IsGameplaySuppressed && (Down(KeyAction.MoveRight) || Input.GetKeyDown(KeyCode.RightArrow));
+
     public static bool RunHeld => !IsGameplaySuppressed && (Held(KeyAction.Run) || EditorRunHeld);
     public static bool JumpPressed => !IsGameplaySuppressed && Down(KeyAction.Jump);
     public static bool DodgePressed => !IsGameplaySuppressed && Down(KeyAction.Dodge);
@@ -105,6 +109,9 @@ public static class PlayerInput
     private static readonly Vector2 EditorMove = Vector2.zero;
     private const bool EditorRunHeld = false;
 #endif
+    public static bool MonsterGrabPressed => !IsGameplaySuppressed && !ShowCursorHeld && (Down(KeyAction.MonsterGrab) || EditorTakeGrabPress()); // 술래 잡기(§69 F3)
+    public static bool EditorGrabPress;
+    private static bool EditorTakeGrabPress() { bool p = EditorGrabPress; EditorGrabPress = false; return p; }
     public static bool TentacleDashPressed => !IsGameplaySuppressed && Down(KeyAction.MonsterDash);
     public static bool SearchBombPressed => !IsGameplaySuppressed && (Down(KeyAction.MonsterSearch) || EditorTakeSearchPress()); // 술래 수색 폭탄(§68 GP5)
     public static bool EditorSearchPress;

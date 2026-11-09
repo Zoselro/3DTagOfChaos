@@ -15,9 +15,10 @@ public class BalloonAimPreview : MonoBehaviour
     private readonly Vector3[] points = new Vector3[Segments + 1];
     private readonly Vector3[] ringPoints = new Vector3[RingSegments];
 
-    public static BalloonAimPreview Create()
+    // dotted: 점선 궤적(섬광탄 고각 미리보기, §69 B6).
+    public static BalloonAimPreview Create(bool dotted = false)
     {
-        var go = new GameObject("BalloonAimPreview");
+        var go = new GameObject(dotted ? "FlashbangAimPreview" : "BalloonAimPreview");
         var p = go.AddComponent<BalloonAimPreview>();
         p.line = go.AddComponent<LineRenderer>();
         p.line.positionCount = Segments + 1;
@@ -33,8 +34,83 @@ public class BalloonAimPreview : MonoBehaviour
         p.ring.material = EscapeVisuals.SoftParticleMaterial();
         p.ring.startColor = p.ring.endColor = HitColor;
         p.ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        if (dotted) p.MakeDotted();
         go.SetActive(false);
         return p;
+    }
+
+    private static Texture2D dotTexture;
+
+    // 궤적을 점선으로: 반은 불투명·반은 투명한 작은 무늬를 선 길이를 따라 반복한다.
+    private void MakeDotted()
+    {
+        if (dotTexture == null)
+        {
+            dotTexture = new Texture2D(8, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Point, name = "AimDots" };
+            for (int x = 0; x < 8; x++) dotTexture.SetPixel(x, 0, x < 4 ? Color.white : Color.clear);
+            dotTexture.Apply();
+        }
+        Shader sprite = Shader.Find("Sprites/Default");
+        if (sprite == null) return;
+        line.material = new Material(sprite) { mainTexture = dotTexture };
+        line.textureMode = LineTextureMode.Tile;
+        line.widthMultiplier = 0.12f;
+        ring.material = new Material(sprite);
+    }
+
+    // 떨어질 자리와 터지는 반경(섬광탄): 대상 고리 대신 땅에 반경 원.
+    public void ShowArea(Vector3 from, Vector3 to, float radius, Color color)
+    {
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        float apex = ToolAim.ApexHeight(from, to);
+        for (int i = 0; i <= Segments; i++) points[i] = ToolAim.ArcPoint(from, to, apex, i / (float)Segments);
+        line.SetPositions(points);
+        line.startColor = line.endColor = color;
+        ring.gameObject.SetActive(true);
+        ring.startColor = ring.endColor = color;
+        var centre = to + Vector3.up * 0.12f;
+        for (int i = 0; i < RingSegments; i++)
+        {
+            float a = i * Mathf.PI * 2f / RingSegments;
+            ringPoints[i] = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
+        }
+        ring.SetPositions(ringPoints);
+    }
+
+    // 사이렌 함정 놓을 자리(§69 F5): 그 자리 고리만(궤적 없음).
+    public void ShowSpot(Vector3 at, float radius, Color color)
+    {
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        for (int i = 0; i <= Segments; i++) points[i] = at;
+        line.SetPositions(points);
+        ring.gameObject.SetActive(true);
+        ring.startColor = ring.endColor = color;
+        var centre = at + Vector3.up * 0.12f;
+        for (int i = 0; i < RingSegments; i++)
+        {
+            float a = i * Mathf.PI * 2f / RingSegments;
+            ringPoints[i] = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
+        }
+        ring.SetPositions(ringPoints);
+    }
+
+    // 녹음기: 고른 AI 발밑 고리만(궤적 없음).
+    public void ShowRingOnly(Transform target, Color color)
+    {
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        for (int i = 0; i <= Segments; i++) points[i] = target.position;
+        line.SetPositions(points);
+        ring.gameObject.SetActive(true);
+        ring.startColor = ring.endColor = color;
+        Bounds b = WaterBubbleView.BodyBounds(target);
+        float radius = Mathf.Max(0.5f, Mathf.Max(b.size.x, b.size.z) * 0.55f);
+        var centre = new Vector3(b.center.x, target.position.y + 0.12f, b.center.z);
+        for (int i = 0; i < RingSegments; i++)
+        {
+            float a = i * Mathf.PI * 2f / RingSegments;
+            ringPoints[i] = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
+        }
+        ring.SetPositions(ringPoints);
     }
 
     public void Show(Vector3 from, Vector3 to, Transform target)
