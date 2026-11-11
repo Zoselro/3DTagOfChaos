@@ -1,0 +1,263 @@
+실제 소스 검색을 시작했고, 먼저 중요한 차이점을 발견했어.
+
+현재 프로젝트에는 이미 섬광탄과 수색폭탄의 투척 관련 코드가 존재해.
+
+검색된 기존 구현의 구조는 다음과 같아.
+- 섬광탄: ToolUser.cs → ToolShotFx.cs → ToolHitReceiver.cs
+- 수색폭탄: NoiseBombPresenter.cs → EscapeAuthority.cs → ToolHitReceiver.cs
+두 기능은 현재 서로 다른 방식으로 처리되고 있어. 특히 섬광탄은 기존 물풍선의 투척 연출을 재사용하는 구조이고, 수색폭탄은 괴물의 전방 위치를 계산해서 방장에게 보내는 구조로 확인돼.
+
+이제 기준 브랜치의 실제 코드 전체를 읽어서 수정해야 할 지점을 구분할게.
+1. 실제 코드 분석 결과
+기준 브랜치 소스 확인
+분석 대상은 feature/gameplay-overhaul 브랜치에서 직접 가져온 실제 파일이야.
+① 플레이어 섬광탄
+관련 파일: ToolUser.cs, ToolShotFx.cs, ToolAim.cs, ToolHitReceiver.cs
+
+현재 동작 구조는 다음과 같아.
+ToolUser.Use()
+
+섬광탄 사용 입력
+
+
+PickTarget()
+
+전방 45도 부채꼴에서 가장 가까운 플레이어 탐색
+
+
+CollectInSphere()
+
+선택한 위치 주변의 플레이어 수집
+
+
+EscapeAuthority.ToolUse()
+
+방장이 사용 횟수, 쿨타임, 명중 대상 검증
+
+
+ToolHitReceiver.Handle()
+
+ToolShotFx.ThrowCanister()로 투척 연출
+
+
+FlashbangFx.Burst() / Blind()
+
+폭발 및 섬광 효과
+
+
+발견한 핵심 문제
+현재 ToolUser.cs의 섬광탄 부분은 다음과 같아.
+IGameCharacter aimed = PickTarget(
+    aim,
+    tool.Range,
+    ToolAim.BalloonHalfAngle,
+    true
+);
+
+point = aimed != null
+    ? aimed.gameObject.transform.position
+    : GroundAhead(cam, origin, aim, tool.Range);
+
+
+이 코드를 변경하려는 이유야.
+
+현재는 카메라가 바라보는 방향을 기준으로 플레이어를 탐색하고, 플레이어가 발견되면 그 플레이어의 위치를 투척 목표로 설정해.
+
+즉, 카메라 방향으로 던지는 것처럼 보이지만 실제로는 플레이어를 찾아 그 위치로 투척하는 구조야.
+또 하나 중요한 발견
+ToolShotFx.ThrowCanister()는 실제 Rigidbody 투사체가 아니야.
+float k = Mathf.Clamp01(
+    (Time.time - releaseAt) / flight
+);
+
+transform.position = ToolAim.ArcPoint(
+    from,
+    end,
+    ToolAim.ApexHeight(from, end),
+    k
+);
+
+
+Update()에서 직접 위치를 계산해서 움직이는 시각적 투척 연출이야.
+
+따라서 현재 섬광탄에는 다음 기능이 없어.
+- Rigidbody 기반 중력
+- 실제 물리 충돌
+- 벽에 부딪힌 후 튕기기
+- 지면에서 구르기
+현재 섬광탄은 포물선 애니메이션만 구현되어 있는 상태야.
+
+참고 파일:
+- ToolUser.cs
+- ToolShotFx.cs
+- ToolAim.cs
+- ToolHitReceiver.cs
+
+② 괴물 수색폭탄
+관련 파일: NoiseBombPresenter.cs, EscapeAuthority.cs, SearchBombFx.cs, ToolHitReceiver.cs
+
+수색폭탄은 섬광탄보다 더 단순한 구조야.
+
+현재 NoiseBombPresenter.UpdateSearch()의 실제 코드야.
+Transform t = c.gameObject.transform;
+
+Camera cam = Camera.main;
+
+Vector3 fwd = cam != null
+    ? Vector3.ProjectOnPlane(
+        cam.transform.forward,
+        Vector3.up
+      ).normalized
+    : t.forward;
+
+if (fwd.sqrMagnitude < 0.01f)
+    fwd = t.forward;
+
+manager.Request(
+    EscapeOp.SearchBomb,
+    0,
+    0,
+    manager.SnapToGround(
+        t.position +
+        fwd * EscapeAuthority.SearchThrowRange
+    )
+);
+
+
+이 부분이 현재 수색폭탄의 핵심이야.
+
+현재 동작은 다음과 같아.
+1. 괴물이 수색폭탄 버튼을 누른다.
+2. 카메라의 수평 방향을 가져온다.
+3. 괴물 위치에서 전방 10m 지점을 계산한다.
+4. 해당 지점을 지면에 맞춘다.
+5. 방장에게 SearchBomb 요청을 보낸다.
+6. 방장이 그 지점 주변의 진짜 플레이어를 찾는다.
+7. 대상에게 기침 효과를 발생시킨다.
+현재 문제점
+수색폭탄은 실제 폭탄을 던지는 구조가 아니야.
+
+현재 코드에는 다음이 없어.
+- 폭탄 GameObject 생성
+- 포물선 비행
+- 투사체 충돌
+- 반발력
+- 굴러가기
+- 폭발 타이머
+즉, 현재 수색폭탄은 10m 앞의 위치를 계산해서 즉시 범위 판정을 요청하는 스킬이야.
+
+참고 파일:
+- NoiseBombPresenter.cs
+- EscapeAuthority.cs
+- SearchBombFx.cs
+
+2. 현재 ScriptableObject 설정 확인
+실제 에셋도 확인했어.
+Tool_Flashbang.asset
+거리 변경 필요
+변수	현재 값
+Range	12m
+HitRadius	6m
+StunSecondsCookie	3초
+StunSecondsMonster	3초
+CooldownSeconds	3초
+
+
+Tool_SearchBomb.asset
+기본 사거리 일치
+변수	현재 값
+Range	10m
+HitRadius	12m
+CooldownSeconds	25초
+
+
+여기서 주의할 점이 있어.
+
+수색폭탄의 CooldownSeconds는 에셋에 25초로 저장되어 있지만, 실제 NoiseBombPresenter와 EscapeAuthority는 SearchCooldown = 3f를 사용하고 있어.
+
+따라서 현재 실제 쿨타임은 3초야.
+
+그리고 수색폭탄의 HitRadius = 12m는 투척 거리가 아니라 폭발 후 탐색 범위야.
+
+3. 기존 구조를 유지하면서 어떻게 변경해야 할까?
+내가 추천하는 방향은 기존 기능을 재사용하고, 투척 부분만 공통 시스템으로 교체하는 것이야.
+기존 클래스	변경 방향
+ToolUser	섬광탄의 플레이어 자동 탐색 제거, 카메라 Raycast 목표점 사용
+NoiseBombPresenter	기존 전방 10m 즉시 판정 제거, 카메라 Raycast 및 투척 요청
+ToolShotFx	기존 시각적 포물선 대신 물리 투사체 처리
+ToolAim	기존 물풍선 계산은 유지하고 새로운 투척 계산과 역할 분리
+ToolHitReceiver	투척물 도착 후 기존 섬광·기침 효과 연결
+EscapeAuthority	방장 권한, 쿨타임, 거리 검증 및 폭발 판정 유지
+BalloonAimPreview	기존 섬광탄 점선 미리보기 개선
+
+4. 새로 필요한 클래스
+기존 구조를 분석한 결과 다음 정도만 추가하는 것이 적절해.
+Escape/
+├── Projectile/
+│   ├── BallisticProjectile.cs
+│   ├── ProjectileThrowCalculator.cs
+│   └── ProjectileConfigSO.cs
+│
+├── ToolUser.cs
+├── ToolShotFx.cs
+├── NoiseBombPresenter.cs
+├── ToolHitReceiver.cs
+└── ToolAim.cs
+
+
+각 클래스의 역할은 다음과 같아.
+- BallisticProjectile: Rigidbody 비행, 충돌, 튕김, 구르기, 폭발 대기.
+- ProjectileThrowCalculator: 카메라 Raycast와 포물선 초기 속도 계산.
+- ProjectileConfigSO: 섬광탄과 수색폭탄의 사거리, 높이, 폭발 시간 설정.
+기존 ToolShotFx는 삭제하지 않고, 물풍선과 섬광탄의 기존 연출 의존성을 먼저 분리하는 것이 안전해.
+
+5. 내가 판단한 가장 중요한 수정 사항
+섬광탄
+현재 방식 제거
+플레이어 자동 탐색 → 카메라 Raycast 목표점
+유지할 기능
+- 기존 섬광 범위 판정
+- 쿠키 및 괴물 기절
+- 흰 화면 효과
+- 기존 사운드
+- 방장 검증
+  
+  수색폭탄
+현재 방식 제거
+10m 앞 위치 즉시 계산 → 실제 폭탄 투척
+유지할 기능
+- 진짜 플레이어만 탐색
+- AI 제외
+- 기존 기침 효과
+- 기존 3초 쿨타임
+- 방장 권한
+
+6. 최종 구현 전 추가로 주의할 부분
+특히 Photon PUN2에서 중요한 차이가 있어.
+
+현재 섬광탄은 방장이 hitAt을 지정하고 모든 클라이언트가 같은 시각에 도착 연출을 재생해.
+
+반면 수색폭탄은 위치와 대상만 전송해 즉시 판정해.
+
+이번에 두 기능 모두 실제 투사체로 바꾸면 다음을 통일하는 게 좋아.
+1. 투척 요청에는 시작 위치, 목표 지점, 발사 방향을 포함한다.
+2. 방장이 투척 요청의 유효성을 확인한다.
+3. 방장이 실제 투사체의 위치와 충돌을 관리한다.
+4. 폭발 시각과 위치를 전체 클라이언트에 전송한다.
+5. 폭발 판정은 방장에서 한 번만 실행한다.
+또한 현재 EscapeAuthority.ValidTargets()는 섬광탄의 경우 클라이언트가 보낸 대상 목록을 방장이 추가 검증하는 구조야. 새 시스템에서는 이 목록을 그대로 신뢰하지 말고, 실제 폭발 시점에 방장이 직접 범위 내 대상을 계산하는 편이 더 안전해.
+
+최종 결론
+지금 프로젝트는 이미 물풍선과 섬광탄에 포물선 연출 시스템이 있지만, 실제 물리 투척은 구현되어 있지 않아.
+
+따라서 내가 앞서 제안했던 ProjectileBase를 그대로 추가하기보다는 기존 ToolShotFx, ToolAim, ToolUser의 책임을 정리하면서 공통 물리 투척 시스템을 도입해야 해.
+
+실제 투척하기 전에 화면 중앙 조준점에서 목표 지점까지 예상 포물선을 점선으로 보여주면 플레이어가 거리와 착지 위치를 직관적으로 파악할 수 있어. 다만 벽이나 장애물에 가려진 구간은 점선을 끊어주는 게 좋아.
+
+내가 가장 추천하는 작업 순서는 다음과 같아.
+1. 공통 물리 투척 시스템을 먼저 구현하고 기존 물풍선과 섬광탄의 영향 범위를 확인한다.
+2. 섬광탄과 물풍선을 카메라 Raycast 기반 8m 투척으로 변경한다.
+3. 수색폭탄을 카메라 Raycast 기반 10m 투척으로 변경한다.
+4. 방장 권한 및 4~5인 네트워크 테스트를 진행한다.
+
+구현을 할 때 중요한점은 투척용 아이템이 새로 나올 수 있기 때문에 이에 대해 확장성을 고려하여 구현을 한다는거야.
