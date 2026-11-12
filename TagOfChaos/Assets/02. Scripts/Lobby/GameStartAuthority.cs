@@ -86,8 +86,9 @@ public static class GameStartAuthority
         int[] spies = PickSpies(settings.ClampSpies(RoomState.SpyCount(), PhotonNetwork.CurrentRoom.PlayerCount));
         AuthorityProps.SetRoom(new Hashtable
         {
-            // §73 L4: 늦게 로딩하는 사람을 기다릴 시간까지 넉넉히 — 모두 맵에 들어오면 방장(RoomLifecycleWatcher)이 "지금 + 준비 시간"으로 당긴다
-            { NetKeys.PrepareEndTime, PhotonNetwork.Time + settings.SceneLoadGrace + RoomLifecycleWatcher.MaxArrivalWait + settings.PrepareSeconds },
+            // §73.10: 시작 + 3 + 15초(예전 값)로 되돌림. 45초를 더한 넉넉한 값으로 시험했더니 클라이언트들이 맵을 연 뒤 준비 끝 시각까지
+            // 첫 프레임에서 멈췄다(원인 조사 중 — StallWatch). 모두 일찍 도착하면 방장(RoomLifecycleWatcher)이 "지금 + 준비 시간"으로 맞춘다.
+            { NetKeys.PrepareEndTime, PhotonNetwork.Time + settings.SceneLoadGrace + settings.PrepareSeconds },
             { NetKeys.GameMapScene, map },
             { NetKeys.SpyActorNumbers, spies },
             { NetKeys.CharacterAssignments, AssignCharacters() },
