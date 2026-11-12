@@ -7337,3 +7337,671 @@ v1 §S1~S8 그대로:
 - 남은 것: VirtualArtifacts 손상 오류(시험 7개, Unity 재시작으로 확인), 거대 괴물 등장 확률 설정값이 100 %(`GiantSettings.SpawnChance`, 시험은 30 % 기대 — 사용자 확인), 멀티 확인.
 
 - **술래 1인칭 손 변경(2026-11-09 사용자: 새 손이 아니라 기존 촉수·손이 보이게, 상대는 다 보이게)**: Blender 발톱 손(FP_ClawArm·MonsterClawHands·FPClaws 프리팹)은 지웠다. 본인 화면에서만 몸 메시 중 팔(UpperArm·Forearm·Hand)·촉수 뼈에 붙은 삼각형만 남긴 메시를 같은 뼈로 그린다(`MonsterFirstPersonLimbs`, 원래 몸은 그림자만 — Monster_Rigged Read/Write 켬). `MonsterTentacleFlourish`가 본인 화면에서만 애니메이션 뒤에 팔·촉수 끝을 카메라 앞 지점으로 겨눈다: 평소 = 촉수 화면 위 양옆·손 아래 양옆(물결), 돌진 준비 = 치켜들고 당김, 돌진 = 가운데 앞으로 뻗음 → 출렁이며 복귀, GrabKill·기절 = 원래 동작 그대로. 상대 화면은 원래 몸·동작.
+
+---
+
+## 70. 2026-11-12 요청 — 투척 아이템(시점 투척·물리 충돌) · 돌진 잡기 판정 · 권한 구조와 Dedicated Server 검토
+
+요청: ① 수색 폭탄(술래)·섬광탄(스파이)·물풍선(쿠키)을 "내가 바라본 시점에서 던지는" 방식으로(정크랫 기본 공격처럼, 참고: `\3DTagOfChaos\투척 아이템 구현 방식\`). ①-1 섬광탄 자동 조준 없애기. ①-2 물풍선은 플레이어에게 실제로 닿았을 때 발동. ② 술래가 AI에게 돌진해 잡아도 AI가 안 죽음(간혹 죽음). ③ 술래가 플레이어에게 돌진해 잡으면 잡는 동작이 취소됨. (질문) 이동·애니메이션은 어디서 처리하나, AI 경로·잡기·처치 확정은 방장 권한인가, 나중에 Dedicated Server로 바꿀 수 있나.
+
+읽은 코드(2026-11-12 기준 실제 파일): `ToolUser` · `ToolAim` · `ToolShotFx` · `ToolHitReceiver` · `NoiseBombPresenter` · `SearchBombFx` · `EscapeAuthority`(ToolUse·ValidTargets·SearchBomb·DecoyCatch·DecoyWithinReach·MonsterCouldReach·TrackPositions) · `EscapeNet`(EscapeRequest) · `GrabKillAuthority` · `NetSecurityRules` · `PositionHistory` · `PositionTrack` · `NetworkTransformSync` · `MonsterController` · `MonsterGrabKillTrigger` · `MonsterTentacleDash` · `HideOrSeekPlayer`(RequestGrabKill·GrabKillRejected) · `DecoyView` · `DecoyRoute` · `DecoyRouteBook` · `DecoyBrain` · `NetworkDefaults` · `NetEventCodes`, 참고 폴더의 문서 1개·그림 6개.
+
+### 70.0 요약(결론 먼저)
+
+- **②③ 원인은 하나다.** 방장은 "방장 화면에 그려진 술래 위치"를 0.05초마다 기록해 두고, 술래가 보낸 "잡은 순간 내 위치"가 그 기록의 길에서 2 m(쿠키)·6 m(AI) 안인지 본다. 그런데 돌진은 초속 68 m(20 m ÷ 0.294초)이고 위치 동기화는 초당 10번이라, 방장 화면의 원격 술래는 돌진 중 실제보다 7~14 m 뒤에 있다. 게다가 돌진 직전 0.35초는 준비 자세로 서 있어서, 기록을 앞으로 늘려 주는 보정(마지막 속도 × 지연)이 0이 된다. → 방장이 "술래가 그 자리에 있을 수 없다"고 거절한다.
+  - 쿠키: 거절 알림(`GrabKillRejected`)이 모두에게 가서 **잡는 동작이 취소**된다(③).
+  - AI: 거절 알림이 없어 술래는 빈손으로 잡는 동작을 끝까지 하고 **AI는 살아 있다**(②). 통과하는 경우(긴 돌진·지연이 맞아떨어질 때)만 죽는다.
+  - **술래가 방장(호스트)일 때는 정상**이다(기록이 곧 실제 위치). 원격 술래일 때만 실패한다.
+- 실제 판정 코드(`PositionTrack`·`NetSecurityRules`)로 모의 실험한 결과, 3~6 m 짧은 돌진에서 쿠키 주장 33~100 %, AI 주장 0~67 %가 거절됐다(70.2.3).
+- **고침**: 준비 자세가 시작될 때 "돌진 예고"(시작 위치·방향·출발 시각)를 모두에게 보낸다. 준비 0.35초가 지연보다 길어서, 출발 전에 방장과 모든 화면이 돌진 길을 안다. 방장은 주장 위치가 "예고된 돌진 길 위, 그 시각까지 갈 수 있는 거리 안"이면 인정한다. 허용 오차(2 m)는 늘리지 않는다(70.2.5).
+- **① 투척**: 지금 세 가지 모두 "실제로 날아가는 물체"가 없다(물풍선·섬광탄 = 대상을 미리 골라 놓고 그리는 포물선 연출, 수색 폭탄 = 10 m 앞 즉시 판정). 공통 투척 시스템을 새로 만든다: 카메라 가운데 광선으로 목표 지점 → 손에서 포물선 속도 계산 → 중력·튕김·구름이 있는 투사체. 궤적은 모든 화면이 같은 수식으로 계산하고, **닿음·폭발 판정은 방장이 한 번만** 한다(70.3).
+- **권한 구조**: 이동은 조작하는 사람 화면, 판정은 "화면이 주장 → 방장이 검증·확정". 서버(Photon)는 중계만 한다. Dedicated Server로 가는 길은 열려 있지만 이동 권한과 전송 계층이 걸림돌이다(70.1).
+
+### 70.1 질문 답 — 누가 무엇을 처리하나
+
+| 항목 | 지금 처리하는 곳 | 근거 |
+| --- | --- | --- |
+| 내 캐릭터 이동(쿠키·술래) | **조작하는 사람 화면**(Rigidbody 물리) | `HideOrSeekPlayer.FixedUpdate`·`MonsterController.FixedUpdate`의 `if (!pv.IsMine) return;`, 원격은 `rb.isKinematic = !pv.IsMine` |
+| 위치 전달 | 소유자 → 모두, 초당 10번(위치·회전·상태 번호) | `NetworkTransformSync.Write`, `PhotonNetwork.SerializationRate = CharacterSyncRate(10)` |
+| 남의 캐릭터 그리기 | 각 화면이 받은 위치로 부드럽게 따라감(초당 비율 10, 10 m 넘게 벌어지면 순간이동) | `NetworkTransformSync.Interpolate` |
+| 애니메이션 | **각 화면이 직접 재생**. 네트워크로는 상태 번호만 온다(걷기·달리기·돌진·잡기…) | `ChangeState(networkSync.RemoteState)`, 던지기·휘두르기는 `ToolHit` 이벤트를 받아 각 화면이 재생 |
+| 서버(Photon Cloud) | **중계만**. 게임 규칙·물리·판정 없음 | PUN2 구조 |
+| AI 판단·경로 | **방장** `DecoyBrain`이 정해 방 속성 `DR_<id>`로 공유 → 모든 화면이 같은 경로 + 같은 시계(`PhotonNetwork.Time`)로 위치를 계산 | `DecoyRoute.Sample`, `DecoyRouteBook` |
+| AI 잡기 | 술래 화면이 주장(본 위치·시각) → **방장이 검증·확정** → 상태(`EscapeState`) | `DecoyView.RequestCatch` → `EscapeAuthority.DecoyCatch` |
+| 플레이어 처치 | 술래 화면이 주장(모두에게 RPC — 연출을 먼저 시작) → **방장이 검증** → 확정(`HitCount`) 또는 거절(`GrabKillRejected`) | `MonsterGrabKillTrigger.TryGrabKill` → `GrabKillAuthority.TryConfirm` |
+| 아이템·상자·수리·탈출·도구 명중 | 요청(`EscapeOp`) → **방장** `EscapeAuthority` → 상태·알림 | `EscapeManager.Request`, `ToolHit` |
+| 이동 감시 | 방장이 속도·스태미나만 살핌(막지 않고 "의심" 표시 → 위치가 중요한 요청을 잠깐 무시) | `EscapeAuthority.TrackPositions`, `NetSecurityRules.IsPlausibleMove` |
+
+한 줄로: **"소유자 권한 이동 + 방장이 검증하는 주장(claim)"** 구조다. 서버 권한(server-authoritative)이 아니다. 방장이 나가면 PUN이 다음 사람을 방장으로 올리고, 방장 전용 기록(`PositionHistory`·AI 스태미나 등)은 새 방장이 다시 쌓는다.
+
+#### 70.1.1 Dedicated Server 전환 검토
+
+**이미 유리한 점**
+- 판정 코드가 한곳에 모여 있다: `EscapeAuthority`(1,535줄)·`GrabKillAuthority`·`DecoyBrain`·`PositionHistory`·`RoomPropertyGuard`.
+- 규칙이 네트워크를 모르는 순수 계산으로 떨어져 있다: `NetSecurityRules`·`PositionTrack`·`DecoyRoute`·`ToolAim`·`ColaCannonRules`·`PumpkinCarriageRules`·`SirenCage` — 서버에서 그대로 쓸 수 있고 EditMode 시험이 있다.
+- "주장 → 되돌려 검증"(지연 보정) 설계는 Dedicated Server에서도 표준 방식이라 그대로 옮겨 간다.
+
+**걸림돌**
+1. **이동이 소유자 권한**이다. 서버가 위치를 계산하지 않으므로 속도·순간이동 조작을 근본적으로 막지 못한다(지금은 의심 표시뿐). 서버 권한 이동으로 바꾸려면 입력 전송 + 서버 물리 + 클라이언트 예측·보정이 필요하다 — 가장 큰 작업.
+2. **전송 계층이 코드에 박혀 있다**: `PhotonNetwork.IsMasterClient` 54곳(28개 파일), `PhotonNetwork.Time` 91곳, `RaiseEvent` 12곳, `SetCustomProperties` 15곳, `[PunRPC]` 6개, `OnPhotonSerializeView` 2개 파일.
+3. **판정이 Unity 씬에 기대고 있다**(레이캐스트·NavMesh·충돌체). 서버도 맵 씬을 띄운 Unity(헤드리스)여야 한다.
+4. 방장도 플레이어라고 가정한 곳이 있다(예: `EscapeManager.Request`의 `if (IsMasterClient) authority.Handle(r)` 지름길, 인원 수 계산).
+
+**권장 경로(단계)**
+- **0단계(지금)**: PUN 유지. 판정 정확도를 고친다(이 절).
+- **1단계 "헤드리스 방장"**: 플레이하지 않는 Unity 인스턴스(서버 PC·클라우드)를 방에 넣고 항상 방장으로 고정한다(`PhotonNetwork.SetMasterClient`). 판정이 특정 플레이어 PC에서 돌지 않으므로 호스트 유리·방장 교체 끊김·방장 조작이 사라진다. 코드 변경은 "방장이 캐릭터가 없는 경우" 처리와 화면·소리 끄기 정도 — **Dedicated Server 이점의 대부분을 적은 비용으로 얻는다.**
+- **2단계 "진짜 Dedicated Server"**: 서버 권한 이동 + 전송 교체(Photon Fusion 서버 모드, Photon Server 플러그인, Mirror/NGO 등). 걸림돌 1·2를 모두 풀어야 한다.
+
+**이번 작업부터 지킬 원칙(전환 비용을 늘리지 않게)**
+- 새 판정은 **순수 계산 클래스**로 만든다(`DashWindow`, `BallisticSim`, `ThrowSolver`) — Unity 씬 접근은 인자로 받는다.
+- 새 코드는 `PhotonNetwork.IsMasterClient`·`PhotonNetwork.Time`을 직접 부르지 않고 얇은 래퍼를 쓴다. 기존 54곳은 이번에 건드리지 않는다(나중에 한 번에 치환).
+
+```csharp
+// Core/NetAuthority.cs (새 파일) — 판정을 맡은 쪽인지와 공용 시계. 지금은 PUN 방장, 나중에 서버로 바꿀 한 곳.
+public static class NetAuthority
+{
+    public static bool IsAuthority => PhotonNetwork.IsMasterClient;   // 2단계: 서버 프로세스에서만 true
+    public static double Time => PhotonNetwork.Time;
+    public static int Stamp => PhotonNetwork.ServerTimestamp;
+    public static float AgeOf(int stamp) => unchecked(PhotonNetwork.ServerTimestamp - stamp) / 1000f;
+}
+```
+
+- 투사체·돌진 판정은 "방장만 아는 것"에 기대지 않게 한다: 진행 중인 투사체·돌진 예고는 모든 화면이 갖고 있어서, 방장이 바뀌어도(또는 서버가 맡아도) 이어서 판정한다.
+
+### 70.2 돌진 잡기 판정 분석(②③)
+
+#### 70.2.1 지금 흐름(코드 그대로)
+
+**돌진** — `MonsterController`
+1. Shift → `dashWindupRemaining = 0.35`(준비 자세, 제자리·방향 고정).
+2. 0.35초 뒤 `tentacleDash.TryStartDash(dashWindupForward)` → `FixedUpdateDash`가 물리 스텝(0.02초)마다 `rb.linearVelocity = 방향 × 68 m/s`(한 스텝 1.36 m).
+3. 스텝마다 `TryStopBeforeCookieOnDashPath`가 Cookie 레이어(쿠키·AI 둘 다 여기 있다 — 확인함)를 구로 훑어, 걸리면 그 앞까지만 가고 `grabKillTrigger.TryCatchOnContact(hitCookie, hitDecoy)`.
+
+**쿠키 처치** — `MonsterGrabKillTrigger.TryGrabKill` → `HideOrSeekPlayer.RequestGrabKill`(RPC, 모두) → 방장 `GrabKillAuthority.TryConfirm`
+```csharp
+// 술래 화면: 주장 = (내 위치, 내가 본 쿠키 위치, 시각)
+cookiePv.RPC(HideOrSeekPlayer.RpcRequestGrabKill, RpcTarget.All, monsterPv.ViewID,
+    monsterPv.transform.position, cookie.transform.position, PhotonNetwork.ServerTimestamp);
+
+// 방장: 주장한 술래 위치가 방장 기록의 길에서 벗어난 거리
+float lead = monster.View.IsMine ? 0f : NetSecurityRules.RemoteLead(age);           // 지연 + 0.15초
+bool monsterKnown = monsterTrack.TryMinDistanceLeading(claim.Monster, from, now, monsterNow, lead, out float monsterError);
+...
+if (monsterPathError > GrabClaimPathTolerance /* 2 m */) return GrabVerdict.MonsterMismatch;   // → 거절
+```
+거절되면 `pv.RPC(RpcGrabKillRejected, RpcTarget.All, …)` → 모든 화면이 붙잡힘 연출을 끝내고 술래 화면은 `monster.CancelGrabKill()` — **③의 "잡는 동작이 취소"가 바로 이 경로다.**
+
+**AI 잡기** — `MonsterGrabKillTrigger.TryGrabDecoy` → `DecoyView.RequestCatch` → 방장 `EscapeAuthority.DecoyCatch`
+```csharp
+// 술래 화면
+onCooldown = true; monsterController.PlayGrabKill(); decoy.RequestCatch();   // 잡는 동작을 먼저 시작
+manager.Request(EscapeOp.DecoyCatch, id, PhotonNetwork.ServerTimestamp, transform.position);
+
+// 방장: DecoyWithinReach
+float error = DecoyRoute.MinDistance(route, seen, from, now);                 // AI가 본 자리에 있었나(2 m)
+bool reach = MonsterCouldReach(actor, seen, from, now, age, out float monsterGap);   // 술래 기록이 그 자리 6 m 안을 지났나
+bool ok = age <= 0.6f && age >= -0.1f && error <= 2f && reach;
+```
+`ok`가 false면 `return false`로 끝난다. **술래에게 알리는 코드가 없다** → 빈손 잡기 동작 2.63초, AI는 그대로(②).
+
+**방장의 기록** — `PositionHistory.Update`
+```csharp
+track.Record(now, c.gameObject.transform.position);   // 0.05초마다, "방장 화면에 그려진" 위치
+```
+원격 캐릭터의 `transform.position`은 `NetworkTransformSync.Interpolate`가 받은 위치를 향해 초당 비율 10으로 따라가는 값이다.
+
+#### 70.2.2 숫자로 본 어긋남
+
+| 값 | 크기 | 출처 |
+| --- | --- | --- |
+| 돌진 속도 | 20 m ÷ 0.294초 = **68 m/s** | `GameSettings` (실측) |
+| 물리 한 스텝 이동 | 1.36 m | `fixedDeltaTime 0.02` |
+| 위치 패킷 간격 | 0.1초 = 돌진 중 **6.8 m** | `SerializationRate 10` |
+| 주장(RPC) 전송 | 다음 전송 틱(초당 30번) — **위치 패킷보다 먼저 도착**하기 쉽다 | `SendRate 30` |
+| 방장 화면 보간 | 초당 비율 10(절반 따라잡는 데 약 0.07초), 10 m 넘으면 순간이동 | `Interpolate` |
+| 방장 기록 간격 | 0.05초(그려진 위치) | `PositionHistory.SampleInterval` |
+| 앞으로 늘리기 | (그려진 위치의 마지막 두 기록 속도, 상한 60 m/s) × (지연 + 0.15초) | `PositionTrack.Velocity`·`RemoteLead` |
+| 허용 오차 | 쿠키 주장 2 m, AI는 술래 기록이 6 m 안 | `GrabClaimPathTolerance`, `InteractReach` |
+
+허용 오차 2 m는 걷기·달리기(4~8 m/s) 기준 0.25~0.5초분이지만, 돌진에서는 **0.03초분**이다. 지연(0.04~0.15초) + 패킷 간격(0~0.1초) + 보간 지연(약 0.1초)을 합친 0.15~0.35초 동안 술래는 10~24 m를 간다.
+
+#### 70.2.3 모의 실험(실제 판정 클래스 사용, Unity 에디터에서 계산)
+
+조건: 술래가 0.35초 서 있다가 68 m/s로 D m 돌진해 닿는 순간 주장. 방장은 지연 L 뒤 패킷을 받아 화면에 보간해 그리고 0.05초마다 기록. 패킷 타이밍 3가지. `PositionTrack.TryMinDistanceLeading`·`NetSecurityRules` 실제 코드로 계산.
+
+| 돌진 거리 | 지연 | 쿠키 주장: 술래 위치 오차(허용 2 m) | AI 주장: 술래 기록까지 거리(허용 6 m) |
+| --- | --- | --- | --- |
+| 3 m | 40 ms | 1.9~3.0 m — **거절 2/3** | 4.2~5.3 m — 거절 0/3 |
+| 6 m | 40 ms | 2.4~6.0 m — **거절 3/3** | 4.7~8.3 m — **거절 2/3** |
+| 10 m | 40 ms | 0.0~1.9 m — 거절 0/3 | 0.3~4.2 m — 거절 0/3 |
+| 15 m | 40 ms | 0.0~3.3 m — 거절 1/3 | 2.2~5.6 m — 거절 0/3 |
+| 20 m | 40 ms | 0.0~0.8 m — 거절 0/3 | 0.0~3.1 m — 거절 0/3 |
+| 3 m | 80 ms | 1.1~3.0 m — **거절 2/3** | 3.4~5.3 m — 거절 0/3 |
+| 6 m | 80 ms | 0.0~3.8 m — 거절 1/3 | 0.5~6.1 m — 거절 1/3 |
+| 6 m | 150 ms | 0.1~5.1 m — **거절 2/3** | 2.4~7.4 m — 거절 1/3 |
+| 10 m | 150 ms | 0.0~6.6 m — 거절 1/3 | 0.0~8.9 m — 거절 1/3 |
+
+- **가까이에서 돌진할수록 잘 실패한다**: 닿을 때까지 방장이 돌진 패킷을 하나도 못 받아, 기록상 술래는 아직 출발 전(속도 0)이다. 긴 돌진은 패킷 1~2개가 도착해 "늘리기"가 덮어 준다.
+- 실제 플레이는 쿠키가 움직이고 프레임이 흔들리므로 표보다 나쁠 수 있다. AI는 아래 C6·C7이 더해진다.
+- 이 실험은 한 대에서 한 계산이다. 실제 두 대 재현은 단계 DG1에서 한다.
+
+#### 70.2.4 원인 목록
+
+| # | 원인 | 영향 |
+| --- | --- | --- |
+| C1 | 방장 기록이 "그려진 위치"(초당 10번 패킷 + 보간)라 돌진 중 실제보다 7~14 m 뒤 | ②③ 주원인 |
+| C2 | 앞으로 늘리기가 그려진 위치의 속도를 쓴다 — 준비 자세 0.35초 동안 서 있어서 출발 직후 속도 = 0 | ②③ 주원인 |
+| C3 | 주장(RPC, 초당 30번 틱)이 위치 패킷(초당 10번)보다 먼저 도착 | C1을 키움 |
+| C4 | 허용 오차(2 m·6 m)가 걷기·달리기 속도 기준 | 돌진에는 0.03~0.09초분 |
+| C5 | 주장 위치가 이번 물리 스텝 이동 전의 `transform.position`(보간 켜짐) — 실제 멈춘 곳보다 최대 1.4~2.7 m 뒤. 잡기 거리 한도 5.37 m(몸 앞면 1.87 + 잡기 3 + 여유 0.5) 대비 최악 5.2 m | 드물게 OutOfReach |
+| C6 | (AI) 방장이 AI 경로를 바꾼 직후 — 도망·지그재그는 **술래가 다가올 때** 일어난다 — 술래 화면은 0.05~0.15초 동안 옛 경로로 그리는데 방장은 새 경로로만 비교. 달리는 AI에서 0.3~1 m, 지연이 크면 2 m 근처 | ② 보조 원인("AI 이동 경로와 술래 위치 판정 불일치") |
+| C7 | (AI) 거절을 술래에게 알리지 않음 + 경로 없는 AI는 0.2초마다 잰 `lastPositions`로만 잼(`IsNear`) | ② "잡았는데 안 죽음"으로 보이는 이유 |
+| C8 | 다른 화면에서 술래 돌진이 10 m 넘게 벌어지면 순간이동으로 보임(같은 뿌리의 연출 문제) | 보는 사람 화면 |
+
+**확인 방법(사용자 쪽에서도 가능)**: 방장 PC의 로그에 `[GrabKill] Rejected (MonsterMismatch): … path error cookie x / monster y m`, `[GrabKill] Decoy N rejected: … monster gap y m`가 찍힌다. 술래가 호스트인 판에서는 생기지 않아야 한다.
+
+#### 70.2.5 고침 설계
+
+**D1. 돌진 예고(핵심)** — 준비 자세가 시작될 때 시작 위치·방향·출발 시각을 모두에게 보낸다. 준비 0.35초 > 지연이므로 출발 전에 도착한다.
+
+```csharp
+// Monster/DashWindow.cs (새 파일, 순수 계산 — EditMode 시험)
+public struct DashWindow
+{
+    public Vector3 Start, Direction;      // Direction은 수평 단위 벡터
+    public double MoveStartsAt;           // 출발 시각(공용 시계)
+    public float Speed, Distance;         // 68 m/s, 20 m
+
+    public double MoveEndsAt => MoveStartsAt + Distance / Speed;
+    public bool Covers(double t, float slack) => t >= MoveStartsAt - slack && t <= MoveEndsAt + slack;
+
+    // t 시각까지 돌진으로 갈 수 있는 거리
+    public float ReachableAt(double t) => Mathf.Clamp((float)(t - MoveStartsAt) * Speed, 0f, Distance);
+
+    // 주장한 위치가 "시작 ~ 그 시각까지 갈 수 있는 곳" 선분에서 벗어난 수평 거리
+    public float PathError(Vector3 claimed, double t, float timeSlack)
+    {
+        Vector3 a = Start, b = Start + Direction * ReachableAt(t + timeSlack);
+        a.y = b.y = claimed.y;            // 경사·계단은 높이 검사가 따로 본다
+        return PositionTrack.SegmentDistance(claimed, a, b);
+    }
+}
+```
+
+```csharp
+// MonsterController.Update — 준비 자세 시작(지금 코드에 RPC 한 줄 추가)
+if (PlayerInput.TentacleDashPressed && tentacleDash.CooldownLeft <= 0f && !tentacleDash.IsDashing)
+{
+    dashWindupRemaining = DashWindupSeconds;
+    dashWindupForward = viewSwitcher != null && viewSwitcher.IsFirstPerson ? viewSwitcher.YawRotation * Vector3.forward : transform.forward;
+    pv.RPC(nameof(DashIntent), RpcTarget.All, rb.position, dashWindupForward, NetAuthority.Time + DashWindupSeconds);
+    ...
+}
+
+[PunRPC]
+private void DashIntent(Vector3 start, Vector3 direction, double moveStartsAt, PhotonMessageInfo info)
+{
+    if (info.Sender != pv.Owner) return;                       // 그 술래의 주인만
+    var window = new DashWindow { Start = start, Direction = direction.normalized, MoveStartsAt = moveStartsAt,
+                                  Speed = GameSettings.Current.TentacleDashDistance / GameSettings.Current.TentacleDashDuration,
+                                  Distance = GameSettings.Current.TentacleDashDistance };
+    MonsterDashLedger.Record(pv.ViewID, window, info.SentServerTime);   // 모든 화면이 보관(방장이 바뀌어도 이어진다)
+    if (!pv.IsMine) remoteDash = window;                       // 원격 화면: 출발 시각부터 길 따라 직접 움직인다(D6)
+}
+```
+
+```csharp
+// Monster/MonsterDashLedger.cs (새 파일) — 술래별 최근 돌진 예고. 방장은 받을 때 검증한다.
+public static class MonsterDashLedger
+{
+    private static readonly Dictionary<int, DashWindow> windows = new Dictionary<int, DashWindow>();
+    private const float CooldownSlack = 0.3f, StartTolerance = 2f, IntentMaxAge = 0.5f;
+
+    public static void Record(int viewId, DashWindow w, double sentAt)
+    {
+        if (NetAuthority.IsAuthority)
+        {
+            // 쿨타임보다 자주 예고할 수 없다 · 출발 시각은 보낸 시각 + 준비 시간 근처여야 한다 · 시작 위치는 방장 기록 근처여야 한다
+            if (windows.TryGetValue(viewId, out DashWindow last) && w.MoveStartsAt < last.MoveStartsAt + GameSettings.Current.TentacleDashCooldown - CooldownSlack) return;
+            if (Math.Abs(w.MoveStartsAt - (sentAt + MonsterController.DashWindupSeconds)) > IntentMaxAge) return;
+            if (PositionHistory.TryGet(viewId, out PositionTrack t)
+                && t.TryMinDistance(w.Start, sentAt - 0.5, NetAuthority.Time, w.Start, out float off) && off > StartTolerance) return;
+        }
+        windows[viewId] = w;
+    }
+
+    public static bool TryGet(int viewId, double at, out DashWindow w) => windows.TryGetValue(viewId, out w) && w.Covers(at, 0.5f);
+}
+```
+조작 대비: 예고는 쿨타임(5초)마다 한 번, 길이는 20 m, 시작 위치는 방장 기록 2 m 안, 갈 수 있는 거리는 지난 시간 × 속도. 지금보다 술래 화면을 더 믿는 부분은 "예고한 방향으로 실제로 돌진했다"는 것뿐이다.
+
+**D2. 판정에 돌진 길을 넣는다** — 기록 오차와 돌진 길 오차 중 작은 쪽.
+
+```csharp
+// GrabKillAuthority.Judge — monsterError 계산 뒤
+double seenAt = now - Mathf.Max(0f, age);
+if (MonsterDashLedger.TryGet(monster.View.ViewID, seenAt, out DashWindow dash))
+    monsterError = Mathf.Min(monsterError, dash.PathError(claim.Monster, seenAt, DashTimeSlack /* 0.1초 */));
+```
+```csharp
+// EscapeAuthority.MonsterCouldReach — AI도 같은 규칙. 돌진 길이 AI가 있던 자리 InteractReach 안을 지났는지.
+if (MonsterDashLedger.TryGet(monster.View.ViewID, now - age, out DashWindow dash))
+    gap = Mathf.Min(gap, dash.PathError(seen, now - age, DashTimeSlack));
+return gap <= InteractReach;
+```
+허용 오차(2 m·6 m)는 그대로 둔다. 숫자를 키워 덮는 방식은 쓰지 않는다(20 m를 덮으려면 사실상 검증이 없어진다).
+
+**D3. 주장 위치를 물리 위치로** — 술래 화면이 실제로 멈출 자리(물리 위치 + 이번 스텝 이동)를 보낸다(C5).
+
+```csharp
+// MonsterGrabKillTrigger.TryCatchOnContact(cookie, decoy, Vector3 stopAt)   ← FixedUpdateDash가 rb.position + velocity * dt를 넘긴다
+// TryGrabKill(cookie, stopAt): RPC의 술래 위치 인자를 monsterPv.transform.position 대신 stopAt으로
+```
+
+**D4. 방장 기록을 패킷 기준으로** — 그려진 위치 대신 "받은 위치 + 보낸 시각"을 기록한다. 보간 지연이 기록에서 빠지고, 서버로 옮겨도 같은 코드다.
+
+```csharp
+// MonsterController·HideOrSeekPlayer.OnPhotonSerializeView
+else
+{
+    networkSync.Read(stream, transform);
+    PositionHistory.RecordRemote(pv.ViewID, info.SentServerTime, networkSync.RemotePosition);   // 원격: 패킷마다
+}
+// PositionHistory.Update: 내 캐릭터(IsMine)만 0.05초마다 표본. 원격은 RecordRemote가 채운다.
+```
+이러면 `RemoteLead`의 "보간 지연 0.15초" 보정이 필요 없어진다(지연 보정만 남긴다). 걷다가 잡는 보통 잡기(§46)도 더 정확해진다 — 기존 시험(`Request1031Tests`) 기대값을 함께 맞춘다.
+
+**D5. AI 쪽 보강**
+- 경로 이력(C6): `DecoyRouteBook`이 바뀌기 직전 경로를 0.5초 보관하고, 비교 구간 중 새 경로 시작 전(그리고 시작 뒤 0.3초까지 — 술래 화면이 아직 옛 경로일 수 있는 시간)은 옛 경로로도 잰다.
+
+```csharp
+// DecoyRouteBook
+private readonly Dictionary<int, DecoyRoute> previous = new Dictionary<int, DecoyRoute>();
+public const float RouteSwitchGrace = 0.3f;
+
+public void SetLocal(int id, DecoyRoute route)
+{
+    if (routes.TryGetValue(id, out DecoyRoute old)) previous[id] = old;   // Read()도 같은 처리
+    routes[id] = route; Revision++;
+}
+
+// [from, to] 동안 AI가 point에 가장 가까이 온 거리 — 지금 경로 + (겹치는 동안) 직전 경로
+public float MinDistance(int id, Vector3 point, double from, double to)
+{
+    if (!routes.TryGetValue(id, out DecoyRoute cur)) return float.MaxValue;
+    float best = DecoyRoute.MinDistance(cur, point, Math.Max(from, cur.StartAt), to);
+    if (previous.TryGetValue(id, out DecoyRoute prev) && from < cur.StartAt + RouteSwitchGrace)
+        best = Mathf.Min(best, DecoyRoute.MinDistance(prev, point, from, Math.Min(to, cur.StartAt + RouteSwitchGrace)));
+    return best;
+}
+```
+- 경로 없는 AI(서 있는 AI)도 `IsNear(lastPositions)` 대신 `MonsterCouldReach`(기록 + 돌진 길)로 잰다.
+- 거절 알림(C7): 방장이 거절하면 요청한 술래에게만 `EscapeNoticeKind.DecoyCatchRejected`(AI 번호)를 보낸다 → 술래 화면은 `monster.CancelGrabKill()`로 동작을 끊고 바로 다시 잡을 수 있다. 쿠키 처치의 `GrabKillRejected`와 같은 모양으로 맞춘다.
+
+**D6. 다른 화면의 돌진 표시(C8)** — 예고를 받은 원격 화면은 출발 시각부터 길 따라 직접 움직인다. 술래 화면은 돌진이 끝나면(다 감·벽에 막힘·닿음) `DashEnd(끝 위치)`를 보낸다.
+
+```csharp
+// MonsterController.Update — 원격
+if (!pv.IsMine)
+{
+    double t = NetAuthority.Time;
+    if (remoteDash.Covers(t, 0f) && !remoteDashEnded)
+        transform.position = SnapToGround(remoteDash.Start + remoteDash.Direction * remoteDash.ReachableAt(t));
+    else networkSync.Interpolate(transform, Time.deltaTime);
+    ChangeState(networkSync.RemoteState);
+    return;
+}
+```
+벽에 막혀 일찍 끝난 돌진은 `DashEnd`가 오기 전까지 다른 화면에서 조금 더 나아가 보일 수 있다(지연만큼, 최대 약 0.1초 = 6 m) → `DashEnd` 위치로 0.1초에 걸쳐 되돌린다. 판정에는 영향이 없다(판정은 주장 위치 기준).
+
+**D7. (선택) 보류 판정** — 기록이 주장 시각까지 못 왔고 돌진 예고도 없으면, 최대 0.25초 기다렸다가 판정한다(그동안 연출은 지금처럼 진행). 돌진 외의 급한 이동(대포 착지 직후 잡기 등)까지 덮는 안전망. D1~D5 뒤에도 거절 로그가 남으면 넣는다.
+
+**하지 않는 것**: 동기화 빈도를 30으로 올리기(트래픽 3배인데 68 m/s에는 여전히 부족), 허용 오차 키우기, "잡기 확정 뒤에야 동작 시작"으로 바꾸기(술래 화면 반응이 지연만큼 늦어진다 — 지금처럼 먼저 시작하고 거절을 드물게 만드는 쪽을 택함. 70.4 Q5).
+
+#### 70.2.6 검증 방법
+
+- **한 대 재현 도구**(DG1): `OfflineModeBootstrap`에 "원격 술래 흉내" 스위치 — 방장 기록에 실제 위치 대신 `지연 L + 초당 10번 패킷 + 보간`을 거친 복사본을 넣는다. 고치기 전 거절이 재현되는지, 고친 뒤 0인지 본다.
+- **두 대 재현**: 에디터 + 빌드 한 대, PUN 지연 시뮬레이션(`PhotonNetwork.NetworkingClient.LoadBalancingPeer.NetworkSimulationSettings` 지연 80·150 ms, 흔들림 20 ms). 술래 = 비방장. 쿠키 20회·AI 20회 돌진 잡기(3 m·6 m·10 m·20 m).
+- **EditMode 시험**: 70.2.3 표를 시험으로 고정(고친 뒤 거절 0), `DashWindow.PathError`, 쿨타임보다 잦은 예고 거부, 경로 이력 `MinDistance`, 패킷 기준 기록.
+- 합격 기준: 지연 150 ms에서 돌진 접촉 잡기 거절 0/40, 걷다가 잡기 회귀 없음, 예고 없는 20 m 순간이동 주장은 여전히 거절.
+
+### 70.3 투척 아이템(①)
+
+#### 70.3.1 지금 구조와 문제
+
+| | 물풍선 | 섬광탄 | 수색 폭탄 |
+| --- | --- | --- | --- |
+| 쓰는 곳 | `ToolUser.Use` | `ToolUser.Use` | `NoiseBombPresenter.UpdateSearch` |
+| 목표 정하기 | 전방 45° 부채꼴에서 가장 가까운 사람(`PickTarget`) **자동 조준**, 없으면 보는 곳 땅 | 같음(**자동 조준**) | 카메라 수평 방향 **10 m 앞 땅**(고정) |
+| 날아가는 것 | `ToolShotFx.ThrowBalloon` — 대상을 **따라가는** 포물선 그림 | `ToolShotFx.ThrowCanister` — 포물선 그림(흰 캡슐) | **없음**(즉시 판정) |
+| 충돌 | 없음(벽·천장을 뚫고 지나감) | 없음 | 없음 |
+| 누가 맞나 | 던질 때 고른 한 명(방장은 거리만 확인) | 던질 때 떨어질 자리 둘레를 **던진 사람 화면이** 모음 | 방장이 그 자리 둘레 진짜 사람 |
+| 맞는 시각 | 방장이 정한 `hitAt`(손 떠남 0.35초 + 거리로 정한 비행 시간) | 같음 | 즉시 |
+
+```csharp
+// ToolUser.Use — 지금 섬광탄(물풍선도 같은 꼴)
+IGameCharacter aimed = PickTarget(aim, tool.Range, ToolAim.BalloonHalfAngle, true);            // ← 자동 조준
+point = aimed != null ? aimed.gameObject.transform.position : GroundAhead(cam, origin, aim, tool.Range);
+CollectInSphere(point, tool.HitRadius, targets, 16, true);                                     // ← 맞을 사람을 던지는 순간 정함
+```
+즉 "던진다"는 느낌은 그림뿐이고, 결과는 클릭하는 순간 이미 정해진다. 벽 뒤 사람도 맞고, 피할 수도 없다.
+
+#### 70.3.2 참고 문서와의 대조
+
+참고 폴더(설계안 그림·문서)의 요구: 카메라 가운데 레이캐스트로 목표 지점 → 45° 포물선 → 부딪히면 튕기고 구른 뒤 → 일정 시간 뒤 폭발. 섬광탄 8 m(최대 10 m, 꼭대기 약 2.0 m), 수색 폭탄 10 m(최대 12 m, 꼭대기 약 2.5 m). 방장이 투사체와 폭발을 관리, 폭발 판정은 방장에서 한 번. 점선 미리보기(장애물에 가리면 끊기). 새 투척 아이템이 늘 수 있게 확장성.
+
+**따르는 것**: 위 전부. 클래스 나누기도 문서 제안과 같다(이름만 프로젝트 규칙에 맞춤).
+
+**다르게 하는 것 하나 — Rigidbody 대신 "같은 수식 계산"**
+문서는 `Rigidbody.linearVelocity`로 발사한다고 적었다. 그대로 하면 화면마다 물리 결과가 조금씩 달라 **같은 자리에서 터지지 않는다**. 방장의 Rigidbody만 믿고 위치를 동기화하면 초당 10번이라 끊겨 보이고 지연만큼 늦다. 그래서:
+- 중력·튕김·구름을 직접 계산하는 작은 시뮬레이션(`BallisticSim`)을 만들고, **모든 화면이 같은 입력(시작점·속도·출발 시각)으로 같은 계산**을 한다 → 추가 동기화 없이 어디서나 같은 궤적.
+- 벽·바닥과의 충돌은 Unity 충돌체에 구를 쏘아(`Physics.SphereCast`) 찾는다 — "실제 물리 충돌"이 맞다. 캐릭터와의 닿음은 방장이 검사한다.
+- 보이는 느낌(포물선·튕김·구름)은 Rigidbody와 같다. 얻는 것: 화면 간 일치, 던진 사람 화면 즉시 반응, 서버 이전 쉬움, EditMode 시험 가능.
+
+#### 70.3.3 새 구조
+
+```
+던지는 사람 화면                     방장(권한)                             모든 화면
+───────────────────────────────────────────────────────────────────────────────────────────
+들고 있는 동안: 조준점 + 점선 궤적 미리보기(같은 계산)
+클릭 → 던지는 동작
+0.35초 뒤 손을 떠남(그 순간 보는 방향으로)
+ ├ 예측 투사체를 내 화면에 바로 생성
+ └ EscapeOp.Throw(칸, 시작점, 속도, 시각) ─→ 검증: 횟수·쿨타임·시작점이 그 사람 손 근처·속도 상한·시각
+                                          ├ 통과: ProjectileSpawn(id, 아이템, 주인, 시작점, 속도, t0) ─→ 같은 계산으로 날아감
+                                          │        (던진 사람은 예측 투사체를 이것으로 바꿈)
+                                          └ 거절: 던진 사람에게만 알림 → 예측 투사체 지움
+                                          물리 스텝마다 진행:
+                                           · 물풍선: 캐릭터 몸에 닿으면 → 그 사람 명중
+                                           · 섬광탄·수색 폭탄: 첫 충돌 뒤 시한이 지나면 → 그 자리 둘레 대상 계산
+                                          └ ToolHit(아이템, 주인, 대상들, 터진 자리, 시각, id) ─────→ 투사체 지우고 기존 효과
+                                                                                                   (갇힘·섬광·기침 — ToolHitReceiver.Apply 그대로)
+```
+- 효과(갇힘 5초, 섬광 5초 + 기절 3초, 기침)와 그 수치는 바꾸지 않는다. 바뀌는 것은 "어디로 날아가 언제 누구에게 닿는가"뿐이다.
+- 진행 중인 투사체 목록은 모든 화면이 갖는다 → 방장이 바뀌면 새 방장이 이어서 판정한다.
+
+#### 70.3.4 코드
+
+**설정(아이템마다 에셋 하나) — 새 투척 아이템은 에셋만 추가**
+```csharp
+// Escape/Projectile/ProjectileConfigSO.cs
+[CreateAssetMenu(menuName = "TagOfChaos/Escape/Projectile", fileName = "Projectile_")]
+public class ProjectileConfigSO : ScriptableObject
+{
+    [Header("Throw")]
+    [Min(1f)] public float baseRange = 8f;        // 허공을 볼 때 떨어지는 거리
+    [Min(1f)] public float maxRange = 10f;        // 바닥·벽을 봐도 이보다 멀리는 안 간다
+    [Range(10f, 75f)] public float launchAngle = 45f;
+    [Header("Flight")]
+    [Min(0.02f)] public float radius = 0.12f;
+    [Min(1f)] public float gravity = 9.81f;
+    [Range(0f, 0.9f)] public float bounciness = 0.35f;   // 부딪힌 면 방향 속도를 이만큼 되돌린다
+    [Range(0f, 1f)] public float surfaceFriction = 0.25f; // 부딪힐 때마다 면을 따라가는 속도가 줄어든다(구름)
+    [Min(0f)] public float restSpeed = 0.4f;             // 이보다 느려지면 멈춘 것으로
+    [Header("Trigger")]
+    public bool hitsCharacters;                   // 물풍선: 캐릭터 몸에 닿으면 발동
+    [Min(0f)] public float fuseAfterImpact = 1f;  // 첫 충돌 뒤 이 시간에 폭발(0 = 닿는 즉시)
+    [Min(0.5f)] public float maxLifeSeconds = 4f; // 아무것도 안 닿아도 이때 폭발
+    [Header("Look")]
+    public GameObject model;                      // 날아가는 모습(없으면 아이템 모델)
+}
+```
+`ToolSO`에 `[SerializeField] private ProjectileConfigSO projectile;` + `public ProjectileConfigSO Projectile => projectile;` 추가. `IsThrown`은 `projectile != null`로.
+
+**던지는 속도 계산(순수 계산)**
+```csharp
+// Escape/Projectile/ThrowSolver.cs
+public static class ThrowSolver
+{
+    // 카메라 가운데 광선이 닿은 곳. 허공이면 baseRange 앞의 땅. 사거리(maxRange) 밖이면 안으로 당긴다.
+    public static Vector3 TargetPoint(Ray aim, Vector3 origin, ProjectileConfigSO c, int worldMask, float cameraToOrigin)
+    {
+        bool looked = Physics.Raycast(aim, out RaycastHit hit, c.maxRange + cameraToOrigin, worldMask, QueryTriggerInteraction.Ignore);
+        Vector3 point = looked ? hit.point : aim.origin + aim.direction * (c.baseRange + cameraToOrigin);
+        Vector3 flat = new Vector3(point.x - origin.x, 0f, point.z - origin.z);
+        bool pulledIn = flat.magnitude > c.maxRange;
+        if (pulledIn) point = new Vector3(origin.x, point.y, origin.z) + flat.normalized * c.maxRange;
+        // 허공을 봤거나 사거리 안으로 당겨진 경우: 그 아래 땅을 목표로 삼는다
+        if ((!looked || pulledIn) && Physics.Raycast(point + Vector3.up * 2f, Vector3.down, out RaycastHit ground, 30f, worldMask, QueryTriggerInteraction.Ignore))
+            point = ground.point;
+        return point;
+    }
+
+    // 방장 검증용 상한: 평지에서 maxRange를 던지는 속도(45°일 때 √(g·d))
+    public static float MaxSpeed(ProjectileConfigSO c) =>
+        LaunchVelocity(Vector3.zero, Vector3.forward * c.maxRange, c.launchAngle, c.gravity).magnitude;
+
+    // origin에서 target에 떨어지는 처음 속도. 목표가 높으면 각을 세운다.
+    //   h = d·tanθ − g·d² / (2·v²·cos²θ)  →  v² = g·d² / (2·cos²θ·(d·tanθ − h))
+    public static Vector3 LaunchVelocity(Vector3 origin, Vector3 target, float angleDeg, float gravity)
+    {
+        Vector3 flat = new Vector3(target.x - origin.x, 0f, target.z - origin.z);
+        float d = Mathf.Max(0.5f, flat.magnitude), h = target.y - origin.y;
+        float theta = Mathf.Max(angleDeg * Mathf.Deg2Rad, Mathf.Atan2(h, d) + 12f * Mathf.Deg2Rad);
+        theta = Mathf.Clamp(theta, 5f * Mathf.Deg2Rad, 80f * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(theta);
+        float v = Mathf.Sqrt(gravity * d * d / Mathf.Max(0.01f, 2f * cos * cos * (d * Mathf.Tan(theta) - h)));
+        return flat.normalized * (v * cos) + Vector3.up * (v * Mathf.Sin(theta));
+    }
+}
+```
+45°로 평지 8 m → 꼭대기 2.0 m, 10 m → 2.5 m(= 거리 ÷ 4). 설계안 그림의 숫자와 같다.
+
+**궤적 계산(순수 계산 — 모든 화면·방장·미리보기가 같은 함수)**
+```csharp
+// Escape/Projectile/BallisticSim.cs
+public struct ProjectileState
+{
+    public Vector3 Position, Velocity;
+    public float Age;            // 출발 뒤 지난 시간
+    public float FirstImpactAt;  // 처음 부딪힌 시각(-1 = 아직)
+    public int Bounces;
+    public bool Resting;
+}
+
+public static class BallisticSim
+{
+    public const float Step = 1f / 60f;   // 고정 간격 — 프레임 속도와 무관하게 같은 결과
+
+    // world: 구를 쏘아 벽·바닥을 찾는 함수(실행 때는 Physics.SphereCast, 시험에서는 가짜 바닥).
+    public delegate bool Sweep(Vector3 from, Vector3 direction, float distance, float radius, out Vector3 centerAtHit, out Vector3 normal);
+
+    public static void Advance(ref ProjectileState s, ProjectileConfigSO c, Sweep world)
+    {
+        if (!s.Resting)
+        {
+            s.Velocity += Vector3.down * (c.gravity * Step);
+            Vector3 move = s.Velocity * Step;
+            float distance = move.magnitude;
+            if (distance > 1e-5f && world(s.Position, move / distance, distance, c.radius, out Vector3 at, out Vector3 normal))
+            {
+                s.Position = at + normal * 0.002f;
+                Vector3 vn = Vector3.Project(s.Velocity, normal);
+                s.Velocity = (s.Velocity - vn) * (1f - c.surfaceFriction) - vn * c.bounciness;   // 면 따라 구르고, 면 방향으로 튕김
+                s.Bounces++;
+                if (s.FirstImpactAt < 0f) s.FirstImpactAt = s.Age;
+                if (s.Velocity.magnitude < c.restSpeed) { s.Velocity = Vector3.zero; s.Resting = true; }
+            }
+            else s.Position += move;
+        }
+        s.Age += Step;
+    }
+
+    public static bool FuseDone(in ProjectileState s, ProjectileConfigSO c) =>
+        s.Age >= c.maxLifeSeconds || (s.FirstImpactAt >= 0f && s.Age - s.FirstImpactAt >= c.fuseAfterImpact);
+}
+```
+
+**요청 형식** — `EscapeRequest`에 방향·시각 칸을 덧붙인다(옛 요청은 길이 5로 그대로 읽힌다).
+```csharp
+// EscapeNet.cs
+public UnityEngine.Vector3 Dir; public int Stamp;
+public object[] ToPayload() => new object[] { (byte)Op, A, B, Pos, Targets ?? new int[0], Dir, Stamp };
+// TryParse: if (d.Length > 6 && d[5] is Vector3 dir && d[6] is int stamp) { request.Dir = dir; request.Stamp = stamp; }
+// EscapeOp.Throw = 28,  NetEventCodes.ProjectileSpawn = 15
+```
+
+`EscapeManager.Request`는 지금 `Request(EscapeOp op, int a = 0, int b = 0, Vector3 pos = default, int[] targets = null)`이다. 뒤에 `Vector3 dir = default, int stamp = 0`을 덧붙인다(기존 호출 40여 곳은 그대로 컴파일된다).
+
+**던지는 사람** — `ToolUser`(물풍선·섬광탄), `NoiseBombPresenter`(수색 폭탄)가 같은 도우미를 쓴다.
+```csharp
+// Escape/Projectile/ThrowAim.cs — "지금 보는 곳으로 던지면" 시작점과 처음 속도. 미리보기와 실제 던지기가 같은 함수를 쓴다.
+public readonly struct ThrowAim
+{
+    public readonly Vector3 Origin, Velocity, Target;
+    private ThrowAim(Vector3 origin, Vector3 velocity, Vector3 target) { Origin = origin; Velocity = velocity; Target = target; }
+
+    public static ThrowAim FromCamera(Camera cam, Vector3 hand, ProjectileConfigSO c)
+    {
+        Ray aim = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));                 // 화면 가운데
+        float cameraToHand = Vector3.Dot(hand - aim.origin, aim.direction);            // 3인칭 카메라는 캐릭터 뒤에 있다
+        Vector3 target = ThrowSolver.TargetPoint(aim, hand, c, ProjectileWorld.Mask, Mathf.Max(0f, cameraToHand));
+        return new ThrowAim(hand, ThrowSolver.LaunchVelocity(hand, target, c.launchAngle, c.gravity), target);
+    }
+}
+```
+```csharp
+// ToolUser.Use
+case ToolKind.Flashbang:
+case ToolKind.WaterBalloon:
+    if (pose != null) pose.Play(PlayerActionPose.OneShot.Throw);
+    StartCoroutine(ReleaseThrow(slot, item));     // 자동 조준(PickTarget)·CollectInSphere 없음
+    return;
+
+private IEnumerator ReleaseThrow(int slot, ItemSO item)
+{
+    yield return new WaitForSeconds(PlayerActionPose.ThrowRelease);                  // 손을 떠나는 순간(0.35초)
+    if (inventory.HeldItem != item) yield break;                                      // 그 사이 칸을 바꿨으면 취소
+    ThrowAim aim = ThrowAim.FromCamera(Camera.main, ToolShotFx.HandPosition(transform), item.Tool.Projectile);  // 시작점·속도
+    int stamp = NetAuthority.Stamp;
+    ProjectilePresenter.SpawnPredicted(item, aim.Origin, aim.Velocity, NetAuthority.Time);
+    manager.Request(EscapeOp.Throw, slot, Random.Range(0, 10), aim.Origin, null, aim.Velocity, stamp);
+}
+```
+```csharp
+// NoiseBombPresenter.UpdateSearch — 10 m 앞 고정 대신
+ThrowAim aim = ThrowAim.FromCamera(Camera.main, MonsterHand(t), manager.Catalog.SearchBomb.Tool.Projectile);
+manager.Request(EscapeOp.Throw, -1 /* 술래 스킬: 인벤토리 칸 없음 */, 0, aim.Origin, null, aim.Velocity, NetAuthority.Stamp);
+```
+
+**방장** — 검증 뒤 투사체를 등록하고, 스텝마다 진행·판정.
+```csharp
+// EscapeAuthority.Throw(r)
+ItemSO def = r.A < 0 ? catalog.SearchBomb : catalog.Find(State.Items[State.HeldItemAt(r.Sender, r.A)].Id);
+ProjectileConfigSO cfg = def.Tool.Projectile;
+// 지금 ToolUse와 같은 검사: 횟수·쿨타임(술래는 SearchCooldown)·IsActiveEscaper / IsMonster
+if (!IsNear(r.Sender, r.Pos, ThrowOriginReach /* 3 m */)) return false;              // 시작점이 그 사람 근처
+float maxSpeed = ThrowSolver.MaxSpeed(cfg) * 1.1f;                                   // maxRange를 던지는 속도 + 10 %
+Vector3 velocity = Vector3.ClampMagnitude(r.Dir, maxSpeed);
+float age = NetAuthority.AgeOf(r.Stamp); if (age < -0.1f || age > 0.5f) age = 0f;    // 던진 시각(이상하면 지금)
+// 횟수 차감(지금 코드 그대로) 뒤
+projectiles.Launch(def, r.Sender, r.Pos, velocity, NetAuthority.Time - age, r.B);    // → ProjectileSpawn 이벤트
+```
+```csharp
+// Escape/Projectile/ProjectileAuthority.cs — 방장 Tick(물리 스텝마다)
+foreach (LiveProjectile p in live)
+{
+    while (p.State.Age < now - p.T0)
+    {
+        BallisticSim.Advance(ref p.State, p.Config, ProjectileWorld.Sweep);
+        if (p.Config.hitsCharacters && TryHitCharacter(p, out int viewId)) { Finish(p, new[] { viewId }); break; }   // 물풍선
+        if (BallisticSim.FuseDone(p.State, p.Config)) { Finish(p, AreaTargets(p)); break; }                          // 섬광탄·수색 폭탄
+    }
+}
+
+// 캐릭터 닿음: 투사체 구와 캐릭터 몸이 겹치는지(방장 화면의 충돌체). 던진 사람 본인, 죽은·나간·탈것 안·구르는 중(무적)·
+// 그 도구가 못 맞히는 대상(물풍선은 술래 제외 — ToolSO.CanHitMonster)은 건너뛴다.
+// AreaTargets: 터진 자리 둘레 HitRadius — 섬광탄은 모두(술래 포함, 던진 사람 제외 — 지금 규칙), 수색 폭탄은 진짜 사람만(지금 SearchBomb 규칙).
+// Finish: ToolHit 이벤트(아이템, 주인, 대상들, 터진 자리, 색, 지금 시각, knock, 투사체 id) — 지금 형식 뒤에 id만 덧붙인다.
+```
+
+**모든 화면** — 같은 계산으로 그리고, 결과가 오면 지운다.
+```csharp
+// Escape/Projectile/ProjectilePresenter.cs
+// OnSpawn(id, item, owner, origin, velocity, t0): 투사체 모습 생성(내 예측 투사체가 있으면 그것을 이어 씀)
+// Update: while (state.Age < NetAuthority.Time - t0) BallisticSim.Advance(...); transform.position = state.Position; 굴러가는 회전
+// ToolHitReceiver.Handle: 투사체 id가 있으면 그 투사체를 터진 자리로 옮겨 지우고 Apply(...) — ThrowBalloon/ThrowCanister 연출은 부르지 않는다
+// 예측 투사체: 0.5초 안에 Spawn이 안 오면(방장 거절) 조용히 지운다
+```
+
+#### 70.3.5 아이템별 설정(안)
+
+| | 물풍선(쿠키) | 섬광탄(스파이) | 수색 폭탄(술래) |
+| --- | --- | --- | --- |
+| 허공을 볼 때 거리 | 10 m(지금 사거리) | **8 m**(지금 12 m → 설계안) | 10 m |
+| 최대 거리 | 12 m | 10 m | 12 m |
+| 발사 각 | 45° | 45° | 45° |
+| 사람 몸에 닿으면 | **터짐 → 그 사람 5초 갇힘** | 튕김(Q2) | 튕김(Q2) |
+| 벽·바닥에 닿으면 | Q1 | 튕기고 구름 | 튕기고 구름 |
+| 폭발 | Q1 | 첫 충돌 뒤 1.0초 → 반경 6 m 섬광 5초·기절 3초(술래 포함) | 첫 충돌 뒤 1.0초 → 반경 12 m 진짜 사람만 기침 |
+| 안 닿아도 폭발 | 4초 | 4초 | 4초 |
+| 쿨타임·횟수 | 그대로 | 그대로 | 3초 그대로 |
+
+수치는 모두 에셋(`Projectile_WaterBalloon/Flashbang/SearchBomb.asset`)에 있어 코드 없이 조정한다.
+
+#### 70.3.6 미리보기와 조준점
+
+- 투척 아이템을 들고 있으면(술래는 수색 폭탄 쿨타임이 끝났을 때 R을 누르고 있는 동안 — Q4) 화면 가운데 **작은 조준점** + **점선 궤적**을 그린다.
+- 궤적은 지금 조준으로 `BallisticSim`을 앞으로 돌려 얻은 점들이다(첫 충돌까지 점선, 그 뒤 튕기는 구간은 옅게). 벽에 막히면 거기서 끊긴다 — 실제 던졌을 때와 같은 계산이라 어긋나지 않는다.
+- 끝에 범위 고리: 섬광탄 6 m, 수색 폭탄 12 m는 "굴러가 멈출 것으로 예상되는 자리" 기준. 물풍선은 고리 없이 닿는 자리 표시만.
+- `BalloonAimPreview`에 `ShowPath(Vector3[] points, int count, int firstImpactIndex, Vector3 end, float radius, Color color)`를 더하고 기존 `Show`(대상 따라가기)·`ShowArea`는 지운다.
+
+#### 70.3.7 Blender
+
+- **수색 폭탄 투사체**(요청): 설계안 그림처럼 어두운 쇠 구슬 + 붉게 빛나는 렌즈 + 심지. 지금 `ITEM_SearchBomb.fbx`(§68에서 만든 손 모델)를 바탕으로 굴러가도 어색하지 않게 원점을 가운데로 한 `PROJ_SearchBomb.fbx`를 만든다. 사진을 먼저 보이고 승인 뒤 내보낸다.
+- 섬광탄: 지금 날아갈 때 흰 캡슐(기본 도형)이다 → 손에 든 `ITEM_Flashbang` 모델을 그대로 투사체로 쓴다(새 모델 불필요, 그림의 보라빛 통과 비슷한지 사진으로 확인).
+- 물풍선: 지금 물방울(`WaterBubbleView.CreateSmall`) 그대로.
+- 술래가 던지는 팔 동작은 없다(1인칭 팔·촉수 연출에 "던지기" 자세를 하나 더할지 Q4).
+
+#### 70.3.8 없애거나 바꾸는 것
+
+- `ToolUser`: 물풍선·섬광탄의 `PickTarget` 자동 조준, `CollectInSphere`(섬광탄), `UpdateBalloonPreview`·`UpdateFlashbangPreview`의 대상 따라가기 → 새 미리보기.
+- `ToolShotFx.ThrowBalloon`·`ThrowCanister`와 유도 포물선, `ToolAim.ArcPoint`·`ApexHeight`·`FlightSeconds`(다른 곳에서 안 쓰면).
+- `EscapeAuthority.ToolUse`의 던지는 도구 분기(`hitAt` 계산, `ValidTargets`의 `area` 경로), `EscapeAuthority.SearchBomb`(→ `Throw`로 합침), `EscapeOp.SearchBomb`.
+- `ToolSO.Range`(물풍선·섬광탄)는 `ProjectileConfigSO`로 옮긴다. 기존 시험(`Request1029Tests` 물풍선 포물선, `Request1108GpTests` 섬광탄·수색 폭탄) 기대값을 새 규칙으로 바꾼다.
+- 뿅망치·권투 글러브·스턴건·스케이트·마차·대포·녹음기는 건드리지 않는다.
+
+### 70.4 확인할 것(사용자)
+
+| # | 질문 | 권장 |
+| --- | --- | --- |
+| Q1 | **물풍선이 사람이 아닌 벽·바닥에 먼저 닿으면?** (A) 그 자리에서 바로 터지고 아무도 안 갇힘 — 직접 맞혀야만 함 (B) 바로 터지되 1.5 m 안 가장 가까운 한 명은 갇힘 (C) 정크랫처럼 튕기고 구르다가, 구르는 동안 사람에게 닿으면 그 사람이 갇히고 1초 뒤에는 그냥 터짐 | C — "공통적으로 정크랫처럼" + "닿았을 때 발동"을 둘 다 만족 |
+| Q2 | **섬광탄·수색 폭탄이 사람 몸에 직접 맞으면?** (A) 튕겨 나가고 시한(첫 충돌 뒤 1초)에 폭발 (B) 맞는 즉시 폭발(정크랫 직격) | A — 범위 효과라 직격 폭발이 없어도 됨. 시한 1초가 적당한지도 확인 |
+| Q3 | **거리**: 섬광탄 허공 8 m·최대 10 m(지금 12 m에서 줄어듦), 수색 폭탄 10 m·12 m, 물풍선 10 m·12 m로 할까? | 설계안대로 |
+| Q4 | **술래 수색 폭탄**: R을 누르는 즉시 던질까, 누르고 있는 동안 궤적을 보이고 떼면 던질까? 던지는 팔 동작(1인칭)도 넣을까? | 누르고 있는 동안 궤적, 떼면 던짐 + 팔 동작 추가 |
+| Q5 | **잡기 동작 시작 시점**: 지금처럼 술래 화면에서 바로 시작하고 방장이 거절하면 취소(고친 뒤 거절은 드묾) vs 방장 확정 뒤 시작(취소는 없지만 지연만큼 늦음) | 지금 방식 유지 |
+| Q6 | **Rigidbody 대신 같은 수식 계산**(70.3.2)으로 가도 될까? | 그렇게 진행 |
+
+### 70.5 단계
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| S0 | 코드 조사·모의 실험·계획(이 절) | ✅ |
+| S1 | 확인(Q1~Q6) | 대기 |
+| NA1 | `NetAuthority` 래퍼(새 코드만 사용) | |
+| DG1 | 재현 도구: `OfflineModeBootstrap` "원격 술래 흉내" + 두 대 지연 시뮬레이션 절차. 지금 코드로 거절 재현·로그 확보 | |
+| DG2 | `DashWindow`·`MonsterDashLedger` + EditMode 시험(70.2.3 표 고정) | |
+| DG3 | `MonsterController` 돌진 예고·끝 RPC, 원격 돌진 표시(D1·D6) | |
+| DG4 | `GrabKillAuthority`·`EscapeAuthority` 돌진 길 판정, 주장 위치(D2·D3), AI 경로 이력·거절 알림·경로 없는 AI(D5) | |
+| DG5 | `PositionHistory` 패킷 기준(D4) + 기존 잡기 시험 맞추기. 필요하면 보류 판정(D7) | |
+| DG6 | 검증: 재현 도구 거절 0, 두 대(지연 80·150 ms) 쿠키 20회·AI 20회, 걷다가 잡기 회귀 | |
+| TH1 | `ThrowSolver`·`BallisticSim` + EditMode 시험(8 m 꼭대기 2.0 m, 착지 오차, 같은 입력 = 같은 궤적, 튕길수록 느려짐, 멈춤) | |
+| TH2 | `ProjectileConfigSO` + 에셋 3개, `ToolSO` 연결, `EscapeRequest` 확장, `EscapeOp.Throw`, `ProjectileSpawn` | |
+| TH3 | 방장 `ProjectileAuthority`(진행·닿음·시한·대상) + 모든 화면 `ProjectilePresenter`(예측 포함) + `ToolHitReceiver` 연결 | |
+| TH4 | `ToolUser`(물풍선·섬광탄)·`NoiseBombPresenter`(수색 폭탄) 교체, 자동 조준 제거, 조준점·점선 미리보기 | |
+| TH5 | Blender 수색 폭탄 투사체(사진 승인) + 섬광탄 투사체 모습 확인 | |
+| TH6 | 옛 경로 정리(70.3.8) + 기존 시험 갱신 | |
+| TH7 | Play Mode(맵 4개: 벽·계단·지하 천장·문·건물 안), 두 대(던진 사람·맞는 사람·보는 사람 화면 일치, 방장 교체 중 투사체) | |
+| DOC | 결과·README | |
+
+순서: DG(버그)를 먼저, TH(투척)를 다음에. 둘은 서로 기대지 않는다(`NetAuthority`만 공유).
+
+### 70.6 위험과 주의
+
+- **화면 간 계산 차이**: 같은 수식이라도 CPU에 따라 소수점 끝자리가 달라질 수 있고, 움직이는 충돌체(문·탈것·거대 괴물이 부순 건물)는 화면마다 상태가 조금 다를 수 있다. 결과(터진 자리·대상)는 방장 것을 쓰므로 어긋나도 마지막에 방장 자리로 맞춰진다. 2초 남짓한 비행에서 눈에 띄는 차이는 드물 것으로 본다 — TH7에서 확인.
+- **맞는 사람 입장의 지연**: 방장은 방장 화면의 캐릭터 위치로 닿음을 본다. 맞는 사람 화면에서는 물풍선이 살짝 뒤를 지나갔는데 맞는 경우가 생길 수 있다(투사체 게임의 공통 한계, 지연만큼). D4(패킷 기준 위치)가 이를 줄인다.
+- **돌진 예고 악용**: 방장이 쿨타임·시작 위치·출발 시각을 검사한다(70.2.5). 예고 없이 20 m를 건너뛴 주장은 지금처럼 거절된다.
+- **기존 잡기(§46) 회귀**: D4가 기록 방식을 바꾸므로 걷다가·달리다가 잡는 경우를 DG6에서 함께 본다.
+- **섬광탄 거리 축소**(12 → 8~10 m)는 밸런스 변경이다(Q3).
+- 규칙: Play Mode 중 업로드·컴파일 금지, 배치·모델은 사진 승인 뒤, 맵 빌더 "Build Map Scenes"·Compact 실행 안 함.

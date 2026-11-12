@@ -220,12 +220,18 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     {
         if (!pv.IsMine)
         {
-            networkSync.Interpolate(transform, Time.deltaTime);
+            if (!TickRemoteDash()) networkSync.Interpolate(transform, Time.deltaTime);
             ChangeState(networkSync.RemoteState);
             return;
         }
 
         tentacleDash.TickCooldown(Time.deltaTime);
+        if (dashIntentOpen && !IsDashWindingUp && !tentacleDash.IsDashing)
+        {
+            // 예고한 돌진의 이동이 끝났다(다 감·벽·닿음·취소) — 다른 화면이 여기서 멈추게 알린다(§70.2.5 D6).
+            dashIntentOpen = false;
+            pv.RPC(nameof(DashEnd), RpcTarget.Others, rb.position);
+        }
 
         if (IsGrabKilling)
         {
@@ -288,6 +294,9 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         {
             dashWindupRemaining = DashWindupSeconds;
             dashWindupForward = viewSwitcher != null && viewSwitcher.IsFirstPerson ? viewSwitcher.YawRotation * Vector3.forward : transform.forward;
+            // 돌진 예고(§70.2.5 D1): 준비 자세(0.35초)가 지연보다 길어, 출발 전에 방장과 모든 화면이 돌진 길을 안다.
+            dashIntentOpen = true;
+            pv.RPC(nameof(DashIntent), RpcTarget.All, rb.position, dashWindupForward, NetAuthority.Time + DashWindupSeconds);
             moveInput = Vector3.zero;
             ChangeState(MonsterMoveState.TentacleDashWindup);
         }
@@ -381,8 +390,80 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         if (stopBeforeCookie)
         {
             tentacleDash.Cancel(); // 돌진 이동만 끝낸다 — 애니메이션 마무리는 그대로 이어진다
-            if (grabKillTrigger != null) grabKillTrigger.TryCatchOnContact(hitCookie, hitDecoy); // 닿으면 잡는다(구르는 쿠키·감옥 풍선은 빠진다)
+            if (grabKillTrigger != null) grabKillTrigger.TryCatchOnContact(hitCookie, hitDecoy, position + velocity * dt); // 닿으면 잡는다(구르는 쿠키·감옥 풍선은 빠진다)
         }
+        return true;
+    }
+
+    // ---------------- 돌진 예고(§70.2.5) ----------------
+
+    private bool dashIntentOpen;      // 본인: 예고를 보냈고 아직 끝을 알리지 않았다
+    private DashWindow remoteDash;    // 원격: 받은 예고
+    private bool remoteDashEnded;
+    private Vector3 remoteDashEndPosition;
+    private float remoteDashHoldUntil;
+    private const float RemoteDashEndWait = 0.3f;   // 이동이 끝난 뒤 끝 알림을 기다리는 시간
+    private const float RemoteDashHoldSeconds = 0.4f; // 끝난 자리에서 위치 패킷이 따라올 때까지 버티는 시간
+    private const float RemoteDashCatchUp = 1.5f;   // 받은 위치가 끝 자리에 이만큼 가까워지면 평소 보간으로 돌아간다(m)
+
+    // 준비 자세가 시작됐다: 시작 위치·방향·출발 시각. 모든 화면이 적어 두고(방장은 검사), 원격 화면은 출발 시각부터 그 길을 따라 그린다.
+    [PunRPC]
+    private void DashIntent(Vector3 start, Vector3 direction, double moveStartsAt, PhotonMessageInfo info)
+    {
+        if (pv == null || info.Sender == null || info.Sender != pv.Owner) return;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 1e-6f) return;
+        GameSettingsSO settings = GameSettings.Current;
+        var window = new DashWindow
+        {
+            Start = start, Direction = direction.normalized, MoveStartsAt = moveStartsAt,
+            Speed = settings.TentacleDashDistance / settings.TentacleDashDuration, Distance = settings.TentacleDashDistance,
+        };
+        bool validate = NetAuthority.IsAuthority && !pv.IsMine;
+        float offPath = 0f;
+        if (validate && PositionHistory.TryGet(pv.ViewID, out PositionTrack track)
+            && track.TryMinDistance(start, info.SentServerTime - NetSecurityRules.GrabRewindWindow, NetAuthority.Time, track.NewestPoint, out float off)) offPath = off;
+        if (!MonsterDashLedger.Record(pv.ViewID, window, info.SentServerTime, DashWindupSeconds, settings.TentacleDashCooldown, validate, offPath)) return;
+        if (pv.IsMine) return;
+        remoteDash = window;
+        remoteDashEnded = false;
+    }
+
+    // 돌진 이동이 끝난 자리(본인 → 다른 화면).
+    [PunRPC]
+    private void DashEnd(Vector3 position, PhotonMessageInfo info)
+    {
+        if (pv == null || pv.IsMine || info.Sender == null || info.Sender != pv.Owner || !remoteDash.IsValid) return;
+        if (NetAuthority.Time < remoteDash.MoveStartsAt) { remoteDash = default; return; } // 출발 전에 취소됐다(기절·잡기)
+        remoteDashEnded = true;
+        remoteDashEndPosition = position;
+        remoteDashHoldUntil = Time.time + RemoteDashHoldSeconds;
+    }
+
+    // 원격 화면: 예고된 돌진을 출발 시각부터 직접 그린다 — 위치 패킷(초당 10번)으로는 초속 68 m가 순간이동으로 보인다(§70.2.5 D6).
+    // 이번 프레임을 돌진으로 그렸으면 true(평소 보간을 건너뛴다).
+    private bool TickRemoteDash()
+    {
+        if (!remoteDash.IsValid) return false;
+        double now = NetAuthority.Time;
+        if (!remoteDashEnded)
+        {
+            if (now < remoteDash.MoveStartsAt) return false; // 준비 자세: 평소 보간(제자리)
+            if (now > remoteDash.MoveEndsAt + RemoteDashEndWait) { remoteDash = default; return false; }
+            Vector3 point = remoteDash.PointAt(now);
+            point.y = transform.position.y;
+            if (Physics.Raycast(point + Vector3.up * 3f, Vector3.down, out RaycastHit ground, 9f, groundLayer, QueryTriggerInteraction.Ignore)) point.y = ground.point.y;
+            transform.position = point;
+            transform.rotation = Quaternion.LookRotation(remoteDash.Direction);
+            return true;
+        }
+        // 끝난 자리에서 버틴다 — 받은 위치가 아직 뒤쪽이라 평소 보간으로 돌아가면 뒤로 끌려갔다가 다시 온다.
+        if (Time.time > remoteDashHoldUntil || (networkSync.RemotePosition - remoteDashEndPosition).sqrMagnitude < RemoteDashCatchUp * RemoteDashCatchUp)
+        {
+            remoteDash = default;
+            return false;
+        }
+        transform.position = Vector3.MoveTowards(transform.position, remoteDashEndPosition, 60f * Time.deltaTime);
         return true;
     }
 
@@ -525,6 +606,9 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         if (stream.IsWriting)
             networkSync.Write(stream, transform, currentState);
         else
+        {
             networkSync.Read(stream, transform);
+            PositionHistory.RecordRemote(pv.ViewID, info.SentServerTime, networkSync.RemotePosition); // 방장: 패킷 기준 기록(§70.2.5 D4)
+        }
     }
 }

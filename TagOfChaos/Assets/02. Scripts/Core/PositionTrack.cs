@@ -18,6 +18,7 @@ public sealed class PositionTrack
 
     public int Count => count;
     public double NewestTime => count > 0 ? times[Index(count - 1)] : double.NegativeInfinity;
+    public Vector3 NewestPoint => count > 0 ? points[Index(count - 1)] : Vector3.zero;
     public double OldestTime => count > 0 ? times[Index(0)] : double.PositiveInfinity;
 
     // 오래된 순 i번째(0 = 가장 오래된 것).

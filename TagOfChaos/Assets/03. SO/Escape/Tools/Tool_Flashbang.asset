@@ -22,3 +22,4 @@ MonoBehaviour:
   paintsTarget: 0
   effectSeconds: 5
   speedMultiplier: 2
+  projectile: {fileID: 11400000, guid: 24f82d7beaca3144ba4bea534969fb00, type: 2}

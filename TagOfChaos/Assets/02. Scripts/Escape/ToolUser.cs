@@ -5,9 +5,8 @@ using UnityEngine;
 // 모두에게 명중(ToolHit)을 알린다 — 기절·떨어뜨리기·색칠은 맞은 사람 본인이 처리한다(ToolHitReceiver).
 // - 뿅망치(§45.5): 두 손으로 휘두르고, 망치가 닿는 순간(0.32초) 전방 5 m·60° 안에서 가장 가까운 대상 한 명.
 // - 스턴건: 카메라가 보는 방향 사거리(20 m, §45.6) 안 첫 대상. 우클릭을 누르고 있는 동안만 조준(조준점 + 약간 확대 + 조준 자세)되고, 그때 좌클릭해야 쏜다.
-// - 물풍선(§45.7): 전방 10 m·45° 안에서 가장 가까운 대상 한 명을 향해 위로 던진다(포물선 높이는 거리로 그때그때 계산). 들고 있는 동안
-//   대상 표시와 예상 궤적이 보인다(BalloonAimPreview). 대상이 없으면 보는 곳 앞 땅에 떨어진다.
-// - 섬광탄(§68 GP2): 물풍선처럼 앞으로 던져(대상이 있으면 그쪽) 떨어진 자리 둘레 HitRadius 안 모두(술래 포함)를 맞힌다.
+// - 물풍선·섬광탄(§70.3): 화면 가운데가 보는 곳으로 던진다(자동 조준 없음). 손을 떠나면 실제로 날아가 물풍선은 사람 몸에 닿으면 가두고
+//   벽·바닥에 먼저 닿으면 그냥 터지며, 섬광탄은 튕기고 구르다 첫 충돌 2초 뒤 터진다. 들고 있는 동안 조준점과 점선 궤적이 보인다.
 // - 권투 글러브(§68 GP3): 뿅망치처럼 휘둘러 주먹이 닿는 순간 앞 짧은 부채꼴 안 가장 가까운 쿠키 한 명(술래 제외).
 // 괴물은 충돌 캡슐(반지름 약 0.31 m)이 몸 겉모습보다 훨씬 작으므로, 몸 크기의 트리거(잡기 범위 구)도 맞힘 판정에 넣는다.
 public class ToolUser : MonoBehaviour
@@ -53,25 +52,32 @@ public class ToolUser : MonoBehaviour
         UpdateAimHum(Aiming);
         if (Aiming && crosshair == null) crosshair = CreateCrosshair();
         if (crosshair != null && crosshair.activeSelf != Aiming) crosshair.SetActive(Aiming);
-        UpdateBalloonPreview(held, cam);
-        UpdateFlashbangPreview(held, cam);
+        UpdateThrowPreview(held, cam);
         UpdateRecorderTarget(held, cam);
     }
 
-    // ---------------- 섬광탄 고각 점선(§69 B6) ----------------
-    private BalloonAimPreview flashPreview;
-    private static readonly Color FlashPreviewColor = new Color(1f, 0.95f, 0.6f, 0.85f);
+    // ---------------- 던지는 도구 조준(§70.3.6) ----------------
+    private readonly ThrowPreview throwPreview = new ThrowPreview();
+    private static readonly Color BalloonPreviewColor = new Color(0.45f, 0.95f, 1f, 0.9f);
+    private static readonly Color FlashPreviewColor = new Color(1f, 0.95f, 0.6f, 0.9f);
+    private const float BalloonSplashRing = 0.5f;
 
-    private void UpdateFlashbangPreview(ItemSO held, Camera cam)
+    private void UpdateThrowPreview(ItemSO held, Camera cam)
     {
-        bool flash = held != null && held.IsTool && held.Tool.Kind == ToolKind.Flashbang && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
-        if (!flash) { if (flashPreview != null) flashPreview.Hide(); return; }
-        if (flashPreview == null) flashPreview = BalloonAimPreview.Create(dotted: true);
-        Vector3 origin = transform.position + Vector3.up * 1.1f;
-        Vector3 aim = cam != null ? cam.transform.forward : transform.forward;
-        IGameCharacter aimed = PickTarget(aim, held.Tool.Range, ToolAim.BalloonHalfAngle, true);
-        Vector3 to = aimed != null ? aimed.gameObject.transform.position : GroundAhead(cam, origin, aim, held.Tool.Range); // Use()와 같은 떨어질 자리
-        flashPreview.ShowArea(ToolShotFx.HandPosition(transform), to, held.Tool.HitRadius, FlashPreviewColor);
+        bool thrown = held != null && held.IsTool && held.Tool.Projectile != null && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
+        if (!thrown || cam == null) { throwPreview.Hide(); return; }
+        bool balloon = held.Tool.Kind == ToolKind.WaterBalloon;
+        throwPreview.Show(cam, ToolShotFx.HandPosition(transform), transform, held.Tool.Projectile,
+            balloon ? BalloonSplashRing : held.Tool.HitRadius, balloon ? BalloonPreviewColor : FlashPreviewColor);
+    }
+
+    // 손을 떠나는 순간(던지기 동작 0.35초) 그때 보는 곳으로 던진다. 그사이 다른 칸으로 바꿨으면 던지지 않는다.
+    private System.Collections.IEnumerator ReleaseThrow(int slot, ItemSO item)
+    {
+        yield return new WaitForSeconds(PlayerActionPose.ThrowRelease);
+        if (inventory == null || inventory.HeldItem != item || ProjectileSystem.Instance == null) yield break;
+        ThrowAim aim = ThrowAim.FromCamera(Camera.main, ToolShotFx.HandPosition(transform), transform.forward, item.Tool.Projectile);
+        ProjectileSystem.Instance.Throw(item, slot, Random.Range(0, 10), aim, transform);
     }
 
     // ---------------- 녹음기: 조준한 내 AI(§69 B3) ----------------
@@ -113,23 +119,6 @@ public class ToolUser : MonoBehaviour
         return best;
     }
 
-    // 물풍선을 들고 있으면 맞을 대상·예상 궤적(§45.7 WB0).
-    private BalloonAimPreview preview;
-
-    private void UpdateBalloonPreview(ItemSO held, Camera cam)
-    {
-        bool balloon = held != null && held.IsTool && held.Tool.Kind == ToolKind.WaterBalloon
-                       && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
-        if (!balloon) { if (preview != null) preview.Hide(); return; }
-        if (preview == null) preview = BalloonAimPreview.Create();
-        Vector3 origin = transform.position + Vector3.up * 1.1f;
-        Vector3 aim = cam != null ? cam.transform.forward : transform.forward;
-        IGameCharacter target = PickTarget(aim, held.Tool.Range, ToolAim.BalloonHalfAngle, held.Tool.CanHitMonster);
-        Vector3 from = ToolShotFx.HandPosition(transform);
-        Vector3 to = target != null ? WaterBubbleView.BodyBounds(target.gameObject.transform).center : GroundAhead(cam, origin, aim, held.Tool.Range);
-        preview.Show(from, to, target != null ? target.gameObject.transform : null);
-    }
-
     // 스턴건을 조준하는 동안 윙 소리 반복(본인 2D, S5).
     private void UpdateAimHum(bool aiming)
     {
@@ -158,7 +147,7 @@ public class ToolUser : MonoBehaviour
     {
         aimHum.Stop();
         if (crosshair != null) Destroy(crosshair);
-        if (preview != null) Destroy(preview.gameObject);
+        throwPreview.Destroy();
         Camera cam = Camera.main;
         if (cam != null && baseFov > 0f) cam.fieldOfView = baseFov;
         Aiming = false;
@@ -221,14 +210,12 @@ public class ToolUser : MonoBehaviour
                 StartCoroutine(HammerHit(slot, tool, GloveHitDelay, GloveHalfAngle));
                 return;
             case ToolKind.Flashbang:
-            {
+            case ToolKind.WaterBalloon:
+                if (tool.Projectile == null) { readyAt = 0f; return; }
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
                 if (pose != null) pose.Play(PlayerActionPose.OneShot.Throw);
-                IGameCharacter aimed = PickTarget(aim, tool.Range, ToolAim.BalloonHalfAngle, true);
-                point = aimed != null ? aimed.gameObject.transform.position : GroundAhead(cam, origin, aim, tool.Range);
-                CollectInSphere(point, tool.HitRadius, targets, 16, true); // 둘레 모두(술래 포함, 던진 사람 제외)
-                break;
-            }
+                StartCoroutine(ReleaseThrow(slot, item)); // 대상은 날아가 닿을 때 방장이 정한다(§70.3)
+                return;
             case ToolKind.StunGun:
             {
                 Ray ray = cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)) : new Ray(origin, aim);
@@ -283,19 +270,6 @@ public class ToolUser : MonoBehaviour
                 }
                 manager.Request(EscapeOp.ToolUse, slot, Mathf.RoundToInt(yaw), point, new int[0]);
                 return;
-            }
-            case ToolKind.WaterBalloon:
-            {
-                if (pose == null) pose = GetComponent<PlayerActionPose>();
-                if (pose != null) pose.Play(PlayerActionPose.OneShot.Throw);
-                IGameCharacter target = PickTarget(aim, tool.Range, ToolAim.BalloonHalfAngle, tool.CanHitMonster);
-                if (target != null)
-                {
-                    point = target.gameObject.transform.position;
-                    targets.Add(target.View.ViewID);
-                }
-                else point = GroundAhead(cam, origin, aim, tool.Range);
-                break;
             }
             default:
             {
@@ -356,22 +330,6 @@ public class ToolUser : MonoBehaviour
 
     private readonly List<IGameCharacter> candidates = new List<IGameCharacter>();
     private readonly List<Vector3> candidatePoints = new List<Vector3>();
-
-    // 대상이 없을 때 떨어질 곳: 보는 곳(사거리 안)의 땅.
-    private static Vector3 GroundAhead(Camera cam, Vector3 origin, Vector3 aim, float range)
-    {
-        Ray ray = cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)) : new Ray(origin, aim);
-        float camOffset = cam != null ? Vector3.Distance(cam.transform.position, origin) : 0f;
-        Vector3 point = Physics.Raycast(ray, out RaycastHit hit, range + camOffset, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
-            ? hit.point : ray.origin + ray.direction * (range + camOffset);
-        Vector3 flat = point - origin;
-        flat.y = 0f;
-        if (flat.magnitude > range) point = new Vector3(origin.x, point.y, origin.z) + flat.normalized * range;
-        if (Physics.Raycast(point + Vector3.up * 2f, Vector3.down, out RaycastHit ground, 30f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
-            && ground.point.y < point.y + 0.1f)
-            point = ground.point;
-        return point;
-    }
 
     private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 

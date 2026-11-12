@@ -113,6 +113,7 @@ public static class PlayerInput
     public static bool EditorGrabPress;
     private static bool EditorTakeGrabPress() { bool p = EditorGrabPress; EditorGrabPress = false; return p; }
     public static bool TentacleDashPressed => !IsGameplaySuppressed && Down(KeyAction.MonsterDash);
+    public static bool SearchBombHeld => !IsGameplaySuppressed && Held(KeyAction.MonsterSearch); // 누르고 있는 동안 궤적, 떼면 던짐(§70.3 Q4)
     public static bool SearchBombPressed => !IsGameplaySuppressed && (Down(KeyAction.MonsterSearch) || EditorTakeSearchPress()); // 술래 수색 폭탄(§68 GP5)
     public static bool EditorSearchPress;
     private static bool EditorTakeSearchPress() { bool p = EditorSearchPress; EditorSearchPress = false; return p; }

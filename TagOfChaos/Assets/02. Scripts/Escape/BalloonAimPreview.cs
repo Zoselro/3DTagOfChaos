@@ -62,6 +62,7 @@ public class BalloonAimPreview : MonoBehaviour
     public void ShowArea(Vector3 from, Vector3 to, float radius, Color color)
     {
         if (!gameObject.activeSelf) gameObject.SetActive(true);
+        line.positionCount = Segments + 1;
         float apex = ToolAim.ApexHeight(from, to);
         for (int i = 0; i <= Segments; i++) points[i] = ToolAim.ArcPoint(from, to, apex, i / (float)Segments);
         line.SetPositions(points);
@@ -81,6 +82,7 @@ public class BalloonAimPreview : MonoBehaviour
     public void ShowSpot(Vector3 at, float radius, Color color)
     {
         if (!gameObject.activeSelf) gameObject.SetActive(true);
+        line.positionCount = Segments + 1;
         for (int i = 0; i <= Segments; i++) points[i] = at;
         line.SetPositions(points);
         ring.gameObject.SetActive(true);
@@ -98,6 +100,7 @@ public class BalloonAimPreview : MonoBehaviour
     public void ShowRingOnly(Transform target, Color color)
     {
         if (!gameObject.activeSelf) gameObject.SetActive(true);
+        line.positionCount = Segments + 1;
         for (int i = 0; i <= Segments; i++) points[i] = target.position;
         line.SetPositions(points);
         ring.gameObject.SetActive(true);
@@ -116,6 +119,7 @@ public class BalloonAimPreview : MonoBehaviour
     public void Show(Vector3 from, Vector3 to, Transform target)
     {
         if (!gameObject.activeSelf) gameObject.SetActive(true);
+        line.positionCount = Segments + 1;
         float apex = ToolAim.ApexHeight(from, to);
         for (int i = 0; i <= Segments; i++) points[i] = ToolAim.ArcPoint(from, to, apex, i / (float)Segments);
         line.SetPositions(points);
@@ -135,6 +139,26 @@ public class BalloonAimPreview : MonoBehaviour
             }
             ring.SetPositions(ringPoints);
         }
+    }
+
+    // 던지는 물체의 예상 궤적(§70.3.6): 계산한 점들을 그대로 잇고, 끝(멈추거나 터질 자리)에 반경 고리.
+    public void ShowPath(Vector3[] path, int count, Vector3 end, float radius, Color color)
+    {
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
+        count = Mathf.Clamp(count, 2, path.Length);
+        if (line.positionCount != count) line.positionCount = count;
+        for (int i = 0; i < count; i++) line.SetPosition(i, path[i]);
+        line.startColor = line.endColor = color;
+        ring.gameObject.SetActive(radius > 0f);
+        if (radius <= 0f) return;
+        ring.startColor = ring.endColor = color;
+        var centre = end + Vector3.up * 0.1f;
+        for (int i = 0; i < RingSegments; i++)
+        {
+            float a = i * Mathf.PI * 2f / RingSegments;
+            ringPoints[i] = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
+        }
+        ring.SetPositions(ringPoints);
     }
 
     public void Hide()

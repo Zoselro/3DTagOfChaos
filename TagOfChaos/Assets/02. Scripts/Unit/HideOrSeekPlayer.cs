@@ -735,6 +735,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         else // 원격 플레이어의 상태 정보 수신
         {
             networkSync.Read(stream, transform);
+            PositionHistory.RecordRemote(pv.ViewID, info.SentServerTime, networkSync.RemotePosition); // 방장: 패킷 기준 기록(§70.2.5 D4)
         }
     }
 }

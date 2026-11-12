@@ -8,7 +8,11 @@ using UnityEngine;
 public sealed class DecoyRouteBook
 {
     private readonly Dictionary<int, DecoyRoute> routes = new Dictionary<int, DecoyRoute>();
+    private readonly Dictionary<int, DecoyRoute> previous = new Dictionary<int, DecoyRoute>(); // 바뀌기 직전 경로(§70.2.5 D5)
     private readonly System.Func<Vector3, bool> isAllowed;
+
+    // 경로가 바뀐 뒤 이만큼은 다른 화면이 아직 옛 경로로 그리고 있을 수 있다(방 속성이 도착하기 전, 초).
+    public const float RouteSwitchGrace = 0.3f;
 
     public int Count => routes.Count;
     public int Revision { get; private set; } // 바뀔 때마다 오른다(화면이 다시 읽을지 판단)
@@ -31,14 +35,14 @@ public sealed class DecoyRouteBook
     // 방 속성 전체(입장·방장 교체) 또는 바뀐 것만(OnRoomPropertiesUpdate). 바뀐 경로가 있으면 true.
     public bool Read(Hashtable props, bool full)
     {
-        if (full) routes.Clear();
+        if (full) { routes.Clear(); previous.Clear(); }
         bool changed = full;
         if (props == null) return changed;
         foreach (System.Collections.DictionaryEntry e in props)
         {
             if (!TryParseKey(e.Key, out int id)) continue;
             changed = true;
-            if (e.Value is byte[] data && DecoyRoute.TryDecode(data, out DecoyRoute r)) routes[id] = Sanitize(r);
+            if (e.Value is byte[] data && DecoyRoute.TryDecode(data, out DecoyRoute r)) Replace(id, Sanitize(r));
             else routes.Remove(id);
         }
         if (changed) Revision++;
@@ -48,18 +52,38 @@ public sealed class DecoyRouteBook
     // 방장이 쓴 값을 바로 반영한다(서버 응답 전에도 같은 위치로 판정하도록).
     public void SetLocal(int id, DecoyRoute route)
     {
-        routes[id] = route;
+        Replace(id, route);
         Revision++;
+    }
+
+    // 새 경로로 바꾸며 직전 경로를 남긴다. 같은 경로를 다시 받은 것(방장 자신의 쓰기가 돌아옴)은 직전 경로를 덮지 않는다.
+    private void Replace(int id, DecoyRoute route)
+    {
+        if (routes.TryGetValue(id, out DecoyRoute old) && old.IsValid && System.Math.Abs(old.StartAt - route.StartAt) > 1e-3) previous[id] = old;
+        routes[id] = route;
+    }
+
+    // [from, to] 동안 그 AI가 point에 가장 가까이 온 거리. 술래가 다가오면 AI는 도망 경로로 바뀌는데, 술래 화면은 새 경로가 도착하기 전까지
+    // 옛 경로로 그린다 — 그래서 바뀐 직후(RouteSwitchGrace)까지는 직전 경로로도 잰다(§70.2.5 D5). 경로가 없으면 float.MaxValue.
+    public float MinDistance(int id, Vector3 point, double from, double to)
+    {
+        if (!routes.TryGetValue(id, out DecoyRoute current)) return float.MaxValue;
+        float best = DecoyRoute.MinDistance(current, point, from, to);
+        if (previous.TryGetValue(id, out DecoyRoute prev) && from < current.StartAt + RouteSwitchGrace)
+            best = Mathf.Min(best, DecoyRoute.MinDistance(prev, point, from, System.Math.Min(to, current.StartAt + RouteSwitchGrace)));
+        return best;
     }
 
     public void RemoveLocal(int id)
     {
+        previous.Remove(id);
         if (routes.Remove(id)) Revision++;
     }
 
     public void Clear()
     {
         routes.Clear();
+        previous.Clear();
         Revision++;
     }
 

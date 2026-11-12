@@ -475,7 +475,8 @@ public sealed class EscapeAuthority
             case EscapeOp.PlaceBomb: changed = PlaceBomb(r.Sender, r.Pos); break;
             case EscapeOp.RemoveBomb: changed = RemoveBomb(r.Sender, r.A); break;
             case EscapeOp.DecoyCatch: changed = DecoyCatch(r.Sender, r.A, r.Pos, r.B); break;
-            case EscapeOp.SearchBomb: changed = SearchBomb(r.Sender, r.Pos); break;
+            case EscapeOp.SearchBomb: changed = false; break; // 옛 즉시 수색 폭탄 — 이제 던진다(EscapeOp.Throw, §70.3)
+            case EscapeOp.Throw: changed = Throw(r); break;
             case EscapeOp.CageMash: changed = CageMash(r.Sender, r.A); break;
             case EscapeOp.CarriageBoard: changed = CarriageBoard(r.Sender, r.A); break;
             case EscapeOp.CannonBoard: changed = CannonBoard(r.Sender, r.A, r.B); break;
@@ -1100,12 +1101,19 @@ public sealed class EscapeAuthority
     private bool DecoyCatch(int actor, int id, Vector3 seen, int seenStamp)
     {
         int i = State.DecoyIndex(id);
-        if (i < 0 || !RoomState.IsMonster(actor)) return false;
+        bool testSameActor = GrabKillAuthority.DebugJudgeSameActor && !RoomState.IsMonster(actor); // 재현 도구(§70.2.6): 위치 판정만 로그로
+        if (i < 0 || (!RoomState.IsMonster(actor) && !testSameActor)) return false;
         EscapeState.Decoy d = State.Decoys[i];
         double now = PhotonNetwork.Time;
+        if (testSameActor) { DecoyWithinReach(actor, d, manager.Routes.PoseOf(d, now), seen, seenStamp, now); return false; }
         // 움직이는 AI는 경로 위치로 잰다(모든 화면이 같은 경로로 그린다, Request1009Plan.md §44.6).
         DecoyRoute.Pose pose = manager.Routes.PoseOf(d, now);
-        if (d.Caught || !DecoyWithinReach(actor, d, pose, seen, seenStamp, now)) return false;
+        if (d.Caught) return false; // 이미 잡히는 중(같은 요청이 겹침) — 진행 중인 잡기를 끊지 않게 거절 알림도 보내지 않는다
+        if (!DecoyWithinReach(actor, d, pose, seen, seenStamp, now))
+        {
+            NoticeTo(actor, EscapeNoticeKind.DecoyCatchRejected, id.ToString()); // 술래 화면이 빈손 잡기 동작을 바로 끊는다(§70.2.5 D5)
+            return false;
+        }
         // 바로 지우지 않고 잡는 동작(GrabKill) 동안 괴물 손에 들려 있게 한다 — 끝나면 Tick이 지운다(§26 R10)
         d.Pos = pose.Position; // 마지막으로 확정한 자리(방장이 바뀌어도 여기서 시작)
         d.Yaw = pose.Yaw;
@@ -1116,31 +1124,43 @@ public sealed class EscapeAuthority
     }
 
     // 괴물 화면이 본 순간으로 되돌려 잰다(§46.2 GK4): 그 화면이 본 AI 위치가 [본 시각 − 0.5초, 지금] 동안의 경로에서 2 m 안이고,
-    // 괴물이 그 위치에 손이 닿으면 잡힌다. 경로가 없거나(서 있는 AI) 본 시각이 없으면 지금 경로 위치로 잰다.
+    // 괴물이 그 위치에 손이 닿으면 잡힌다. 경로가 바뀐 직후에는 직전 경로로도 재고, 서 있는 AI(경로 없음)는 그 자리로 잰다(§70.2.5 D5).
     private bool DecoyWithinReach(int actor, EscapeState.Decoy d, DecoyRoute.Pose pose, Vector3 seen, int seenStamp, double now)
     {
-        if (seenStamp == 0 || !manager.Routes.TryGet(d.Id, out DecoyRoute route)) return IsNear(actor, pose.Position, InteractReach);
-        float age = unchecked(PhotonNetwork.ServerTimestamp - seenStamp) / 1000f;
-        double from = now - Mathf.Max(0f, age) - NetSecurityRules.GrabRewindWindow;
-        float error = DecoyRoute.MinDistance(route, seen, from, now);
-        bool reach = MonsterCouldReach(actor, seen, from, now, age, out float monsterGap);
+        if (seenStamp == 0) return IsNear(actor, pose.Position, InteractReach); // 옛 클라이언트
+        float age = NetAuthority.AgeOf(seenStamp);
+        double seenAt = now - Mathf.Max(0f, age);
+        double from = seenAt - NetSecurityRules.GrabRewindWindow;
+        float error = manager.Routes.TryGet(d.Id, out _) ? manager.Routes.MinDistance(d.Id, seen, from, now) : Vector3.Distance(seen, pose.Position);
+        bool reach = MonsterCouldReach(actor, seen, from, now, seenAt, out float monsterGap);
         bool ok = age <= NetSecurityRules.GrabClaimMaxAge && age >= -0.1f && error <= NetSecurityRules.GrabClaimPathTolerance && reach;
         Debug.Log($"[GrabKill] Decoy {d.Id} {(ok ? "caught" : "rejected")}: path error {error:F1} m, now {Vector3.Distance(seen, pose.Position):F1} m apart, " +
                   $"monster gap {monsterGap:F1} m, age {age * 1000f:F0} ms.");
         return ok;
     }
 
-    // 괴물이 본 AI 자리에 손이 닿았는지: 방장 기록의 괴물 길(지연만큼 앞으로 늘림)이 그 자리에서 InteractReach 안을 지났는지(§46 후속).
-    // 예전에는 0.2초마다 잰 방장 화면의 지금 위치로만 재서, 달려와 잡은 괴물은 아직 뒤에 있는 것으로 보여 거절됐다.
-    private bool MonsterCouldReach(int actor, Vector3 seen, double from, double now, float age, out float gap)
+    // 괴물이 본 AI 자리에 손이 닿았는지: 방장 기록의 괴물 길(마지막 패킷에서 앞으로 늘림)이 그 자리에서 InteractReach 안을 지났는지(§46 후속),
+    // 또는 예고된 돌진 길이 그 안을 지났는지(§70.2.5 D2 — 돌진은 위치 패킷으로 따라갈 수 없다).
+    private bool MonsterCouldReach(int actor, Vector3 seen, double from, double now, double seenAt, out float gap)
     {
         gap = -1f;
         IGameCharacter monster = CharacterRegistry.FindByOwner(actor);
-        if (monster == null || monster.View == null || !PositionHistory.TryGet(monster.View.ViewID, out PositionTrack track))
-            return IsNear(actor, seen, InteractReach);
-        Vector3 current = monster.gameObject.transform.position;
-        float lead = monster.View.IsMine ? 0f : NetSecurityRules.RemoteLead(age);
-        if (!track.TryMinDistanceLeading(seen, from, now, current, lead, out gap)) return IsNear(actor, seen, InteractReach);
+        if (monster == null || monster.View == null) return IsNear(actor, seen, InteractReach);
+        bool known = false;
+        if (PositionHistory.TryGet(monster.View.ViewID, out PositionTrack track))
+        {
+            bool remote = PositionHistory.IsRemote(monster.View);
+            Vector3 current = remote ? track.NewestPoint : monster.gameObject.transform.position;
+            float lead = remote ? NetSecurityRules.PacketLead(seenAt, track.NewestTime) : 0f;
+            known = track.TryMinDistanceLeading(seen, from, now, current, lead, out gap);
+        }
+        if (MonsterDashLedger.TryGet(monster.View.ViewID, seenAt, out DashWindow dash))
+        {
+            float dashGap = dash.PathError(seen, seenAt, MonsterDashLedger.ClaimTimeSlack);
+            gap = known ? Mathf.Min(gap, dashGap) : dashGap;
+            known = true;
+        }
+        if (!known) return IsNear(actor, seen, InteractReach);
         return gap <= InteractReach;
     }
 
@@ -1153,6 +1173,7 @@ public sealed class EscapeAuthority
         EscapeState.Item it = State.Items[item];
         ItemSO def = catalog.Find(it.Id);
         if (def == null || !def.IsTool || it.Charges <= 0 || !def.Tool.UsedByClick) return false;
+        if (def.Tool.Projectile != null) return false; // 던지는 도구는 EscapeOp.Throw로만(자동 조준 요청은 받지 않는다, §70.3)
         if (toolReadyAt.TryGetValue(r.Sender, out float ready) && Time.time < ready) return false;
 
         int[] targets;
@@ -1196,6 +1217,56 @@ public sealed class EscapeAuthority
         var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B, hitAt, knock };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
         return true;
+    }
+
+    // ---------------- 던지기(§70.3) ----------------
+
+    public const float ThrowOriginReach = 4f; // 손(시작점)이 그 사람 기록 위치에서 벗어나도 되는 거리(달리기 + 동기화 여유)
+    public const float ThrowMaxAge = 0.5f;    // 손을 떠난 시각이 이보다 오래됐거나 앞서면 지금으로 본다
+
+    // 물풍선·섬광탄(쿠키·스파이 인벤토리 칸) 또는 수색 폭탄(술래, A = -1). 횟수·쿨타임·시작점·속도를 확인하고 투사체를 출발시킨다.
+    // 누가 맞는지는 날아가 닿거나 터질 때 방장이 정한다(ProjectileSystem) — 던질 때 고른 대상은 받지 않는다.
+    private bool Throw(EscapeRequest r)
+    {
+        ProjectileSystem projectiles = ProjectileSystem.Instance;
+        if (projectiles == null) return false;
+        ItemSO def;
+        int item = -1;
+        if (r.A < 0)
+        {
+            def = catalog.SearchBomb;
+            if (def == null || !def.IsTool || !RoomState.IsMonster(r.Sender)) return false;
+            if (searchReadyAt.TryGetValue(r.Sender, out float searchReady) && Time.time < searchReady) return false;
+        }
+        else
+        {
+            item = State.HeldItemAt(r.Sender, r.A);
+            if (item < 0 || !IsActiveEscaper(r.Sender)) return false;
+            def = catalog.Find(State.Items[item].Id);
+            if (def == null || !def.IsTool || State.Items[item].Charges <= 0) return false;
+            if (toolReadyAt.TryGetValue(r.Sender, out float ready) && Time.time < ready) return false;
+        }
+        ProjectileConfigSO cfg = def.Tool.Projectile;
+        if (cfg == null) return false;
+        if (!IsNear(r.Sender, r.Pos, ThrowOriginReach)) return false; // 손이 그 사람 근처
+        Vector3 velocity = Vector3.ClampMagnitude(r.Dir, ThrowSolver.MaxSpeed(cfg));
+        if (velocity.sqrMagnitude < 0.01f) return false;
+        float age = NetAuthority.AgeOf(r.Stamp);
+        if (r.Stamp == 0 || age < -0.1f || age > ThrowMaxAge) age = 0f;
+
+        if (item >= 0)
+        {
+            toolReadyAt[r.Sender] = Time.time + def.Tool.CooldownSeconds;
+            EscapeState.Item it = State.Items[item];
+            it.Charges--;
+            if (it.Charges <= 0) it.Loc = ItemLocation.Gone;
+            State.Items[item] = it;
+        }
+        else searchReadyAt[r.Sender] = Time.time + SearchCooldown;
+
+        int localKey = r.Targets != null && r.Targets.Length > 0 ? r.Targets[0] : 0;
+        projectiles.AuthorizeSpawn(def, r.Sender, r.Pos, velocity, NetAuthority.Time - Mathf.Max(0f, age), Mathf.Clamp(r.B, 0, 9), localKey);
+        return item >= 0; // 횟수가 바뀌었을 때만 상태를 다시 쓴다
     }
 
     // 녹음기: 그 사람의 AI 중 무작위 하나가 목소리를 내며 걷기 시작한다.
@@ -1487,6 +1558,14 @@ public sealed class EscapeAuthority
     {
         if (!RoomState.IsInRoom()) return null;
         return PhotonNetwork.CurrentRoom.GetPlayer(actor);
+    }
+
+    // 한 사람에게만 보내는 알림.
+    private static void NoticeTo(int actor, EscapeNoticeKind kind, string text)
+    {
+        // 오프라인 방은 대상 지정(TargetActors)을 무시하고 아무에게도 보내지 않으므로 모두에게(혼자뿐)
+        var options = PhotonNetwork.OfflineMode ? new RaiseEventOptions { Receivers = ReceiverGroup.All } : new RaiseEventOptions { TargetActors = new[] { actor } };
+        PhotonNetwork.RaiseEvent(NetEventCodes.EscapeNotice, new object[] { (byte)kind, text ?? string.Empty }, options, SendOptions.SendReliable);
     }
 
     private void Notice(EscapeNoticeKind kind, string itemId)

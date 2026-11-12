@@ -37,6 +37,8 @@ public class ToolSO : ScriptableObject
     [SerializeField, Min(0f)] private float effectSeconds = 5f;
     [Tooltip("스케이트 빠르기 배율(1 = 그대로, 2 = +100%).")]
     [SerializeField, Min(1f)] private float speedMultiplier = 2f;
+    [Tooltip("Thrown tools (water balloon, flashbang, search bomb): how the projectile flies (Request1009Plan.md §70.3).")]
+    [SerializeField] private ProjectileConfigSO projectile;
 
     public ToolKind Kind => kind;
     // 괴물을 맞힐 수 있는 도구는 스턴건(§59 AT1)과 섬광탄(§68 GP2)뿐이다. 뿅망치·물풍선·권투 글러브 등은 괴물을 건너뛴다 — 쓰는 쪽·방장·받는 쪽이 모두 이 규칙을 본다.
@@ -54,11 +56,14 @@ public class ToolSO : ScriptableObject
     public bool PaintsTarget => paintsTarget;
     public float EffectSeconds => effectSeconds;
     public float SpeedMultiplier => speedMultiplier;
+    public ProjectileConfigSO Projectile => projectile;
 
     // 왼쪽 클릭으로 쓰는 도구인지(해체 도구는 누르기, 모자는 E, 소음폭탄은 괴물 스킬).
     public bool UsedByClick => kind != ToolKind.Dismantle && kind != ToolKind.HeliHat && kind != ToolKind.NoiseBomb && kind != ToolKind.SearchBomb;
 
 #if UNITY_EDITOR
+    public void EditorSetProjectile(ProjectileConfigSO config) => projectile = config;
+
     public void EditorSetup(ToolKind toolKind, int count, float rangeMeters, float radius, float cookieStun, float monsterStun, float cooldown, bool paints,
         float effect = 5f, float speed = 2f)
     {

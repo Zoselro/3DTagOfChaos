@@ -83,6 +83,11 @@ public static class NetSecurityRules
     // 원격 캐릭터의 기록을 앞으로 늘릴 시간: 보낸 뒤 걸린 시간 + 보간 지연.
     public static float RemoteLead(float claimAge) => Mathf.Clamp(claimAge, 0f, GrabClaimMaxAge) + RemoteViewLag;
 
+    // 패킷 기준 기록(§70.2.5 D4)을 앞으로 늘릴 시간: 마지막 패킷을 보낸 시각부터 본 시각까지 + 한 패킷 간격의 여유.
+    public const float PacketLeadSlack = 0.05f;
+    public static float PacketLead(double seenAt, double newestRecordAt) =>
+        Mathf.Clamp((float)(seenAt - newestRecordAt), 0f, MaxRemoteLead) + PacketLeadSlack;
+
     public enum GrabVerdict : byte
     {
         Confirmed,

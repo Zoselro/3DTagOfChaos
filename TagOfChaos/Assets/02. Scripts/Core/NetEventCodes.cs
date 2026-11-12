@@ -12,6 +12,7 @@ public static class NetEventCodes
     public const byte RoomSettingsRequest = 10; // research.md R5-22 — 호스트가 방장에게 방 설정(인원·제한시간·타임어택) 변경을 요청
     public const byte KickRequest = 11; // Request1009Plan.md §19.6 — 호스트가 방장에게 대기실 강퇴를 요청(내용: 대상 액터 번호)
     public const byte Kicked = 12;      // 방장이 강퇴 대상에게만 보낸다(내용: 대상 액터 번호) — 받은 사람은 방을 나간다
+    public const byte ProjectileSpawn = 15; // Request1009Plan.md §70.3 — 방장이 승인한 투척물 출발(번호·아이템·주인·시작점·속도·시각·색·던진 사람 번호)
     public const byte VoiceClip = 14; // Request1009Plan.md §25.3 Q6 — 대기실에서 녹음한 목소리 조각(판 시작 때 한 번, 보낸 사람 본인 것)
     // 13(LobbyDoorState, 괴물 대기실 대기 중 문 공유)은 대기를 없애며 지웠다(§38). 비워 둔다.
 }

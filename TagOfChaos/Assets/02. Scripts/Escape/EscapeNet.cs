@@ -32,6 +32,7 @@ public enum EscapeOp : byte
     CageMash = 25,      // A = 함정 번호(사이렌 철창 안에서 점프 키 연타, §68 GP5)
     CarriageBoard = 26, // A = 마차 번호(주인이 문 앞에서 E — 문 열림·탑승·순간이동, §68.7)
     CannonBoard = 27,   // A = 대포 번호, B = 보는 방향(도) — 주인이 뒤 계단에서 E(해치·탑승·겨눔·발사, §68.9)
+    Throw = 28,         // A = 인벤토리 칸(-1 = 술래 수색 폭탄), B = 물풍선 색, Pos = 손(시작점), Dir = 처음 속도, Stamp = 손을 떠난 시각, Targets[0] = 던진 사람 번호(§70.3)
 }
 
 public enum EscapeNoticeKind : byte
@@ -49,6 +50,7 @@ public enum EscapeNoticeKind : byte
     MaterialRestored = 11, // 닿는 곳에 하나도 없던 재료를 방장이 다시 만들었다(§26 D). 내용: 아이템 ID, 아이템 번호, 보여 줄 시각 — 괴물 제외
     AllDecoysGone = 12,    // 마녀 시간이 시작돼 AI가 모두 사라졌다(§26 Q16)
     CookieCaught = 13,     // 괴물이 진짜 쿠키(스파이 포함)를 잡았다. 내용: 잡힌 사람 액터 번호(문자열)
+    DecoyCatchRejected = 14, // 방장이 AI 잡기를 거절했다(요청한 술래에게만, §70.2.5 D5). 내용: AI 번호(문자열)
 }
 
 // 게임이 끝난 이유(NetKeys.EscapeEndReason).
@@ -76,8 +78,11 @@ public struct EscapeRequest
     public int B;
     public UnityEngine.Vector3 Pos;
     public int[] Targets;
+    public UnityEngine.Vector3 Dir; // 던지기: 처음 속도(§70.3)
+    public int Stamp;               // 던지기: 손을 떠난 시각(PhotonNetwork.ServerTimestamp)
 
-    public object[] ToPayload() => new object[] { (byte)Op, A, B, Pos, Targets ?? new int[0] };
+    // 옛 요청(길이 5)과 같은 앞부분 뒤에 Dir·Stamp를 덧붙인다.
+    public object[] ToPayload() => new object[] { (byte)Op, A, B, Pos, Targets ?? new int[0], Dir, Stamp };
 
     public static bool TryParse(object data, int sender, out EscapeRequest request)
     {
@@ -85,6 +90,7 @@ public struct EscapeRequest
         if (!(data is object[] d) || d.Length < 5) return false;
         if (!(d[0] is byte op) || !(d[1] is int a) || !(d[2] is int b) || !(d[3] is UnityEngine.Vector3 pos)) return false;
         request = new EscapeRequest { Op = (EscapeOp)op, Sender = sender, A = a, B = b, Pos = pos, Targets = d[4] as int[] ?? new int[0] };
+        if (d.Length > 6 && d[5] is UnityEngine.Vector3 dir && d[6] is int stamp) { request.Dir = dir; request.Stamp = stamp; }
         return true;
     }
 }

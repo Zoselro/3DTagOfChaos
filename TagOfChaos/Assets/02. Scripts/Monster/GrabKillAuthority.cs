@@ -35,6 +35,10 @@ public static class GrabKillAuthority
         public int SeenStamp;
     }
 
+    // 재현 도구(§70.2.6): 오프라인 한 대에서는 술래와 쿠키가 같은 사람이라 "술래 아님"으로 먼저 거절된다. 켜면 그래도 위치 판정을 해 로그로 남긴다(확정은 하지 않는다).
+    public static bool DebugJudgeSameActor;
+    public static string LastJudgeDetail { get; private set; }
+
     public static float LastClaimAge { get; private set; }               // 시험·로그용
     public static NetSecurityRules.GrabVerdict LastVerdict { get; private set; }
 
@@ -65,6 +69,12 @@ public static class GrabKillAuthority
         string detail;
         if (verdict == NetSecurityRules.GrabVerdict.Confirmed) verdict = Judge(cookie, monster, claim, reach, settings.MaxGrabHeight, out detail);
         else detail = $"phase {phase}, alive {alive}, onMap {onMap}, since {since:F1}s";
+        if (verdict != NetSecurityRules.GrabVerdict.Confirmed && DebugJudgeSameActor)
+        {
+            NetSecurityRules.GrabVerdict would = Judge(cookie, monster, claim, reach, settings.MaxGrabHeight, out string judged);
+            LastJudgeDetail = $"{would}: {judged}";
+            Debug.Log($"[GrabKill] (test) position verdict {would}: {judged}");
+        }
         LastVerdict = verdict;
 
         if (verdict != NetSecurityRules.GrabVerdict.Confirmed)
@@ -96,18 +106,29 @@ public static class GrabKillAuthority
         if (claim.Valid && PositionHistory.TryGet(cookie.View.ViewID, out PositionTrack cookieTrack)
                         && PositionHistory.TryGet(monster.View.ViewID, out PositionTrack monsterTrack))
         {
-            float age = unchecked(PhotonNetwork.ServerTimestamp - claim.SeenStamp) / 1000f;
+            float age = NetAuthority.AgeOf(claim.SeenStamp);
             LastClaimAge = age;
-            double now = PhotonNetwork.Time;
-            double from = now - Mathf.Max(0f, age) - NetSecurityRules.GrabRewindWindow;
-            bool cookieKnown = cookieTrack.TryMinDistance(claim.Cookie, from, now, cookieNow, out float cookieError);
-            // 괴물이 보낸 것은 자기 "지금" 위치 — 방장 화면의 괴물은 그보다 늦으므로 기록 끝을 마지막 속도로 앞으로 늘려 비교한다.
+            double now = NetAuthority.Time;
+            double seenAt = now - Mathf.Max(0f, age);
+            double from = seenAt - NetSecurityRules.GrabRewindWindow;
+            // 남의 캐릭터의 기록은 받은 패킷(보낸 시각·위치)이다(§70.2.5 D4) — 길의 끝도 화면에 그려진 위치가 아니라 마지막 패킷 위치로 잇는다.
+            bool cookieRemote = PositionHistory.IsRemote(cookie.View), monsterRemote = PositionHistory.IsRemote(monster.View);
+            bool cookieKnown = cookieTrack.TryMinDistance(claim.Cookie, from, now, cookieRemote ? cookieTrack.NewestPoint : cookieNow, out float cookieError);
+            // 괴물이 보낸 것은 자기 "지금" 위치 — 방장이 가진 마지막 패킷은 그보다 앞선 시각이라 기록 끝을 마지막 속도로 앞으로 늘려 비교한다.
             // 괴물 본인이 방장이면 기록이 곧 실제 위치라 늘리지 않는다.
-            float lead = monster.View.IsMine ? 0f : NetSecurityRules.RemoteLead(age);
-            bool monsterKnown = monsterTrack.TryMinDistanceLeading(claim.Monster, from, now, monsterNow, lead, out float monsterError);
+            float lead = monsterRemote ? NetSecurityRules.PacketLead(seenAt, monsterTrack.NewestTime) : 0f;
+            bool monsterKnown = monsterTrack.TryMinDistanceLeading(claim.Monster, from, now, monsterRemote ? monsterTrack.NewestPoint : monsterNow, lead, out float monsterError);
             if (cookieKnown && monsterKnown)
             {
-                detail = $"seen {Flat(claim.Cookie - claim.Monster):F1} m, now {nowDistance:F1} m, path error cookie {cookieError:F1} / monster {monsterError:F1} m, age {age * 1000f:F0} ms";
+                // 돌진 중이었으면 예고된 돌진 길로도 잰다(§70.2.5 D2) — 초속 68 m는 초당 10번 패킷으로 따라갈 수 없다.
+                string dashNote = string.Empty;
+                if (MonsterDashLedger.TryGet(monster.View.ViewID, seenAt, out DashWindow dash))
+                {
+                    float dashError = dash.PathError(claim.Monster, seenAt, MonsterDashLedger.ClaimTimeSlack);
+                    dashNote = $", dash path {dashError:F1} m";
+                    monsterError = Mathf.Min(monsterError, dashError);
+                }
+                detail = $"seen {Flat(claim.Cookie - claim.Monster):F1} m, now {nowDistance:F1} m, path error cookie {cookieError:F1} / monster {monsterError:F1} m{dashNote}, age {age * 1000f:F0} ms";
                 return NetSecurityRules.JudgeGrabClaim(claim.Monster, claim.Cookie, reach, maxHeight, age, cookieError, monsterError);
             }
         }

@@ -204,6 +204,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         gameObject.AddComponent<EscapeAudioPresenter>().Init(this); // 탈출 모드 소리(상태 차이, SoundPlan.md S5)
         gameObject.AddComponent<DecoyBrain>().Init(this);           // AI 판단 — 방장만 돈다(§44)
         gameObject.AddComponent<DecoyPresenter>().Init(this);       // 맵의 AI(§25.5 L)
+        ProjectileSystem.Create(this); // 던진 물체(물풍선·섬광탄·수색 폭탄, §70.3)
         gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 사이렌 함정(옛 소음폭탄 §25.5 K)·수색 폭탄 입력(§68 GP5)
         gameObject.AddComponent<SirenTrapPresenter>().Init(this);   // 사이렌 철창(§68 GP5)
         gameObject.AddComponent<PumpkinCarriagePresenter>().Init(this); // 호박 마차 탈것(§68.7)
@@ -362,6 +363,21 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
             new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient }, SendOptions.SendReliable);
     }
 
+    // 던지기(§70.3): 손을 떠난 순간의 시작점·속도·시각과 던진 사람이 붙인 번호.
+    public void RequestThrow(int slot, int color, Vector3 origin, Vector3 velocity, int stamp, int localKey)
+    {
+        if (!RoomState.IsInRoom() || PhotonNetwork.LocalPlayer == null) return;
+        var r = new EscapeRequest { Op = EscapeOp.Throw, Sender = PhotonNetwork.LocalPlayer.ActorNumber, A = slot, B = color, Pos = origin,
+                                    Targets = new[] { localKey }, Dir = velocity, Stamp = stamp };
+        if (PhotonNetwork.IsMasterClient)
+        {
+            authority.Handle(r);
+            return;
+        }
+        PhotonNetwork.RaiseEvent(NetEventCodes.EscapeRequest, r.ToPayload(),
+            new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient }, SendOptions.SendReliable);
+    }
+
     public void OnEvent(EventData e)
     {
         switch (e.Code)
@@ -381,7 +397,16 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
                     if (n.Length >= 5 && n[2] is int itemIndex && n[3] is double showAt && n[4] is bool onGround)
                         EscapeHud.ScheduleRespawned(n[1] as string, itemIndex, showAt, onGround);
                 }
+                else if ((EscapeNoticeKind)kind == EscapeNoticeKind.DecoyCatchRejected)
+                {
+                    // 내 AI 잡기가 거절됐다: 빈손 잡기 동작을 끊고 바로 다시 잡을 수 있게 한다(§70.2.5 D5)
+                    if (CharacterRegistry.FindByOwner(PhotonNetwork.LocalPlayer.ActorNumber) is MonsterController me) me.CancelGrabKill();
+                }
                 else EscapeHud.Notice((EscapeNoticeKind)kind, n[1] as string);
+                break;
+            case NetEventCodes.ProjectileSpawn:
+                if (!SentByMaster(e)) return;
+                if (ProjectileSystem.Instance != null) ProjectileSystem.Instance.OnSpawn(e.CustomData);
                 break;
             case NetEventCodes.ToolHit:
                 if (!SentByMaster(e)) return;

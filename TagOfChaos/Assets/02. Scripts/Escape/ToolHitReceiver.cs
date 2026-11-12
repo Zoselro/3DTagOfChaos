@@ -24,9 +24,17 @@ public static class ToolHitReceiver
         Vector3? from = HandOf(user);
         // 쓴 사람은 누르는 순간 이미 들었다(ToolUser.Use). 다른 사람은 그 손에서 3D로(S5).
         bool mine = PhotonNetwork.LocalPlayer != null && senderActor == PhotonNetwork.LocalPlayer.ActorNumber;
-        if (!mine) GameAudio.PlayAt(ToolUser.UseSound(item.Tool.Kind), from ?? point);
+        bool thrownObject = d.Length > 7 && d[7] is int;
+        if (!mine && !thrownObject) GameAudio.PlayAt(ToolUser.UseSound(item.Tool.Kind), from ?? point);
         bool balloon = item.Tool.Kind == ToolKind.WaterBalloon;
         bool knock = d.Length > 6 && d[6] is bool k && k;
+        // 던진 물체가 끝났다(§70.3): 날아가는 모습·던지는 동작·소리는 ProjectileSystem이 이미 보였다. 그 자리로 옮겨 지우고 효과만.
+        if (d.Length > 7 && d[7] is int projectileId)
+        {
+            if (ProjectileSystem.Instance != null) ProjectileSystem.Instance.OnFinished(projectileId, point);
+            Apply(item, targets, point, color, hitAt, knock);
+            return;
+        }
         if (!mine && user != null && user.gameObject.TryGetComponent(out PlayerActionPose pose))
         {
             if (item.Tool.IsThrown) pose.Play(PlayerActionPose.OneShot.Throw);

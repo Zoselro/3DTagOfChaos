@@ -47,10 +47,11 @@ public class MonsterGrabKillTrigger : MonoBehaviour
     }
 
     // 돌진하다 몸이 닿았다(§69 F2 — 25번): 조준과 상관없이 그 쿠키(스파이 포함)나 AI를 같은 잡기 동작으로 잡는다. 방장은 보통 잡기와 같이 판정한다.
-    public bool TryCatchOnContact(HideOrSeekPlayer cookie, DecoyView decoy)
+    // stopAt: 이번 물리 스텝에 실제로 멈출 자리(§70.2.5 D3) — 화면에 그려진 위치는 보간 때문에 그보다 한두 스텝 뒤다.
+    public bool TryCatchOnContact(HideOrSeekPlayer cookie, DecoyView decoy, Vector3 stopAt)
     {
         if (onCooldown || monsterPv == null || !monsterPv.IsMine) return false;
-        if (cookie != null) return IsCatchable(cookie) && TryGrabKill(cookie);
+        if (cookie != null) return IsCatchable(cookie) && TryGrabKill(cookie, stopAt);
         return decoy != null && TryGrabDecoy(decoy);
     }
 
@@ -162,7 +163,10 @@ public class MonsterGrabKillTrigger : MonoBehaviour
     }
 
     // 처형 시작의 단일 진입점. 처형을 시작했으면 true.
-    public bool TryGrabKill(HideOrSeekPlayer cookie)
+    public bool TryGrabKill(HideOrSeekPlayer cookie) => TryGrabKill(cookie, monsterPv != null ? monsterPv.transform.position : Vector3.zero);
+
+    // monsterAt: 방장에게 알릴 술래 위치(보통은 지금 위치, 돌진 접촉이면 멈출 자리).
+    public bool TryGrabKill(HideOrSeekPlayer cookie, Vector3 monsterAt)
     {
         if (onCooldown || cookie == null) return false;
         if (!monsterPv.IsMine) return false; // 판정 시도는 괴물 소유 클라이언트만
@@ -180,7 +184,7 @@ public class MonsterGrabKillTrigger : MonoBehaviour
         // 파괴 확정(HitCount)은 여전히 피해자 본인 클라이언트만 한다(소유권 원칙, Bug-fix-plan.md §36).
         // 이 화면이 판정한 순간의 두 위치와 시각을 함께 보낸다 — 방장이 그 순간으로 되돌려 잰다(§46.2 GK1).
         cookiePv.RPC(HideOrSeekPlayer.RpcRequestGrabKill, RpcTarget.All, monsterPv.ViewID,
-            monsterPv.transform.position, cookie.transform.position, PhotonNetwork.ServerTimestamp);
+            monsterAt, cookie.transform.position, PhotonNetwork.ServerTimestamp);
         // 파괴·잡은 횟수는 방장이 거리·단계를 검증한 뒤 쓴다(GrabKillAuthority, AuditFixPlan.md §8.1).
         return true;
     }

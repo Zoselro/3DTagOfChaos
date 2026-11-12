@@ -36,6 +36,15 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
     [Tooltip("Show the item test keys and the selected item at the top-left of the game view.")]
     [SerializeField] private bool showItemHelp = true;
 
+    // 돌진 잡기 판정 재현(Request1009Plan.md §70.2.6): 혼자서도 "방장이 아닌 술래"처럼 판정받는다 — 방장 기록에 내 실제 위치 대신
+    // 지연 + 초당 10번 패킷으로 받은 위치가 들어간다. Ignore Dash Intent를 켜면 돌진 예고를 쓰지 않는 예전 판정이 된다.
+    [Header("Grab judgment test (offline room only)")]
+    [Tooltip("Judge my monster as if it were a remote client: the master's position record gets 10 Hz packets delayed by the latency below.")]
+    [SerializeField] private bool simulateRemoteMonster = false;
+    [SerializeField, Range(0, 300)] private int simulatedLatencyMs = 80;
+    [Tooltip("Ignore the dash intent (old judgment) to reproduce the rejected dash grabs.")]
+    [SerializeField] private bool ignoreDashIntent = false;
+
     private const float RefillDelay = 1f;
     private bool witchTimerStarted, itemsGiven, itemsCleared;
     private readonly string[] slotItems = new string[EscapeAuthority.InventorySlots]; // 무한 사용: 칸마다 마지막으로 준 아이템
@@ -75,12 +84,16 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
     {
         SpawnAsMonster = false;
         GiantOverride = null;
+        PositionHistory.DebugRemoteLatency = -1f;
+        MonsterDashLedger.DebugIgnore = false;
         if (PhotonNetwork.OfflineMode && !PhotonNetwork.InRoom) PhotonNetwork.OfflineMode = false;
     }
 
     // 사냥이 시작되면 마녀 타이머를 바로 시작한다(시험용 — 원래는 첫 탈출 때). 쿠키 자리를 앞 샷으로.
     private void Update()
     {
+        PositionHistory.DebugRemoteLatency = simulateRemoteMonster ? simulatedLatencyMs / 1000f : -1f;
+        MonsterDashLedger.DebugIgnore = simulateRemoteMonster && ignoreDashIntent;
         if (itemTest) UpdateItemTest();
         if (!startWitchTimerOnHunt || witchTimerStarted || !PhotonNetwork.OfflineMode || !PhotonNetwork.IsMasterClient) return;
         if (GamePhaseState.Current != GamePhase.Hunt || EscapeManager.Instance == null || EscapeManager.Instance.State == null) return;
