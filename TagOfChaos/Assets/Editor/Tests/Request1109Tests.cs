@@ -18,7 +18,7 @@ public class Request1109Tests
     [Test]
     public void CookieControls_Camera_Struggle_Dodge()
     {
-        Assert.AreEqual(4.5f, HideOrSeekPlayer.CookieCameraDistance, 1e-4f);
+        Assert.AreEqual(5.4f, HideOrSeekPlayer.CookieCameraDistance, 1e-4f); // 사용자가 4.5 → 5.4로 바꿈(2026-11-12 확인)
         Assert.AreEqual(10, HideOrSeekPlayer.StrugglePresses);
         Assert.AreEqual(2.5f, HideOrSeekPlayer.StruggleWindow, 1e-4f);
     }

@@ -1132,19 +1132,20 @@ public sealed class EscapeAuthority
         double seenAt = now - Mathf.Max(0f, age);
         double from = seenAt - NetSecurityRules.GrabRewindWindow;
         float error = manager.Routes.TryGet(d.Id, out _) ? manager.Routes.MinDistance(d.Id, seen, from, now) : Vector3.Distance(seen, pose.Position);
-        bool reach = MonsterCouldReach(actor, seen, from, now, seenAt, out float monsterGap);
+        bool reach = MonsterCouldReach(actor, seen, from, now, seenAt, out float monsterGap, out string dashNote);
         bool ok = age <= NetSecurityRules.GrabClaimMaxAge && age >= -0.1f && error <= NetSecurityRules.GrabClaimPathTolerance && reach;
         Debug.Log($"[GrabKill] Decoy {d.Id} {(ok ? "caught" : "rejected")}: path error {error:F1} m, now {Vector3.Distance(seen, pose.Position):F1} m apart, " +
-                  $"monster gap {monsterGap:F1} m, age {age * 1000f:F0} ms.");
+                  $"monster gap {monsterGap:F1} m{dashNote}, age {age * 1000f:F0} ms.");
         return ok;
     }
 
     // 괴물이 본 AI 자리에 손이 닿았는지: 방장 기록의 괴물 길(마지막 패킷에서 앞으로 늘림)이 그 자리에서 InteractReach 안을 지났는지(§46 후속),
     // 또는 예고된 돌진 길이 그 안을 지났는지(§70.2.5 D2 — 돌진은 위치 패킷으로 따라갈 수 없다).
-    private bool MonsterCouldReach(int actor, Vector3 seen, double from, double now, double seenAt, out float gap)
+    private bool MonsterCouldReach(int actor, Vector3 seen, double from, double now, double seenAt, out float gap, out string dashNote)
     {
         gap = -1f;
-        IGameCharacter monster = CharacterRegistry.FindByOwner(actor);
+        dashNote = string.Empty;
+        IGameCharacter monster = MonsterOf(actor);
         if (monster == null || monster.View == null) return IsNear(actor, seen, InteractReach);
         bool known = false;
         if (PositionHistory.TryGet(monster.View.ViewID, out PositionTrack track))
@@ -1157,11 +1158,21 @@ public sealed class EscapeAuthority
         if (MonsterDashLedger.TryGet(monster.View.ViewID, seenAt, out DashWindow dash))
         {
             float dashGap = dash.PathError(seen, seenAt, MonsterDashLedger.ClaimTimeSlack);
+            dashNote = $" (dash path {dashGap:F1} m)";
             gap = known ? Mathf.Min(gap, dashGap) : dashGap;
             known = true;
         }
+        else dashNote = $" ({MonsterDashLedger.Describe(monster.View.ViewID, seenAt)})";
         if (!known) return IsNear(actor, seen, InteractReach);
         return gap <= InteractReach;
+    }
+
+    // 그 사람의 술래 캐릭터(없으면 그 사람의 아무 캐릭터).
+    private static IGameCharacter MonsterOf(int actor)
+    {
+        foreach (IGameCharacter c in CharacterRegistry.All)
+            if (c.Role == CharacterRole.Monster && c.View != null && c.View.Owner != null && c.View.Owner.ActorNumber == actor) return c;
+        return CharacterRegistry.FindByOwner(actor);
     }
 
     // ---------------- tools ----------------

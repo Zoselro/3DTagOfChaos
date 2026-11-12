@@ -52,6 +52,7 @@ public class Request1112DashTests
         MonsterDashLedger.DebugIgnore = false;
         Assert.IsTrue(MonsterDashLedger.Record(7, Window(50.0), 50.0 - Windup, Windup, Cooldown, true, 0f));
         Assert.IsTrue(MonsterDashLedger.TryGet(7, 50.1, out _));
+        Assert.IsTrue(MonsterDashLedger.TryGet(7, 51.5, out _), "standing at the dash end after it finished");
         Assert.IsFalse(MonsterDashLedger.TryGet(7, 52.0, out _));
         Assert.IsFalse(MonsterDashLedger.TryGet(8, 50.1, out _));
         // 쿨타임 안의 두 번째 예고는 적지 않는다
@@ -142,5 +143,20 @@ public class Request1112DashTests
         book.SetLocal(1, second);
         book.SetLocal(1, second); // 방장 자신의 쓰기가 방 속성으로 돌아옴
         Assert.Less(book.MinDistance(1, new Vector3(9f, 0f, 0f), 102.15, 102.3), 0.3f);
+    }
+
+    [Test]
+    public void Ledger_LateStartMovesTheWindowWithinOneSecond()
+    {
+        MonsterDashLedger.Clear();
+        MonsterDashLedger.DebugIgnore = false;
+        Assert.IsTrue(MonsterDashLedger.Record(3, Window(20.0), 20.0 - Windup, Windup, Cooldown, true, 0f));
+        Assert.IsFalse(MonsterDashLedger.TryGet(3, 22.0, out _), "2 s after the announced start is outside the window");
+        Assert.IsTrue(MonsterDashLedger.Delay(3, 20.9), "the owner's frames hitched: it really left 0.9 s late");
+        Assert.IsFalse(MonsterDashLedger.Delay(3, 20.9 + MonsterDashLedger.MaxStartDelay + 0.1), "a delay beyond the limit is refused");
+        Assert.IsTrue(MonsterDashLedger.TryGet(3, 21.0, out DashWindow w));
+        Assert.Less(w.PathError(Vector3.forward * 6.8f, 21.0, 0f), 0.01f);
+        Assert.IsFalse(MonsterDashLedger.Delay(3, 20.5), "never earlier than before");
+        MonsterDashLedger.Clear();
     }
 }

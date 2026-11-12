@@ -15,7 +15,10 @@ public struct DashWindow
     public double MoveEndsAt => MoveStartsAt + Distance / Mathf.Max(0.01f, Speed);
 
     // t가 돌진 이동 시간(앞뒤 slack초 여유) 안인지.
-    public bool Covers(double t, float slack) => IsValid && t >= MoveStartsAt - slack && t <= MoveEndsAt + slack;
+    public bool Covers(double t, float slack) => Covers(t, slack, slack);
+
+    // 앞뒤 여유를 따로: 돌진이 끝난 뒤에도 술래는 걸어 나가기 전까지 그 길(끝 자리) 위에 서 있다.
+    public bool Covers(double t, float before, float after) => IsValid && t >= MoveStartsAt - before && t <= MoveEndsAt + after;
 
     // t 시각까지 돌진으로 갈 수 있는 거리.
     public float ReachableAt(double t) => Mathf.Clamp((float)(t - MoveStartsAt) * Speed, 0f, Distance);

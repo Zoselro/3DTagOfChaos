@@ -249,11 +249,15 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         {
             // 준비 자세: 제자리에서 방향을 고정한다. 끝나면 고정한 방향으로 나간다(§69 F2).
             moveInput = Vector3.zero;
+            // 예고한 출발 시각(공용 시계)에 끝낸다 — 프레임이 끊겨 Time.deltaTime이 실제 시간보다 덜 흘러도 예고와 어긋나지 않게(§70.2).
             dashWindupRemaining -= Time.deltaTime;
-            if (dashWindupRemaining > 0f) return;
+            if (dashWindupRemaining > 0f && NetAuthority.Time < dashMoveStartsAt) return;
             dashWindupRemaining = 0f;
             if (!IsStunned && tentacleDash.TryStartDash(dashWindupForward))
             {
+                if (dashIntentOpen && NetAuthority.Time > dashMoveStartsAt + DashLateNotice)
+                    pv.RPC(nameof(DashStarted), RpcTarget.All, NetAuthority.Time); // 그래도 늦었으면 실제 출발 시각을 알린다
+
                 tentacleDashAnimRemaining = Mathf.Max(tentacleDashAnimDuration, GameSettings.Current.TentacleDashDuration);
                 dashRecoverAt = -1f;
                 ChangeState(MonsterMoveState.TentacleDash);
@@ -296,7 +300,8 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
             dashWindupForward = viewSwitcher != null && viewSwitcher.IsFirstPerson ? viewSwitcher.YawRotation * Vector3.forward : transform.forward;
             // 돌진 예고(§70.2.5 D1): 준비 자세(0.35초)가 지연보다 길어, 출발 전에 방장과 모든 화면이 돌진 길을 안다.
             dashIntentOpen = true;
-            pv.RPC(nameof(DashIntent), RpcTarget.All, rb.position, dashWindupForward, NetAuthority.Time + DashWindupSeconds);
+            dashMoveStartsAt = NetAuthority.Time + DashWindupSeconds;
+            pv.RPC(nameof(DashIntent), RpcTarget.All, rb.position, dashWindupForward, dashMoveStartsAt);
             moveInput = Vector3.zero;
             ChangeState(MonsterMoveState.TentacleDashWindup);
         }
@@ -398,6 +403,8 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     // ---------------- 돌진 예고(§70.2.5) ----------------
 
     private bool dashIntentOpen;      // 본인: 예고를 보냈고 아직 끝을 알리지 않았다
+    private double dashMoveStartsAt;  // 본인: 예고한 출발 시각(공용 시계)
+    private const float DashLateNotice = 0.05f; // 이보다 늦게 출발하면 실제 출발 시각을 다시 알린다
     private DashWindow remoteDash;    // 원격: 받은 예고
     private bool remoteDashEnded;
     private Vector3 remoteDashEndPosition;
@@ -427,6 +434,15 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         if (pv.IsMine) return;
         remoteDash = window;
         remoteDashEnded = false;
+    }
+
+    // 예고보다 늦게 출발했다(본인 → 모두): 출발 시각만 옮긴다(1초 안까지).
+    [PunRPC]
+    private void DashStarted(double actualStart, PhotonMessageInfo info)
+    {
+        if (pv == null || info.Sender == null || info.Sender != pv.Owner) return;
+        if (!MonsterDashLedger.Delay(pv.ViewID, actualStart)) return;
+        if (!pv.IsMine && remoteDash.IsValid && !remoteDashEnded) remoteDash.MoveStartsAt = actualStart;
     }
 
     // 돌진 이동이 끝난 자리(본인 → 다른 화면).

@@ -10,7 +10,8 @@ public static class MonsterDashLedger
     public const float CooldownSlack = 0.3f;   // 쿨타임 판정 여유(초)
     public const float StartTolerance = 3f;    // 시작 위치가 기록된 길에서 벗어나도 되는 거리(m)
     public const float IntentTimeSlack = 0.5f; // 출발 시각과 (보낸 시각 + 준비 시간)의 차이 허용(초)
-    public const float CoverSlack = 0.5f;      // 돌진 이동 시간 앞뒤로 이만큼은 그 돌진으로 본다(초)
+    public const float CoverSlack = 0.5f;      // 돌진 이동 시간 앞으로 이만큼은 그 돌진으로 본다(초)
+    public const float HoldAfterEnd = 1.5f;    // 돌진이 끝난 뒤 이만큼은 그 길 위에 서 있을 수 있다(후딜 0.4초 + 프레임 끊김 여유, 초)
     public const float ClaimTimeSlack = 0.1f;  // 주장 시각의 오차(한 물리 스텝 + 시계 차이)만큼 더 갈 수 있다고 본다(초)
 
     private static readonly Dictionary<int, DashWindow> windows = new Dictionary<int, DashWindow>();
@@ -51,10 +52,27 @@ public static class MonsterDashLedger
         return true;
     }
 
+    public const float MaxStartDelay = 1f; // 예고보다 늦게 출발했다는 알림은 이 안까지만 받는다(프레임 끊김)
+
+    // 예고보다 늦게 출발했다(술래 화면의 프레임이 끊겨 준비 자세가 늦게 끝남): 출발 시각만 옮긴다. 시작 위치·방향은 그대로.
+    public static bool Delay(int viewId, double actualStart)
+    {
+        if (!windows.TryGetValue(viewId, out DashWindow w)) return false;
+        double delay = actualStart - w.MoveStartsAt;
+        if (delay <= 0 || delay > MaxStartDelay) return false;
+        w.MoveStartsAt = actualStart;
+        windows[viewId] = w;
+        return true;
+    }
+
+    // 로그용: 그 술래의 마지막 예고와 at의 관계.
+    public static string Describe(int viewId, double at) =>
+        DebugIgnore ? "ignored" : windows.TryGetValue(viewId, out DashWindow w) ? $"last dash moves {w.MoveStartsAt - at:+0.00;-0.00}s..{w.MoveEndsAt - at:+0.00;-0.00}s from the claim" : "no intent";
+
     // at 시각에 그 술래가 예고한 돌진 중이었으면(앞뒤 여유 포함) 그 돌진.
     public static bool TryGet(int viewId, double at, out DashWindow w)
     {
         if (DebugIgnore) { w = default; return false; }
-        return windows.TryGetValue(viewId, out w) && w.Covers(at, CoverSlack);
+        return windows.TryGetValue(viewId, out w) && w.Covers(at, CoverSlack, HoldAfterEnd);
     }
 }
