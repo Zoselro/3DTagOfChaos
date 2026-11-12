@@ -12,8 +12,18 @@ using UnityEngine.SceneManagement;
 // 같게 본다 — 준비 유예 + MonsterArrivalTimeout 뒤에도 괴물이 한 명도 도착하지 않았으면 같은 경고 후 대기실로 돌아간다.
 public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
 {
+    // §73 L4: 로딩이 느린 PC(한 PC에 여러 창·네트워크 폴더에서 실행)를 기다린다 — 시작 때 PrepareEndTime을 기다림만큼 넉넉히 쓰고
+    // (GameStartAuthority), 방장이 모두 맵에 들어온 것을 보면 "지금 + 준비 시간"으로 당긴다. 방장이 가장 늦게 와도, 로드 중에 방장이
+    // 바뀌어도 새 방장이 같은 일을 한다. 괴물 도착 확인도 MaxArrivalWait까지 미룬다. 예전에는 방장 로드 뒤 13초에 괴물이
+    // 아직 로딩 중이면 "괴물이 오지 않음"으로 보고 모두 대기실로 돌려보냈다(방이 터진 것처럼 보임).
+    public const float MaxArrivalWait = 45f;
+    private const float ArrivalPollSeconds = 1f;
+
     private double? monstersGoneAt;
     private bool arrivalChecked;
+    private bool everyoneArrived;
+    private float nextArrivalPoll;
+    private float nextMonsterCheck;
     private readonly Dictionary<int, string> loadedScenes = new Dictionary<int, string>();
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
@@ -51,16 +61,16 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
     }
 
     // 준비 유예 + 도착 대기 시간이 지나면 한 번 확인한다. 그 사이 늦은 괴물은 RoomSceneFollower가 맵으로 끌어온다.
-    private void CheckMonsterArrival()
+    private void CheckMonsterArrival(bool final)
     {
-        arrivalChecked = true;
         int[] monsters = MonsterRoster.Remaining(MonsterRoster.Current(), PhotonNetwork.CurrentRoom.Players.Keys);
-        if (monsters.Length == 0) return; // 괴물 없는 시험 방·이미 모두 나감(OnPlayerLeftRoom 경로)
+        if (monsters.Length == 0) { arrivalChecked = true; return; } // 괴물 없는 시험 방·이미 모두 나감(OnPlayerLeftRoom 경로)
 
-        loadedScenes.Clear();
-        foreach (Player p in PhotonNetwork.CurrentRoom.Players.Values) loadedScenes[p.ActorNumber] = RoomState.LoadedScene(p);
+        ReadLoadedScenes();
         string map = SceneManager.GetActiveScene().name;
         int arrived = MonsterArrival.Arrived(monsters, loadedScenes, map);
+        if (arrived == 0 && !final) return; // 아직 로딩 중일 수 있다 — MaxArrivalWait까지 기다린다(§73 L4)
+        arrivalChecked = true;
         RoomSyncLog.Note($"Monster arrival check: {arrived}/{monsters.Length} in {map}");
         if (!MonsterArrival.ShouldReturn(monsters.Length, arrived)) return;
 
@@ -80,12 +90,40 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
         if (RoomState.TryGetDouble(NetKeys.MonsterDepartedAt, out double departedAt)) monstersGoneAt = departedAt;
     }
 
+    private void ReadLoadedScenes()
+    {
+        loadedScenes.Clear();
+        foreach (Player p in PhotonNetwork.CurrentRoom.Players.Values) loadedScenes[p.ActorNumber] = RoomState.LoadedScene(p);
+    }
+
+    // 모두 맵에 들어오면(또는 MaxArrivalWait가 지나면) 준비 시간을 지금부터 PrepareSeconds로 맞춘다.
+    private void StartPrepareWhenEveryoneArrives()
+    {
+        if (everyoneArrived || Time.unscaledTime < nextArrivalPoll) return;
+        nextArrivalPoll = Time.unscaledTime + ArrivalPollSeconds;
+        if (GamePhaseState.Current != GamePhase.Prepare || !RoomState.TryGetDouble(NetKeys.PrepareEndTime, out double prepareEnd)) return;
+        ReadLoadedScenes();
+        string map = SceneManager.GetActiveScene().name;
+        int arrived = MonsterArrival.ArrivedPlayers(PhotonNetwork.CurrentRoom.Players.Keys, loadedScenes, map, out int total);
+        if (arrived < total && Time.timeSinceLevelLoad < MaxArrivalWait) return;
+        everyoneArrived = true;
+        LoadTiming.Mark($"players in the map {arrived}/{total}" + (arrived < total ? " (stopped waiting)" : string.Empty));
+        float prepare = GameSettings.Current.PrepareSeconds;
+        if (MonsterArrival.ShouldShortenPrepare(prepareEnd, PhotonNetwork.Time, prepare))
+            AuthorityProps.SetRoom(new Hashtable { { NetKeys.PrepareEndTime, PhotonNetwork.Time + prepare } });
+    }
+
     private void Update()
     {
         if (!PhotonNetwork.IsMasterClient) return;
+        if (RoomState.IsInRoom() && !monstersGoneAt.HasValue) StartPrepareWhenEveryoneArrives();
         if (!arrivalChecked && !monstersGoneAt.HasValue && RoomState.IsInRoom()
-            && Time.timeSinceLevelLoad >= GameSettings.Current.SceneLoadGrace + GameSettings.Current.MonsterArrivalTimeout)
-            CheckMonsterArrival();
+            && Time.timeSinceLevelLoad >= GameSettings.Current.SceneLoadGrace + GameSettings.Current.MonsterArrivalTimeout
+            && Time.unscaledTime >= nextMonsterCheck)
+        {
+            nextMonsterCheck = Time.unscaledTime + ArrivalPollSeconds;
+            CheckMonsterArrival(final: Time.timeSinceLevelLoad >= MaxArrivalWait);
+        }
         if (!monstersGoneAt.HasValue) return;
         if (PhotonNetwork.Time < monstersGoneAt.Value + GameSettings.Current.MonsterDepartureReturnDelay) return;
 

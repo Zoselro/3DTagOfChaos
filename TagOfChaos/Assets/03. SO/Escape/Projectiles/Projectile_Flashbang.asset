@@ -22,7 +22,7 @@ MonoBehaviour:
   rollDeceleration: 4
   restSpeed: 0.35
   burstOnImpact: 0
-  fuseAfterImpact: 2
+  fuseAfterImpact: 1
   maxLifeSeconds: 5
   model: {fileID: 0}
   modelScale: 1

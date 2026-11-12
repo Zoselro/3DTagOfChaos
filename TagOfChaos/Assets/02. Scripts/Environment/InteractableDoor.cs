@@ -152,8 +152,7 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
             return;
         }
 
-        var options = new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient };
-        PhotonNetwork.RaiseEvent(NetEventCodes.DoorStateRequest, new object[] { DoorId, (byte)target }, options, SendOptions.SendReliable);
+        MasterRequestResend.Send(NetEventCodes.DoorStateRequest, new object[] { DoorId, (byte)target }); // 방장이 바뀌면 다시 보낸다(§72 E3)
     }
 
     public void OnEvent(EventData photonEvent)
@@ -194,7 +193,10 @@ public class InteractableDoor : MonoBehaviourPunCallbacks, IInteractable, IOnEve
                  && Equals(pending, confirmed))
             masterPendingWrites.Remove(DoorId); // 보낸 값이 확정됐을 때만 지운다(그 사이 다시 쓴 값은 유지)
         requestExpireTime = 0f;
-        ApplyState(ReadState(doors), instant: false);
+        // §72 E9: 방장이 같은 문을 연달아 바꾸면 첫 값의 응답이 먼저 와 문이 잠깐 옛 상태로 돌아갔다(깜빡임). 아직 확정 안 된 내 값이 있으면 그 값을 보인다.
+        DoorState shown = masterPendingWrites.TryGetValue(DoorId, out object mine) && mine is byte raw && raw <= (byte)DoorState.OpenOutward
+            ? (DoorState)raw : ReadState(doors);
+        ApplyState(shown, instant: false);
     }
 
     public override void OnMasterClientSwitched(Player newMasterClient) => masterPendingWrites.Clear();

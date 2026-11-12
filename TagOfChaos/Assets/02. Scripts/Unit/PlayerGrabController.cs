@@ -97,8 +97,10 @@ public class PlayerGrabController : MonoBehaviour
         if (carriedPlayer) // 방을 나가 파괴된 경우에는 RPC/충돌 복구를 건너뛰고, 캐리 상태·자세만 정리한다
         {
             var targetPv = carriedPlayer.View;
+            // 내려놓을 자리는 내 화면(드는 사람)이 정한다 — 탈것을 타기 직전 자리 기준(§71 B1·§72 E6)
+            Vector3 dropAt = transform.position + transform.forward * PlayerCarryFollower.ReleaseDistance;
             if (targetPv != null && targetPv.Owner != null)
-                targetPv.RPC(HideOrSeekPlayer.RpcOnReleased, targetPv.Owner);
+                targetPv.RPC(HideOrSeekPlayer.RpcOnReleased, targetPv.Owner, dropAt);
             carriedPlayer.SetLocalCarrierOverride(-1);
             StartCoroutine(RestoreCollisionLater(carriedPlayer.gameObject));
         }

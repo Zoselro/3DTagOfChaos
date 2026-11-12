@@ -77,6 +77,7 @@ public class RoomSceneFollower : MonoBehaviourPunCallbacks
         if (PunSceneLoad.RescueCancelled(RoomState.IsInRoom()))
             RoomSyncLog.Note("A cancelled scene load was blocking later loads — let it finish.");
         bool loading = IsPunLoading;
+        ApplyLoadingPriority(loading);
         RestoreQueueIfStuck(now, loading);
         RoomSceneTransition.TickDeferred();
         if (!RoomState.IsInRoom() || !PhotonNetwork.IsMessageQueueRunning) { mismatchSince = -1f; return; }
@@ -102,6 +103,14 @@ public class RoomSceneFollower : MonoBehaviourPunCallbacks
         FollowCount++;
         RoomSyncLog.Note($"Stranded in {active} while the room is in {room}. Loading it (master: {PhotonNetwork.IsMasterClient}).");
         PunSceneLoad.Load(room); // 방장이어도 curScn과 같은 값이라 Props는 다시 쓰지 않고 로컬만 로드한다
+    }
+
+    // §73 L3: 씬을 불러오는 동안만 비동기 로딩 우선순위를 높인다. 기본값(BelowNormal)은 로딩 마무리(객체 만들기·자산 올리기)를
+    // 프레임마다 아주 조금씩만 해서, 프레임이 낮은 PC(한 PC에 여러 창)일수록 로딩이 길어졌다. 끝나면 되돌려 게임 중 끊김을 줄인다.
+    private static void ApplyLoadingPriority(bool loading)
+    {
+        ThreadPriority want = loading ? ThreadPriority.High : ThreadPriority.BelowNormal;
+        if (Application.backgroundLoadingPriority != want) Application.backgroundLoadingPriority = want;
     }
 
     private void RestoreQueueIfStuck(float now, bool loading)
@@ -141,6 +150,11 @@ public class RoomSceneFollower : MonoBehaviourPunCallbacks
 
     public override void OnRoomPropertiesUpdate(Hashtable changed)
     {
-        if (changed.ContainsKey(CurrentSceneKey)) RoomSyncLog.Note("Room scene changed to " + (changed[CurrentSceneKey] ?? "-"));
+        if (!changed.ContainsKey(CurrentSceneKey)) return;
+        RoomSyncLog.Note("Room scene changed to " + (changed[CurrentSceneKey] ?? "-"));
+        string scene = changed[CurrentSceneKey] as string;
+        if (string.IsNullOrEmpty(scene) || scene == SceneManager.GetActiveScene().name) return;
+        Application.backgroundLoadingPriority = ThreadPriority.High; // PUN이 곧 로드를 시작한다(§73 L3)
+        LoadTiming.Begin("room scene changed to " + scene);
     }
 }

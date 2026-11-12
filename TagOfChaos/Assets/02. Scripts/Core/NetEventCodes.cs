@@ -13,6 +13,7 @@ public static class NetEventCodes
     public const byte KickRequest = 11; // Request1009Plan.md §19.6 — 호스트가 방장에게 대기실 강퇴를 요청(내용: 대상 액터 번호)
     public const byte Kicked = 12;      // 방장이 강퇴 대상에게만 보낸다(내용: 대상 액터 번호) — 받은 사람은 방을 나간다
     public const byte ProjectileSpawn = 15; // Request1009Plan.md §70.3 — 방장이 승인한 투척물 출발(번호·아이템·주인·시작점·속도·시각·색·던진 사람 번호)
-    public const byte VoiceClip = 14; // Request1009Plan.md §25.3 Q6 — 대기실에서 녹음한 목소리 조각(판 시작 때 한 번, 보낸 사람 본인 것)
+    public const byte VoiceClip = 14; // Request1009Plan.md §25.3 Q6 — 대기실에서 녹음한 목소리 조각(대기실에서 미리 조각으로, 보낸 사람 본인 것 — §72 E2)
+    public const byte ClaimResult = 16; // Request1009Plan.md §71 L1 — 방장이 가마솥 신청자에게만 보내는 결과(ClaimOutcome)
     // 13(LobbyDoorState, 괴물 대기실 대기 중 문 공유)은 대기를 없애며 지웠다(§38). 비워 둔다.
 }

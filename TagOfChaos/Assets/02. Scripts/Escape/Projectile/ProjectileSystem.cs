@@ -13,7 +13,7 @@ public class ProjectileSystem : MonoBehaviour
 {
     public static ProjectileSystem Instance { get; private set; }
 
-    public const float PredictedTimeout = 1f;   // 예측 투사체: 이 안에 Spawn이 안 오면(방장 거절) 지운다
+    public const float PredictedTimeout = 2f;   // 예측 투사체: 이 안에 Spawn이 안 오면 지운다(거절은 ThrowRejected로 바로 온다 — §71 T4, 느린 연결 대비 1 → 2초)
     public const float FinishTimeout = 1.5f;    // 끝날 때가 지났는데 ToolHit이 안 오면(방장 교체 등) 지운다
     public const float ContactHold = 0.5f;      // 물풍선이 내 화면에서 사람에게 닿았는데 결과가 안 오면 이만큼 기다렸다가 계속 날아간다
 
@@ -119,6 +119,20 @@ public class ProjectileSystem : MonoBehaviour
         p.State = ProjectileState.Launch(origin, velocity);
         p.Done = false;
         p.HoldUntil = 0f;
+    }
+
+    // 방장이 던지기를 받지 않았다(§71 T1, 던진 사람에게만): 예측 투사체를 바로 지우고, 쓴 쿨타임을 돌려준다.
+    public static event System.Action<ItemSO, ThrowReject> ThrowRejected;
+
+    public void OnThrowRejected(int localKey, ThrowReject why)
+    {
+        Live p = live.Find(x => x.Id == 0 && x.LocalKey == localKey);
+        if (p == null) return;
+        ItemSO item = p.Item;
+        Remove(p);
+        Debug.Log($"[Projectile] My {item.ItemId} throw was rejected by the master: {why}.");
+        if (why != ThrowReject.Cooldown) ScreenToast.Show(EscapeTextsSO.Current.throwRejected, 1.5f); // 결과 알림(§72 A3) — 쿨타임은 돌려주기만
+        ThrowRejected?.Invoke(item, why);
     }
 
     // ToolHit에 투사체 번호가 있으면: 그 자리로 옮겨 지운다. 효과는 ToolHitReceiver가 이어서 처리한다.

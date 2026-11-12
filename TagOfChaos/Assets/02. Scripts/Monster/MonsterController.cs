@@ -255,8 +255,8 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
             dashWindupRemaining = 0f;
             if (!IsStunned && tentacleDash.TryStartDash(dashWindupForward))
             {
-                if (dashIntentOpen && NetAuthority.Time > dashMoveStartsAt + DashLateNotice)
-                    pv.RPC(nameof(DashStarted), RpcTarget.All, NetAuthority.Time); // 그래도 늦었으면 실제 출발 시각을 알린다
+                // 실제로 출발했다고 늘 알린다(§71 C1) — 다른 화면은 이것을 받은 뒤에만 길을 따라 움직인다(준비 중 기절·잡기로 취소되면 움직이지 않음).
+                if (dashIntentOpen) pv.RPC(nameof(DashStarted), RpcTarget.All, System.Math.Max(NetAuthority.Time, dashMoveStartsAt));
 
                 tentacleDashAnimRemaining = Mathf.Max(tentacleDashAnimDuration, GameSettings.Current.TentacleDashDuration);
                 dashRecoverAt = -1f;
@@ -404,8 +404,9 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
 
     private bool dashIntentOpen;      // 본인: 예고를 보냈고 아직 끝을 알리지 않았다
     private double dashMoveStartsAt;  // 본인: 예고한 출발 시각(공용 시계)
-    private const float DashLateNotice = 0.05f; // 이보다 늦게 출발하면 실제 출발 시각을 다시 알린다
     private DashWindow remoteDash;    // 원격: 받은 예고
+    private bool remoteDashConfirmed; // 원격: 실제 출발 알림(DashStarted)을 받았다
+    private const float RemoteConfirmWait = 0.6f; // 예고한 출발 뒤 이만큼 안에 출발 알림이 없으면 예고를 버린다
     private bool remoteDashEnded;
     private Vector3 remoteDashEndPosition;
     private float remoteDashHoldUntil;
@@ -434,6 +435,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         if (pv.IsMine) return;
         remoteDash = window;
         remoteDashEnded = false;
+        remoteDashConfirmed = false;
     }
 
     // 예고보다 늦게 출발했다(본인 → 모두): 출발 시각만 옮긴다(1초 안까지).
@@ -441,8 +443,12 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     private void DashStarted(double actualStart, PhotonMessageInfo info)
     {
         if (pv == null || info.Sender == null || info.Sender != pv.Owner) return;
-        if (!MonsterDashLedger.Delay(pv.ViewID, actualStart)) return;
-        if (!pv.IsMine && remoteDash.IsValid && !remoteDashEnded) remoteDash.MoveStartsAt = actualStart;
+        MonsterDashLedger.Delay(pv.ViewID, actualStart); // 늦었으면 판정 창을 옮긴다(늦지 않았으면 그대로)
+        if (!pv.IsMine && remoteDash.IsValid && !remoteDashEnded)
+        {
+            if (actualStart > remoteDash.MoveStartsAt && actualStart - remoteDash.MoveStartsAt <= MonsterDashLedger.MaxStartDelay) remoteDash.MoveStartsAt = actualStart;
+            remoteDashConfirmed = true;
+        }
     }
 
     // 돌진 이동이 끝난 자리(본인 → 다른 화면).
@@ -450,7 +456,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     private void DashEnd(Vector3 position, PhotonMessageInfo info)
     {
         if (pv == null || pv.IsMine || info.Sender == null || info.Sender != pv.Owner || !remoteDash.IsValid) return;
-        if (NetAuthority.Time < remoteDash.MoveStartsAt) { remoteDash = default; return; } // 출발 전에 취소됐다(기절·잡기)
+        if (!remoteDashConfirmed) { remoteDash = default; return; } // 출발하지 않고 취소됐다(기절·잡기)
         remoteDashEnded = true;
         remoteDashEndPosition = position;
         remoteDashHoldUntil = Time.time + RemoteDashHoldSeconds;
@@ -464,12 +470,20 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         double now = NetAuthority.Time;
         if (!remoteDashEnded)
         {
-            if (now < remoteDash.MoveStartsAt) return false; // 준비 자세: 평소 보간(제자리)
+            if (!remoteDashConfirmed)
+            {
+                // 출발 알림 전: 평소 보간(제자리). 너무 오래 안 오면 취소로 본다.
+                if (now > remoteDash.MoveStartsAt + RemoteConfirmWait) remoteDash = default;
+                return false;
+            }
             if (now > remoteDash.MoveEndsAt + RemoteDashEndWait) { remoteDash = default; return false; }
             Vector3 point = remoteDash.PointAt(now);
             point.y = transform.position.y;
-            if (Physics.Raycast(point + Vector3.up * 3f, Vector3.down, out RaycastHit ground, 9f, groundLayer, QueryTriggerInteraction.Ignore)) point.y = ground.point.y;
-            transform.position = point;
+            // 바닥은 지금 높이 + 1 m에서 찾는다(§72 E8 — 3 m 위에서 쏘면 낮은 천장 위로 올라갔다)
+            if (Physics.Raycast(point + Vector3.up * 1f, Vector3.down, out RaycastHit ground, 6f, groundLayer, QueryTriggerInteraction.Ignore)
+                && ground.point.y - transform.position.y < 1.5f) point.y = ground.point.y;
+            // 출발 알림이 늦게 와도 순간이동하지 않게 돌진 속도의 2배로 따라잡는다(§71 C1)
+            transform.position = Vector3.MoveTowards(transform.position, point, remoteDash.Speed * 2f * Time.deltaTime);
             transform.rotation = Quaternion.LookRotation(remoteDash.Direction);
             return true;
         }

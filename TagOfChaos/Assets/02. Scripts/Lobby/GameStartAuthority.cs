@@ -44,8 +44,7 @@ public static class GameStartAuthority
             return;
         }
 
-        var options = new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient };
-        PhotonNetwork.RaiseEvent(NetEventCodes.StartGameRequest, null, options, SendOptions.SendReliable);
+        MasterRequestResend.Send(NetEventCodes.StartGameRequest, null); // 방장이 바뀌면 새 방장에게 다시 보낸다(§72 E3)
         RoomSyncLog.Note($"Start requested to master (actor {PhotonNetwork.CurrentRoom.MasterClientId})");
     }
 
@@ -87,13 +86,15 @@ public static class GameStartAuthority
         int[] spies = PickSpies(settings.ClampSpies(RoomState.SpyCount(), PhotonNetwork.CurrentRoom.PlayerCount));
         AuthorityProps.SetRoom(new Hashtable
         {
-            { NetKeys.PrepareEndTime, PhotonNetwork.Time + settings.SceneLoadGrace + settings.PrepareSeconds },
+            // §73 L4: 늦게 로딩하는 사람을 기다릴 시간까지 넉넉히 — 모두 맵에 들어오면 방장(RoomLifecycleWatcher)이 "지금 + 준비 시간"으로 당긴다
+            { NetKeys.PrepareEndTime, PhotonNetwork.Time + settings.SceneLoadGrace + RoomLifecycleWatcher.MaxArrivalWait + settings.PrepareSeconds },
             { NetKeys.GameMapScene, map },
             { NetKeys.SpyActorNumbers, spies },
             { NetKeys.CharacterAssignments, AssignCharacters() },
         });
 
         PhotonNetwork.CurrentRoom.IsOpen = false; // 씬 전환 도중 새로 입장하는 걸 방지(대기실 복귀 시 RoundStateResetter가 다시 연다)
+        LoadTiming.Begin("start pressed, map " + map); // §73 L7
         RoomSceneTransition.LoadLevelForRoom(map); // 방장만 호출, 나머지는 AutomaticallySyncScene으로 함께 이동
         RoomSyncLog.Note($"Start by actor {requesterActor}. Map: {map}");
         return Result.Started;

@@ -23,9 +23,8 @@ public static class RoomSettingsAuthority
         if (!CanLocalEdit()) return Result.NotHost;
         if (PhotonNetwork.IsMasterClient) return TryApply(PhotonNetwork.LocalPlayer.ActorNumber, players, spies, witchMinutes, region);
 
-        var options = new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient };
         int regionIndex = PhotonRegions.IndexOf(region);
-        PhotonNetwork.RaiseEvent(NetEventCodes.RoomSettingsRequest, new[] { players, spies, witchMinutes, regionIndex }, options, SendOptions.SendReliable);
+        MasterRequestResend.Send(NetEventCodes.RoomSettingsRequest, new[] { players, spies, witchMinutes, regionIndex }); // §72 E3
         // 방장도 같은 규칙으로 맞추므로 결과를 미리 알 수 있다
         return ClampPlayers(players) > players ? Result.PlayersRaised : Result.Applied;
     }

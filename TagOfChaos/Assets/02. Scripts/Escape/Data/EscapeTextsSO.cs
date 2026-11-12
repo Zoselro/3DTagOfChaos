@@ -77,6 +77,15 @@ public class EscapeTextsSO : ScriptableObject
     public string hostChanged = "{0} is now the host.";       // 대기실 방장이 바뀜(§69 A4, {0} = 닉네임)
     public string recorderAim = "Aim at your own AI";         // 녹음기: 조준한 내 AI가 없음(§69 B3)
     public string carryStruggle = "Mash Left / Right to break free"; // 들린 쿠키: 좌우 연타로 빠져나가기(§69 C2)
+    public string claimRoomNotFull = "Wait until the room is full to claim the monster seat"; // 가마솥 신청 거절: 정원 미달(§71 L1)
+    public string claimNotAtCauldron = "Step into the cauldron to claim"; // 가마솥 신청 거절: 가마솥 밖
+    public string claimNoSeat = "The monster seat is already taken"; // 가마솥 신청 거절: 자리 없음(먼저 들어간 사람이 됨)
+    public string claimNoAnswer = "No answer from the host. Step out and back in to try again"; // 가마솥 신청 3번 모두 답 없음(§71 L4)
+    public string throwRejected = "Your throw was cancelled"; // 방장이 던지기를 받지 않음(§71 T1)
+    public string requestFailed = "The host didn't get that. Please try again"; // 요청 재전송까지 답 없음(§72 E3)
+    public string loadingMap = "Loading the map... {0}%"; // 판 시작 로딩 화면(§73 L5, {0} = 진행도 %)
+    public string waitingPlayers = "Waiting for other players ({0}/{1})"; // 맵에 아직 안 온 사람이 있음(§73 L5)
+    public string masterSlow = "The host's PC is slow — the round may start late or drop. A faster PC should host."; // 방장 화면 저속 안내(§73 L6, 방장 본인에게)
 
     [Header("Player list (§59 PL — Tab)")]
     public string playerListTitle = "Players";

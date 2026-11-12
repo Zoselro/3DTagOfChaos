@@ -1246,22 +1246,24 @@ public sealed class EscapeAuthority
         if (r.A < 0)
         {
             def = catalog.SearchBomb;
-            if (def == null || !def.IsTool || !RoomState.IsMonster(r.Sender)) return false;
-            if (searchReadyAt.TryGetValue(r.Sender, out float searchReady) && Time.time < searchReady) return false;
+            if (def == null || !def.IsTool || !RoomState.IsMonster(r.Sender)) return RejectThrow(r, ThrowReject.NotAllowed);
+            if (searchReadyAt.TryGetValue(r.Sender, out float searchReady) && Time.time < searchReady - CooldownSlack) return RejectThrow(r, ThrowReject.Cooldown);
         }
         else
         {
             item = State.HeldItemAt(r.Sender, r.A);
-            if (item < 0 || !IsActiveEscaper(r.Sender)) return false;
+            if (item < 0) return RejectThrow(r, ThrowReject.NotHolding);
+            if (!IsActiveEscaper(r.Sender)) return RejectThrow(r, ThrowReject.NotAllowed);
             def = catalog.Find(State.Items[item].Id);
-            if (def == null || !def.IsTool || State.Items[item].Charges <= 0) return false;
-            if (toolReadyAt.TryGetValue(r.Sender, out float ready) && Time.time < ready) return false;
+            if (def == null || !def.IsTool) return RejectThrow(r, ThrowReject.NotHolding);
+            if (State.Items[item].Charges <= 0) return RejectThrow(r, ThrowReject.NoCharges);
+            if (toolReadyAt.TryGetValue(r.Sender, out float ready) && Time.time < ready - CooldownSlack) return RejectThrow(r, ThrowReject.Cooldown);
         }
         ProjectileConfigSO cfg = def.Tool.Projectile;
-        if (cfg == null) return false;
-        if (!IsNear(r.Sender, r.Pos, ThrowOriginReach)) return false; // 손이 그 사람 근처
+        if (cfg == null) return RejectThrow(r, ThrowReject.NotAllowed);
+        if (!ThrowOriginOk(r.Sender, r.Pos, r.Stamp)) return RejectThrow(r, ThrowReject.FarFromHand); // 손이 그 사람 근처
         Vector3 velocity = Vector3.ClampMagnitude(r.Dir, ThrowSolver.MaxSpeed(cfg));
-        if (velocity.sqrMagnitude < 0.01f) return false;
+        if (velocity.sqrMagnitude < 0.01f) return RejectThrow(r, ThrowReject.BadVelocity);
         float age = NetAuthority.AgeOf(r.Stamp);
         if (r.Stamp == 0 || age < -0.1f || age > ThrowMaxAge) age = 0f;
 
@@ -1278,6 +1280,40 @@ public sealed class EscapeAuthority
         int localKey = r.Targets != null && r.Targets.Length > 0 ? r.Targets[0] : 0;
         projectiles.AuthorizeSpawn(def, r.Sender, r.Pos, velocity, NetAuthority.Time - Mathf.Max(0f, age), Mathf.Clamp(r.B, 0, 9), localKey);
         return item >= 0; // 횟수가 바뀌었을 때만 상태를 다시 쓴다
+    }
+
+    // 쿨타임 판정 여유(§71 T3): 던진 사람 화면과 방장의 시계·프레임 차이로 딱 맞춰 누른 던지기가 거절되지 않게.
+    public const float CooldownSlack = 0.25f;
+
+    // 던지기를 받지 않았다(§71 T1): 던진 사람에게만 이유를 알린다 — 그 화면은 예측 투사체를 바로 지우고 쿨타임을 돌려준다.
+    private bool RejectThrow(EscapeRequest r, ThrowReject why)
+    {
+        int key = r.Targets != null && r.Targets.Length > 0 ? r.Targets[0] : 0;
+        NoticeTo(r.Sender, EscapeNoticeKind.ThrowRejected, key + "|" + (byte)why);
+        Debug.Log($"[Projectile] Throw from actor {r.Sender} rejected: {why}.");
+        return false;
+    }
+
+    // 손(시작점)이 그 사람 근처인지(§71 T2): 받은 위치 기록(최근 0.5초 + 던진 시각) 또는 예고된 돌진 길에서 수평으로 ThrowOriginReach 안.
+    // 예전에는 0.2초마다 잰 방장 화면의 보간된 위치(lastPositions)로만 재서 돌진·엘리베이터 직후 거절됐다. 순간이동 예외(탈것·엘리베이터)는 막지 않는다.
+    private bool ThrowOriginOk(int actor, Vector3 origin, int stamp)
+    {
+        IGameCharacter c = MonsterOf(actor);
+        if (c == null || c.View == null) return IsNear(actor, origin, ThrowOriginReach);
+        if (moveExemptUntil.TryGetValue(actor, out float until) && Time.realtimeSinceStartup < until) return true;
+        double now = NetAuthority.Time;
+        double at = now - Mathf.Clamp(NetAuthority.AgeOf(stamp), 0f, ThrowMaxAge);
+        Vector3 flat = new Vector3(origin.x, c.gameObject.transform.position.y, origin.z);
+        if (PositionHistory.TryGet(c.View.ViewID, out PositionTrack track))
+        {
+            Vector3 newest = track.NewestPoint;
+            Vector3 probe = new Vector3(origin.x, newest.y, origin.z);
+            if (track.TryMinDistance(probe, at - 0.5, now, newest, out float off) && off <= ThrowOriginReach) return true;
+        }
+        if (MonsterDashLedger.TryGet(c.View.ViewID, at, out DashWindow dash) && dash.PathError(origin, at, MonsterDashLedger.ClaimTimeSlack) <= ThrowOriginReach) return true;
+        Vector3 d = c.gameObject.transform.position - flat;
+        d.y = 0f;
+        return d.magnitude <= ThrowOriginReach || IsNear(actor, origin, ThrowOriginReach);
     }
 
     // 녹음기: 그 사람의 AI 중 무작위 하나가 목소리를 내며 걷기 시작한다.
@@ -1571,8 +1607,17 @@ public sealed class EscapeAuthority
         return PhotonNetwork.CurrentRoom.GetPlayer(actor);
     }
 
+    // §72 E5: 방장이 아닌 화면도 방장이 승인한 던지기·도구 사용(모두에게 오는 ProjectileSpawn·ToolHit)을 보고 쿨타임을 적어 둔다 —
+    // 예전에는 방장만 들고 있어, 방장이 바뀌면 쿨타임이 사라져 바로 다시 던질 수 있었다. 방장 자신은 승인할 때 이미 적었다.
+    public void NoteApprovedUse(int actor, ItemSO def)
+    {
+        if (PhotonNetwork.IsMasterClient || def == null || !def.IsTool || actor <= 0) return;
+        if (def == catalog.SearchBomb) searchReadyAt[actor] = Time.time + SearchCooldown;
+        else toolReadyAt[actor] = Time.time + def.Tool.CooldownSeconds;
+    }
+
     // 한 사람에게만 보내는 알림.
-    private static void NoticeTo(int actor, EscapeNoticeKind kind, string text)
+    public static void NoticeTo(int actor, EscapeNoticeKind kind, string text)
     {
         // 오프라인 방은 대상 지정(TargetActors)을 무시하고 아무에게도 보내지 않으므로 모두에게(혼자뿐)
         var options = PhotonNetwork.OfflineMode ? new RaiseEventOptions { Receivers = ReceiverGroup.All } : new RaiseEventOptions { TargetActors = new[] { actor } };

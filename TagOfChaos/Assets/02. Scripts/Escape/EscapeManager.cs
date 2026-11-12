@@ -213,7 +213,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         gameObject.AddComponent<DestructionPresenter>();            // 부서지는 연출(데칼·붕괴, §66)
         gameObject.AddComponent<GiantBrain>().Init(this);           // 거대 괴물 판단 — 방장만 돈다(§64)
         gameObject.AddComponent<GiantPresenter>().Init(this);       // 거대 괴물 연출(§64)
-        VoiceNet.SendLocalVoice();                                  // 대기실에서 녹음한 목소리를 방에 보낸다(§25.3 Q6)
+        VoiceNet.EnsureSent();                                      // 대기실에서 못 받은 사람에게만 목소리를 보낸다(§25.3 Q6, §72 E2)
         ReadStateFromRoom();
     }
 
@@ -230,10 +230,16 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
             nextTrack = Time.unscaledTime + TrackSeconds;
             authority.TrackPositions(); // 방장이 아니어도 기록한다(F-10)
         }
+        TickOutbox();
         if (!PhotonNetwork.IsMasterClient)
         {
             TrackBrokenPlayers(asMaster: false); // 방장이 아니어도 잡힌 사람을 기억해 둔다 — 방장이 되면 다시 알리지 않게(research.md R4.10-9)
             return;
+        }
+        if (adoptAt >= 0f)
+        {
+            if (Time.unscaledTime < adoptAt) return; // 이어받기 유예 중(§72 E4)
+            FinishAdopt();
         }
 
         if (State == null && !initRequested && CanInitialize())
@@ -287,11 +293,18 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         }
     }
 
+    // 새 방장이 이어받는다. §72 E4: 바로 이어받으면 이전 방장이 나가기 직전에 쓴 상태가 아직 도착하지 않아 옛 상태로 덮어쓸 수 있었다 —
+    // AdoptDelay초 동안 요청을 모아 두고(Tick도 쉼) 그사이 도착한 최신 상태로 이어받는다.
     public override void OnMasterClientSwitched(Player newMasterClient)
     {
-        if (!PhotonNetwork.IsMasterClient || State == null) return;
-        authority.Adopt(State); // 새 방장이 이어받는다
-        authority.Reevaluate();
+        seenSeq.Clear();
+        if (!PhotonNetwork.IsMasterClient)
+        {
+            adoptAt = -1f;
+            deferred.Clear();
+            return;
+        }
+        adoptAt = Time.unscaledTime + AdoptDelay;
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
@@ -354,13 +367,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         if (!RoomState.IsInRoom() || PhotonNetwork.LocalPlayer == null) return;
         var r = new EscapeRequest { Op = op, Sender = PhotonNetwork.LocalPlayer.ActorNumber, A = a, B = b, Pos = pos, Targets = targets };
-        if (PhotonNetwork.IsMasterClient)
-        {
-            authority.Handle(r);
-            return;
-        }
-        PhotonNetwork.RaiseEvent(NetEventCodes.EscapeRequest, r.ToPayload(),
-            new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient }, SendOptions.SendReliable);
+        Send(r);
     }
 
     // 던지기(§70.3): 손을 떠난 순간의 시작점·속도·시각과 던진 사람이 붙인 번호.
@@ -369,13 +376,125 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (!RoomState.IsInRoom() || PhotonNetwork.LocalPlayer == null) return;
         var r = new EscapeRequest { Op = EscapeOp.Throw, Sender = PhotonNetwork.LocalPlayer.ActorNumber, A = slot, B = color, Pos = origin,
                                     Targets = new[] { localKey }, Dir = velocity, Stamp = stamp };
+        Send(r);
+    }
+
+    // ---------------- §72 E3·E4: 요청 번호·확인·재전송, 방장 교체 유예 ----------------
+
+    public const float RequestRetrySeconds = 1f; // 이 안에 방장의 확인(RequestAck)이 없으면 다시 보낸다
+    public const int RequestMaxTries = 3;
+    public const float AdoptDelay = 0.5f;        // 새 방장: 이전 방장이 마지막으로 쓴 상태가 도착할 때까지 요청 처리를 미룬다
+
+    private sealed class Outgoing
+    {
+        public EscapeRequest R;
+        public float SentAt;
+        public int Tries;
+        public int Master;
+    }
+
+    private readonly Dictionary<int, Outgoing> outbox = new Dictionary<int, Outgoing>();
+    private readonly List<int> outboxDrop = new List<int>();
+    private readonly Dictionary<int, RequestSeqWindow> seenSeq = new Dictionary<int, RequestSeqWindow>();
+    private readonly List<EscapeRequest> deferred = new List<EscapeRequest>();
+    private int nextSeq = 1;
+    private float adoptAt = -1f;
+
+    public int PendingRequestCount => outbox.Count; // 시험·로그용
+    public bool AdoptPending => adoptAt >= 0f;
+
+    // 방장이면 바로(유예 중이면 미뤄) 처리하고, 아니면 번호를 붙여 보내고 확인을 기다린다.
+    private void Send(EscapeRequest r)
+    {
         if (PhotonNetwork.IsMasterClient)
         {
-            authority.Handle(r);
+            HandleAsMaster(r);
             return;
         }
+        r.Seq = nextSeq++;
+        outbox[r.Seq] = new Outgoing { R = r, SentAt = Time.unscaledTime, Tries = 1, Master = MasterActor() };
+        Raise(r);
+    }
+
+    private static void Raise(EscapeRequest r) =>
         PhotonNetwork.RaiseEvent(NetEventCodes.EscapeRequest, r.ToPayload(),
             new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient }, SendOptions.SendReliable);
+
+    private static int MasterActor() => PhotonNetwork.CurrentRoom != null ? PhotonNetwork.CurrentRoom.MasterClientId : -1;
+
+    private void HandleAsMaster(EscapeRequest r)
+    {
+        if (adoptAt >= 0f) { deferred.Add(r); return; }
+        authority.Handle(r);
+    }
+
+    // 방장: 받은 요청을 확인해 주고(번호가 있으면), 처음 받은 번호만 처리한다.
+    private void ReceiveRequest(EscapeRequest r)
+    {
+        if (r.Seq > 0)
+        {
+            EscapeAuthority.NoticeTo(r.Sender, EscapeNoticeKind.RequestAck, r.Seq.ToString());
+            if (!seenSeq.TryGetValue(r.Sender, out RequestSeqWindow window)) seenSeq[r.Sender] = window = new RequestSeqWindow();
+            if (!window.Add(r.Seq)) return; // 다시 보낸 요청 — 이미 처리했다
+        }
+        HandleAsMaster(r);
+    }
+
+    // 보낸 요청: 확인이 없으면 다시 보내고, 방장이 바뀌었으면 새 방장에게(두 번 처리돼도 되는 요청만), 내가 방장이 됐으면 직접 처리한다.
+    private void TickOutbox()
+    {
+        if (outbox.Count == 0) return;
+        float now = Time.unscaledTime;
+        int master = MasterActor();
+        bool iAmMaster = PhotonNetwork.IsMasterClient;
+        outboxDrop.Clear();
+        foreach (KeyValuePair<int, Outgoing> kv in outbox)
+        {
+            Outgoing o = kv.Value;
+            bool masterChanged = o.Master != master;
+            if (masterChanged && !EscapeRequest.IsResendSafe(o.R.Op))
+            {
+                outboxDrop.Add(kv.Key);
+                Debug.Log($"[EscapeManager] {o.R.Op} request #{kv.Key} dropped: the master changed before it was confirmed.");
+                if (EscapeRequest.NotifyOnFailure(o.R.Op)) ScreenToast.Show(EscapeTextsSO.Current.requestFailed, 2f);
+                continue;
+            }
+            if (iAmMaster)
+            {
+                outboxDrop.Add(kv.Key);
+                HandleAsMaster(o.R);
+                continue;
+            }
+            if (!masterChanged && now - o.SentAt < RequestRetrySeconds) continue;
+            if (o.Tries >= RequestMaxTries)
+            {
+                outboxDrop.Add(kv.Key);
+                Debug.LogWarning($"[EscapeManager] {o.R.Op} request #{kv.Key} got no answer from the master after {o.Tries} tries.");
+                if (EscapeRequest.NotifyOnFailure(o.R.Op)) ScreenToast.Show(EscapeTextsSO.Current.requestFailed, 2f);
+                continue;
+            }
+            o.Tries++;
+            o.SentAt = now;
+            o.Master = master;
+            Raise(o.R);
+            Debug.Log($"[EscapeManager] {o.R.Op} request #{kv.Key} resent (try {o.Tries}{(masterChanged ? ", new master" : string.Empty)}).");
+        }
+        for (int i = 0; i < outboxDrop.Count; i++) outbox.Remove(outboxDrop[i]);
+    }
+
+    // 유예가 끝났다: 방 캐시의 최신 상태(늦게 도착한 이전 방장의 마지막 커밋 포함)를 이어받고, 미뤄 둔 요청을 처리한다.
+    private void FinishAdopt()
+    {
+        adoptAt = -1f;
+        ReadStateFromRoom();
+        if (State != null)
+        {
+            authority.Adopt(State);
+            authority.Reevaluate();
+        }
+        Debug.Log($"[EscapeManager] Took over as master (revision {(State != null ? State.Revision : -1)}, {deferred.Count} deferred request(s)).");
+        for (int i = 0; i < deferred.Count; i++) authority.Handle(deferred[i]);
+        deferred.Clear();
     }
 
     public void OnEvent(EventData e)
@@ -383,7 +502,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         switch (e.Code)
         {
             case NetEventCodes.EscapeRequest:
-                if (PhotonNetwork.IsMasterClient && EscapeRequest.TryParse(e.CustomData, e.Sender, out EscapeRequest r)) authority.Handle(r);
+                if (PhotonNetwork.IsMasterClient && EscapeRequest.TryParse(e.CustomData, e.Sender, out EscapeRequest r)) ReceiveRequest(r);
                 break;
             case NetEventCodes.EscapeNotice:
                 if (!SentByMaster(e)) return;
@@ -397,6 +516,17 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
                     if (n.Length >= 5 && n[2] is int itemIndex && n[3] is double showAt && n[4] is bool onGround)
                         EscapeHud.ScheduleRespawned(n[1] as string, itemIndex, showAt, onGround);
                 }
+                else if ((EscapeNoticeKind)kind == EscapeNoticeKind.ThrowRejected)
+                {
+                    // 내 던지기를 방장이 받지 않았다(§71 T1): "던진 사람 번호|이유"
+                    string[] parts = (n[1] as string ?? string.Empty).Split('|');
+                    if (parts.Length == 2 && int.TryParse(parts[0], out int key) && byte.TryParse(parts[1], out byte why) && ProjectileSystem.Instance != null)
+                        ProjectileSystem.Instance.OnThrowRejected(key, (ThrowReject)why);
+                }
+                else if ((EscapeNoticeKind)kind == EscapeNoticeKind.RequestAck)
+                {
+                    if (int.TryParse(n[1] as string, out int seq)) outbox.Remove(seq); // 방장이 받았다(§72 E3)
+                }
                 else if ((EscapeNoticeKind)kind == EscapeNoticeKind.DecoyCatchRejected)
                 {
                     // 내 AI 잡기가 거절됐다: 빈손 잡기 동작을 끊고 바로 다시 잡을 수 있게 한다(§70.2.5 D5)
@@ -407,14 +537,19 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
             case NetEventCodes.ProjectileSpawn:
                 if (!SentByMaster(e)) return;
                 if (ProjectileSystem.Instance != null) ProjectileSystem.Instance.OnSpawn(e.CustomData);
+                if (e.CustomData is object[] sp && sp.Length > 2 && sp[1] is string spItem && sp[2] is int spOwner)
+                    authority.NoteApprovedUse(spOwner, catalog.Find(spItem)); // 쿨타임을 따라 적는다(§72 E5)
                 break;
             case NetEventCodes.ToolHit:
                 if (!SentByMaster(e)) return;
                 ToolHitReceiver.Handle(e.CustomData);
+                if (e.CustomData is object[] th && th.Length > 1 && th[0] is string thItem && th[1] is int thActor)
+                {
+                    ItemSO used = catalog.Find(thItem);
+                    if (used != null && used.IsTool && used.Tool.Projectile == null) authority.NoteApprovedUse(thActor, used); // 투사체 명중은 던질 때 이미 적었다
+                }
                 break;
-            case NetEventCodes.VoiceClip:
-                VoiceNet.Receive(e.Sender, e.CustomData);
-                break;
+            // VoiceClip은 VoiceNet이 씬과 무관하게 직접 받는다(§72 E2).
         }
     }
 

@@ -174,4 +174,33 @@ public class Request1112ThrowTests
         Assert.AreEqual(Mathf.Sqrt(9.81f * 20f), flat, 0.05f, "45 degrees: v = sqrt(g d)");
         Assert.AreEqual(flat * ThrowSolver.SpeedSlack, ThrowSolver.MaxSpeed(config), 1e-3f);
     }
+
+    // §71 ①: 물풍선 20° + 중력 14.2는 예전(45° + 9.81)보다 정확히 1.5배 빠르고, 같은 자리에 떨어진다.
+    [Test]
+    public void Balloon_TwentyDegreesWithHeavierGravityIsOneAndAHalfTimesFaster()
+    {
+        foreach (float d in new[] { 6f, 12f, 20f })
+        {
+            Vector3 o = Vector3.zero, t = new Vector3(0f, 0f, d);
+            float before = ThrowSolver.LaunchVelocity(o, t, 45f, 9.81f).magnitude;
+            Vector3 v = ThrowSolver.LaunchVelocity(o, t, 20f, 14.2f);
+            Assert.AreEqual(1.5f, v.magnitude / before, 0.01f);
+            float flight = 2f * v.y / 14.2f;
+            Assert.AreEqual(d, new Vector2(v.x, v.z).magnitude * flight, 0.05f, "still lands on the aimed spot");
+        }
+    }
+
+    // §71 추가: 수색 폭탄도 물풍선과 같은 방식(20°·중력 14.2)으로 던진다. 튕기고 1초 뒤 터지는 성질은 그대로.
+    [Test]
+    public void SearchBomb_IsThrownLikeTheBalloon()
+    {
+        var balloon = UnityEditor.AssetDatabase.LoadAssetAtPath<ProjectileConfigSO>("Assets/03. SO/Escape/Projectiles/Projectile_WaterBalloon.asset");
+        var search = UnityEditor.AssetDatabase.LoadAssetAtPath<ProjectileConfigSO>("Assets/03. SO/Escape/Projectiles/Projectile_SearchBomb.asset");
+        Assert.IsNotNull(balloon);
+        Assert.IsNotNull(search);
+        Assert.AreEqual(balloon.launchAngle, search.launchAngle, 1e-4f);
+        Assert.AreEqual(balloon.gravity, search.gravity, 1e-4f);
+        Assert.IsFalse(search.burstOnImpact);
+        Assert.AreEqual(1f, search.fuseAfterImpact, 1e-4f);
+    }
 }

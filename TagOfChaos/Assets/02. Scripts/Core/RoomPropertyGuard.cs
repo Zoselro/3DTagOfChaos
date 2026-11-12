@@ -84,6 +84,7 @@ public class RoomPropertyGuard : MonoBehaviourPunCallbacks, IOnEventCallback
             if (AuthorityProps.InGrace) { AuthorityProps.AcceptRoom(key, now); continue; }
             object expected = AuthorityProps.ExpectedRoom(key);
             if (NetSecurityRules.ValuesEqual(now, expected)) continue;
+            if (AuthorityProps.WasRecentlyWrittenRoom(key, now)) continue; // 내 옛 값의 늦은 응답(§72 E7) — 새 값의 응답이 곧 온다
             restoreBuffer[key] = expected;
             if (expected == null) cache.Remove(key); else cache[key] = expected; // 방장 화면은 즉시 정상 값으로
         }
@@ -106,6 +107,7 @@ public class RoomPropertyGuard : MonoBehaviourPunCallbacks, IOnEventCallback
             if (AuthorityProps.InGrace) { AuthorityProps.AcceptPlayer(target.ActorNumber, key, now); continue; }
             object expected = AuthorityProps.ExpectedPlayer(target.ActorNumber, key);
             if (NetSecurityRules.ValuesEqual(now, expected)) continue;
+            if (AuthorityProps.WasRecentlyWrittenPlayer(target.ActorNumber, key, now)) continue; // §72 E7
             restoreBuffer[key] = expected;
             if (expected == null) target.CustomProperties.Remove(key); else target.CustomProperties[key] = expected;
         }

@@ -11,6 +11,7 @@ public class PlayerCarryFollower
     // 풀면서 위로 튕겨냈다(Play Mode 실측: 내려놓는 순간 y=1.4 → 4.75). 두 캡슐 반지름 합(약 0.92m)보다 먼
     // 드는 쪽 정면에 먼저 내려놓은 뒤 충돌을 복원한다.
     private const float ReleaseDropDistance = 1.2f;
+    public static float ReleaseDistance => ReleaseDropDistance;
 
     private readonly GameObject self;
     private readonly Rigidbody rb;
@@ -45,7 +46,11 @@ public class PlayerCarryFollower
 
     // 드는 쪽 정면에 내려놓고 충돌을 복원한다. restorePhysics=false(파괴 상태)면 키네마틱을 유지한다.
     // 실제로 들려 있었으면 true.
-    public bool Detach(bool restorePhysics)
+    // dropAt: 드는 사람 화면이 정한 내려놓을 자리(§71 B1·§72 E6 — 들린 사람 화면의 드는 사람은 지연만큼 뒤에 있거나 탈것으로 이미 순간이동했을 수 있다).
+    // 없거나 지금 자리에서 너무 멀면 예전처럼 이 화면의 드는 사람 앞에 내려놓는다.
+    public const float MaxDropOffset = 6f;
+
+    public bool Detach(bool restorePhysics, Vector3? dropAt = null)
     {
         if (carrierViewId < 0) return false;
 
@@ -53,6 +58,7 @@ public class PlayerCarryFollower
         {
             Transform carrier = carrierObject.transform;
             Vector3 dropPos = carrier.position + carrier.forward * ReleaseDropDistance;
+            if (dropAt.HasValue && (dropAt.Value - rb.position).sqrMagnitude <= MaxDropOffset * MaxDropOffset) dropPos = dropAt.Value;
             Quaternion upright = CarryPose.UprightFacing(dropPos, carrier.position); // 눕혀 들었던 몸을 세워 드는 쪽을 보게
             rb.position = dropPos;
             rb.rotation = upright;

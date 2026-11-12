@@ -51,6 +51,20 @@ public enum EscapeNoticeKind : byte
     AllDecoysGone = 12,    // 마녀 시간이 시작돼 AI가 모두 사라졌다(§26 Q16)
     CookieCaught = 13,     // 괴물이 진짜 쿠키(스파이 포함)를 잡았다. 내용: 잡힌 사람 액터 번호(문자열)
     DecoyCatchRejected = 14, // 방장이 AI 잡기를 거절했다(요청한 술래에게만, §70.2.5 D5). 내용: AI 번호(문자열)
+    ThrowRejected = 15,      // 방장이 던지기를 받지 않았다(던진 사람에게만, §71 T1). 내용: "던진 사람 번호|이유(ThrowReject)"
+    RequestAck = 16,         // 방장이 요청을 받았다(보낸 사람에게만, §72 E3). 내용: 요청 번호(문자열)
+}
+
+// 던지기를 받지 않은 이유(§71 T1). 번호는 알림에 실려 가므로 고정한다.
+public enum ThrowReject : byte
+{
+    Unknown = 0,
+    Cooldown = 1,
+    NotHolding = 2,
+    FarFromHand = 3,
+    NoCharges = 4,
+    NotAllowed = 5,
+    BadVelocity = 6,
 }
 
 // 게임이 끝난 이유(NetKeys.EscapeEndReason).
@@ -70,6 +84,23 @@ public enum DeathCause
     Giant = 3, // 거대 괴물에게 밟힘(Request1009Plan.md §64) — 쿠키·스파이·술래
 }
 
+// 보낸 사람별로 최근 받은 요청 번호(방장, §72 E3). 같은 번호가 다시 오면(재전송) 처리하지 않는다. 오래된 번호는 Capacity개를 넘으면 버린다.
+public sealed class RequestSeqWindow
+{
+    public const int Capacity = 128;
+    private readonly System.Collections.Generic.HashSet<int> seen = new System.Collections.Generic.HashSet<int>();
+    private readonly System.Collections.Generic.Queue<int> order = new System.Collections.Generic.Queue<int>();
+
+    // 처음 받은 번호면 true.
+    public bool Add(int seq)
+    {
+        if (!seen.Add(seq)) return false;
+        order.Enqueue(seq);
+        if (order.Count > Capacity) seen.Remove(order.Dequeue());
+        return true;
+    }
+}
+
 public struct EscapeRequest
 {
     public EscapeOp Op;
@@ -80,9 +111,18 @@ public struct EscapeRequest
     public int[] Targets;
     public UnityEngine.Vector3 Dir; // 던지기: 처음 속도(§70.3)
     public int Stamp;               // 던지기: 손을 떠난 시각(PhotonNetwork.ServerTimestamp)
+    public int Seq;                 // 요청 번호(§72 E3) — 방장이 받았다고 알리고(RequestAck), 다시 온 같은 번호는 처리하지 않는다. 0 = 번호 없음
 
-    // 옛 요청(길이 5)과 같은 앞부분 뒤에 Dir·Stamp를 덧붙인다.
-    public object[] ToPayload() => new object[] { (byte)Op, A, B, Pos, Targets ?? new int[0], Dir, Stamp };
+    // 옛 요청(길이 5)과 같은 앞부분 뒤에 Dir·Stamp·Seq를 덧붙인다.
+    public object[] ToPayload() => new object[] { (byte)Op, A, B, Pos, Targets ?? new int[0], Dir, Stamp, Seq };
+
+    // 방장이 바뀐 뒤 새 방장에게 다시 보내도 되는 요청인지(§72 E3). 이전 방장이 이미 처리했을 수 있으므로, 두 번 처리되면
+    // 결과가 달라지는 요청(던지기·도구·떨어뜨리기·연타)은 다시 보내지 않는다. 같은 방장에게는 번호로 중복을 거르므로 모두 다시 보낸다.
+    public static bool IsResendSafe(EscapeOp op) =>
+        op != EscapeOp.Throw && op != EscapeOp.ToolUse && op != EscapeOp.Drop && op != EscapeOp.DropAll && op != EscapeOp.CageMash;
+
+    // 끝내 답이 없을 때 알릴 요청인지(자주 보내는 보조 요청은 조용히 버린다).
+    public static bool NotifyOnFailure(EscapeOp op) => op != EscapeOp.RepairStop && op != EscapeOp.CageMash && op != EscapeOp.DismantleBegin;
 
     public static bool TryParse(object data, int sender, out EscapeRequest request)
     {
@@ -91,6 +131,7 @@ public struct EscapeRequest
         if (!(d[0] is byte op) || !(d[1] is int a) || !(d[2] is int b) || !(d[3] is UnityEngine.Vector3 pos)) return false;
         request = new EscapeRequest { Op = (EscapeOp)op, Sender = sender, A = a, B = b, Pos = pos, Targets = d[4] as int[] ?? new int[0] };
         if (d.Length > 6 && d[5] is UnityEngine.Vector3 dir && d[6] is int stamp) { request.Dir = dir; request.Stamp = stamp; }
+        if (d.Length > 7 && d[7] is int seq) request.Seq = seq;
         return true;
     }
 }

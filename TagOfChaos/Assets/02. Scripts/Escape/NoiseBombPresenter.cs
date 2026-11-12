@@ -15,14 +15,21 @@ public class NoiseBombPresenter : MonoBehaviour
     {
         manager = owner;
         manager.StateChanged += Sync;
+        ProjectileSystem.ThrowRejected += OnThrowRejected;
+    }
+
+    // 방장이 수색 폭탄을 받지 않았다(§71 T1): 쿨타임을 돌려준다.
+    private void OnThrowRejected(ItemSO item, ThrowReject why)
+    {
+        if (item != null && item.IsTool && item.Tool.Kind == ToolKind.SearchBomb) SearchReadyAt = 0f;
     }
 
     private void OnDestroy()
     {
         if (manager != null) manager.StateChanged -= Sync;
+        ProjectileSystem.ThrowRejected -= OnThrowRejected;
         if (placePreview != null) Destroy(placePreview.gameObject);
         if (markers != null) Destroy(markers.gameObject);
-        searchPreview.Destroy();
     }
 
     // 지금 내 괴물의 남은 칸(HUD).
@@ -104,35 +111,15 @@ public class NoiseBombPresenter : MonoBehaviour
         markers.End();
     }
 
-    // 수색 폭탄(§70.3, Q4): 수색 키를 누르고 있는 동안 조준점·점선 궤적, 떼면 그때 보는 곳으로 던진다. 쿨타임 중에 누르면 거절음.
-    private readonly ThrowPreview searchPreview = new ThrowPreview();
-    private static readonly Color SearchPreviewColor = new Color(1f, 0.35f, 0.3f, 0.9f);
-    private bool searchAiming;
-
+    // 수색 폭탄(§70.3): 물풍선과 같이 수색 키를 누르면 바로 보는 곳으로 던진다 — 조준점·점선 궤적 없음(§71 추가 요청,
+    // 예전에는 누르고 있는 동안 궤적을 보여 주고 떼면 던졌다). 쿨타임 중에 누르면 거절음.
     private void UpdateSearch()
     {
+        if (!PlayerInput.SearchBombPressed) return;
         IGameCharacter monster = SearchThrower();
         ItemSO bomb = manager.Catalog.SearchBomb;
-        if (monster == null || bomb == null || !bomb.IsTool || bomb.Tool.Projectile == null)
-        {
-            searchAiming = false;
-            searchPreview.Hide();
-            return;
-        }
-        if (PlayerInput.SearchBombPressed)
-        {
-            if (Time.time < SearchReadyAt) UiSoundCues.Error();
-            else searchAiming = true;
-        }
-        if (!searchAiming) { searchPreview.Hide(); return; }
-        Transform t = monster.gameObject.transform;
-        if (PlayerInput.SearchBombHeld)
-        {
-            searchPreview.Show(Camera.main, MonsterHand(t), t, bomb.Tool.Projectile, bomb.Tool.HitRadius, SearchPreviewColor);
-            return;
-        }
-        searchAiming = false;
-        searchPreview.Hide();
+        if (monster == null || bomb == null || !bomb.IsTool || bomb.Tool.Projectile == null) return;
+        if (Time.time < SearchReadyAt) { UiSoundCues.Error(); return; }
         ThrowSearchBomb(monster);
     }
 

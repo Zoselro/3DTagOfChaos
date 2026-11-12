@@ -8453,23 +8453,44 @@ private bool IsNearCauldron(int actor)
 | Q5 | 로비: 가마솥 안에 서 있는 채로 정원이 차면 자동으로 술래 신청? (지금은 다시 들어와야 함, §30.7-2) | 자동 신청 |
 | Q6 | 지난 시험 때 **모든 PC가 같은(§70 이후) 빌드**였는지, 가능하면 방장 PC의 Console/Player.log에서 `[MonsterAssignment]`·`[Projectile]`·`[NetGuard]` 줄을 보내 주실 수 있는지 | — |
 
+#### 71.7.1 확정(2026-11-12 사용자 답)
+
+| # | 확정 |
+| --- | --- |
+| Q1 | A — 물풍선 20° + 중력 14.2(정확히 1.5배) |
+| Q2 | 수색 폭탄도 **1초**(섬광탄과 같게) |
+| Q3 | AI 경로 미리 보내기 0.25초 |
+| Q4 | 빌드 버전이 다르면 입장을 막고 안내 |
+| Q5 | 가마솥 안에 서 있는 채로 정원이 차면 자동 신청 |
+| Q6 | 시험은 모두 같은 PC(GTX 1060·RAM 16 GB, 핫스팟)에서 빌드 4개를 동시에 켰다(에디터 실행 없음). 집 PC(RTX 3070 Ti·RAM 32 GB)에서는 문제 없음 → 느린 PC + 핫스팟에서 드러나는 약점으로 판단(§72 E1·E2·E3 등) |
+
+#### 71.7.2 추가 확정(2026-11-12 사용자 답, 구현 중 질문)
+
+| # | 확정 |
+| --- | --- |
+| 미리보기 | 물풍선·섬광탄: 점선 궤적과 조준점 **둘 다 없앤다**. 수색 폭탄은 처음에 R 길게 누르기 미리보기를 남겼다가, 구현 중 추가 요청("수색 폭탄도 물풍선이랑 동일하게 던져지게")으로 **수색 폭탄도 없앰** — 아래 B3 |
+| 선착순 | 가마솥 자리보다 들어간 사람이 많으면 **먼저 들어간 사람**(들어간 시각 기준) |
+| 버전 | 빌드 버전은 **Player Settings의 Version**(`Application.version`)을 쓴다 — 별도 상수(`NetProtocol.Version`)는 만들지 않음 |
+| 범위 | 이번에는 §71·§72만. 새 진행 목록 항목은 다음으로 |
+
 ### 71.8 단계
 
 | 단계 | 내용 | 상태 |
 | --- | --- | --- |
 | R0 | 코드·git 조사, 오프라인 재현(수색 폭탄 1초 사라짐·AI 경로 잘림 0건), 계획(이 절) | ✅ |
-| R1 | 확인(Q1~Q6) | 대기 |
-| B1 | 물풍선 20°·중력 14.2, 섬광탄 1초(에셋 + `ProjectileSetup`) + 시험 | |
-| T1~T4 | 던지기 거절 알림·손 위치(패킷 기록 + 돌진 길)·쿨타임 여유·예측 2초 + 시험 | |
-| V1 | `NetProtocol.Version` + 입장 확인 | |
-| N0 | `NetJumpProbe` 기록 도구(빌드 로그 포함) | |
-| A1~A2 | AI 미래 시작 경로·잘린 경로 미리 잇기·화면 이음 + 잡기 위치 보정 + 시험 | |
-| B1~B2 | 들기: 드는 사람이 내려놓을 자리 결정·원격 이음 | |
-| C1 | 술래 원격 돌진: 출발 확인 뒤 움직임·따라잡기 | |
-| L1~L4 | 로비: 결과 알림·패킷 기록 근처 판정·(Q5)·재전송 | |
-| P1 | Play Mode(진저브레드·놀이공원·초콜릿 공장·사탕 숲): 물풍선·섬광탄·수색 폭탄 던지기, AI 경로 교체 튐 기록 0, 로비 가마솥 | |
-| P2 | 두 대(같은 빌드, PUN 지연 시뮬레이션 80·150 ms): `[NetJump]` 0건 목표, 수색 폭탄 20회 사라짐 0, 로비 술래 선정 10회 | |
-| DOC | 결과·README | |
+| R1 | 확인(Q1~Q6) | ✅ 71.7.1 |
+| B1 | 물풍선 20°·중력 14.2, 섬광탄 1초, 수색 폭탄 1초(에셋 + `ProjectileSetup`) + 시험, 물풍선·섬광탄 점선·조준점 삭제 | ✅ |
+| T1~T4 | 던지기 거절 알림(`ThrowRejected` + 이유 `ThrowReject`, 쿨타임 돌려줌, 알림 문구)·손 위치(패킷 기록 0.5초 + 돌진 길 4 m)·쿨타임 여유 0.25초·예측 2초 + 시험 | ✅ |
+| V1 | 빌드 버전 = `Application.version`을 `PhotonNetwork.GameVersion`으로 — 버전이 다르면 서로의 방이 보이지도, 들어가지도 않는다(71.7.2) | ✅ |
+| N0 | `NetJumpProbe` 기록 도구(빌드 로그 포함, 긴 프레임은 25 m/s × 프레임만큼 여유), F9 핫스팟 흉내(150 ms·50 ms·2 %) | ✅ |
+| A1~A2 | AI 미래 시작 경로(0.25초 뒤 시작, 시작 전까지 직전 경로)·새 경로 시작점 = 그 시각의 옛 경로 위치·화면 이음(0.25초 보정)·잡기 요청은 경로 위치로 + 시험. `RouteSwitchGrace`(0.3초)는 이제 화면이 실제로 바뀌는 시작 시각부터 세므로 늘리지 않았다 | ✅ |
+| B1~B2 | 들기: 드는 사람 화면이 내려놓을 자리(앞 1 m)를 정해 RPC로 보냄, 6 m 넘게 다르면 받은 쪽 위치 | ✅ |
+| C1 | 술래 원격 돌진: `DashStarted`(실제 출발) 확인 뒤 움직임, 0.6초 안에 확인이 없으면 취소, 속도 2배로 따라잡기, 바닥 찾기 +1 m·6 m·1.5 m 위 무시(E8) | ✅ |
+| L1~L4 | 로비: 결과 알림(`ClaimResult` 16, `ClaimOutcome`)·패킷 기록 근처 판정(1.5초)·안에 서 있으면 정원이 찰 때 자동 신청·먼저 들어간 사람(0.4초 모아 들어간 시각 순)·1초마다 재전송 3번 | ✅ |
+| P1 | Play Mode(진저브레드·대기실): 물풍선·섬광탄·수색 폭탄 던지기, AI 경로 교체 튐 기록 0(긴 프레임 제외), 거절 알림, 로비 가마솥 자동 신청 — 71.10 | ✅ (진저브레드만) |
+| P2 | 두 대(같은 빌드, PUN 지연 시뮬레이션 80·150 ms): `[NetJump]` 0건 목표, 수색 폭탄 20회 사라짐 0, 로비 술래 선정 10회 | 사용자 대기(에디터 한 대로는 원격 화면을 만들 수 없음) |
+| B3 | (추가 요청) 수색 폭탄도 물풍선처럼: 20°·중력 14.2, 누르면 바로 던짐, 조준점·점선 없음(튕김·첫 충돌 1초 뒤 터짐은 그대로) | ✅ |
+| DOC | 결과(71.10)·README | ✅ |
 
 순서: B1(값) → T(수색 폭탄) → V1·N0 → A·B·C(순간이동) → L(로비) → P → DOC.
 
@@ -8479,3 +8500,448 @@ private bool IsNearCauldron(int actor)
 - AI 미래 시작(A1)은 방장이 0.25초 앞을 미리 정하므로 아주 가까이 온 술래에게 AI 반응이 0.25초 늦다. 잡기 판정(§70 직전 경로 0.3초)과 맞물리도록 `RouteSwitchGrace`를 RouteLead + 0.3초로 늘린다.
 - 버전 확인을 넣으면 옛 빌드로는 새 방에 들어갈 수 없다 — 시험 PC 모두 새로 빌드해야 한다.
 - 규칙: Play Mode 중 업로드·컴파일 금지, 맵 빌더 실행 안 함, 위험한 변경은 확인 뒤.
+
+### 71.10 결과(2026-11-12)
+
+- **값**: 물풍선 20°·중력 14.2(정확히 1.5배), 섬광탄·수색 폭탄 첫 충돌 1초 뒤 터짐. 수색 폭탄도 20°·중력 14.2(추가 요청 B3).
+- **미리보기**: 물풍선·섬광탄·수색 폭탄 모두 점선 궤적·조준점 없음(`ToolUser`에서 미리보기 제거, `NoiseBombPresenter`는 수색 키를 누르면 바로 던짐). `ThrowPreview` 클래스는 이제 쓰는 곳이 없다(지워도 됨 — 지우기는 확인 뒤).
+- **거절**: 방장이 던지기를 받지 않으면 던진 사람에게만 `ThrowRejected`(이유 포함) → 예측 투사체를 바로 지우고 쿨타임을 돌려주며 "던지기가 취소됐어요"(쿨타임 거절은 문구 없음). 손 위치는 받은 패킷 기록·돌진 길로 확인.
+- **버전**: `PhotonNetwork.GameVersion = Application.version` — **새 빌드마다 Player Settings → Version을 올리고, 시험하는 모든 PC가 같은 빌드여야 한다**(다르면 방 목록에 안 보임).
+- **순간이동**: AI 경로는 0.25초 뒤에 시작하도록 미리 보내고 시작 전까지는 직전 경로를 따른다. 들린 사람 내려놓을 자리는 드는 사람이 정한다. 원격 돌진은 실제 출발 신호 뒤에 움직인다. `[NetJump]` 기록 도구 + F9 핫스팟 흉내.
+- **로비**: 가마솥 결과 알림(정원 미달·가마솥 밖·자리 없음·답 없음), 1초 재전송 3번, 안에 서 있는 채로 정원이 차면 자동 신청, 자리보다 많으면 먼저 들어간 사람.
+- **시험**: EditMode — 새·관련 시험 `Request1113NetTests`·`Request1112ThrowTests`·`Request1109Tests`·`Request1011Tests` 통과(18 + 62), 전체 416/417(실패 1개 `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`는 §70 전부터 실패하던 설정값 시험 — 이번 변경과 무관).
+- **Play Mode(진저브레드 오프라인)**: 물풍선 0.48초 도착·미리보기 선 0개 / 섬광탄 1.88초(튕김 2번 + 1초)·선 0개 / 수색 폭탄 방장 승인·낮게 날아 튕김 2번·1.92초·선 0개 / 없는 칸 던지기 → `rejected: NotHolding` 알림 왕복 / AI 10마리 30초 — `[NetJump]`는 모두 1.3~1.9초짜리 긴 프레임(에디터 도구 호출 중 멈춤)에서만 나와 기록 도구에 프레임 여유를 넣음, 보통 프레임에서는 0건. **대기실(GameLobbyScene 오프라인)**: 가마솥 안으로 옮기자 자동 신청 → `Accepted` → 괴물 확정. Console 예외 0.
+- **못 한 것**: 두 대 시험(P2)은 에디터 한 대로 원격 화면을 만들 수 없어 사용자 시험 대기. 놀이공원·초콜릿 공장·사탕 숲 맵 Play Mode는 하지 않음(이번 변경은 맵과 무관한 공통 코드).
+
+---
+
+## 72. 2026-11-12 요청 — 네트워크 전수 조사(§71에서 말한 것 외에 문제가 될 수 있는 곳)
+
+기준: GitHub `feature/gameplay-overhaul` 최신(`db1d9dbc`, 2026-11-12 20:28)을 받아 스크립트 272개 전부를 훑었다. 본 범위: RPC 10개(정의 3개 파일)·RPC 호출 12곳, `RaiseEvent` 31곳(방장에게 보내는 요청 7종), 방 속성 쓰기(`AuthorityProps` 43곳·`SetCustomProperties` 15곳), 위치 동기화(`OnPhotonSerializeView` 2곳·`NetworkTransformSync`), 방장 교체 처리(`OnMasterClientSwitched` 11곳), 공용 시계(`PhotonNetwork.Time` 92곳), 씬 전환(`LoadLevel`·`IsMessageQueueRunning`), 생성·삭제(`PhotonNetwork.Instantiate` 6곳·`Destroy` 1곳), 프로젝트 설정(`runInBackground`).
+
+표시: **높음** = 실제 플레이에서 자주 보일 수 있음 / **중간** = 특정 상황에서 보임 / **낮음** = 드묾·부하·로그. §71에서 이미 다룬 것(71.x)은 짧게만 적는다.
+
+### 72.0 요약
+
+| # | 내용 | 정도 | 보이는 증상 |
+| --- | --- | --- | --- |
+| E1 | **에디터가 방장일 때, 에디터 창이 포커스를 잃으면 Play Mode가 크게 느려짐**(실측: 한 프레임 1초 이상) | 높음 | AI 순간이동·잡기 거절·투척 사라짐·문/상자 늦음 — 방장 일이 통째로 멈춤 |
+| E2 | 판 시작 때 모든 사람이 목소리 조각(1인당 40 KB, 신뢰 전송)을 한꺼번에 보냄 | 높음 | 시작 직후 1~수 초 동안 모든 동기화가 밀림 → 시작 직후 순간이동·느린 시작 |
+| E3 | 방장에게 보내는 요청 7종이 방장 교체 중이면 **조용히 사라짐**(재전송·응답 없음) | 중간 | 상자·문·던지기·AI 잡기·가마솥·시작 버튼이 가끔 "안 먹음" |
+| E4 | 방장이 바뀐 직후 상태 경합: 새 방장이 옛 상태로 커밋 → 이전 방장의 늦은 쓰기와 엇갈림 | 중간 | 줍기·상자·재료가 되돌아가거나 두 번 처리 |
+| E5 | 방장 교체 때 판정용 기록이 비워짐(위치 기록 1.5초·쿨타임·잡기 간격) | 중간 | 교체 직후 잡기 거절, 도구 쿨타임 무시 |
+| E6 | 들고 있는 사람이 탈것(호박 마차·대포·모자)을 타면 들린 사람이 **함께 맵 반대편으로** 내려질 수 있음 | 중간 | 들린 플레이어 순간이동 |
+| E7 | 방장 자신의 방 속성 메아리를 감시 코드가 "조작"으로 보고 다시 씀 | 낮음 | 트래픽 2배·`[NetGuard] ... restoring` 경고 로그(실제 조작처럼 보여 혼란) |
+| E8 | 원격 술래 돌진 표시의 바닥 찾기가 발 3 m 위에서 쏨 | 낮음 | 지하·건물 안에서 돌진하는 술래가 천장 위로 떴다 내려옴 |
+| E9 | 문 상태: 방장 화면에서 앞선 표의 메아리가 다른 문을 잠깐 되돌림 | 낮음 | 방장 화면에서만 문이 깜빡 |
+| E10 | 원격 캐릭터 보간이 "마지막 위치로 비율 따라가기"(시간 버퍼 없음) | 낮음 | 지연이 흔들릴 때 끊겨 보임, 10 m 넘으면 순간이동(탈것·엘리베이터는 정상) |
+| — | §71: AI 경로 교체 지연(71.4.2)·들기 내려놓기(71.4.3)·술래 돌진 취소(71.4.3)·빌드 섞임(71.4.4)·투척 거절 무알림(71.3)·가마솥 결과 무알림(71.5) | — | — |
+
+**괜찮았던 것**(문제 없음 확인): RPC 보낸 사람 확인(들기·놓기·거절·잡기·빠져나가기·돌진 예고 모두 `info.Sender`로 주인 확인), 방장 전용 알림·명중의 보낸 사람 확인(`SentByMaster`), 방장 속성 보호(`RoomPropertyGuard`), 씬 전환 대기열 처리(`RoomSceneFollower`·`PunSceneLoad`), 빌드의 `runInBackground: 1`, 방장 화면이 자기 쓰기의 늦은 메아리로 AI 경로·상태를 되돌리지 않는 처리(`EscapeManager.OnRoomPropertiesUpdate` 282행·306행).
+
+### 72.1 E1 에디터 방장의 백그라운드 저속(높음)
+
+- 빌드는 `ProjectSettings.runInBackground: 1`이라 창을 내려도 돈다. 하지만 **Unity 에디터의 Play Mode는 에디터 창이 포커스를 잃으면 크게 느려진다**. §70 검증 중 실제로 한 프레임이 1~1.5초가 되는 것을 쟀다(돌진 접촉이 1.3~1.7초 늦게 기록됨).
+- 한 PC에서 에디터(방장) + 빌드(다른 플레이어)로 시험하면서 빌드 창을 클릭해 플레이하면, 방장이 하는 일 — AI 판단·경로(`DecoyBrain`), 상태 커밋, 잡기·던지기 판정, 문 — 이 모두 멈췄다 몰아서 처리된다. 다른 화면에서는 AI가 멈췄다가 순간이동하고, 잡기·던지기가 거절되거나 사라진다.
+- 확인: 시험할 때 에디터를 방장이 아닌 쪽으로 하거나, 서로 다른 PC로 시험. 에디터를 꼭 방장으로 써야 하면 Unity 설정 *Preferences → General → Interaction Mode = No Throttling*과 *Game 뷰를 별도 창으로 띄워 포커스 유지*.
+- 코드 보완(선택): 에디터에서 방장일 때 프레임 간격이 0.5초를 넘으면 경고 로그(`[Perf] Master editor is throttled`)를 남겨 시험 결과를 걸러낼 수 있게 한다.
+
+```csharp
+// Dev/MasterFrameWatch.cs (에디터 전용)
+#if UNITY_EDITOR
+private void Update()
+{
+    if (PhotonNetwork.IsMasterClient && Time.unscaledDeltaTime > 0.5f)
+        Debug.LogWarning($"[Perf] Master editor frame took {Time.unscaledDeltaTime:F2}s (window unfocused?). Network judgments are delayed.");
+}
+#endif
+```
+
+### 72.2 E2 판 시작 때 목소리 한꺼번에 전송(높음)
+
+```csharp
+// Escape/VoiceStore.cs 95~112행 — VoiceNet.SendLocalVoice
+float[] samples = VoiceStore.LocalSamples;      // 8000 Hz × 5초 = 40,000 바이트
+for (int c = 0; c < total; c++)                  // 8,000 바이트씩 5조각
+    PhotonNetwork.RaiseEvent(NetEventCodes.VoiceClip, new object[] { c, total, chunk },
+        new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);   // 같은 프레임에 전부
+```
+- 5명이면 각자 40 KB × 4명에게 = 160 KB를 판 시작과 동시에 **신뢰 전송**으로 쏟는다. 신뢰 전송은 순서를 지켜야 하므로, 그 뒤에 오는 방 속성(첫 상태·AI 경로)·잡기 RPC가 모두 이 짐 뒤에 줄을 선다. 업로드가 느린 PC가 있으면 시작 직후 수 초 동안 다른 사람들 화면이 밀린다 — "시작 직후 순간이동", "방장 사양(연결)에 따라 시작이 느림"의 한 원인.
+- 고침: (a) 대기실에서 녹음이 끝나면 바로 보내 두기(판 시작과 분리), (b) 조각을 0.2초 간격으로 나눠 보내기, (c) 같은 목소리면 다시 보내지 않기(해시 비교).
+
+```csharp
+// VoiceNet: 한 프레임에 한 조각씩, 0.2초 간격(코루틴)
+private static IEnumerator SendChunks(byte[] bytes)
+{
+    int total = (bytes.Length + ChunkBytes - 1) / ChunkBytes;
+    for (int c = 0; c < total; c++)
+    {
+        ... RaiseEvent(...);
+        yield return new WaitForSecondsRealtime(0.2f);
+    }
+}
+```
+
+### 72.3 E3 방장에게 보낸 요청이 교체 중 사라짐(중간)
+
+방장에게만 보내는 이벤트 7종: `EscapeRequest`(상자·줍기·던지기·AI 잡기 등, `EscapeManager.cs` 363·378행), `ClaimMonster`(`Cauldron.cs` 32행), `DoorStateRequest`(`InteractableDoor.cs` 155행), `StartGameRequest`·`RoomSettingsRequest`·`KickRequest`(로비). 모두 **한 번 보내고 끝**이며, 받았다는 응답이 없다.
+- 방장이 나가거나(§43 방장 정책으로 바뀌거나) 요청이 이동 중일 때 방장이 바뀌면, 옛 방장에게 간 요청은 버려진다. 보낸 사람은 모른다(문은 `RequestTimeout`으로 화면만 되돌림).
+- `MasterClientPolicy`는 게임 중에도 "자격 있는 사람(괴물 아닌 최선 입장자)"으로 방장을 되돌리므로 교체가 생각보다 잦을 수 있다.
+- 고침: 요청에 번호를 붙이고, 방장은 처리 결과(성공·거절 이유)를 그 사람에게 알린다. 1초 안에 결과가 없거나 그 사이 방장이 바뀌었으면 한 번 다시 보낸다. 방장은 같은 사람의 같은 번호를 두 번 처리하지 않는다.
+
+```csharp
+// EscapeRequest에 Seq(요청 번호) 칸 추가. 방장: 최근 처리 번호를 사람별로 기억
+private readonly Dictionary<int, int> lastSeq = new Dictionary<int, int>();
+public void Handle(EscapeRequest r)
+{
+    if (r.Seq > 0 && lastSeq.TryGetValue(r.Sender, out int done) && r.Seq <= done) { Ack(r, duplicate: true); return; }
+    ...처리...
+    if (r.Seq > 0) lastSeq[r.Sender] = r.Seq;
+    Ack(r, changed);
+}
+// EscapeManager(보낸 쪽): 결과가 안 온 요청 목록 → OnMasterClientSwitched 또는 1초 경과 시 다시 보냄
+```
+(§71 T1 투척 거절 알림·L1 가마솥 결과 알림이 이 틀의 일부가 된다.)
+
+### 72.4 E4 방장 교체 직후 상태 경합(중간)
+
+```csharp
+// EscapeAuthority.Commit (1609행) — 상태 전체를 한 덩어리로 다시 씀
+State.Revision++;
+AuthorityProps.SetRoom(new Hashtable { { NetKeys.EscapeState, State.Encode() } });
+// EscapeManager.ApplyLocalState (306행) — 방장만 낮은 번호를 무시, 다른 화면은 온 순서대로 적용
+if (PhotonNetwork.IsMasterClient && State != null && state.Revision < State.Revision) return;
+```
+- 옛 방장이 나가기 직전 쓴 상태(번호 r+1)가 아직 서버에 가는 중인데, 새 방장은 자기 캐시(번호 r)로 이어받아(`authority.Adopt`) 다음 요청을 처리하며 r+1을 쓴다. 두 r+1이 엇갈려 도착하면 다른 화면은 나중 것을 적용 → 한쪽 변경(상자 열림·줍기)이 사라지거나 두 번 일어난다. 이전 방장 유예(1.5초) 동안 옛 방장 쓰기도 정상으로 받아들인다.
+- 고침: 상태 쓰기에 Photon의 조건부 쓰기(`expectedProperties` — 서버에 있는 번호가 내가 아는 번호일 때만 씀)를 쓴다. 실패하면 서버 값을 다시 읽어 이어서 처리.
+
+```csharp
+// AuthorityProps.SetRoomIfRevision(Hashtable props, int expectedRevision)
+PhotonNetwork.CurrentRoom.SetCustomProperties(props, new Hashtable { { NetKeys.EscapeRevision, expectedRevision } });
+// 상태 번호를 별도 키(NetKeys.EscapeRevision)로도 함께 써서 서버가 비교할 수 있게 한다
+```
+
+### 72.5 E5 방장 교체 때 판정 기록이 비워짐(중간)
+
+| 기록 | 위치 | 교체 직후 |
+| --- | --- | --- |
+| 위치 기록 1.5초 | `PositionHistory`(방장 아니면 비움) | 새 방장은 빈 기록 → 잡기는 "기록 없음" 판정(방장 화면 지금 위치 + 3 m) → 돌진 잡기 거절 |
+| 도구·수색 쿨타임 | `EscapeAuthority.toolReadyAt`(38행)·`searchReadyAt`(40행) | 비어 있음 → 교체 직후 쿨타임 없이 다시 쓸 수 있음 |
+| 잡기 간격·잡은 수 | `GrabKillAuthority.lastConfirmAt` | 비어 있음(잡은 수는 속성에서 이어 셈 — 정상) |
+| 투사체 번호 | `ProjectileSystem.nextId` | Spawn 받을 때마다 올려 두므로 정상 |
+
+- 고침: (a) 위치 기록은 방장이 아니어도 **모두가** 쌓아 두게 한다(패킷 받을 때 적기만 — 비용 작음). 그러면 새 방장이 바로 판정할 수 있다. (b) 쿨타임은 "다음에 쓸 수 있는 시각(공용 시계)"을 상태(`EscapeState`)에 넣어 이어받는다.
+
+```csharp
+// PositionHistory.RecordRemote — IsMasterClient 조건 제거, TryGet도 방장 조건 제거(판정은 여전히 방장만)
+public static void RecordRemote(int viewId, double sentAt, Vector3 position)
+{
+    if (instance == null || !PhotonNetwork.InRoom) return;
+    instance.TrackOf(viewId).Record(sentAt, position);
+}
+```
+
+### 72.6 E6 탈것을 타며 내려놓은 들린 사람의 순간이동(중간)
+
+```csharp
+// PlayerGrabController.Update — 드는 사람이 탈것에 타면(맵을 떠남) 내려놓기
+if (HasCarryReference && pv.Owner != null && EscapeManager.HasLeftMap(pv.Owner.ActorNumber)) Release();
+// PlayerCarryFollower.Detach (55행) — 들린 사람 화면: 그 순간의 드는 사람 위치 앞에 내려놓음
+Vector3 dropPos = carrier.position + carrier.forward * ReleaseDropDistance;
+```
+- 놓기 RPC(`OnReleased`)가 들린 사람에게 도착할 때, 들린 사람 화면의 드는 사람은 이미 호박 마차 순간이동·대포 비행·모자 비행으로 다른 곳에 있을 수 있다 → 들린 사람이 그 자리 앞으로 내려진다(맵 반대편·공중).
+- 고침(§71 B1과 같음): 놓기 RPC에 **드는 사람이 정한 내려놓을 자리**를 담는다(탈것을 타기 직전 위치 기준). 들린 사람은 그 자리가 자기 위치에서 너무 멀면(예: 6 m) 자기 자리에 그냥 내린다.
+
+```csharp
+// PlayerGrabController.Release(Vector3? dropAt = null)
+Vector3 drop = dropAt ?? transform.position + transform.forward * 1.2f;
+targetPv.RPC(HideOrSeekPlayer.RpcOnReleased, targetPv.Owner, drop);
+// HideOrSeekPlayer.OnReleased(Vector3 drop, PhotonMessageInfo info) → carryFollower.Detach(restorePhysics, drop)
+```
+
+### 72.7 E7 방장 자신의 속성 메아리를 조작으로 오인(낮음)
+
+```csharp
+// RoomPropertyGuard.OnRoomPropertiesUpdate (86행)
+cache.TryGetValue(key, out object now);                      // 서버에서 돌아온 값(내가 0.1초 전에 쓴 옛 값일 수 있음)
+object expected = AuthorityProps.ExpectedRoom(key);           // 내가 마지막으로 쓴 값(더 새 값)
+if (NetSecurityRules.ValuesEqual(now, expected)) continue;    // 다르면 → "조작" → 다시 씀 + 경고
+```
+- PUN은 방 속성을 서버를 거쳐 돌아온 뒤에 반영한다. 방장이 같은 키를 왕복 시간 안에 두 번 쓰면(AI 경로 `DR_*`는 0.1초마다, 상태는 요청마다) 첫 메아리가 "기댓값과 다름"으로 보여 **다시 쓰기 + `[NetGuard] Room keys changed by someone other than the master — restoring` 경고**가 난다. 동작은 맞지만 트래픽이 늘고, 진짜 조작 경고와 섞여 원인 찾기를 어렵게 한다.
+- 고침: 이벤트 기록(`OnEvent`의 `lastRoomWriter`)으로 **보낸 사람이 나(방장)이면** 되돌리지 않는다. 또는 기댓값에 "최근에 쓴 값 몇 개"를 두어 그중 하나면 정상으로 본다.
+
+```csharp
+if (instance.lastRoomWriter.TryGetValue(key, out int writer) && writer == PhotonNetwork.LocalPlayer.ActorNumber) continue; // 내 메아리
+```
+(`OnEvent`가 같은 프레임에 먼저 와야 하므로, 순서가 보장되지 않으면 "최근 값 3개" 방식으로.)
+
+### 72.8 E8 원격 술래 돌진의 바닥 찾기(낮음, §70 코드)
+
+```csharp
+// MonsterController.TickRemoteDash (471행)
+if (Physics.Raycast(point + Vector3.up * 3f, Vector3.down, out RaycastHit ground, 9f, groundLayer, ...)) point.y = ground.point.y;
+```
+- 발 3 m 위에서 아래로 쏜다. 지하 동굴·건물 안처럼 천장이 3 m보다 낮은 곳(계단 밑·문틀)에서는 천장 윗면에 맞아 술래가 천장 위로 올라갔다 내려온다.
+- 고침: 지금 높이 + 1 m에서 쏘고, 맞은 높이가 지금보다 1.5 m 넘게 높으면 무시.
+
+### 72.9 E9 문 상태 메아리(낮음)
+
+```csharp
+// InteractableDoor.OnRoomPropertiesUpdate (197행) — 모든 문이 받은 표를 그대로 적용
+ApplyState(ReadState(doors), instant: false);
+```
+- 방장이 문 A를 열고 곧바로 문 B를 열면, A만 반영된 첫 표의 메아리가 와서 방장 화면의 B를 잠깐 닫았다가 다시 연다(다른 화면은 순서대로 받아 정상). 고침: 이 문에 아직 확정 안 된 쓰기(`masterPendingWrites`)가 있으면 그 값을 우선 적용.
+
+### 72.10 E10 원격 보간 방식(낮음)
+
+```csharp
+// NetworkTransformSync.Interpolate (50행)
+if (snapDistance < (transform.position - RemotePosition).magnitude) transform.position = RemotePosition;   // 10 m
+else transform.position = Vector3.Lerp(transform.position, RemotePosition, deltaTime * lerpRate);          // 비율 10
+```
+- 마지막으로 받은 위치를 비율로 따라가므로 패킷 간격이 흔들리면(와이파이) 빨라졌다 느려졌다 하고, 프레임에 따라 지연도 달라진다. 보통은 괜찮지만, 순간이동처럼 보이는 "툭툭 끊김"의 원인이 될 수 있다.
+- 고침(선택, 큰 작업 아님): 받은 위치를 보낸 시각과 함께 2~3개 쌓아 두고, 0.1초 전 시각을 기준으로 두 점 사이를 이어 그리는 시간 버퍼 보간. §70의 `PositionHistory.RecordRemote`가 이미 받은 시각을 갖고 있어 재사용할 수 있다.
+
+### 72.11 기타(문제는 아니지만 알아 둘 것)
+
+- **AI 경로 `DR_*` 보호**: 접두어 키로 방장 전용이 맞게 설정돼 있다(`NetKeys.PrefixScopes`). 정상.
+- **괴물 아닌 사람의 괴물 캐릭터 삭제**(`MonsterController.cs` 173행): 괴물 목록이 아직 안 온 화면은 건너뛰므로(`!RoomState.HasMonster()`) 정상 괴물을 지우지 않는다. 정상.
+- **문 요청 거리 검사**: 방장 화면의 보간 위치로 잼 + 여유. 가마솥과 같은 이유로 달려와서 누르면 드물게 거절될 수 있다 → E3의 결과 알림으로 보완.
+- **방장 PC 사양과 시작 속도**(진행목록 질문): 맞다. 맵 씬을 불러오고 첫 상태(`EscapeState`)를 만드는 것은 방장이 하므로, 방장 PC가 느리면 모두가 상태를 기다린다. 또 E2(목소리 전송)가 시작 순간에 겹친다. 고침: E2 + 첫 상태를 만들 때 무거운 계산(상자 배치·AI 자리 찾기 NavMesh 경로)을 여러 프레임에 나눔.
+
+### 72.12 확인할 것(사용자)
+
+| # | 질문 | 권장 |
+| --- | --- | --- |
+| A1 | 시험할 때 **에디터가 방장**이었는지, 한 PC에서 에디터 + 빌드였는지 | 서로 다른 PC, 또는 빌드를 방장으로 |
+| A2 | 목소리 전송: (a) 대기실에서 녹음 끝나면 바로 보냄 (b) 시작 때 나눠 보냄 | (a) + (b) |
+| A3 | 요청 재전송·결과 알림(E3)을 모든 요청에 넣을까, 투척·가마솥·AI 잡기부터 넣을까 | 모든 요청(틀 하나로) |
+| A4 | 시간 버퍼 보간(E10)도 이번에 할까 | §71·E1~E9 뒤에, 시험해 보고 |
+
+#### 72.12.1 확정(2026-11-12 사용자 답)
+
+| # | 확정 |
+| --- | --- |
+| A1 | 에디터는 쓰지 않았고, 같은 PC에서 빌드 4개를 동시에 실행(GTX 1060·핫스팟). E1(에디터 저속)은 이번 증상의 원인이 아니지만, 한 PC에 4개를 띄우면 각 창의 프레임이 크게 떨어져 방장 창도 느려진다 — 같은 효과 |
+| A2 | 목소리: 대기실에서 미리 보내고, 나눠 보냄 |
+| A3 | 요청 결과 알림·재전송을 모든 요청에 |
+| A4 | 시간 버퍼 보간(E10)은 나머지를 고친 뒤 시험해 보고 결정 |
+
+### 72.13 단계
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| AU0 | 전수 조사(이 절) | ✅ |
+| AU1 | 확인(A1~A4) | ✅ 72.12.1 |
+| — | §71 단계(B1·T·V1·N0·A·B·C·L) | ✅ 71.8 |
+| E1 | 방장 저속 경고(`Dev/MasterFrameWatch` — 방장 평균 15 fps 아래 2초면 `[MasterFrame]` 경고, 10초 간격) | ✅ |
+| E2 | 목소리: 녹음하자마자·새로 들어온 사람에게 대기실에서 미리, 8 KB 조각을 0.2초 간격으로, 이미 보낸 사람은 생략(판 시작 때는 빠진 사람만), 받는 쪽은 씬과 무관하게 늘 받음(`VoiceNet` 송수신기), 녹음 번호로 섞임 방지 | ✅ |
+| E3 | 탈출 요청: 번호(`Seq`)·방장 확인(`RequestAck` 16)·1초마다 재전송 3번·같은 번호 두 번 처리 안 함(`RequestSeqWindow`)·방장이 바뀌면 두 번 처리돼도 되는 요청만 새 방장에게(던지기·도구·떨어뜨리기·연타 제외)·끝내 답이 없으면 알림. 대기실 요청(시작·설정·강퇴·문)은 `MasterRequestResend`로 방장이 바뀌면 3초 안의 요청을 새 방장에게 다시. 가마솥은 L1~L4, 던지기는 T1 | ✅ |
+| E4 | 방장 교체 유예: 새 방장은 0.5초 동안 요청을 모아 두고(Tick도 쉼) 그사이 도착한 최신 상태(높은 번호)로 이어받은 뒤 처리. 조건부 쓰기(`expectedProperties`)는 쓰지 않았다 — 늦게 온 옛 상태는 이미 번호(Revision)로 거르고, 유예로 경합 창을 닫아 충분 | ✅ |
+| E5 | 위치 기록을 모든 화면이 쌓음(`PositionHistory`), 쿨타임은 모두에게 오는 승인 신호(ProjectileSpawn·ToolHit)를 보고 모든 화면이 따라 적음(`NoteApprovedUse`) | ✅ |
+| E6 | 들기 놓기 자리 드는 사람이 정함(§71 B1) | ✅ |
+| E7~E9 | 방장이 최근 5초 안에 쓴 값의 늦은 메아리는 되돌리지 않음(`AuthorityProps.WasRecentlyWritten*`)·돌진 바닥(§71 C1)·문은 확정 안 된 내 값을 먼저 보임 | ✅ |
+| E10 | (선택) 시간 버퍼 보간 | 보류(A4 — 두 대 시험 뒤 결정) |
+| P | 한 대: EditMode 통과, Play Mode 오프라인(방장 교체 유예 → "Took over as master (revision 5, 1 deferred request)"). 두 대 시험(서로 다른 PC, 같은 빌드, F9 핫스팟 흉내, 방장 강제 교체 포함)은 사용자 대기 | 일부 ✅ |
+
+### 72.14 결정(2026-11-12 사용자): Dedicated Server 대비 설계 철회
+
+- **PUN2 방장 방식으로 간다.** "나중에 Dedicated Server로 전환할 수 있게 설계"하라는 요구(§70 요청)는 철회한다. 같은 장르(R.E.P.O.는 PUN 방장 방식, 리썰 컴퍼니는 호스트 방식)가 이 구조로 출시됐고, 지금 문제들은 PUN에서 코드로 줄일 수 있다(§71·§72).
+- 앞으로의 설계 기준:
+  - 새 코드에서 Dedicated Server 전환을 위한 추상화·구조를 따로 만들지 않는다. §70.1.1의 "이번 작업부터 지킬 원칙"(새 코드는 `NetAuthority` 래퍼만 사용, 서버 이전을 위한 분리)은 더 이상 지키지 않아도 된다.
+  - §70.1.1의 단계(헤드리스 방장 → Dedicated Server)는 계획에서 뺀다. 나중에 공개 매칭·조작 문제가 커지면 그때 다시 검토한다.
+  - §71·§72 계획에서 서버 전환을 이유로 든 부분은 판단 근거에서 뺀다. 각 고침은 PUN에서의 문제 해결(순간이동·요청 유실·방장 교체·조작 방지)만으로 필요성이 있어 그대로 유지한다.
+- 이미 들어간 코드: `Core/NetAuthority.cs`(4줄짜리 래퍼)와 순수 계산 클래스(`DashWindow`·`MonsterDashLedger`·`BallisticSim`·`ThrowSolver`)는 동작 중이고 버그 원인이 아니므로 그대로 둔다. `NetAuthority`를 `PhotonNetwork` 직접 호출로 되돌리는 정리는 필요하면 별도로 한다(동작 차이 없음).
+
+---
+
+## 73. 2026-11-12 요청 — 게임 시작 때 씬 이동이 느림·사양 낮은 PC가 방장이면 방이 터짐(조사)
+
+> 요청: "멀티 플레이 할 때, 방장이 게임 시작을 누르면, 씬 이동이 느리게 가지는 현상에 대해서 조사해줘" + "사양 안좋은 컴퓨터가 방장이 된 후 게임 시작을 누르면 게임 방이 터지는 경우도 있어"
+> 시험 환경(§71.7.1 Q6): 한 PC(GTX 1060·RAM 16 GB·핫스팟)에서 빌드 4개 동시 실행. 집 PC(RTX 3070 Ti·32 GB)에서는 문제 없음.
+
+### 73.0 요약
+
+- **씬 이동이 느린 가장 큰 원인은 맵 크기, 특히 텍스처 메모리다.** 진저브레드 마을을 한 번 불러오면 에디터 측정으로 **RAM +2.2 GB, 그래픽 메모리 +2.2 GB**가 늘어난다. 건물 텍스처 76장이 모두 4096×4096(BC7, 장당 21 MB)이고, 밉맵 스트리밍이 꺼져 있어 전부 한꺼번에 올라간다.
+- 한 PC에 빌드 4개면 그래픽 메모리 약 9 GB가 필요해 GTX 1060(3/6 GB)을 넘는다. 넘친 만큼 시스템 RAM(16 GB)으로 밀려나 디스크 스왑이 생기고, 로딩이 몇 배로 느려진다. 메모리가 바닥나면 **프로세스가 죽거나(메모리 부족·그래픽 장치 제거) 멈춘다 → "방이 터짐"의 가장 유력한 원인.** 방장이 죽으면 Photon이 끊김을 알아채는 데 약 10초가 걸리고, 그동안 모두가 시작 도중에 멈춘다.
+- 코드 쪽 약점도 있다.
+  - 비동기 로딩 우선순위가 기본값(BelowNormal)이다.
+  - 준비 시간이 "시작을 누른 순간"부터 18초로 고정이다. 늦게 들어온 사람은 준비 시간을 잃고, 방장이 늦으면 판 초기화도 늦다.
+  - 괴물 도착 확인이 방장 로드 뒤 13초다. 괴물 PC가 그보다 늦으면 모두 대기실로 돌아가 방이 터진 것처럼 보인다.
+- §71·§72에서 고친 것 중 이 증상과 관련된 것은 없다(시작 직후 목소리 일괄 전송(E2)만 시작 뒤 부하를 조금 줄였다).
+
+### 73.1 시작 경로(코드)
+
+```
+방장(호스트) 시작 버튼
+ → GameStartAuthority.TryStart: 시작 조건 확인, 방장 교체 직후면 1초 대기(§43 SettleSeconds)
+ → AuthorityProps.SetRoom(PrepareEndTime = 지금 + SceneLoadGrace 3 + PrepareSeconds 15, 맵, 스파이, 캐릭터)
+ → RoomSceneTransition.LoadLevelForRoom → OpRemoveCompleteCache → PunSceneLoad.Load → PhotonNetwork.LoadLevel
+     (PUN: IsMessageQueueRunning = false, SceneManager.LoadSceneAsync(map) — 우선순위 Application.backgroundLoadingPriority)
+ 다른 사람: curScn(방 속성) 도착 → PUN AutomaticallySyncScene이 같은 LoadLevel → 각자 로드
+ 각자 로드 끝 → PlayerSpawner가 메시지 큐 재개·캐릭터 생성 → RoomSceneFollower가 LoadedScene(플레이어 속성) 게시
+ 방장: EscapeManager가 PrepareEndTime·괴물이 있으면 판 초기화(EscapeAuthority.Initialize)
+ 방장: RoomLifecycleWatcher — 방장 로드 뒤 3 + 10초에 괴물이 맵에 하나도 없으면 5초 경고 뒤 모두 대기실로
+```
+
+### 73.2 측정(에디터, 2026-11-12)
+
+| 항목 | 진저브레드 마을 | 초콜릿 공장 | 저주받은 놀이공원 | 사탕 숲 | 대기실 |
+| --- | --- | --- | --- | --- | --- |
+| 텍스처 수 | 281 | 172 | 189 | 125 | — |
+| 4096 텍스처 | **76** | 81 | 88 | 0 | 0 |
+| 텍스처 그래픽 메모리 추정(밉 포함) | **약 1.7 GB** | 약 0.35 GB | 약 0.6 GB | 약 0.18 GB | 작음 |
+| 맵 불러온 뒤 증가(실측, Play Mode) | RAM +2.2 GB · 그래픽 +2.2 GB | — | — | — | — |
+
+- 공장·놀이공원의 4096 텍스처는 원본이 더 작은 것이 많아 실제 크기가 작다. 진저브레드 건물(지상·지하·룬·숨는 건물 20채)은 albedo·normal·ms·emission이 **모두 실제 4096**이다. 예: `GIN_HD_WitchTeapot_albedo`, `GIN_RUNE_Red_emission`, `GIN_UG_CrookedChocoCottage_ms` — 장당 21 MB.
+- 설정:
+  - 품질 Ultra, 텍스처 밉 제한 0(원본 크기).
+  - 밉맵 스트리밍 꺼짐(`streamingMipmapsActive: 0`).
+  - 비동기 로딩 우선순위 `BelowNormal`(기본값 그대로).
+  - Photon `KeepAliveInBackground` 60초, `RunInBackground` 켜짐.
+- 에디터 로드 시간은 3초(3프레임, 한 프레임이 약 1초 멈춤)였다. 에디터는 자산을 미리 들고 있어 빌드보다 훨씬 빠르므로 절대값보다 "한 프레임이 길게 멈춘다"는 점이 중요하다.
+
+### 73.3 원인
+
+| # | 원인 | 증상과 관계 | 근거 |
+| --- | --- | --- | --- |
+| C1 | 진저브레드 건물 텍스처 4096 × 76장, 밉 스트리밍 없음 | 로딩이 느림, 한 PC 4개면 메모리 초과 → 스왑·**프로세스 종료** | 73.2 실측 +2.2 GB / +2.2 GB |
+| C2 | 비동기 로딩 우선순위 BelowNormal | 빌드에서 로딩 마무리(객체 생성·자산 올리기)를 프레임마다 조금씩만 함 → 프레임이 낮은 PC일수록 오래 걸림 | `Application.backgroundLoadingPriority` 설정 없음 |
+| C3 | 준비 시간이 시작 순간부터 고정(3 + 15초) | 늦게 들어온 사람은 준비 시간을 잃는다. 방장이 늦으면 다른 사람은 맵에 와도 판 초기화(상자·AI)가 안 된 채 기다림 | `GameStartAuthority` PrepareEndTime |
+| C4 | 괴물 도착 확인이 방장 로드 뒤 13초 | 괴물 PC가 방장보다 13초 넘게 늦으면 "괴물이 오지 않음" → 5초 뒤 **모두 대기실** = 방이 터진 것처럼 보임 | `RoomLifecycleWatcher.CheckMonsterArrival` |
+| C5 | 로딩 화면·진행 표시 없음 | 대기실 화면이 멈춘 채 남아 "씬 이동이 느림"으로 보임 | — |
+| C6 | 방장이 로드 중 죽으면 Photon이 알아채는 데 약 10초, 그동안 시작 절차가 멈춤 | 사양 낮은 방장일 때 방이 터지는 체감 | PUN 기본 끊김 판정 |
+
+"방이 터짐"이 정확히 어떤 모습인지(① 방장 창이 꺼짐/멈춤 ② 모두 대기실로 돌아감 ③ 모두 첫 화면(로비)으로 튕김)에 따라 C1·C6(①·③)인지 C4(②)인지 갈린다. 해당 PC의 로그로 확인할 수 있다(73.6).
+
+### 73.4 고칠 방법
+
+#### L1 텍스처 줄이기(C1, 효과 가장 큼)
+
+- 진저브레드 건물 텍스처를 Standalone 최대 2048로 줄인다(albedo·normal 2048, ms·emission 1024). 4096 → 2048이면 메모리가 4분의 1이다. 추정 1.7 GB → 약 0.4 GB. 원본 파일은 그대로 두고 가져오기 설정만 바꾸므로 언제든 되돌릴 수 있다.
+- 놀이공원·공장의 실제 4096 텍스처도 같은 기준을 적용한다.
+
+```csharp
+// Editor/Optimization/TextureBudget.cs (계획)
+var imp = (TextureImporter)AssetImporter.GetAtPath(path);
+var ps = imp.GetPlatformTextureSettings("Standalone");
+ps.overridden = true;
+ps.maxTextureSize = IsDetailMap(path) ? 1024 : 2048; // _ms·_emission은 1024
+ps.format = TextureImporterFormat.Automatic;
+imp.SetPlatformTextureSettings(ps);
+imp.SaveAndReimport();
+```
+
+#### L2 밉맵 스트리밍(C1)
+
+- `QualitySettings.streamingMipmapsActive = true`로 하고 예산을 정한다(예: 1024 MB). 멀리 있는 건물은 작은 밉만 올린다. 텍스처마다 `streamingMipmaps` 켜기(L1 도구에서 같이).
+
+#### L3 로딩 우선순위(C2)
+
+```csharp
+// PunSceneLoad.Load (계획)
+Application.backgroundLoadingPriority = ThreadPriority.High;   // 로드하는 동안만
+PhotonNetwork.LoadLevel(sceneName);
+// RoomSceneFollower가 로드 끝(IsBusy == false)을 보면 BelowNormal로 되돌림
+```
+
+#### L4 모두 도착한 뒤 준비 시간 시작(C3·C4)
+
+- 시작할 때는 맵만 정하고, PrepareEndTime은 방장이 "방 안 모든 사람의 LoadedScene == 맵"을 확인한 순간(최대 30초)에 쓴다. 늦게 온 사람도 준비 시간 15초를 온전히 받는다. 그전까지는 모두 로딩 화면.
+- 괴물 도착 확인은 "괴물이 방에 있고 아직 로딩 중"이면 기다린다(LoadedScene이 대기실이면서 로딩 중 표시가 있는 동안). 최대 대기를 13초 → 45초로 늘리고, 방을 나간 경우만 바로 처리한다.
+
+```csharp
+// GameStartAuthority / 새 MapArrivalGate (계획)
+if (!RoomState.TryGetDouble(NetKeys.PrepareEndTime, out _) &&
+    (MapArrival.AllArrived(players, loadedScenes, map) || Time.unscaledTime - loadStartedAt > MaxArrivalWait))
+    AuthorityProps.SetRoom(new Hashtable { { NetKeys.PrepareEndTime, PhotonNetwork.Time + settings.PrepareSeconds } });
+```
+
+#### L5 로딩 화면(C5)
+
+- 시작을 누르면 모두 로딩 화면: 진행도(`PunSceneLoad.Current.progress`), "다른 참가자를 기다리는 중 (3/4)". 맵이 열린 뒤에도 PrepareEndTime이 정해질 때까지 유지.
+
+#### L6 방장이 맵에 먼저 들어가야 하는 일 줄이기(C3·C6)
+
+- 판 초기화(`EscapeAuthority.Initialize`)는 방장이 맵에 도착해야만 된다. 방장이 늦으면 모두 기다린다. L4로 "모두 도착 뒤 시작"이 되면 방장이 늦어도 판 시간이 줄지 않는다.
+- 방장 정책(§43)은 "괴물이 아닌 최선 입장자"로 고정이다. 시작 전 대기실에서 방장 PC의 프레임이 많이 낮으면(`MasterFrameWatch`, §72 E1) 시작 버튼 옆에 "방장 PC가 느립니다" 안내만 넣는다. 자동으로 방장을 바꾸지는 않는다(사용자 결정 필요 — Q3).
+
+#### L7 측정 로그
+
+- `[LoadTiming]`: 시작 누름 · LoadLevel · curScn 받음 · 씬 열림 · 첫 프레임 · 모두 도착 시각과 그때 메모리(`Profiler.GetTotalAllocatedMemoryLong`). 빌드 Player.log에 남는다. 고친 뒤 효과를 같은 시험으로 비교한다.
+
+### 73.5 확인할 것(사용자)
+
+| # | 질문 | 권장 |
+| --- | --- | --- |
+| Q1 | 건물 텍스처를 2048(ms·emission 1024)로 줄여도 될까? 가까이서 보면 약간 흐려질 수 있다 | 줄임(효과 가장 큼, 되돌리기 쉬움) |
+| Q2 | 로딩 화면 + "모두 도착한 뒤 준비 시간 시작"(L4·L5)을 넣을까? | 넣음 |
+| Q3 | 사양 낮은 PC가 방장일 때: (a) 안내만 (b) 대기실에서 더 빠른 PC에게 방장을 자동으로 넘김 | (a) |
+| Q4 | 방이 터졌을 때 모습: ① 방장 창이 꺼짐/멈춤 ② 모두 대기실로 ③ 모두 로비로 튕김 — 그리고 가능하면 그 PC의 로그 | — |
+
+### 73.6 로그 위치(Windows 빌드)
+
+- `%USERPROFILE%\AppData\LocalLow\DefaultCompany\TagOfChaos\Player.log`(직전 실행은 `Player-prev.log`). 같은 PC에서 4개를 띄우면 마지막에 켠 것만 남는다 — 각 창을 `-logFile` 옵션으로 따로 남기면 좋다(예: `TagOfChaos.exe -logFile log1.txt`).
+- 프로세스가 죽었으면 `%TEMP%\DefaultCompany\TagOfChaos\Crashes\` 폴더에 crash.dmp와 Player.log가 남는다.
+- 찾을 줄: `[RoomSync]`(씬 이동), `[RoomLifecycle]`(괴물 도착 확인·대기실 복귀), `Disconnect`/`DisconnectByServer`/`ClientTimeout`(끊김), `Out of memory`/`Could not allocate`(메모리 부족), `[MasterFrame]`(§72 E1).
+
+### 73.5.1 확정(2026-11-12 사용자 답)
+
+| # | 확정 |
+| --- | --- |
+| Q1 | 텍스처는 줄이지 않는다(L1·L2 하지 않음) |
+| Q2 | 로딩 화면 + 모두 도착한 뒤 준비 시간 시작 — 넣음 |
+| Q3 | 사양 낮은 방장: 안내만(자동으로 방장을 넘기지 않음) |
+| Q4 | 방장 창이 멈추고, 모두 대기실로 돌아감 — 방장 PC의 Player.log 받음(73.5.2) |
+
+### 73.5.2 받은 로그 분석(방장 PC, Player.log)
+
+| 줄 | 내용 | 뜻 |
+| --- | --- | --- |
+| `Renderer: NVIDIA GeForce GTX 1050`, `VRAM: 4021 MB` | 방장 PC는 GTX 1050 4 GB | 진저브레드 맵 하나에 그래픽 메모리 약 2.2 GB(73.2) — 같은 PC에 창이 여럿이면 바로 넘친다 |
+| `Mono path[0] = '\\192.168.219.100\3DTagOfChaosGame/...'` | **게임을 네트워크 폴더(다른 PC의 공유 폴더)에서 실행** | 맵·텍스처·모델을 모두 네트워크로 읽는다 |
+| `Loaded All Assemblies, in 29.592 seconds` | 코드 파일 읽기만 30초(보통 1초 안) | 네트워크 폴더 읽기가 매우 느림 → **씬 이동이 느린 가장 큰 원인**. 여러 창이 동시에 같은 폴더에서 맵(초콜릿 공장 모델·에셋 약 1.3 GB)을 읽으면 더 느리다 |
+| `[MasterFrame] ... runs at 9 fps` | 대기실에서 방장 창이 초당 9프레임 | §72 E1 경고가 실제로 잡힘 |
+| `Moving the room to ChocolateFactory` → `Spawned cookie` → `Connection lost. OnStatusChanged to DisconnectByServerTimeout` | 맵을 불러온 직후 **서버가 방장의 응답을 오래 못 받아 끊음** | 방장 창이 멈춘 동안(로딩 마무리·메모리 부족) + 같은 네트워크로 게임 파일을 읽느라 Photon 패킷이 밀림. PUN의 보조 스레드(로딩 중 ACK, 60초)로도 막지 못할 만큼 PC나 네트워크가 막혔다 |
+| `[RoomExit] Left room. Loading lobby scene.` | 방장은 첫 화면으로 | — |
+
+- 다른 사람이 "모두 대기실로" 돌아간 이유: 방장이 끊기면 새 방장이 이어받는다. 그런데 괴물(actor 5) 창이 아직 로딩 중이면, 예전 코드는 새 방장 로드 뒤 13초에 "괴물이 오지 않음"으로 보고 5초 뒤 모두 대기실로 돌려보냈다(C4). 이번 L4로 45초까지 기다린다.
+- **가장 효과 큰 조치(코드 밖)**: 게임 폴더를 각 PC의 로컬 디스크(C:·D:)에 복사해서 실행한다. 네트워크 폴더에서 바로 실행하지 않는다. 한 PC에는 창 하나.
+
+### 73.7 단계
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| R0 | 시작 경로 코드 조사, 맵 텍스처·메모리 측정(이 절) | ✅ |
+| R1 | 확인(Q1~Q4)·로그 분석 | ✅ 73.5.1·73.5.2 |
+| L7 | 측정 로그 `Dev/LoadTiming` — 시작 누름·방 씬 바뀜·씬 열림·첫 프레임·모두 도착 시각과 메모리, 첫 5초 가장 긴 프레임 | ✅ |
+| L1~L2 | 텍스처 예산 도구·밉 스트리밍 | 하지 않음(Q1) |
+| L3 | 로딩 우선순위 High(로드 중만, `PunSceneLoad.Load`·방 씬 변경 받음·`RoomSceneFollower` 틱, 끝나면 BelowNormal) | ✅ |
+| L4~L5 | 시작 때 PrepareEndTime = 지금 + 3 + 45 + 15초(임시), 방장이 모두 맵에 온 것을 보면(최대 45초) 지금 + 15초로 당김(늘리지는 않음 — `MonsterArrival.ShouldShortenPrepare`), 괴물 도착 확인 13 → 45초까지 기다림, 로딩 화면 `UI/LoadingOverlay`(전체 화면 진행도 + 맵에서 "다른 참가자를 기다리는 중 (n/m)") + 시험 | ✅ |
+| L6 | 방장 저속 안내: 대기실에서 방장 창이 15 fps 아래면 방장 본인에게 알림(60초 간격) | ✅ |
+| P | Play Mode(대기실 → 진저브레드, 오프라인): 로딩 화면 표시, 우선순위 High → 끝나고 BelowNormal, 도착 1/1 → 준비 시간 15.0초로 당김, `[LoadTiming]` 기록, 예외 0. 여러 PC 시험은 사용자 대기 | 일부 ✅ |
+| DOC | 결과(73.9)·README | ✅ |
+
+### 73.8 참고
+
+- 한 PC(RAM 16 GB·GTX 1060)에서 빌드 4개는 이 게임 규모로는 사양을 넘는다. L1~L3를 해도 4개 동시 실행은 빠듯하다. 실제 멀티 시험은 PC마다 하나씩 띄우는 것이 정확하다.
+
+### 73.9 결과(2026-11-12)
+
+- 구현:
+  - L3 로딩 우선순위.
+  - L4 모두 도착 뒤 준비 시간 + 괴물 도착 45초 대기.
+  - L5 로딩 화면, L6 방장 저속 안내, L7 `[LoadTiming]`.
+  - 문구 3개(`loadingMap`·`waitingPlayers`·`masterSlow`)는 EscapeTexts 에셋(한국어).
+  - 텍스처는 그대로(Q1).
+- 시험: EditMode `Request1113NetTests`·`Request1011Tests` 47/47(새 시험 `MapArrival_CountsPlayersAndOnlyShortensPrepare`). 컴파일 오류 0.
+- Play Mode(에디터, 대기실 → 진저브레드, 오프라인):
+  - 로딩 중 로딩 화면이 뜨고 우선순위 High, 맵이 열린 뒤 BelowNormal.
+  - 모두 도착 1/1 → 준비 시간 15.0초.
+  - 첫 실행(자산이 메모리에 없을 때) 씬 열림 +10.7초. 두 번째(자산이 메모리에 남음) +1.7초. 메모리 사용 664 → 2,977 MB.
+  - 에디터 수치는 빌드와 다르다 — 빌드의 `[LoadTiming]` 로그로 비교한다.
+- 다음 시험에서 부탁할 것:
+  - ① 게임 폴더를 각 PC 로컬 디스크로 복사.
+  - ② PC마다 창 하나.
+  - ③ Player.log의 `[LoadTiming]`·`[MasterFrame]`·`Disconnect` 줄 확인.
+  - ④ 빌드 버전(Player Settings → Version)을 올려 새로 빌드.

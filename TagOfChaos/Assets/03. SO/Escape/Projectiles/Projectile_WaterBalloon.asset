@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baseRange: 12
   maxRange: 20
-  launchAngle: 45
+  launchAngle: 20
   radius: 0.2
-  gravity: 9.81
+  gravity: 14.2
   bounciness: 0.4
   surfaceFriction: 0.2
   rollDeceleration: 4

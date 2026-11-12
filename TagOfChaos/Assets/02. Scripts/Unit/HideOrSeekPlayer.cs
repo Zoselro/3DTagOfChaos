@@ -193,12 +193,12 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
     // 나를 들고 있는 쪽만 내려놓을 수 있다(F-01 — 예전에는 아무나 보내도 떨어졌다).
     [PunRPC]
-    private void OnReleased(PhotonMessageInfo info)
+    private void OnReleased(Vector3 dropAt, PhotonMessageInfo info)
     {
         if (pv == null || !pv.IsMine || !carryFollower.IsCarried) return;
         PhotonView carrierView = PhotonView.Find(carryFollower.CarrierViewId);
         if (carrierView != null && info.Sender != null && carrierView.Owner != info.Sender) return;
-        ReleaseFromCarrierLocally();
+        ReleaseFromCarrierLocally(dropAt); // 드는 사람이 정한 자리에(§71 B1)
     }
 
     // 내가 들려던 쿠키가 거절했다(드는 쪽 캐릭터에서 받는다). 보낸 사람이 그 쿠키의 주인일 때만.
@@ -212,9 +212,9 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     }
 
     // 파괴 상태면 키네마틱·잠금을 그대로 유지하고, 아니면 물리와 Idle 애니메이션을 되돌린다.
-    private void ReleaseFromCarrierLocally()
+    private void ReleaseFromCarrierLocally(Vector3? dropAt = null)
     {
-        if (carryFollower.Detach(restorePhysics: !IsBroken) && !IsBroken)
+        if (carryFollower.Detach(restorePhysics: !IsBroken, dropAt) && !IsBroken)
             animationDriver.ChangeState(PlayerMoveState.Idle);
     }
 

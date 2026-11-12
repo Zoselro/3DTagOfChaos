@@ -14,6 +14,9 @@ public class ToolUser : MonoBehaviour
     private PlayerInventory inventory;
     private EscapeManager manager;
     private float readyAt;
+
+    // 방장이 던지기를 받지 않았다(§71 T1): 쿨타임을 돌려준다.
+    public void RefundCooldown() => readyAt = 0f;
     private readonly Collider[] overlap = new Collider[16];
     private const float AimZoom = 0.72f;          // 조준 중 시야각 배율(약간 확대)
     private const float AimZoomSpeed = 8f;
@@ -31,6 +34,13 @@ public class ToolUser : MonoBehaviour
     {
         inventory = owner;
         manager = escape;
+        ProjectileSystem.ThrowRejected -= OnThrowRejected;
+        ProjectileSystem.ThrowRejected += OnThrowRejected;
+    }
+
+    private void OnThrowRejected(ItemSO item, ThrowReject why)
+    {
+        if (inventory != null && PlayerInventory.Local == inventory && item != null && item.IsTool && item.Tool.Kind != ToolKind.SearchBomb) RefundCooldown();
     }
 
     private void Update()
@@ -52,24 +62,10 @@ public class ToolUser : MonoBehaviour
         UpdateAimHum(Aiming);
         if (Aiming && crosshair == null) crosshair = CreateCrosshair();
         if (crosshair != null && crosshair.activeSelf != Aiming) crosshair.SetActive(Aiming);
-        UpdateThrowPreview(held, cam);
         UpdateRecorderTarget(held, cam);
     }
 
-    // ---------------- 던지는 도구 조준(§70.3.6) ----------------
-    private readonly ThrowPreview throwPreview = new ThrowPreview();
-    private static readonly Color BalloonPreviewColor = new Color(0.45f, 0.95f, 1f, 0.9f);
-    private static readonly Color FlashPreviewColor = new Color(1f, 0.95f, 0.6f, 0.9f);
-    private const float BalloonSplashRing = 0.5f;
-
-    private void UpdateThrowPreview(ItemSO held, Camera cam)
-    {
-        bool thrown = held != null && held.IsTool && held.Tool.Projectile != null && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
-        if (!thrown || cam == null) { throwPreview.Hide(); return; }
-        bool balloon = held.Tool.Kind == ToolKind.WaterBalloon;
-        throwPreview.Show(cam, ToolShotFx.HandPosition(transform), transform, held.Tool.Projectile,
-            balloon ? BalloonSplashRing : held.Tool.HitRadius, balloon ? BalloonPreviewColor : FlashPreviewColor);
-    }
+    // 물풍선·섬광탄은 들고 있는 동안 점선·조준점을 그리지 않는다(§71 — §70.3.6의 미리보기는 시험용이었다). 수색 폭탄 궤적은 NoiseBombPresenter.
 
     // 손을 떠나는 순간(던지기 동작 0.35초) 그때 보는 곳으로 던진다. 그사이 다른 칸으로 바꿨으면 던지지 않는다.
     private System.Collections.IEnumerator ReleaseThrow(int slot, ItemSO item)
@@ -145,9 +141,9 @@ public class ToolUser : MonoBehaviour
 
     private void OnDestroy()
     {
+        ProjectileSystem.ThrowRejected -= OnThrowRejected;
         aimHum.Stop();
         if (crosshair != null) Destroy(crosshair);
-        throwPreview.Destroy();
         Camera cam = Camera.main;
         if (cam != null && baseFov > 0f) cam.fieldOfView = baseFov;
         Aiming = false;

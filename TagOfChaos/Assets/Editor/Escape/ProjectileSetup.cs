@@ -17,25 +17,27 @@ public static class ProjectileSetup
 
         GameObject bombModel = ImportSearchBombModel();
 
-        // 물풍선: 사람 몸에 닿으면 가둠, 벽·바닥이면 그냥 터짐(Q1 A). 허공 12 m·최대 20 m(Q3).
+        // 물풍선: 사람 몸에 닿으면 가둠, 벽·바닥이면 그냥 터짐(Q1 A). 허공 12 m·최대 20 m(Q3). 20°·중력 14.2(§71 ①).
         ProjectileConfigSO balloon = Config("Projectile_WaterBalloon", c =>
         {
-            c.baseRange = 12f; c.maxRange = 20f; c.launchAngle = 45f; c.radius = 0.2f;
+            c.baseRange = 12f; c.maxRange = 20f; c.launchAngle = 20f; c.radius = 0.2f;
+            c.gravity = 14.2f; // §71 ①: 20°에서 지금(45°·9.81)보다 정확히 1.5배 빠름 = 9.81 × 1.5² × sin40°
             c.burstOnImpact = true; c.fuseAfterImpact = 0f; c.maxLifeSeconds = 5f; c.spinSpeed = 0f; c.model = null;
         });
-        // 섬광탄: 튕기고 구르다 첫 충돌 2초 뒤(Q2). 허공 12 m·최대 20 m(Q3).
+        // 섬광탄: 튕기고 구르다 첫 충돌 1초 뒤(§71 ②). 허공 12 m·최대 20 m(Q3).
         ProjectileConfigSO flash = Config("Projectile_Flashbang", c =>
         {
             c.baseRange = 12f; c.maxRange = 20f; c.launchAngle = 45f; c.radius = 0.1f;
             c.bounciness = 0.4f; c.surfaceFriction = 0.2f; c.rollDeceleration = 4f; c.restSpeed = 0.35f;
-            c.burstOnImpact = false; c.fuseAfterImpact = 2f; c.maxLifeSeconds = 5f; c.spinSpeed = 540f; c.model = null;
+            c.burstOnImpact = false; c.fuseAfterImpact = 1f; c.maxLifeSeconds = 5f; c.spinSpeed = 540f; c.model = null; // §71 ②: 1초
         });
-        // 수색 폭탄: 설계안 10 m·최대 12 m(Q3), 첫 충돌 2초 뒤(Q2).
+        // 수색 폭탄: 설계안 10 m·최대 12 m(Q3), 첫 충돌 1초 뒤(§71 Q2). 던지는 방식은 물풍선과 같게 20°·중력 14.2(§71 추가 요청).
         ProjectileConfigSO search = Config("Projectile_SearchBomb", c =>
         {
-            c.baseRange = 10f; c.maxRange = 12f; c.launchAngle = 45f; c.radius = 0.15f;
+            c.baseRange = 10f; c.maxRange = 12f; c.launchAngle = 20f; c.radius = 0.15f;
+            c.gravity = 14.2f; // 물풍선과 같은 낮고 빠른 던지기
             c.bounciness = 0.35f; c.surfaceFriction = 0.2f; c.rollDeceleration = 3f; c.restSpeed = 0.35f;
-            c.burstOnImpact = false; c.fuseAfterImpact = 2f; c.maxLifeSeconds = 5f; c.spinSpeed = 360f; c.model = bombModel; c.modelScale = 1f;
+            c.burstOnImpact = false; c.fuseAfterImpact = 1f; c.maxLifeSeconds = 5f; c.spinSpeed = 360f; c.model = bombModel; c.modelScale = 1f; // §71 Q2: 1초
         });
 
         string linked = "";

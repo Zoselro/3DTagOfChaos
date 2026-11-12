@@ -11,7 +11,7 @@ public sealed class DecoyRouteBook
     private readonly Dictionary<int, DecoyRoute> previous = new Dictionary<int, DecoyRoute>(); // 바뀌기 직전 경로(§70.2.5 D5)
     private readonly System.Func<Vector3, bool> isAllowed;
 
-    // 경로가 바뀐 뒤 이만큼은 다른 화면이 아직 옛 경로로 그리고 있을 수 있다(방 속성이 도착하기 전, 초).
+    // 새 경로가 시작된 뒤 이만큼은 다른 화면이 아직 옛 경로로 그리고 있을 수 있다(늦게 도착한 경우, 초). 시작 전은 TryActive가 옛 경로를 쓴다.
     public const float RouteSwitchGrace = 0.3f;
 
     public int Count => routes.Count;
@@ -87,13 +87,22 @@ public sealed class DecoyRouteBook
         Revision++;
     }
 
+    // now 시각에 따라갈 경로(§71 A1): 방장은 새 경로를 RouteLead(0.25초) 뒤에 시작하도록 미리 보낸다 — 시작 전까지는 직전 경로를 따른다.
+    // 그래서 모든 화면이 새 경로를 시작 전에 받아, 경로가 바뀌는 순간 튀지 않는다.
+    public bool TryActive(int id, double now, out DecoyRoute route)
+    {
+        if (!routes.TryGetValue(id, out route)) return false;
+        if (now < route.StartAt && previous.TryGetValue(id, out DecoyRoute prev) && prev.IsValid) route = prev;
+        return true;
+    }
+
     // 경로가 있으면 경로 위치, 없으면 상태의 마지막 자리.
     public Vector3 PositionOf(EscapeState.Decoy d, double now) =>
-        routes.TryGetValue(d.Id, out DecoyRoute r) ? DecoyRoute.Sample(r, now, d.Yaw).Position : d.Pos;
+        TryActive(d.Id, now, out DecoyRoute r) ? DecoyRoute.Sample(r, now, d.Yaw).Position : d.Pos;
 
     public DecoyRoute.Pose PoseOf(EscapeState.Decoy d, double now)
     {
-        if (routes.TryGetValue(d.Id, out DecoyRoute r)) return DecoyRoute.Sample(r, now, d.Yaw);
+        if (TryActive(d.Id, now, out DecoyRoute r)) return DecoyRoute.Sample(r, now, d.Yaw);
         return new DecoyRoute.Pose { Position = d.Pos, Yaw = d.Yaw };
     }
 

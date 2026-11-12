@@ -42,6 +42,12 @@ public class DecoyView : MonoBehaviour
     private float yaw;
     private bool yawSet;
 
+    // 경로가 늦게 도착해 위치가 튀면 그 차이를 짧게 줄여 가며 보탠다(§71 A2). 잡기 판정에는 경로 위치(보정 전)를 보낸다.
+    private Vector3 correction;
+    private int seenRouteRevision = -1;
+    private const float BlendSeconds = 0.25f, BlendMin = 0.3f, BlendMax = 6f;
+    public Vector3 RoutePosition => transform.position - correction;
+
     public int Id => id;
     // 괴물 조준에 잡히는지(아직 잡히지 않았고, 방금 잡기 요청을 보내지 않았다).
     public bool IsCatchable => !caught && EscapeManager.ActionsAllowed && Time.unscaledTime - requestedAt > RequestRetrySeconds;
@@ -66,7 +72,7 @@ public class DecoyView : MonoBehaviour
     public void RequestCatch()
     {
         requestedAt = Time.unscaledTime;
-        manager.Request(EscapeOp.DecoyCatch, id, PhotonNetwork.ServerTimestamp, transform.position); // 본 순간의 위치·시각(§46.2 GK4)
+        manager.Request(EscapeOp.DecoyCatch, id, PhotonNetwork.ServerTimestamp, RoutePosition); // 본 순간의 경로 위치·시각(§46.2 GK4, §71 A2)
     }
 
     // 상태가 바뀔 때: 경로가 없는 AI만 상태의 자리에 놓는다(경로가 있으면 Tick이 따라간다).
@@ -100,7 +106,7 @@ public class DecoyView : MonoBehaviour
     // 경로를 따라간다: 위치·방향·애니메이션·발소리.
     private void Follow(EscapeState.Decoy d, double now)
     {
-        if (!manager.Routes.TryGet(d.Id, out DecoyRoute route)) { SetMotion(PlayerMoveState.Idle, 0); return; }
+        if (!manager.Routes.TryActive(d.Id, now, out DecoyRoute route)) { SetMotion(PlayerMoveState.Idle, 0); return; }
         DecoyRoute.Pose pose = DecoyRoute.Sample(route, now, yawSet ? yaw : d.Yaw);
 
         if (Time.time >= nextGroundCheck)
@@ -112,7 +118,17 @@ public class DecoyView : MonoBehaviour
                 targetGroundOffset = Mathf.Clamp(hit.point.y - pose.Position.y, -MaxGroundOffset, MaxGroundOffset);
         }
         groundOffset = Mathf.MoveTowards(groundOffset, targetGroundOffset, Time.deltaTime * 2f);
-        transform.position = pose.Position + Vector3.up * groundOffset;
+        Vector3 target = pose.Position + Vector3.up * groundOffset;
+        if (manager.Routes.Revision != seenRouteRevision)
+        {
+            // 새 경로를 받았다: 화면 위치와 새 경로 위치의 차이를 이음(6 m 넘으면 진짜 순간이동으로 보고 그냥 옮김)
+            seenRouteRevision = manager.Routes.Revision;
+            Vector3 jump = transform.position - target;
+            correction = jump.sqrMagnitude > BlendMin * BlendMin && jump.sqrMagnitude < BlendMax * BlendMax ? jump : Vector3.zero;
+        }
+        if (correction != Vector3.zero)
+            correction = Vector3.MoveTowards(correction, Vector3.zero, (correction.magnitude / BlendSeconds + 0.5f) * Time.deltaTime);
+        transform.position = target + correction;
 
         if (!yawSet) { yaw = pose.Yaw; yawSet = true; }
         yaw = Mathf.MoveTowardsAngle(yaw, pose.Yaw, TurnSpeed * Time.deltaTime);

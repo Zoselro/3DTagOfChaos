@@ -37,6 +37,7 @@ public static class PunSceneLoad
     public static void Load(string sceneName)
     {
         AsyncOperation before = Current;
+        Application.backgroundLoadingPriority = ThreadPriority.High; // 로드하는 동안만 높임 — RoomSceneFollower가 끝나면 되돌린다(§73 L3)
         PhotonNetwork.LoadLevel(sceneName);
         if (before != null && !before.isDone && !before.allowSceneActivation)
         {

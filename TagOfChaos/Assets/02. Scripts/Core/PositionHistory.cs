@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using Photon.Pun;
 using UnityEngine;
 
-// 방장이 모든 캐릭터(쿠키·괴물)의 위치를 1.5초분 기록한다(Request1009Plan.md §46.2 GK0, §70.2.5 D4).
-// 잡기 확정(GrabKillAuthority)이 "괴물이 본 순간"의 위치와 비교할 때 쓴다. 방장만 기록하고, 방장이 되면 그때부터 쌓는다.
+// 모든 화면이 모든 캐릭터(쿠키·괴물)의 위치를 1.5초분 기록한다(Request1009Plan.md §46.2 GK0, §70.2.5 D4).
+// 잡기 확정(GrabKillAuthority)이 "괴물이 본 순간"의 위치와 비교할 때 쓴다. §72 E5: 예전에는 방장만 기록해, 방장이 바뀌면
+// 새 방장의 기록이 비어 있어 바뀐 직후의 판정이 지금 위치로만 이뤄졌다. 이제 모두 쌓아 두므로 바로 이어서 판정한다.
 // 내 캐릭터는 0.05초마다 실제 위치를, 남의 캐릭터는 위치 패킷이 올 때마다 "보낸 시각 + 받은 위치"를 적는다 —
 // 예전에는 남의 캐릭터도 화면에 그려진(보간된) 위치를 적어, 기록이 실제보다 보간만큼 더 늦었다.
 public class PositionHistory : MonoBehaviour
@@ -33,11 +34,11 @@ public class PositionHistory : MonoBehaviour
         instance = go.AddComponent<PositionHistory>();
     }
 
-    // 그 캐릭터(ViewID)의 기록. 방장이 아니거나 기록이 없으면 false.
+    // 그 캐릭터(ViewID)의 기록. 기록이 없으면 false.
     public static bool TryGet(int viewId, out PositionTrack track)
     {
         track = null;
-        return instance != null && PhotonNetwork.IsMasterClient && instance.tracks.TryGetValue(viewId, out track) && track.Count > 0;
+        return instance != null && instance.tracks.TryGetValue(viewId, out track) && track.Count > 0;
     }
 
     // 그 캐릭터의 기록이 패킷 기준(실제보다 늦음)인지 — 그러면 판정이 기록 끝을 앞으로 늘려 본다.
@@ -46,7 +47,7 @@ public class PositionHistory : MonoBehaviour
     // 남의 캐릭터의 위치 패킷을 받았다(OnPhotonSerializeView). sentAt = 보낸 쪽이 보낸 시각(PhotonMessageInfo.SentServerTime).
     public static void RecordRemote(int viewId, double sentAt, Vector3 position)
     {
-        if (instance == null || !PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient) return;
+        if (instance == null || !PhotonNetwork.InRoom) return;
         instance.TrackOf(viewId).Record(sentAt, position);
     }
 
@@ -58,9 +59,9 @@ public class PositionHistory : MonoBehaviour
 
     private void Update()
     {
-        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient)
+        if (!PhotonNetwork.InRoom)
         {
-            if (tracks.Count > 0) tracks.Clear(); // 방장이 아니게 되면 버린다(다시 방장이 되면 새로 쌓는다)
+            if (tracks.Count > 0) tracks.Clear(); // 방을 나가면 버린다
             debugPending.Clear();
             return;
         }

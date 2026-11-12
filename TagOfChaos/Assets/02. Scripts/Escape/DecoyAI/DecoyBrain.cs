@@ -18,6 +18,8 @@ public class DecoyBrain : MonoBehaviour
     private const float DoorOpenDistance = 2.5f;
     private const float StartSpread = 3f;      // 사냥 시작 때 한꺼번에 움직이지 않게
     private const float WriteInterval = 0.1f;  // 바뀐 경로를 모아 보내는 간격
+    // 새 경로를 이만큼 뒤에 시작하도록 미리 보낸다(§71 A1, Q3) — 모아 보내기 0.1초 + 왕복 지연 여유. 다른 화면이 시작 전에 받아 튀지 않는다.
+    public const float RouteLead = 0.25f;
     private const int FleeCandidates = 10;
 
     private class Agent
@@ -253,8 +255,8 @@ public class DecoyBrain : MonoBehaviour
             a.Act = DecoyRules.Activity.Dance;
             Write(a, new DecoyRoute
             {
-                StartAt = now, Gait = DecoyGait.Dance, DanceId = danceId, Speed = 0f,
-                HoldUntil = (float)DecoyRules.Range(a.Rng.NextDouble(), 3, 8), FaceYaw = float.NaN, Points = new[] { pos },
+                StartAt = now + RouteLead, Gait = DecoyGait.Dance, DanceId = danceId, Speed = 0f,
+                HoldUntil = (float)DecoyRules.Range(a.Rng.NextDouble(), 3, 8), FaceYaw = float.NaN, Points = new[] { LeadPoint(a, pos, now) },
             });
             return;
         }
@@ -281,8 +283,8 @@ public class DecoyBrain : MonoBehaviour
         a.Act = DecoyRules.Activity.Rest;
         Write(a, new DecoyRoute
         {
-            StartAt = now, Gait = DecoyGait.Idle, Speed = 0f, HoldUntil = (float)DecoyRules.Range(a.Rng.NextDouble(), 2, 6),
-            FaceYaw = (float)(a.Rng.NextDouble() * 360.0), Points = new[] { pos },
+            StartAt = now + RouteLead, Gait = DecoyGait.Idle, Speed = 0f, HoldUntil = (float)DecoyRules.Range(a.Rng.NextDouble(), 2, 6),
+            FaceYaw = (float)(a.Rng.NextDouble() * 360.0), Points = new[] { LeadPoint(a, pos, now) },
         });
         return true;
     }
@@ -395,6 +397,7 @@ public class DecoyBrain : MonoBehaviour
     {
         if (pathsThisFrame >= PathBudget) { a.DecideAt = now + 0.1; return false; }
         pathsThisFrame++;
+        from = LeadPoint(a, from, now); // 새 경로는 RouteLead 뒤 그 자리(옛 경로를 따라간 곳)에서 출발한다(§71 A1)
         if (!NavMesh.SamplePosition(from, out NavMeshHit start, 3f, DecoyNavMesh.Filter)) return false;
         if (!NavMesh.CalculatePath(start.position, to, DecoyNavMesh.Filter, path) || path.status != NavMeshPathStatus.PathComplete) return false;
         Vector3[] corners = path.corners;
@@ -404,12 +407,12 @@ public class DecoyBrain : MonoBehaviour
         a.Continue = truncated;
         if (truncated) { a.ContinueTo = to; a.ContinueGait = gait; a.ContinueRest = rest; a.ContinueYaw = faceYaw; rest = 0f; }
         var points = new Vector3[n];
-        points[0] = from; // 지금 자리에서 이어서(순간이동 없음)
+        points[0] = from; // 옛 경로가 RouteLead 뒤 닿는 자리에서 이어서(순간이동 없음)
         for (int i = 1; i < n; i++) points[i] = DecoyRoute.Quantize(corners[i]);
         // 달리기는 지금 스태미나로 달릴 수 있는 거리까지만, 그 뒤는 걷는다. 지쳤으면(0 → 35) 처음부터 걷는다(§46.4).
         AdvanceStamina(a, now);
         if (gait == DecoyGait.Run && a.Stamina != null && !a.Stamina.CanRun) gait = DecoyGait.Walk;
-        var route = new DecoyRoute { StartAt = now, Gait = gait, Speed = DecoyRules.SpeedFor(gait, walkSpeed), FaceYaw = faceYaw, Points = points };
+        var route = new DecoyRoute { StartAt = now + RouteLead, Gait = gait, Speed = DecoyRules.SpeedFor(gait, walkSpeed), FaceYaw = faceYaw, Points = points };
         if (gait == DecoyGait.Run && a.Stamina != null)
         {
             float runDistance = a.Stamina.RunSecondsLeft * route.Speed;
@@ -420,12 +423,17 @@ public class DecoyBrain : MonoBehaviour
         return true;
     }
 
+    // 새 경로가 시작할 자리: RouteLead 뒤 지금 따라가는 경로가 닿는 곳(경로가 없으면 지금 자리).
+    private Vector3 LeadPoint(Agent a, Vector3 pos, double now) =>
+        manager.Routes.TryActive(a.Id, now + RouteLead, out DecoyRoute r) ? DecoyRoute.Sample(r, now + RouteLead).Position : pos;
+
     private void Write(Agent a, DecoyRoute route)
     {
         AdvanceStamina(a, route.StartAt); // 바뀌기 전 경로로 지금까지 진행
         a.Route = route;
         a.HasRoute = true;
         a.DecideAt = route.EndsAt;
+        if (a.Continue) a.DecideAt -= RouteLead; // 잘린 경로(§69 E2): 끝나기 RouteLead 전에 다음 경로를 정해 끝나는 순간 이어지게
         manager.Routes.SetLocal(a.Id, route);
         pending[DecoyRouteBook.KeyOf(a.Id)] = DecoyRoute.Encode(route);
     }

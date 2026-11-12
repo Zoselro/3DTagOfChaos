@@ -25,7 +25,7 @@ public static class LobbyKick
 
     // 호스트 → 방장 요청(호스트가 방장이 아닐 때).
     public static void SendRequest(int target) =>
-        PhotonNetwork.RaiseEvent(NetEventCodes.KickRequest, target, new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient }, SendOptions.SendReliable);
+        MasterRequestResend.Send(NetEventCodes.KickRequest, target); // §72 E3
 
     // 방장: 검증한 뒤 대상에게만 Kicked를 보낸다. 받아들였으면 true.
     public static bool Handle(int sender, int target)
