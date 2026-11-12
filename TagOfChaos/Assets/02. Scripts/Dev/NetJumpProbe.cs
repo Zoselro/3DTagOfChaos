@@ -14,6 +14,8 @@ public class NetJumpProbe : MonoBehaviour
 
     private static NetJumpProbe instance;
     private readonly Dictionary<Transform, Vector3> last = new Dictionary<Transform, Vector3>();
+    private readonly Dictionary<Transform, float> firstSeen = new Dictionary<Transform, float>();
+    private const float SpawnGrace = 2f; // 막 생긴 캐릭터는 첫 위치 패킷이 와서 생성 자리 → 실제 자리로 옮겨지므로 세지 않는다(대기실 입장 때 80 m대 오탐)
     private readonly List<Transform> drop = new List<Transform>();
     private DecoyView[] decoys = new DecoyView[0];
     private float nextDecoyRefresh;
@@ -52,7 +54,7 @@ public class NetJumpProbe : MonoBehaviour
     {
         if (!PhotonNetwork.InRoom)
         {
-            if (last.Count > 0) last.Clear();
+            if (last.Count > 0) { last.Clear(); firstSeen.Clear(); }
             return;
         }
         IReadOnlyList<IGameCharacter> all = CharacterRegistry.All;
@@ -74,7 +76,7 @@ public class NetJumpProbe : MonoBehaviour
         // 사라진 대상 정리
         drop.Clear();
         foreach (Transform t in last.Keys) if (t == null) drop.Add(t);
-        for (int i = 0; i < drop.Count; i++) last.Remove(drop[i]);
+        for (int i = 0; i < drop.Count; i++) { last.Remove(drop[i]); firstSeen.Remove(drop[i]); }
     }
 
     private static string Describe(IGameCharacter c)
@@ -88,7 +90,8 @@ public class NetJumpProbe : MonoBehaviour
 
     private void Check(Transform t, string who, string why)
     {
-        if (last.TryGetValue(t, out Vector3 p))
+        if (!firstSeen.TryGetValue(t, out float born)) firstSeen[t] = born = Time.unscaledTime;
+        if (last.TryGetValue(t, out Vector3 p) && Time.unscaledTime - born >= SpawnGrace)
         {
             float moved = Vector3.Distance(p, t.position);
             if (moved > JumpMeters + MaxLegitSpeed * Time.unscaledDeltaTime)
