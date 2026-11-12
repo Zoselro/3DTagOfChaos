@@ -18,6 +18,7 @@ public class DestructionPresenter : MonoBehaviour
     private const int RubbleKept = 8;
     private const int MaxPieces = 120;
     private const float PieceLife = 2.2f;
+    private const float ModelWaitSeconds = 3f; // 무너질 때 조각 모델을 아직 읽는 중이면 이만큼 기다린다(§73.11)
 
     private DestructionNet net;
     private Mesh quad;
@@ -42,8 +43,19 @@ public class DestructionPresenter : MonoBehaviour
         if (quad != null) Destroy(quad);
     }
 
+    // 조각 모델(§73.11): 건물이 처음 맞으면 그 건물 것만 비동기로 읽기 시작한다(4번 맞아야 무너지므로 시간이 충분하다).
+    private static GameObject ResolveModel(DestructibleUnit u, out bool loading)
+    {
+        loading = false;
+        if (u.FracturePrefab != null || string.IsNullOrEmpty(u.FractureName)) return u.FracturePrefab;
+        FracturedModels.Request(u.FractureName);
+        u.FracturePrefab = FracturedModels.Get(u.FractureName, out loading);
+        return u.FracturePrefab;
+    }
+
     private void OnLevel(DestructibleUnit u, int from, int to, bool animate)
     {
+        ResolveModel(u, out _);
         if (!animate)
         {
             ClearDecals(u);
@@ -227,6 +239,8 @@ public class DestructionPresenter : MonoBehaviour
         collapsing++;
         try
         {
+            float waitUntil = Time.time + ModelWaitSeconds;
+            while (ResolveModel(u, out bool loading) == null && loading && Time.time < waitUntil) yield return null;
             ClearDecals(u);
             Camera cam = Camera.main;
             bool far = cam == null || Vector3.Distance(cam.transform.position, u.Center) > FarDistance + u.Bounds.extents.magnitude;

@@ -32,10 +32,14 @@ public class VoiceChat : MonoBehaviour
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
     }
 
+    // 실행 옵션 -novoice: 음성 채팅을 켜지 않는다(§73.11 — 한 PC에 여러 창을 띄웠을 때 마이크를 놓는 동안 멈추는지 시험).
+    private static readonly bool disabledByArgs = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-novoice") >= 0;
+
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (mode != LoadSceneMode.Single) return;
-        bool wanted = VoiceChatSettingsSO.Current.IsEnabledIn(scene.name);
+        StallWatch.Mark("VoiceChat scene loaded " + scene.name);
+        bool wanted = !disabledByArgs && VoiceChatSettingsSO.Current.IsEnabledIn(scene.name);
         if (!wanted && instance != null) { Destroy(instance.gameObject); instance = null; }
         if (wanted && instance == null) new GameObject(nameof(VoiceChat)).AddComponent<VoiceChat>();
     }
@@ -72,6 +76,17 @@ public class VoiceChat : MonoBehaviour
         client.SpeakerLinked += OnSpeakerLinked;
         if (PhotonNetwork.LocalPlayer != null) client.Client.LocalPlayer.NickName = PhotonNetwork.LocalPlayer.ActorNumber.ToString();
         InputDevices.Changed += ApplyDevice;
+    }
+
+    // §73.11: 맵으로 갈 때 녹음기가 마이크를 놓는다(Microphone.End). 한 PC에 창이 여럿이면 여기서 오래 멈추는지 시간을 잰다.
+    private void OnDisable()
+    {
+        if (recorder == null || !recorder.RecordingEnabled) return;
+        StallWatch.Mark("VoiceChat releasing microphone");
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        recorder.RecordingEnabled = false;
+        StallWatch.Mark("VoiceChat microphone released");
+        Debug.Log($"[VoiceChat] Microphone released in {sw.ElapsedMilliseconds} ms.");
     }
 
     private void OnDestroy()

@@ -200,21 +200,37 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private void Start()
     {
+        StallWatch.Mark("EscapeManager.Start EscapeHud.Create");
         EscapeHud.Create(this);
+        StallWatch.Mark("EscapeManager.Start EscapeAudioPresenter");
         gameObject.AddComponent<EscapeAudioPresenter>().Init(this); // 탈출 모드 소리(상태 차이, SoundPlan.md S5)
+        StallWatch.Mark("EscapeManager.Start DecoyBrain");
         gameObject.AddComponent<DecoyBrain>().Init(this);           // AI 판단 — 방장만 돈다(§44)
+        StallWatch.Mark("EscapeManager.Start DecoyPresenter");
         gameObject.AddComponent<DecoyPresenter>().Init(this);       // 맵의 AI(§25.5 L)
+        StallWatch.Mark("EscapeManager.Start ProjectileSystem.Create");
         ProjectileSystem.Create(this); // 던진 물체(물풍선·섬광탄·수색 폭탄, §70.3)
+        StallWatch.Mark("EscapeManager.Start NoiseBombPresenter");
         gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 사이렌 함정(옛 소음폭탄 §25.5 K)·수색 폭탄 입력(§68 GP5)
+        StallWatch.Mark("EscapeManager.Start SirenTrapPresenter");
         gameObject.AddComponent<SirenTrapPresenter>().Init(this);   // 사이렌 철창(§68 GP5)
+        StallWatch.Mark("EscapeManager.Start PumpkinCarriagePresenter");
         gameObject.AddComponent<PumpkinCarriagePresenter>().Init(this); // 호박 마차 탈것(§68.7)
+        StallWatch.Mark("EscapeManager.Start ColaCannonPresenter");
         gameObject.AddComponent<ColaCannonPresenter>().Init(this);      // 콜라 대포 탈것(§68.9)
+        StallWatch.Mark("EscapeManager.Start DestructionNet");
         gameObject.AddComponent<DestructionNet>();                  // 거대 괴물이 부수는 물체 상태(§66)
+        StallWatch.Mark("EscapeManager.Start DestructionPresenter");
         gameObject.AddComponent<DestructionPresenter>();            // 부서지는 연출(데칼·붕괴, §66)
+        StallWatch.Mark("EscapeManager.Start GiantBrain");
         gameObject.AddComponent<GiantBrain>().Init(this);           // 거대 괴물 판단 — 방장만 돈다(§64)
+        StallWatch.Mark("EscapeManager.Start GiantPresenter");
         gameObject.AddComponent<GiantPresenter>().Init(this);       // 거대 괴물 연출(§64)
+        StallWatch.Mark("EscapeManager.Start VoiceNet.EnsureSent");
         VoiceNet.EnsureSent();                                      // 대기실에서 못 받은 사람에게만 목소리를 보낸다(§25.3 Q6, §72 E2)
+        StallWatch.Mark("EscapeManager.Start ReadStateFromRoom");
         ReadStateFromRoom();
+        StallWatch.Mark("EscapeManager.Start done");
     }
 
     private void Update()

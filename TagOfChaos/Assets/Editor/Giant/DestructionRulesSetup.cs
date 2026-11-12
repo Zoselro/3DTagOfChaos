@@ -30,11 +30,36 @@ public static class DestructionRulesSetup
             if (go != null) models.Add(go);
         }
         models.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
-        rules.EditorSetFractured(models.ToArray());
+        rules.EditorSetFracturedNames(WriteHolders(models)); // §73.11: 이름만 — 모델은 작은 에셋이 하나씩 가리킨다
         rules.EditorSetCrackMaterials(CrackMaterials());
         EditorUtility.SetDirty(rules);
         AssetDatabase.SaveAssets();
         return $"DestructionRules: {models.Count} fractured models";
+    }
+
+    public const string HolderFolder = "Assets/Resources/Escape/Fractured";
+
+    // 조각 모델마다 Resources/Escape/Fractured/<원본 이름>.asset(FracturedModelSO)을 만들고 원본 이름 목록을 돌려준다.
+    // 규칙 에셋이 모델을 직접 가리키면 규칙을 처음 읽을 때 모든 맵의 조각 모델(876 MB)을 한꺼번에 읽었다(§73.11).
+    public static string[] WriteHolders(List<GameObject> models)
+    {
+        Directory.CreateDirectory(HolderFolder);
+        var names = new List<string>();
+        foreach (GameObject m in models)
+        {
+            string name = m.name.Replace("_Fractured", "");
+            string path = $"{HolderFolder}/{name}.asset";
+            var holder = AssetDatabase.LoadAssetAtPath<FracturedModelSO>(path);
+            if (holder == null)
+            {
+                holder = ScriptableObject.CreateInstance<FracturedModelSO>();
+                AssetDatabase.CreateAsset(holder, path);
+            }
+            holder.EditorSet(m);
+            EditorUtility.SetDirty(holder);
+            names.Add(name);
+        }
+        return names.ToArray();
     }
 
     // 금 간 데칼 재질 3개(GD3 텍스처 — Standard Fade + 노멀).

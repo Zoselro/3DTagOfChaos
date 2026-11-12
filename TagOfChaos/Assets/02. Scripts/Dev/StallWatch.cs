@@ -20,6 +20,52 @@ public static class StallWatch
     private static volatile string lastScene = "-";
     private static volatile bool stopping;
 
+    // 표시(Mark): 메인 스레드가 지나간 자리. 멈추면 마지막 표시와, 풀렸을 때 멈춘 동안 지나간 표시들을 남긴다.
+    private const int MarkCapacity = 32;
+    private static readonly object markLock = new object();
+    private static readonly string[] marks = new string[MarkCapacity];
+    private static readonly double[] markTimes = new double[MarkCapacity];
+    private static int markCount;
+    private static readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+
+    public static void Mark(string what)
+    {
+        lock (markLock)
+        {
+            int i = markCount++ % MarkCapacity;
+            marks[i] = what;
+            markTimes[i] = clock.Elapsed.TotalSeconds;
+        }
+    }
+
+    private static string LastMark()
+    {
+        lock (markLock)
+        {
+            if (markCount == 0) return "-";
+            int i = (markCount - 1) % MarkCapacity;
+            return $"{marks[i]} ({clock.Elapsed.TotalSeconds - markTimes[i]:F1}s ago)";
+        }
+    }
+
+    private static string MarksSince(double since)
+    {
+        var sb = new StringBuilder();
+        lock (markLock)
+        {
+            int n = System.Math.Min(markCount, MarkCapacity);
+            double prev = since;
+            for (int k = markCount - n; k < markCount; k++)
+            {
+                int i = k % MarkCapacity;
+                if (markTimes[i] < since) continue;
+                sb.Append(marks[i]).Append(" +").Append((markTimes[i] - prev).ToString("F1")).Append("s; ");
+                prev = markTimes[i];
+            }
+        }
+        return sb.Length > 0 ? sb.ToString() : "none";
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Bootstrap()
     {
@@ -58,6 +104,7 @@ public static class StallWatch
         var since = System.Diagnostics.Stopwatch.StartNew();
         bool reported = false;
         int[] atStart = new int[256];
+        double stallStart = 0;
         while (!stopping)
         {
             Thread.Sleep(250);
@@ -66,7 +113,7 @@ public static class StallWatch
             {
                 if (reported)
                     Debug.LogWarning($"[Stall] main thread resumed after {since.Elapsed.TotalSeconds:F1}s (scene {lastScene}); " +
-                                     $"Photon events during the stall: {Diff(atStart)}");
+                                     $"Photon events during the stall: {Diff(atStart)}; marks passed: {MarksSince(stallStart)}");
                 seen = now;
                 since.Restart();
                 reported = false;
@@ -74,9 +121,10 @@ public static class StallWatch
             }
             if (reported || since.Elapsed.TotalSeconds < StallSeconds) continue;
             reported = true;
+            stallStart = clock.Elapsed.TotalSeconds - since.Elapsed.TotalSeconds;
             for (int i = 0; i < 256; i++) atStart[i] = Volatile.Read(ref eventCounts[i]);
             Debug.LogWarning($"[Stall] main thread has not moved for {since.Elapsed.TotalSeconds:F1}s — stuck in {phase} (scene {lastScene}, " +
-                             $"last Photon event {lastEventCode}, message queue {(PhotonNetwork.IsMessageQueueRunning ? "on" : "off")})");
+                             $"last mark {LastMark()}, last Photon event {lastEventCode}, message queue {(PhotonNetwork.IsMessageQueueRunning ? "on" : "off")})");
         }
     }
 

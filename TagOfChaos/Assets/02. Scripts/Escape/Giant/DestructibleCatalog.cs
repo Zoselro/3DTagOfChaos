@@ -18,7 +18,8 @@ public sealed class DestructibleUnit
     public DestructibleGrade Grade;
     public Transform Root;
     public Transform ModelRoot;          // 조각 모델을 맞출 자리(조각 모델을 만든 원본 노드)
-    public GameObject FracturePrefab;    // 건물만(없으면 코드 연출)
+    public string FractureName;          // 건물만: 조각 모델 이름(없으면 코드 연출) — 모델은 FracturedModels가 필요할 때 읽는다(§73.11)
+    public GameObject FracturePrefab;    // 읽은 조각 모델(읽기 전 null)
     public Bounds Bounds;                // 세계 경계(남기는 부분 제외)
     public Bounds Zone;                  // 안에 있으면 "여기 숨었다"로 보는 구역 = Bounds(+ 계단은 이어진 시계탑 몸체)
     public Bounds Link;                  // 계단과 이어진 부서지지 않는 몸체의 경계
@@ -53,9 +54,9 @@ public sealed class DestructibleCatalog
         var catalog = new DestructibleCatalog();
         if (map == null || rules == null) return catalog;
         catalog.links = FindLinks(map, rules);
-        var models = new Dictionary<string, GameObject>();
-        foreach (GameObject f in rules.Fractured)
-            if (f != null) models[f.name.Replace("_Fractured", "")] = f;
+        var models = new HashSet<string>();
+        foreach (string f in rules.FracturedNames)
+            if (!string.IsNullOrEmpty(f)) models.Add(f);
         catalog.Scan(map, rules, models, false, 0);
         return catalog;
     }
@@ -67,7 +68,7 @@ public sealed class DestructibleCatalog
         return null;
     }
 
-    private void Scan(Transform group, DestructionRulesSO rules, Dictionary<string, GameObject> models, bool buildingGroup, int depth)
+    private void Scan(Transform group, DestructionRulesSO rules, HashSet<string> models, bool buildingGroup, int depth)
     {
         foreach (Transform child in group)
         {
@@ -81,7 +82,7 @@ public sealed class DestructibleCatalog
         }
     }
 
-    private void TryAdd(Transform root, DestructionRulesSO rules, Dictionary<string, GameObject> models, bool buildingGroup)
+    private void TryAdd(Transform root, DestructionRulesSO rules, HashSet<string> models, bool buildingGroup)
     {
         if (StartsWithAny(root.name, rules.KeepUnits) || HasProtected(root)) return;
 
@@ -93,7 +94,7 @@ public sealed class DestructibleCatalog
 
         Bounds b = WorldBounds(renderers);
 
-        Transform modelRoot = FindModel(root, models, out GameObject model);
+        Transform modelRoot = FindModel(root, models, out string model);
         if (model == null && Mathf.Max(b.size.x, b.size.z) > rules.LumpFootprint) return; // 땅·숲 덩어리
 
         DestructibleGrade grade = StartsWithAny(root.name, rules.StairsPrefixes) ? DestructibleGrade.Stairs
@@ -107,7 +108,7 @@ public sealed class DestructibleCatalog
             Grade = grade,
             Root = root,
             ModelRoot = modelRoot != null ? modelRoot : root,
-            FracturePrefab = model,
+            FractureName = model,
             Bounds = b,
             Renderers = renderers.ToArray(),
             Colliders = colliders.ToArray(),
@@ -198,7 +199,7 @@ public sealed class DestructibleCatalog
     }
 
     // 조각 모델 짝: 물체 뿌리부터 3단계 아래까지 이름(복사 꼬리 " (n)" 뺌)이 같은 첫 노드.
-    private static Transform FindModel(Transform root, Dictionary<string, GameObject> models, out GameObject model)
+    private static Transform FindModel(Transform root, HashSet<string> models, out string model)
     {
         model = null;
         var queue = new Queue<(Transform t, int d)>();
@@ -206,7 +207,8 @@ public sealed class DestructibleCatalog
         while (queue.Count > 0)
         {
             var (t, d) = queue.Dequeue();
-            if (models.TryGetValue(CopySuffix.Replace(t.name, ""), out model)) return t;
+            string name = CopySuffix.Replace(t.name, "");
+            if (models.Contains(name)) { model = name; return t; }
             if (d < 3) foreach (Transform c in t) queue.Enqueue((c, d + 1));
         }
         model = null;

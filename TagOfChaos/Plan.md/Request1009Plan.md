@@ -8962,3 +8962,27 @@ if (!RoomState.TryGetDouble(NetKeys.PrepareEndTime, out _) &&
   2. `Dev/StallWatch` 추가: 메인 스레드가 3초 넘게 프레임을 못 끝내면 다른 스레드가 `[Stall]` 로그를 남긴다 — 멈춘 단계(FixedUpdate·Update·PreLateUpdate 등), 멈춘 동안 받은 Photon 이벤트 수(코드별)·마지막 이벤트·메시지 큐 상태. 에디터에서 4.5초 멈춤으로 시험해 로그 확인.
   3. 괴물 도착 확인 45초 대기·로딩 화면·로딩 우선순위·`[LoadTiming]`은 그대로.
 - 다음: 새 빌드로 같은 시험 → 클라이언트 로그의 `[Stall]` 두 줄(멈춘 단계·이벤트 수)로 원인을 정하고 고친다.
+
+### 73.11 3차 시험과 원인 확정(2026-11-12)
+
+받은 클라이언트 로그(새 `[Stall]` 감시):
+- 클라이언트 3개 모두 `stuck in EarlyUpdate`, `Photon events during the stall: none`, 멈춤 50.6·50.6·50.9초. 그 뒤 `DisconnectByServerTimeout`으로 LobbyScene. 방장은 정상(맵 열림 2.8초, 첫 프레임 5.1초)이었고, 괴물 도착 0/1로 45초 뒤 대기실로 돌아감.
+- 네트워크 메시지 처리는 원인이 아니다. 맵이 열린 직후 스크립트 시작(`Start`) 중 하나가 오래 걸렸다.
+
+에디터에서 같은 감시(단계 표시 추가)로 찾음:
+- `EscapeManager.Start`의 `DestructionNet` 추가 한 줄이 **13.8초**. 다른 단계는 모두 0.0~0.7초였다.
+- `DestructionNet.Awake` → `DestructionRulesSO.Current`(Resources.Load) → 규칙 에셋이 **조각 모델 38개(모든 맵의 건물, 개당 6~45 MB)를 직접 가리킴** → 의존 자산 474개·**876 MB**(텍스처 565 MB·모델 218 MB)를 맵을 열 때마다 화면을 멈춘 채 한꺼번에 읽었다.
+- 방장 PC는 창 하나라 빨리 끝났다. 3070 Ti PC는 창 3개가 같은 디스크(F:)에서 동시에 2.6 GB를 읽어 셋이 같은 시간(약 50초) 멈췄다. 그동안 서버 응답이 끊겨 연결이 끊겼다. 첫 시험(1050 한 대에 4개, 네트워크 폴더)의 멈춤·끊김, 처음 요청의 "씬 이동이 느림"도 같은 원인이다.
+
+고침:
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| F1 | `FracturedModelSO`(조각 모델 하나를 가리키는 작은 에셋) 38개 — `Resources/Escape/Fractured/<원본 이름>.asset` | ✅ |
+| F2 | `DestructionRulesSO`는 모델 대신 이름 목록(`fracturedNames`)만 — 규칙 에셋 의존 자산 876 MB → **1.7 MB**(금 간 데칼 재질만) | ✅ |
+| F3 | `DestructibleCatalog`는 이름으로 짝(건물 판정 동일). `DestructionPresenter`는 건물이 처음 맞을 때 그 건물 조각 모델만 비동기로 읽기 시작(`FracturedModels.Request`), 무너질 때 아직이면 최대 3초 기다리고 없으면 먼지·조각 연출로 대신 | ✅ |
+| F4 | `DestructionRulesSetup.Refresh`가 작은 에셋과 이름 목록을 만든다(다시 실행해도 같은 결과) | ✅ |
+| F5 | 시험: `Request1108Tests`(규칙 에셋이 조각 모델 FBX를 직접 가리키지 않음·이름마다 작은 에셋과 모델 있음·맵 4개 건물 판정 그대로) + `Request1113NetTests` 21/21 | ✅ |
+| F6 | Play Mode(진저브레드, 오프라인): 맵 시작 멈춤 13.8초 → `[Stall]` 없음. 건물 첫 타격 → 2초 안에 그 건물 조각 모델만 읽힘 → 4번째 타격에 조각 모델로 무너짐, 경고·오류 0 | ✅ |
+| F7 | 멈춤 감시 보강: 단계 표시(`StallWatch.Mark` — 맵 시작 각 단계·`[LoadTiming]`·음성 채팅 마이크 놓기), 실행 옵션 `-novoice`(음성 채팅 끄기, 시험용) | ✅ |
+| P | 같은 구성(1050 방장 + 핫스팟, 3070 Ti 창 3개)으로 다시 시험 | 사용자 대기 |

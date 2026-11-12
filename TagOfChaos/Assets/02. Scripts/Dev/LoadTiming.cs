@@ -38,6 +38,7 @@ public class LoadTiming : MonoBehaviour
 
     public static void Mark(string what)
     {
+        StallWatch.Mark(what);
         float t = beganAt >= 0f ? Time.realtimeSinceStartup - beganAt : 0f;
         Debug.Log($"[LoadTiming] {what} at +{t:F1}s (memory {Profiler.GetTotalReservedMemoryLong() >> 20} MB reserved, " +
                   $"{Profiler.GetTotalAllocatedMemoryLong() >> 20} MB used)");

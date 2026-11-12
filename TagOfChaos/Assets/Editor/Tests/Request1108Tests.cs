@@ -158,7 +158,16 @@ public class Request1108Tests
     public void Rules_HaveFracturedModelsAndCrackDecals()
     {
         DestructionRulesSO rules = DestructionRulesSO.Current;
-        Assert.AreEqual(38, rules.Fractured.Length, "GD2: 38 fractured buildings");
+        Assert.AreEqual(38, rules.FracturedNames.Length, "GD2: 38 fractured buildings");
+        // §73.11: 규칙 에셋은 모델을 직접 가리키지 않는다(맵을 열 때 876 MB를 한꺼번에 읽던 원인) — 이름마다 작은 에셋이 하나씩
+        foreach (string dep in UnityEditor.AssetDatabase.GetDependencies(DestructionRulesSetup.AssetPath, true))
+            StringAssert.DoesNotEndWith("_Fractured.fbx", dep, "the rules asset must not reference fractured models directly");
+        foreach (string name in rules.FracturedNames)
+        {
+            var holder = Resources.Load<FracturedModelSO>(FracturedModelSO.ResourceFolder + name);
+            Assert.IsNotNull(holder, name);
+            Assert.IsNotNull(holder.Model, name + " model");
+        }
         for (int stage = 1; stage <= 3; stage++)
         {
             Material m = rules.CrackMaterial(stage);
@@ -187,7 +196,7 @@ public class Request1108Tests
             int bld = 0, tent = 0, props = 0;
             foreach (DestructibleUnit u in a.Units)
             {
-                if (u.Grade == DestructibleGrade.Building) { bld++; Assert.IsNotNull(u.FracturePrefab, u.Root.name + " has a fractured model"); }
+                if (u.Grade == DestructibleGrade.Building) { bld++; Assert.IsFalse(string.IsNullOrEmpty(u.FractureName), u.Root.name + " has a fractured model"); }
                 else if (u.Grade == DestructibleGrade.Tent) tent++;
                 else if (u.Grade == DestructibleGrade.Stairs) continue;
                 else props++;

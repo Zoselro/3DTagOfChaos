@@ -34,6 +34,10 @@ MonoBehaviour:
   - MO_Tent
   - CF_Tent
   - CHO_Shed
+  stairsPrefixes:
+  - Helix_
+  stairsLinkPrefix: GIN_ClockTower
+  stairsLinkRadius: 30
   buildingContainers:
   - Buildings
   - HideBuildings
@@ -44,45 +48,45 @@ MonoBehaviour:
   - ESC_Glow
   - Repair_Point
   lumpFootprint: 60
-  fractured:
-  - {fileID: 919132149155446097, guid: ea5054c87f6c0ba44b467340649c3c60, type: 3}
-  - {fileID: 919132149155446097, guid: eb0aca96ef2a9954a9de04c2a4a7e2f5, type: 3}
-  - {fileID: 919132149155446097, guid: 9c06eef081a954e4c97cbe2a2517c01b, type: 3}
-  - {fileID: 919132149155446097, guid: 9ce035110aa56aa418daa1e96afd767a, type: 3}
-  - {fileID: 919132149155446097, guid: a6b2ee7126be38d4ebd7e9e6006d690c, type: 3}
-  - {fileID: 919132149155446097, guid: d26b4f8e07533e541b1888681699e794, type: 3}
-  - {fileID: 919132149155446097, guid: 946029c2ecf685e4fada2ae87104a7d3, type: 3}
-  - {fileID: 919132149155446097, guid: 099c59bccbdbc734a9cbb05f5e21f923, type: 3}
-  - {fileID: 919132149155446097, guid: 1318b25a037b0a84e83f61f57d74aab2, type: 3}
-  - {fileID: 919132149155446097, guid: 553192fff2c2a6e4c8fd4278e32ab4da, type: 3}
-  - {fileID: 919132149155446097, guid: e8c72e8880f6da948bd4bfb9fbe96066, type: 3}
-  - {fileID: 919132149155446097, guid: 5f74a9737e041d44aad51188c2eea454, type: 3}
-  - {fileID: 919132149155446097, guid: 5e263a3c93d7d5849ac9577f733823f2, type: 3}
-  - {fileID: 919132149155446097, guid: d438640ae307a934d9a837933588aab3, type: 3}
-  - {fileID: 919132149155446097, guid: e37102c0bfd6b1143ae248e5e8d13e25, type: 3}
-  - {fileID: 919132149155446097, guid: 640d253a908dfee40b6461d22710de41, type: 3}
-  - {fileID: 919132149155446097, guid: 26a99c24e87e77b4fa6b33f03e02a5bb, type: 3}
-  - {fileID: 919132149155446097, guid: b236ed73e59208a4bb7a664b8f40442f, type: 3}
-  - {fileID: 919132149155446097, guid: 8798014d7714e1148ada6cc0f18f24da, type: 3}
-  - {fileID: 919132149155446097, guid: 1fc9a2ba3313da74985bd1fd542334af, type: 3}
-  - {fileID: 919132149155446097, guid: a876a76001525514dbf856cbe6759db8, type: 3}
-  - {fileID: 919132149155446097, guid: e7cfdd75dda7f3b46ab4508b654f70d5, type: 3}
-  - {fileID: 919132149155446097, guid: 208f51e401a208a40b113f7212b30cdd, type: 3}
-  - {fileID: 919132149155446097, guid: fe6b2a1b2289ca9429b429982a1f04c7, type: 3}
-  - {fileID: 919132149155446097, guid: 930b3c3da5994da4d8b0940809b5a577, type: 3}
-  - {fileID: 919132149155446097, guid: 2ec811b7dca45cd46a7e1e49c12c9791, type: 3}
-  - {fileID: 919132149155446097, guid: b072774de4fbb3c419b657c43c45cdaa, type: 3}
-  - {fileID: 919132149155446097, guid: 30984b5701a78d7479096e887a9e89a0, type: 3}
-  - {fileID: 919132149155446097, guid: 042b4038f9327264a801828df3d0da0d, type: 3}
-  - {fileID: 919132149155446097, guid: 543540ffdbf95a749ad20a020cc24639, type: 3}
-  - {fileID: 919132149155446097, guid: 74f80961804c4ad45884dc642d8fdedf, type: 3}
-  - {fileID: 919132149155446097, guid: e24cbb7af1848a34f95e34a919a8823f, type: 3}
-  - {fileID: 919132149155446097, guid: 0a0adef6198052246981e89bf0ef4d5d, type: 3}
-  - {fileID: 919132149155446097, guid: 04fb6bfff9a77fd4e81708db7cbeb7c6, type: 3}
-  - {fileID: 919132149155446097, guid: 32180517161ee0f4b9ce2ec9a1891e1b, type: 3}
-  - {fileID: 919132149155446097, guid: 4cf9fbceb0fdc934ea56990a7c12b703, type: 3}
-  - {fileID: 919132149155446097, guid: 9973c326c828e2846b7a5e2b92356cea, type: 3}
-  - {fileID: 919132149155446097, guid: 91ddbc005acf27e4989e1834199c81f0, type: 3}
+  fracturedNames:
+  - CF_Bld_Q1
+  - CF_Bld_Q2
+  - CF_Bld_Q3
+  - CF_Bld_Q4
+  - CF_Cottage
+  - CF_MonsterHouse
+  - CF_Shop
+  - CHO_Bld_ChocolateOil
+  - CHO_Bld_CookieWheel
+  - CHO_Bld_Gear
+  - CHO_Bld_MacaronWheel
+  - CUR_Bld_Battery
+  - CUR_Bld_RedButton
+  - CUR_Bld_RepairKit
+  - CUR_Bld_SafetyBelt
+  - CUR_GyroDrop
+  - CUR_Viking
+  - Carousel
+  - Coaster
+  - GIN_BLD_CandyCaneCottage
+  - GIN_BLD_CandyCogCottage
+  - GIN_BLD_ChocoCottage
+  - GIN_BLD_GingerbreadMill
+  - GIN_BLD_SkullCauldron
+  - GIN_HD_CandyMughouse
+  - GIN_HD_GingerbreadWindmill
+  - GIN_HD_HolidayHideaway
+  - GIN_HD_WitchTeapot
+  - GIN_RuneBuilding
+  - GIN_UG_CandyCaneCottage
+  - GIN_UG_CrookedChocoCottage
+  - GIN_UG_GearworksGate
+  - GIN_UG_GloomgumFortress
+  - GIN_UG_MacaronCottage
+  - Landmark_Cauldron
+  - Landmark_ChocoBar
+  - Landmark_Cogworks
+  - Landmark_Factory
   crackMaterials:
   - {fileID: 2100000, guid: 070ca8d070ddbdc4288f524cbf2daaef, type: 2}
   - {fileID: 2100000, guid: 6180d4d937c9c0e4a9e22793a91d49a9, type: 2}
