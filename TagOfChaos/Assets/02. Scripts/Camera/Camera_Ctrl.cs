@@ -99,6 +99,9 @@ public class Camera_Ctrl : MonoBehaviour
 
     float ObstacleFreeDistance(Vector3 from, Vector3 dir, float want)
     {
+        // 회전 보간(Slerp) 뒤 쿼터니언이 아주 살짝 정규화가 깨지면 SphereCast가 'IsNormalized(direction)' 단언을 띄운다
+        if (dir.sqrMagnitude < 1e-8f) return want;
+        dir.Normalize();
         int n = Physics.SphereCastNonAlloc(from, CamRadius, dir, m_CamHits, want, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
         float best = want;
         for (int i = 0; i < n; i++)
