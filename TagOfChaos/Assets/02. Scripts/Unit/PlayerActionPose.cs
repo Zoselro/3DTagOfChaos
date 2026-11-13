@@ -11,6 +11,7 @@ public class PlayerActionPose : MonoBehaviour
     public const string ThrowState = "Throw";
     public const string SwingState = "Swing";
     public const string TrappedState = "Trapped";
+    public const string HammerHoldState = "HammerHold"; // 뿅망치를 든 동안 오른쪽 어깨에 걸친 자세(§74 P13)
     public const float ThrowSeconds = 0.8f;
     public const float ThrowRelease = 0.35f;  // 손에서 물풍선이 떠나는 순간
     public const float SwingSeconds = 0.7f;
@@ -23,6 +24,7 @@ public class PlayerActionPose : MonoBehaviour
     private int actionLayer = -2;
     private int trappedLayer = -2;
     private bool aiming;
+    private bool hammerHold;
     private bool trapped;
     private float oneShotUntil = -1f;
     private float actionWeight;
@@ -35,6 +37,10 @@ public class PlayerActionPose : MonoBehaviour
     private void Awake() => animator = GetComponent<Animator>();
 
     public void SetAiming(bool on) => aiming = on;
+
+    // 뿅망치를 든 동안 true(HeldItemPresenter가 모든 화면에서 정한다). 휘두르기·조준이 우선이다.
+    public void SetHammerHold(bool on) => hammerHold = on;
+    public bool IsHoldingHammer => hammerHold;
 
     public void SetTrapped(bool on) => trapped = on;
 
@@ -59,8 +65,14 @@ public class PlayerActionPose : MonoBehaviour
                 animator.Play(StunAimState, actionLayer, 0f);
                 actionState = StunAimState;
             }
-            if (!shot && !aiming) actionState = null;
-            actionWeight = Mathf.MoveTowards(actionWeight, shot || aiming ? 1f : 0f, BlendSpeed * Time.deltaTime);
+            else if (!shot && !aiming && hammerHold && actionState != HammerHoldState && animator.HasState(actionLayer, Animator.StringToHash(HammerHoldState)))
+            {
+                animator.Play(HammerHoldState, actionLayer, 0f);
+                actionState = HammerHoldState;
+            }
+            if (!shot && !aiming && !(hammerHold && actionState == HammerHoldState)) actionState = null;
+            bool holding = actionState == HammerHoldState;
+            actionWeight = Mathf.MoveTowards(actionWeight, shot || aiming || holding ? 1f : 0f, BlendSpeed * Time.deltaTime);
             animator.SetLayerWeight(actionLayer, actionWeight);
         }
         if (trappedLayer >= 0)

@@ -20,7 +20,7 @@ using Object = UnityEngine.Object;
 // - 걸리는 상자·장식·표시(무지개·로켓·쿠키 출발)는 가까운 빈 곳으로 옮긴다(출발 자리·술래방 둘레는 비움).
 public static class CarnivalRidesBuilder
 {
-    public const string ScenePath = "Assets/Scenes/Maps/Test/Test_CursedCandyCarnival.unity";
+    public const string ScenePath = "Assets/_CleanupBackup/2026-11-13/Test_CursedCandyCarnival.unity"; // §74 P19: 원본 틀은 백업 폴더로 옮김
     public const string RootName = "Rides";
     public const string CoasterName = "Coaster", EntranceName = "CoasterEntrance", CarouselName = "Carousel";
     public const string TrainPath = CoasterExitBuilder.Folder + "/CUR_CoasterTrain.fbx";

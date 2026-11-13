@@ -53,6 +53,7 @@ public enum EscapeNoticeKind : byte
     DecoyCatchRejected = 14, // 방장이 AI 잡기를 거절했다(요청한 술래에게만, §70.2.5 D5). 내용: AI 번호(문자열)
     ThrowRejected = 15,      // 방장이 던지기를 받지 않았다(던진 사람에게만, §71 T1). 내용: "던진 사람 번호|이유(ThrowReject)"
     RequestAck = 16,         // 방장이 요청을 받았다(보낸 사람에게만, §72 E3). 내용: 요청 번호(문자열)
+    BombRejected = 17,       // 사이렌 함정을 놓지 못했다(놓은 괴물에게만, §74 P12). 내용: 이유(EscapeRules.BombPlace, 문자열)
 }
 
 // 던지기를 받지 않은 이유(§71 T1). 번호는 알림에 실려 가므로 고정한다.

@@ -85,8 +85,20 @@ public static class RoomState
     public static int SpyCount() =>
         TryGetInt(NetKeys.RoomSpyCount, out int spies) ? Mathf.Max(0, spies) : GameSettings.Current.DefaultSpies;
 
+    // 마녀 타이머는 10분으로 고정(§74 P8 — 방 만들기·방 설정에서 고르던 칸을 없앴다). 오프라인 개발 방만 OfflineModeBootstrap 값으로 덮어쓴다.
+    public const int WitchTimerMinutes = 10;
+
     public static int TimeAttackSeconds() =>
-        TryGetInt(NetKeys.TimeAttackDuration, out int seconds) && seconds > 0 ? seconds : GameSettings.Current.DefaultTimeAttackMinutes * 60;
+        PhotonNetwork.OfflineMode && TryGetInt(NetKeys.TimeAttackDuration, out int seconds) && seconds > 0 ? seconds : WitchTimerMinutes * 60;
+
+    // 방 설정 창의 한 줄(Row_…)을 숨긴다 — 줄 이름이 없으면 그 칸만.
+    public static void HideSettingRow(Component field)
+    {
+        if (field == null) return;
+        Transform t = field.transform;
+        while (t != null && !t.name.StartsWith("Row_")) t = t.parent;
+        (t != null ? t.gameObject : field.gameObject).SetActive(false);
+    }
 
     public static int MonsterCount() => TryGetIntArray(NetKeys.MonsterActorNumbers, out int[] monsters) ? monsters.Length : 0;
 

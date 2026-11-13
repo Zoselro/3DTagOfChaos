@@ -129,7 +129,7 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
         if (!TryGetState(out EscapeState.Building b)) return;
         ItemSO material = manager.Catalog.Find(b.MaterialId);
         bool repaired = b.Active && b.ItemIndex >= 0;
-        if (glow != null && glow.activeSelf != b.Repaired) glow.SetActive(b.Repaired);
+        if (glow != null && glow.activeSelf) glow.SetActive(false); // 재료를 꽂아도 빛기둥은 켜지 않는다(§74 P2 — 꽂은 모습·지붕 표시로 충분)
         if (roof != null) roof.Show(LocalSeesRoof && b.Active && material != null, material, b.Repaired);
         ShowVariant(LocalSeesMaterials && material != null && b.Active ? material.ItemId : null);
 

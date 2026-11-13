@@ -243,12 +243,12 @@ public class DecoyBrain : MonoBehaviour
         }
     }
 
-    // 하던 일을 마쳤다: 아주 가끔 춤, 아니면 가중치로 다음 일.
+    // 하던 일을 마쳤다: 다른 행동과 같은 비중으로 춤(§74 P16, 연달아 추지 않음), 아니면 가중치로 다음 일.
     private void Next(Agent a, Vector3 pos, double now, bool prepare)
     {
         DanceCatalogSO dances = DanceCatalogSO.Current;
         bool justDanced = a.Act == DecoyRules.Activity.Dance;
-        if (!justDanced && a.Act != DecoyRules.Activity.None && dances != null && DecoyRules.RollDance(a.Rng.NextDouble())
+        if (!justDanced && a.Act != DecoyRules.Activity.None && dances != null && DecoyRules.RollDance(a.Rng.NextDouble(), a.P, prepare, manager.BuildingCount > 0, DecoyHideSpot.All.Count > 0)
             && dances.TryPickForAi(a.Rng.NextDouble(), out byte danceId))
         {
             Release(a);

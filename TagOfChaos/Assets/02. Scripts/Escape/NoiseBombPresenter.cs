@@ -59,13 +59,24 @@ public class NoiseBombPresenter : MonoBehaviour
         if (monster == null || !PlayerInput.SkillPressed || !EscapeManager.ActionsAllowed) return;
         if (LocalChargesLeft(manager) <= 0) { UiSoundCues.Error(); return; }
         Vector3 spot = PlaceSpot(monster);
-        if (!manager.IsNearMaterialBuilding(spot, EscapeAuthority.BombBuildingRadius))
-        {
-            UiSoundCues.Error();
-            ScreenToast.Show(EscapeTextsSO.Current.bombNeedsBuilding);
-            return;
-        }
+        EscapeRules.BombPlace verdict = EscapeRules.CanPlaceBomb(manager.State, manager.MaterialBuildingAt(spot, EscapeAuthority.BombBuildingRadius));
+        if (verdict != EscapeRules.BombPlace.Ok) { ShowRejected(verdict); return; } // 방장도 같은 규칙으로 다시 본다(§74 P12)
         manager.Request(EscapeOp.PlaceBomb, 0, 0, spot);
+        MonsterViewSwitcher.ShowActionLocal(); // 1인칭 촉수(§74 P15)
+    }
+
+    // 놓지 못한 이유(§74 P12): 재료 건물 밖·이번 판에 쓰지 않는 건물·재료가 꽂힌 건물·이미 함정이 있는 건물.
+    public static void ShowRejected(EscapeRules.BombPlace why)
+    {
+        EscapeTextsSO t = EscapeTextsSO.Current;
+        UiSoundCues.Error();
+        switch (why)
+        {
+            case EscapeRules.BombPlace.InactiveBuilding: ScreenToast.Show(t.bombInactiveBuilding); break;
+            case EscapeRules.BombPlace.MaterialInstalled: ScreenToast.Show(t.bombMaterialInstalled); break;
+            case EscapeRules.BombPlace.AlreadyThere: ScreenToast.Show(t.bombAlreadyThere); break;
+            default: ScreenToast.Show(t.bombNeedsBuilding); break;
+        }
     }
 
     private static IGameCharacter LocalMonster()
@@ -93,7 +104,8 @@ public class NoiseBombPresenter : MonoBehaviour
             return;
         }
         if (placePreview == null) placePreview = BalloonAimPreview.Create(dotted: true);
-        placePreview.ShowSpot(manager.SnapToGround(spot), 0.6f, distance <= EscapeAuthority.BombBuildingRadius ? CanPlace : CannotPlace);
+        bool ok = EscapeRules.CanPlaceBomb(manager.State, manager.MaterialBuildingAt(spot, EscapeAuthority.BombBuildingRadius)) == EscapeRules.BombPlace.Ok;
+        placePreview.ShowSpot(manager.SnapToGround(spot), 0.6f, ok ? CanPlace : CannotPlace);
     }
 
     // 내가 놓은 함정 위치(§69 F5): 벽 너머로도 화면에 빨간 표시(화면 밖이면 가장자리 화살표). 괴물 본인 화면만.
@@ -132,6 +144,7 @@ public class NoiseBombPresenter : MonoBehaviour
         Transform t = monster.gameObject.transform;
         ThrowAim aim = ThrowAim.FromCamera(Camera.main, MonsterHand(t), t.forward, bomb.Tool.Projectile);
         ProjectileSystem.Instance.Throw(bomb, -1, 0, aim, t);
+        MonsterViewSwitcher.ShowActionLocal(); // 1인칭 촉수(§74 P15)
         GameAudio.Play(SoundId.BalloonThrow);
         return true;
     }

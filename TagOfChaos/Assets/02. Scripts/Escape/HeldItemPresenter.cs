@@ -82,6 +82,8 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         shownId = id;
         if (model != null) Destroy(model);
         model = null;
+        if (pose == null) pose = GetComponent<PlayerActionPose>();
+        if (pose != null) pose.SetHammerHold(def != null && def.IsTool && def.Tool.Kind == ToolKind.Hammer); // 어깨에 걸친 자세(§74 P13)
         if (cookie != null) cookie.SetCarry(CarryReason.TwoHandedItem, def != null && def.LocksSlotSwitch);
         if (def == null) return;
 
@@ -129,11 +131,12 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         Quaternion rotation = body * holdRotation;
         if (isHammer)
         {
-            // 휘두르는 동안 자루가 가슴 → 두 손 방향을 따라 눕는다(머리 위로 들었다 앞 아래로 내리침). 들고만 있으면 세워 든다.
+            // 휘두르는 동안 자루가 가슴 → 두 손 방향을 따라 눕는다(머리 위로 들었다 앞 아래로 내리침).
+            // 들고만 있으면 오른쪽 어깨 위로 넘겨 망치 머리가 등 뒤에 오게 한다(§74 P13 — HammerHold 자세와 같은 방향).
             if (pose == null) pose = GetComponent<PlayerActionPose>();
             Vector3 chest = transform.position + Vector3.up * HammerPivotHeight;
             Vector3 dir = anchor - chest;
-            Vector3 up = pose != null && pose.IsSwinging && dir.sqrMagnitude > 0.01f ? dir.normalized : Vector3.up;
+            Vector3 up = pose != null && pose.IsSwinging && dir.sqrMagnitude > 0.01f ? dir.normalized : body * ShoulderCarryDirection;
             hammerUp = Vector3.Slerp(hammerUp, up, Mathf.Clamp01(Time.deltaTime * 30f));
             rotation = Quaternion.LookRotation(Vector3.Cross(body * Vector3.right, hammerUp), hammerUp) * holdRotation;
         }
@@ -152,6 +155,7 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
 
     private const float HeldBalloonSize = 0.38f;
     private const float HammerPivotHeight = 0.75f;
+    private static readonly Vector3 ShoulderCarryDirection = new Vector3(0.305f, 0.294f, -0.906f).normalized; // 몸 기준(오른쪽·위·뒤) — Blender HammerHold 자세에서 잰 자루 방향
     private bool isHammer;
     private PlayerActionPose pose;
     private Vector3 hammerUp = Vector3.up;

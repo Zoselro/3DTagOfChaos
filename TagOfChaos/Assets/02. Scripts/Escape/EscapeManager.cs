@@ -117,6 +117,22 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public const float FloorGap = 8f;
     public bool IsNearMaterialBuilding(Vector3 pos, float radius) => NearestMaterialBuilding(pos, out _) <= radius;
 
+    // 둘레(radius) 안의 가장 가까운 재료 건물 번호(같은 층), 없으면 -1(§74 P12).
+    public int MaterialBuildingAt(Vector3 pos, float radius)
+    {
+        int best = -1;
+        float bestDistance = radius;
+        for (int b = 0; b < buildings.Length; b++)
+        {
+            if (buildings[b] == null) continue;
+            Vector3 p = buildings[b].RepairPoint;
+            if (Mathf.Abs(p.y - pos.y) > FloorGap) continue;
+            float d = Vector2.Distance(new Vector2(p.x, p.z), new Vector2(pos.x, pos.z));
+            if (d <= bestDistance) { bestDistance = d; best = b; }
+        }
+        return best;
+    }
+
     public float NearestMaterialBuilding(Vector3 pos, out Vector3 repairPoint)
     {
         float best = float.MaxValue;
@@ -507,6 +523,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         {
             authority.Adopt(State);
             authority.Reevaluate();
+            authority.RemoveDecoysOfAbsentPlayers(); // 이전 방장이 나가며 못 지운 AI(§74 P17)
         }
         Debug.Log($"[EscapeManager] Took over as master (revision {(State != null ? State.Revision : -1)}, {deferred.Count} deferred request(s)).");
         for (int i = 0; i < deferred.Count; i++) authority.Handle(deferred[i]);
@@ -542,6 +559,10 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
                 else if ((EscapeNoticeKind)kind == EscapeNoticeKind.RequestAck)
                 {
                     if (int.TryParse(n[1] as string, out int seq)) outbox.Remove(seq); // 방장이 받았다(§72 E3)
+                }
+                else if ((EscapeNoticeKind)kind == EscapeNoticeKind.BombRejected)
+                {
+                    if (byte.TryParse(n[1] as string, out byte why)) NoiseBombPresenter.ShowRejected((EscapeRules.BombPlace)why); // §74 P12
                 }
                 else if ((EscapeNoticeKind)kind == EscapeNoticeKind.DecoyCatchRejected)
                 {

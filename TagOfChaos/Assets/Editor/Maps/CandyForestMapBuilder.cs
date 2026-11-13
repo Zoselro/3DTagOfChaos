@@ -16,7 +16,7 @@ public static class CandyForestMapBuilder
     public const string MapName = "CandyForest";
     public const string ScenePath = "Assets/Scenes/Maps/" + MapName + ".unity";
     public const string LayoutPath = "Assets/03. SO/Maps/CandyForestLayout.asset";
-    private const string SourceScene = "Assets/Scenes/Maps/Test/Test_CandyForest.unity";
+    private const string SourceScene = "Assets/_CleanupBackup/2026-11-13/Test_CandyForest.unity"; // §74 P19: 원본 틀은 백업 폴더로 옮김
     private const string MenuRoot = "Tools/TagOfChaos/CandyForest/";
 
     private static readonly string[] KeepInMap = { "Background", WitchPath.FarBackdropName, "Ground", "MonsterRoom" };

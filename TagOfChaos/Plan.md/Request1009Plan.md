@@ -8987,3 +8987,482 @@ if (!RoomState.TryGetDouble(NetKeys.PrepareEndTime, out _) &&
 | F7 | 멈춤 감시 보강: 단계 표시(`StallWatch.Mark` — 맵 시작 각 단계·`[LoadTiming]`·음성 채팅 마이크 놓기), 실행 옵션 `-novoice`(음성 채팅 끄기, 시험용) | ✅ |
 | P | 4차 시험(v020, 1050 방장 + 3070 Ti 창 3개, 6판 — 빵집·놀이공원·사탕 숲 2·공장·진저브레드): 모든 판에서 `[Stall]` 없음, 맵 열림 → 첫 프레임 0.0~0.1초, 연결 끊김 없음, 괴물 도착 1/1·모두 도착 4/4. 방장 맵 로드 0.4~6.4초, 3070 Ti 한 PC 3창은 0.4~47.7초(진저브레드가 가장 김 — 창 3개가 같은 디스크로 맵을 읽음). 판은 괴물 창이 방을 나가서 끝남(사용자 조작) | ✅ |
 | F8 | `[NetJump]` 오탐 제거: 대기실에 새로 들어온 캐릭터의 첫 위치 패킷(생성 자리 → 실제 자리, 80 m대)은 2초 동안 세지 않는다 | ✅ |
+
+---
+
+## 74. 2026-11-13 요청 — 플레이 피드백 20건 + 질문 2건(계획)
+
+> 요청: 물풍선·섬광탄 포물선 제거 / 재료 꽂았을 때 빛기둥 제거 / 스파이 로켓에 다른 재료가 끼워짐 / 괴물도 필요한 재료 알기 / 마우스 감도 설정 / 인원이 다 왔을 때 준비 시간 시작 / 초록 룬 자리에 분홍 룬 / 마녀 타임 설정 삭제(10분 고정) / 공구상자 그림·이름 없음 / 수리키트·공구상자 모델 구분 / 사탕 숲 상자가 수풀에 가림 / 사이렌 함정 건물당 1개·발동 위치 표시 / 뿅망치 드는 자세 / 헬리콥터 모자 등 Blender 모델 적용 확인 / 괴물 1인칭 촉수 숨김 / AI 춤 확률 / 나간 사람의 AI가 남음 / 무너진 건물 조각이 서서히 사라지게 / 안 쓰는 씬 삭제 + 질문 2건.
+> 이 절은 계획이다(코드·에셋을 바꾸지 않았다). 번호는 요청 순서대로 P1~P20으로 다시 붙였다.
+
+### 74.0 요약
+
+| # | 요청 | 원인·현재 코드 | 방법 | Blender |
+| --- | --- | --- | --- | --- |
+| P1 | 물풍선·섬광탄 포물선 제거 | 점선 미리보기는 §71에서 이미 뺐다(v020). 남은 것은 옛 방식 연출 `ToolShotFx.ThrowBalloon/ThrowCanister`(포물선으로 날아가는 가짜 물체)인데 지금 투척 경로에서는 불리지 않는다 | Play Mode로 다시 확인 + 안 쓰는 옛 포물선 코드 정리(Q1) | — |
+| P2 | 재료 꽂았을 때 빛기둥 제거 | `QuadrantBuilding.Refresh`가 수리되면 `ESC_Glow`를 켠다 | 켜지 않게(지붕 표시 `RoofMarker`는 유지) | — |
+| P3 | 스파이 로켓에 다른 재료가 끼워짐 | 사탕 숲·진저브레드 레시피의 로켓 칸 2개가 **4색 모두** 받는다(`accepts` 4개). 로켓에는 첫 번째 색 모양만 보인다 | 판 시작 때 칸마다 재료 1개로 확정(서로 다른 색, 쿠키 건물이 안 쓰는 색 우선) | — |
+| P4 | 괴물도 필요한 재료 알기 | `EscapeHud.RefreshRequirements`가 괴물에게는 "?"만 보인다 | 괴물에게도 건물 재료 그림·이름·진행도(스파이 로켓 재료는 제외) | — |
+| P5 | 마우스 감도 설정 | 감도가 코드 상수(`Camera_Ctrl` 5.0/2.4, `MonsterFirstPersonCamera` 3/2) | `PlayerInput`에 배율 + 설정 창 "조작" 탭에 슬라이더(PlayerPrefs) | — |
+| P6 | 모두 맵에 온 뒤 준비 시간 | §73.10에서 멈춤 원인을 찾기 전에 준비 끝 시각을 "시작 + 18초"로 되돌려 둠. 멈춤 원인(§73.11)은 고쳤다 | 시작 때 넉넉한 임시 시각 → 모두 도착하면 "지금 + 15초"(이미 만든 `StartPrepareWhenEveryoneArrives`) + 기다리는 동안 카운트다운 숨김 | — |
+| P7 | 초록 룬 자리에 분홍 룬 | `ITEM_Rune_Green.fbx`의 재질이 `ME_Rune_Pink`(분홍) 그대로 | 초록 재질 `ME_Rune_Green`을 만들어 모델 재질 연결 교체. 옛 분홍 에셋 정리(Q7) | — |
+| P8 | 마녀 타임 설정 삭제·10분 고정 | 방 만들기·방 설정에 마녀 타이머 칸, `NetKeys.TimeAttackDuration` | 상수 `WitchTimerMinutes = 10`, 칸 숨김, 방 속성은 쓰지 않음 | — |
+| P9 | 공구상자 그림·이름 없음 | 스파이 화면에서 `IsUnknownToLocal`이 공구상자를 "모르는 재료"로 처리(회색 칸 + "?") | 스파이 공구상자(`recipe.SpyToolbox`)는 아는 물건으로 | — |
+| P10 | 수리키트·공구상자 모델이 같음 | `RepairKit`의 모델이 `ITEM_Toolbox.fbx` | Blender로 수리키트 모델 새로(사진 승인 뒤 적용) | ✅ |
+| P11 | 사탕 숲 상자가 수풀에 가림 | 상자 자리(`chestAnchors`)와 수풀 소품 겹침 | 겹친 자리 찾기 → 옮길 배치도 → 승인 뒤 적용 | — |
+| P12 | 사이렌 함정 건물당 1개·발동 위치 표시 | `PlaceBomb`은 건물 둘레면 몇 개든 놓임. 발동 표시는 5초짜리 `AlarmBeacon` | 건물당 1개·재료가 꽂힌 건물엔 불가, 발동한 철창은 풀릴 때까지 벽 너머로 보이는 빛기둥 | — |
+| P13 | 뿅망치 드는 자세 | 두 손 아이템 공통 자세(쿠키 들기 = 머리 위)를 써서 망치가 머리를 뚫는다 | Blender로 "망치 들기" 자세 클립 + 손잡이를 두 손에 맞춤 | ✅ |
+| P14 | 헬리콥터 모자 등 모델 적용 확인 | 손에 든 모델은 Blender 모델이 맞다. **쓴 모습**(`HatFlight.BuildHat`)과 **놓인 사이렌 함정**(`NoiseBombView`)이 기본 도형으로 그려진다 | 두 곳을 Blender 모델로 교체, 7종 전부 점검표 | (프로펠러 분리가 필요하면 ✅) |
+| P15 | 괴물 1인칭 촉수 숨김 | `MonsterFirstPersonLimbs`가 팔·촉수를 늘 그린다 | 촉수는 잡기·돌진·스킬 동안만(팔은 Q15) | — |
+| P16 | AI 춤 확률 | `DecoyRules.DanceChance = 0.03` 따로 굴림 | 춤을 배회·쉬기·방문·숨기와 같은 급으로(Q16) | — |
+| P17 | 나간 사람의 AI가 남음 | `EscapeAuthority.OnPlayerLeft`에 `RemoveDecoysOf`가 없다(잡혔을 때만 지움) | 나갈 때도 지움 | — |
+| P18 | 무너진 조각이 서서히 사라지게 | `DestructionPresenter.Collapse` 끝에서 조각이 땅속으로 가라앉음(`SinkDepth 2.5`) | 가라앉지 않고 투명해지며 사라짐 | — |
+| P19 | 안 쓰는 씬 삭제 | `Assets/Scenes/Maps/Test/`의 Test_ 씬 5개 중 4개가 빌드에서 꺼져 있음 | 4개를 백업 폴더로 옮김(확인 뒤) | — |
+| P20 | (참고) 맵 목록 | `GameSettings.gameMapScenes`에 `Test_HauntedBakery` 포함 — 유지(요청대로) | 변경 없음 | — |
+
+### 74.1 P1 물풍선·섬광탄 포물선
+
+- 점선 궤적·조준점: §71 B1에서 `ToolUser.UpdateThrowPreview`를 지웠고, 수색 폭탄도 B3에서 지웠다. v020 빌드에 들어 있다.
+- 지금 투척은 `ProjectileSystem`이 실제 물리 궤적으로 날린다. 끝나면 `ToolHit`에 투사체 번호(`d[7]`)가 실려 와 아래 옛 연출을 건너뛴다.
+
+```csharp
+// ToolHitReceiver.Handle — 옛 방식(던질 때 대상을 정하던 시절)의 포물선 연출. 지금은 d[7](투사체 번호)가 늘 있어 오지 않는다.
+if (balloon && user != null) { ToolShotFx.ThrowBalloon(...); return; }
+if (item.Tool.Kind == ToolKind.Flashbang && user != null) { ToolShotFx.ThrowCanister(...); return; }
+```
+
+- 할 일:
+  - Play Mode에서 물풍선·섬광탄·수색 폭탄을 던지며 선·가짜 물체가 하나도 없는지 다시 확인.
+  - 위 두 갈래와 `ToolShotFx.ThrowBalloon/ThrowCanister`, `ToolAim.ArcPoint/ApexHeight/FlightSeconds`, `BalloonAimPreview.Show/ShowArea/ShowPath`, `Projectile/ThrowPreview.cs`를 지운다. 쓰는 곳이 없는지 grep으로 확인한 뒤 지운다.
+  - `BalloonAimPreview`는 녹음기 고리(`ShowRingOnly`)·사이렌 자리(`ShowSpot`)에 쓰이므로 남긴다.
+- **Q1**: 혹시 "포물선"이 날아가는 **궤적 자체**(직선으로 날아가게)를 뜻하신 건지? 미리보기 선을 뜻하신 거라면 이미 반영된 상태다.
+
+### 74.2 P2 재료 꽂았을 때 빛기둥
+
+```csharp
+// QuadrantBuilding.Refresh (지금)
+if (glow != null && glow.activeSelf != b.Repaired) glow.SetActive(b.Repaired);
+// → 바꿈: ESC_Glow는 켜지 않는다(지붕 표시가 가동 여부를 보여 준다, §69 D3)
+if (glow != null && glow.activeSelf) glow.SetActive(false);
+```
+
+- 지붕 위 재료 아이콘·기둥(`RoofMarker`, 가동되면 `#done` 모양)은 그대로 둔다.
+- 탈출구가 열렸을 때의 초록 빛기둥(§37)은 이 변경과 무관하다.
+
+### 74.3 P3 스파이 로켓 칸 재료 확정
+
+- 지금: `EscapeAuthority.Initialize`가 레시피의 `accepts` 전체를 칸에 넣는다. 사탕 숲·진저브레드는 두 칸 모두 4색을 받는다. 그래서 로켓에 빨간 모양이 보여도 파란 것이 들어간다. 같은 색 2개로도 두 칸이 찬다.
+
+```csharp
+// Initialize (바꿈) — 칸마다 재료 하나로 확정. 이미 고른 색·쿠키 건물이 쓰는 색은 뒤로 미룬다.
+var taken = new HashSet<string>();
+foreach (EscapeRecipeSO.RocketSlot r in recipe.RocketSlots)
+{
+    List<string> options = /* r.accepts의 ItemId */;
+    if (options.Count == 0) continue;
+    string pick = EscapeRules.PickRocketMaterial(options, taken, activeIds, rng.Next()); // 순수 계산(시험)
+    taken.Add(pick);
+    s.RocketSlots.Add(new EscapeState.Slot { Accepts = new[] { pick }, ItemIndex = -1, Anchor = s.RocketSlots.Count });
+    if (!activeIds.Contains(pick) && spies > 0) spyExtras.Add(catalog.Find(pick));
+}
+```
+
+- `PickRocketMaterial` 우선순위: ① 아직 안 고른 것 중 쿠키 건물이 안 쓰는 색 → ② 아직 안 고른 것 → ③ 아무거나.
+- 로켓 모양(`SpyRocket.Refresh`의 `Accepts[0]`), HUD(`AddRocketEntries`), 안전장치(`RestoreMissingMaterials`의 `slot.Accepts[0]`)는 그대로 맞는다.
+- 초콜릿 공장·놀이공원·빵집은 이미 칸마다 1개라 변화 없다.
+- 시험: 칸마다 `Accepts.Length == 1`, 두 칸이 서로 다른 재료, 다른 색은 `RocketInsert` 거절.
+
+### 74.4 P4 괴물도 필요한 재료 알기
+
+```csharp
+// EscapeHud.RefreshRequirements (바꿈)
+bool seesMaterials = !RoomState.IsLocalSpy(); // 괴물도 본다(스파이만 모름). 스파이 로켓 재료는 스파이 화면에만(AddRocketEntries)
+```
+
+- 괴물 화면 오른쪽 목록: 활성 건물마다 재료 그림·이름·진행도 %(쿠키와 같은 줄).
+- **Q4**: 건물 겉모습(룬 색 건물 `ShowVariant`)도 괴물에게 보이게 할까? 지금은 쿠키에게만 색 건물, 괴물·스파이는 기본 건물이다. 지붕 아이콘은 이미 괴물에게 보인다. 권장: 목록만.
+
+### 74.5 P5 마우스 감도
+
+```csharp
+// Core/PlayerInput.cs
+public const string SensitivityKey = "MouseSensitivity";
+public const float MinSensitivity = 0.2f, MaxSensitivity = 3f, DefaultSensitivity = 1f;
+private static float sensitivity = -1f;
+public static float MouseSensitivity
+{
+    get { if (sensitivity < 0f) sensitivity = Mathf.Clamp(PlayerPrefs.GetFloat(SensitivityKey, DefaultSensitivity), MinSensitivity, MaxSensitivity); return sensitivity; }
+    set { sensitivity = Mathf.Clamp(value, MinSensitivity, MaxSensitivity); PlayerPrefs.SetFloat(SensitivityKey, sensitivity); }
+}
+public static Vector2 CameraRotateDelta => IsMenuOpen ? Vector2.zero
+    : new Vector2(Input.GetAxis(Bindings.MouseXAxis), Input.GetAxis(Bindings.MouseYAxis)) * MouseSensitivity + EditorLook;
+```
+
+- 쿠키(`Camera_Ctrl`)·괴물(`MonsterFirstPersonCamera`) 모두 `LookDelta`를 쓰므로 한 곳에서 적용된다.
+- 설정 창: `SettingsMenu` 프리팹(에디터 도구 `SettingsMenuInstaller`가 만든다)의 조작키 탭에 "마우스 감도" 줄을 추가한다 — 슬라이더 + 숫자(0.2~3.0, 기본 1.0). 새 스크립트 `UI/MouseSensitivityRow.cs`. 문구는 프리팹(한국어).
+- "설정 초기화" 때 감도도 1.0으로.
+- 시험: 범위 고정·저장·초기화, 배율이 `CameraRotateDelta`에 곱해지는지.
+
+### 74.6 P6 모두 맵에 온 뒤 준비 시간
+
+- 지금(§73.10 되돌림): 시작 누를 때 `PrepareEndTime = 지금 + 3 + 15`. 늦게 온 사람은 맵에 오자마자 판이 시작된다.
+- 멈춤 원인(§73.11)을 고쳤으므로 원래 계획(§73 L4)대로 한다.
+
+```csharp
+// GameStartAuthority.TryStart (바꿈) — 임시로 넉넉히
+{ NetKeys.PrepareEndTime, PhotonNetwork.Time + settings.SceneLoadGrace + RoomLifecycleWatcher.MaxArrivalWait + settings.PrepareSeconds },
+
+// RoomLifecycleWatcher.StartPrepareWhenEveryoneArrives (이미 있음) — 모두 도착(또는 45초 지남)이면 지금 + PrepareSeconds로 당김
+if (MonsterArrival.ShouldShortenPrepare(prepareEnd, PhotonNetwork.Time, prepare))
+    AuthorityProps.SetRoom(new Hashtable { { NetKeys.PrepareEndTime, PhotonNetwork.Time + prepare } });
+```
+
+- 기다리는 동안 화면: 위쪽 "다른 참가자를 기다리는 중 (n/4)"(이미 있음). 준비 카운트다운(`PhaseCountdownDisplay`)은 기다리는 동안 숨긴다 — 63초부터 세는 숫자가 보이지 않게.
+
+```csharp
+// PhaseCountdownDisplay.Update (추가)
+if (phase == CountdownPhase.Prepare && LoadingOverlay.Waiting) { Hide(); return; }
+```
+
+- 술래방 문(`MonsterRoomDoor`)·AI(`DecoyBrain` 준비 상태)는 `GamePhase.Prepare` 동안 그대로다. 변경 없음.
+- 시험: 순수 계산(당기기만·늘리지 않음)은 이미 있음. 두 대 시험에서 늦게 온 쪽도 15초를 받는지 `[LoadTiming] players in the map 4/4` 뒤 남은 시간으로 확인.
+
+### 74.7 P7 초록 룬이 분홍으로 보임
+
+- 확인: `ITEM_Rune_Green.fbx`의 재질 3개 중 룬 부분이 `ME_Rune_Pink`(1.0, 0.35, 0.8). §69에서 아이템 이름·아이콘은 초록으로 바꿨지만 모델 재질 연결이 분홍 그대로다. 상자 위·손·재료 꽂는 곳 모두 이 모델을 쓴다.
+- 방법(에디터 도구 `Editor/Escape/RuneGreenFix.cs`, 다시 실행해도 같은 결과):
+  - `ME_Rune_Green.mat` 생성(다른 룬 재질과 같은 셰이더·발광, 색만 초록).
+  - `ModelImporter.AddRemap`으로 `ITEM_Rune_Green.fbx`의 `ME_Rune_Pink` → `ME_Rune_Green`.
+- 건물 겉모습 `Var_Rune_Green`은 이미 초록 텍스처(`M_GIN_RUNE_Green_Exterior`)다. 메시 이름만 `GIN_RUNE_Pink_*`(이름일 뿐 겉모습은 초록).
+- **Q7**: 안 쓰는 옛 분홍 에셋(`ITEM_Rune_Pink.fbx`, `Icon_Rune_Pink.png`, `ME_Rune_Pink.mat`, `GIN_RUNE_Pink/` 폴더의 원본 FBX·텍스처)을 백업 폴더로 옮길까? `GIN_RUNE_Pink_Floorless` 등 생성 메시는 초록 건물이 쓰고 있어 남긴다. 권장: 참조가 0인 것만 `_CleanupBackup/2026-11-13/`로.
+
+### 74.8 P8 마녀 타임 10분 고정
+
+```csharp
+// Core/GameRules.cs(새) 또는 RoomState
+public const int WitchTimerMinutes = 10;
+// RoomState (바꿈)
+public static int TimeAttackSeconds() => GameRules.WitchTimerMinutes * 60; // 방 속성 TimeAttackDuration은 더 읽지 않는다
+```
+
+- 방 만들기(`LobbyController` 273~280행): `witchTimerField`를 읽지 않고, `NetKeys.TimeAttackDuration`을 쓰지 않는다. 칸 오브젝트는 `SetActive(false)`.
+- 방 설정(`RoomSettingsMenu` 42·59행): 마녀 타이머 칸 숨김. `RoomSettingsAuthority.Request/TryApply`의 `witchMinutes` 인자는 지운다. 이벤트 내용은 `[players, spies, 0, regionIndex]`로 길이를 유지한다(옛 형식과 호환).
+- `GameSettingsSO`의 min/max/defaultTimeAttackMinutes, `RoomSettingField.Kind.WitchTimerMinutes`, `RegionMove`의 값 옮기기는 지운다.
+- 대기실·방 목록에 마녀 시간 표시가 있으면 함께 정리(구현 때 grep).
+- 오프라인 시험 도구(`OfflineModeBootstrap.witchTimeSeconds`)는 개발용이라 남긴다(오프라인에서만 덮어씀).
+- 시험: 기존 방 설정 시험 수정 + `TimeAttackSeconds() == 600`.
+
+### 74.9 P9 공구상자 그림·이름
+
+```csharp
+// EscapeHud.IsUnknownToLocal (지금) — 스파이는 건물 재료를 모른다. 수리키트·로켓 재료만 예외
+RoomState.IsLocalSpy() && item.Category == ItemCategory.Material && item != manager.Catalog.RepairKit && !RocketAccepts(...)
+// → 예외 추가: 스파이에게 주는 공구상자(레시피 spyToolbox)
+&& item != manager.Recipe.SpyToolbox
+```
+
+- 공구상자(`Toolbox`)는 분류가 재료(Material)라, 스파이 화면에서는 회색 칸 + "?"로 나왔다. 에셋의 아이콘(`Icon_Toolbox`)·이름("공구상자")은 정상이다.
+- 놀이공원처럼 공구상자가 **건물 재료이기도 한** 맵에서는 스파이가 그 재료를 알게 된다(스파이도 받는 물건이라 어쩔 수 없음).
+- 쿠키 화면에서도 안 보였다면 다른 원인이다 — 구현 때 쿠키·스파이 둘 다 Play Mode로 확인한다.
+
+### 74.10 P10 수리키트 모델(Blender)
+
+- 지금: `RepairKit.modelPrefab = ITEM_Toolbox.fbx`(공구상자와 같은 모델, 0.73 × 0.57 × 0.36 m).
+- Blender MCP로 수리키트 새 모델: 한 손 아이템이라 작게(약 0.3 m). 안: 빨간 십자·렌치 그림이 있는 작은 천 가방/상자. 공구상자(금속 상자)와 실루엣이 다르게.
+- 순서: 모델 → 사진 → **승인** → `ITEM_RepairKit.fbx` 내보내기(100 MB 미만) → `RepairKit.modelPrefab` 교체 → 아이콘은 기존 `Icon_RepairKit` 유지(모양이 많이 다르면 새로 찍음).
+
+### 74.11 P11 사탕 숲 상자가 수풀에 가림
+
+- 방법:
+  1. 에디터 스크립트로 `EscapeManager.chestAnchors` 각 자리에서 반경 1.5 m 안의 수풀 렌더러(이름 `CF_Bush*` 등)·경계 상자 겹침을 찾는다.
+  2. 겹친 자리마다 옮길 후보(가까운 빈 바닥, NavMesh 위, 다른 상자와 6 m 이상)를 계산한다.
+  3. **배치도 그림(전·후)을 보여 드리고 승인받은 뒤** 씬에 적용한다(규칙).
+- 다른 맵 3개도 같은 검사를 돌려 결과만 보고한다(옮기는 것은 요청하신 사탕 숲만).
+- **Q11**: 상자를 옮기는 대신 가리는 수풀을 치우는 쪽이 나은 자리도 있을 수 있다 — 배치도에서 자리별로 제안하겠다.
+
+### 74.12 P12 사이렌 함정
+
+현재:
+- `PlaceBomb`: 재료 건물 둘레(`BombBuildingRadius`)면 놓인다. 한 건물에 여러 개 가능. 재료가 꽂혀 있어도 놓인다.
+- 발동(`DetonateBombsAt`): 수리 시작 때 철창. 괴물 화면에는 `AlarmBeacon` 5초.
+
+바꿈:
+
+```csharp
+// EscapeState.Bomb (상태 버전 +1)
+public int Site;   // 놓은 재료 건물 번호(-1 = 옛 상태)
+
+// EscapeAuthority.PlaceBomb
+int site = manager.NearestMaterialBuilding(pos, BombBuildingRadius);       // 없으면 -1
+if (site < 0) return false;
+EscapeState.Building b = State.Buildings[site];
+if (b.ItemIndex >= 0 || b.Repaired) return RejectBomb(actor, BombReject.MaterialInstalled); // 재료가 꽂힌 건물엔 불가
+foreach (EscapeState.Bomb other in State.Bombs)
+    if (!other.Spent && other.Site == site) return RejectBomb(actor, BombReject.AlreadyThere); // 건물당 1개(철창 선 것 포함)
+State.Bombs.Add(new EscapeState.Bomb { ..., Site = site, Building = -1 });
+```
+
+- 스파이가 재료를 빼면(`Dismantle`) `ItemIndex = -1`이 되어 다시 놓을 수 있다 — 상태만 보므로 따로 처리할 것이 없다.
+- 거절 이유는 괴물에게 알림(`EscapeNotice` → 문구 2개: "이 건물에는 이미 함정이 있어요" / "재료가 꽂힌 건물에는 놓을 수 없어요"). 놓기 전 미리보기 고리(`NoiseBombPresenter.placePreview`)도 같은 조건으로 빨강/초록.
+- 발동 위치 표시: 철창이 서 있는 동안(`bomb.Caged`) 괴물 화면에 그 건물 위 빨간 빛기둥. 탈출구 빛기둥과 같은 셰이더(`TagOfChaos/Beacon`, 벽 너머로 보임). 철창이 부서지면(Spent) 사라진다.
+
+```csharp
+// SirenTrapPresenter.Sync (추가) — 괴물 본인 화면만
+foreach (EscapeState.Bomb b in s.Bombs)
+    if (b.Caged && RoomState.IsLocalMonster()) beacons.Show(b.Id, manager.BuildingRepairPoint(b.Building), CageBeaconColor);
+beacons.HideExcept(/* 지금 선 철창 */);
+```
+
+- 5초짜리 `AlarmBeacon`은 지운다(위 표시로 대체). 사이렌 소리·화면 가장자리 표시는 유지.
+- **Q12**: 발동 표시는 괴물 **모두**에게(괴물 2명일 때)? 지금 알림은 모든 괴물에게 간다. 권장: 모든 괴물.
+- 시험: 건물당 1개, 꽂힌 건물 거절, 뺀 뒤 가능, 총 개수 제한(`BombMaxCharges = 3`) 유지.
+
+### 74.13 P13 뿅망치 드는 자세(Blender)
+
+- 지금 `HeldItemPresenter`: 두 손 아이템은 쿠키를 들 때와 같은 상체 자세(Carry 레이어, 두 손이 머리 위)를 쓰고, 망치는 두 손 가운데에서 가슴을 축으로 세운다. 3배 크기라 머리를 뚫는다.
+- 바꿈:
+  - Blender: 쿠키 뼈대(4종 공용 Humanoid)에 **"HammerHold"** 상체 자세 클립 — 두 손으로 손잡이를 쥐고 오른쪽 어깨에 걸친 자세(머리 옆·뒤로 망치 머리). 휘두르기(`Swing`)와 자연스럽게 이어지게 시작 자세를 맞춘다. 사진 승인 뒤 내보내기.
+  - Unity: Animator 상체 레이어에 `HammerHold` 상태(파라미터 `HoldKind`), `PlayerAnimationDriver.SetCarry(CarryReason.TwoHandedItem)`에서 망치면 이 자세로.
+  - `HeldItemPresenter`: 망치는 **손잡이 아래쪽 두 점**(오른손·왼손)을 손뼈에 맞춘다 — 오른손 위치에 손잡이 끝, 방향은 오른손 → 왼손.
+
+```csharp
+// HeldItemPresenter.LateUpdate (망치) — 가슴 축 대신 두 손을 잇는 선에 손잡이를 놓는다
+Vector3 r = rightHand.position, l = leftHand.position;
+Quaternion rot = Quaternion.LookRotation((l - r).normalized, transform.up) * HammerGripRotation;
+socket.SetPositionAndRotation(r + rot * HammerGripOffset, rot);
+```
+
+- 확인: 4종 캐릭터 모두 머리·몸을 뚫지 않는지 사진(앞·옆).
+
+### 74.14 P14 Blender 아이템 모델 7종 적용 점검
+
+| 아이템 | 손에 든 모델 | 쓰는 중/놓인 모습 | 상태 |
+| --- | --- | --- | --- |
+| 헬리콥터 모자 | `ITEM_HeliHat.fbx` ✅ | `HatFlight.BuildHat`가 **구·막대 도형**으로 그림 | ❌ 고칠 것 |
+| 사이렌 함정 | `ITEM_NoiseBomb.fbx` ✅ | `NoiseBombView`가 **구 도형**으로 그림 | ❌ 고칠 것 |
+| 인라인 스케이트 | `ITEM_Skates.fbx` ✅ | `SkateVisual`(발) — §69에서 Blender 발 스케이트. 도형 fallback 2곳 남음 | 확인 |
+| 호박 마차 | `ITEM_Pumpkin.fbx` ✅ | 마차 모델(§68.7) | 확인 |
+| 접착 녹음기 | `ITEM_Recorder.fbx` ✅ | AI에 붙은 모습 | 확인 |
+| 해체 도구 | `ITEM_Dismantle.fbx` ✅ | — | 확인 |
+| 수색 폭탄 | `ITEM_SearchBomb.fbx` ✅ | 투사체 `PROJ_SearchBomb.fbx` ✅ | ✅ |
+
+```csharp
+// HatFlight.BuildHat (바꿈) — 아이템 모델을 머리에 씌우고, 이름이 Propeller/Blade로 시작하는 노드를 돌린다
+ItemSO def = EscapeCatalogSO.Current.Find("HeliHat");
+GameObject model = EscapeVisuals.CreateItemModel(def, hat);          // 지금 손에 드는 것과 같은 모델
+propeller = EscapeCue.FindDeep(model.transform, "Propeller") ?? model.transform;
+```
+
+- 모자 모델에 프로펠러가 따로 떨어진 노드가 없으면 Blender에서 `Propeller` 노드로 나눠 다시 내보낸다(모양은 그대로).
+- 놓인 사이렌 함정도 `ITEM_NoiseBomb` 모델 + 깜빡이는 빨간 불(기존 불빛 유지).
+- 나머지 4종은 Play Mode에서 사진으로 확인하고, 다른 곳이 나오면 같은 방식으로 고친다.
+
+### 74.15 P15 괴물 1인칭 촉수
+
+- 지금: `MonsterViewSwitcher`가 1인칭일 때 `MonsterFirstPersonLimbs`(팔 + 촉수 한 메시)를 늘 켠다.
+- 바꿈: 메시를 **팔 / 촉수 둘로** 만든다(`IsLimbBone`을 `IsArmBone`·`IsTentacleBone`으로 나눔). 촉수 렌더러는 동작 중에만 켠다.
+
+```csharp
+// MonsterViewSwitcher (추가)
+bool acting = monster.IsGrabKilling || monster.CurrentMoveState == MonsterMoveState.TentacleDashWindup
+           || monster.CurrentMoveState == MonsterMoveState.TentacleDash || Time.time < actionShownUntil; // 스킬(수색 폭탄·함정) 0.8초
+foreach (SkinnedMeshRenderer t in tentacleRenderers) if (t.gameObject.activeSelf != (firstPerson && acting)) t.gameObject.SetActive(firstPerson && acting);
+```
+
+- 수색 폭탄 던지기·사이렌 함정 놓기 때 `MonsterViewSwitcher.ShowAction(0.8f)`를 부른다.
+- **Q15**: 팔(발톱 손)도 평소에 숨길까, 팔은 늘 보이게 둘까? 요청은 "촉수"라서 권장은 팔 유지·촉수만 숨김.
+
+### 74.16 P16 AI 춤 확률
+
+```csharp
+// DecoyRules (지금) — 행동을 고르기 전에 3 %로 따로 굴림
+public const float DanceChance = 0.03f;
+// → 바꿈: 춤을 다른 행동과 같은 급으로. 춤 몫 = 다른 행동 몫의 평균(성격마다 다름) → 대략 5번에 1번
+public static Activity PickActivity(Personality p, double roll, bool prepare, bool hasBuildings, bool hasHideSpots, bool canDance)
+{
+    int visit = ..., hide = ...;
+    int kinds = 2 + (visit > 0 ? 1 : 0) + (hide > 0 ? 1 : 0);
+    int dance = canDance ? Mathf.Max(1, (p.Wander + p.Rest + visit + hide) / kinds) : 0;
+    int total = p.Wander + p.Rest + visit + hide + dance;
+    ...
+    if ((pick -= dance) < 0) return Activity.Dance;
+}
+```
+
+- `canDance` = 방금 춤추지 않았고 춤 목록이 있음(연달아 춤추지 않게 — 지금 규칙 유지). 준비 시간에도 춤출 수 있음(지금과 같음).
+- **Q16**: "동일하게"를 위처럼 **다른 행동과 같은 비중(약 20 %)**으로 이해했다. 맞는지?
+- 시험: 굴림 분포(각 행동이 고르게 나오는지), 연속 춤 없음.
+
+### 74.17 P17 나간 사람의 AI
+
+```csharp
+// EscapeAuthority.OnPlayerLeft (바꿈)
+bool changed = DropAll(player.ActorNumber, pos);
+changed |= ClearPersonal(player.ActorNumber);
+changed |= RemoveDecoysOf(player.ActorNumber); // 잡혔을 때(OnPlayerBroken)와 같게 — 네트워크 끊김·강제 종료·나가기 모두 이 경로
+```
+
+- `EscapeManager.OnPlayerLeftRoom` → 방장만 부른다. 방장이 나간 경우: PUN이 방장을 바꾼 뒤 이 콜백을 부르므로 새 방장이 처리한다. 단 §72 E4의 0.5초 유예 중이면 `authority.State`가 아직 옛 것일 수 있다 → 유예가 끝날 때(`FinishAdopt`) "방에 없는 사람의 AI"를 한 번 더 정리한다.
+
+```csharp
+// EscapeManager.FinishAdopt (추가)
+authority.RemoveDecoysOfAbsentPlayers(); // 방 안에 없는 주인의 AI를 지운다(방장이 나가며 못 한 처리)
+```
+
+- 괴물이 나간 경우는 AI와 무관(괴물은 AI가 없음).
+- 시험: 순수 계산 `DecoysToRemove(state, presentActors)`.
+
+### 74.18 P18 무너진 건물 조각이 서서히 사라지게
+
+```csharp
+// DestructionPresenter.Collapse 끝 (지금) — 조각을 SinkDepth(2.5 m)만큼 땅속으로 내린 뒤 지움
+// → 바꿈: 제자리에서 FadeSeconds(1.5초) 동안 투명해진 뒤 지움
+foreach (Fragment f in sinking) Faders.Add(f.T.GetComponentsInChildren<Renderer>());
+for (float e = 0f; e < FadeSeconds; e += Time.deltaTime) { SetAlpha(1f - e / FadeSeconds); yield return null; }
+```
+
+- 투명도: 조각 재질을 조각마다 복사해 Standard **Fade** 모드로 바꾼다(금 간 데칼이 이미 Standard Fade라 빌드에 셰이더 변형이 있다). 끝나면 복사한 재질도 지운다.
+- 남기는 큰 잔해 8개(`RubbleKept`)·바닥 판(`RubbleGround`)은 그대로.
+- 재질이 Standard가 아니면(특수 셰이더) 크기를 0으로 줄이는 방식으로 대신한다.
+
+### 74.19 P19 안 쓰는 씬 삭제
+
+| 씬 | 빌드 | 처리 |
+| --- | --- | --- |
+| `Scenes/LobbyScene`, `GameLobbyScene` | 켜짐 | 유지 |
+| `Scenes/Maps/CandyForest`, `CursedCandyCarnival`, `ChocolateFactory`, `GingerbreadVillage` | 켜짐 | 유지 |
+| `Scenes/Maps/Test/Test_HauntedBakery` | 켜짐 | 유지(요청) |
+| `Scenes/Maps/Test/Test_CandyForest`, `Test_GingerbreadVillage`, `Test_ChocolateFactory`, `Test_CursedCandyCarnival` | 꺼짐 | **삭제 대상 4개** |
+
+- 프로젝트 `Assets/` 안의 씬은 위 11개가 전부다.
+- 삭제는 되돌리기 어려우므로 예전 정리(§47)처럼 `_CleanupBackup/2026-11-13/Scenes/`로 옮기고(빌드 목록에서도 뺌), 한동안 문제 없으면 지운다.
+- 옮기기 전에 확인: 이 씬들을 가리키는 코드·시험·에디터 도구(`SceneNames`, 테스트의 씬 경로, NavMesh 굽기 도구, 맵 빌더)를 grep해서 함께 고친다. 씬 전용 NavMesh·라이트 데이터 폴더도 같이 옮긴다.
+- **Q19**: 백업 폴더로 옮기기(권장) / 완전 삭제 중 어느 쪽?
+
+### 74.20 질문 답
+
+**(질문 1) 방장 컴퓨터 사양에 따라 게임 시작이 느릴 수 있는가?**
+
+- 다른 사람의 **맵 로딩 속도**는 방장 사양과 무관하다. 각자 자기 PC에서 맵을 읽는다. 방장이 시작을 누르면 다른 사람은 그 신호(방 속성)를 받는 즉시 — 핑만큼 뒤에 — 각자 로딩을 시작한다(§73.1). 지난 시험에서도 1050 방장은 0.4~6초, 다른 PC는 그와 상관없이 자기 속도로 열렸다.
+- 방장 사양이 영향을 주는 것:
+  - **판 초기화**(상자·재료·AI 배치)는 방장이 맵에 들어와야 된다. 방장 로딩이 가장 늦으면 다른 사람은 맵에 먼저 와서 기다린다. P6을 넣으면 그동안 준비 시간이 흐르지 않고 "기다리는 중"만 보인다(최대 45초).
+  - 판 도중: 방장 화면이 느리면(`[MasterFrame]`, 1050은 9~14 fps) AI 움직임·잡기 판정·아이템 요청 처리가 그만큼 늦게 느껴진다.
+- 정리: 시작 버튼 → 맵 진입은 방장이 느려도 다른 사람이 느려지지 않는다. 다만 **판이 실제로 시작되는 시점과 판 중 반응**은 방장 PC를 따라간다. 가장 빠른 PC가 방장을 하는 것이 좋다(대기실 안내는 §73 L6으로 들어가 있다).
+
+**(질문 2) 지금 탈출이 불가능한 상황이 나올 수 있는가?**
+
+코드를 읽은 범위에서는 막힌 채 끝나는 일반 경로는 없다. 안전장치:
+- 재료가 손 닿는 곳(일반 상자·바닥·쿠키 손)에 하나도 없으면 방장이 빈 상자에 새로 만든다(`RestoreMissingMaterials`, 주기 검사). 스파이가 들고 있는 것·로켓에 넣은 것은 세지 않으므로 스파이가 숨겨도 다시 생긴다. 로켓 재료도 같다.
+- 사람이 나가거나 잡히면 들고 있던 것을 그 자리에 떨어뜨린다. 바닥이 닿을 수 없는 곳이면(`IsReachableGround`) 없는 것으로 보고 새로 만든다.
+- 사이렌 철창은 연타 25번으로 부순다. 아무도 탈출 못 한 채 오래 지나면 마녀 타이머가 강제로 시작돼 판은 끝난다(`SafetyCapSeconds`).
+
+남아 있는 위험(구현 때 시험으로 확인할 것):
+
+| # | 상황 | 판단 |
+| --- | --- | --- |
+| R1 | 진저브레드: 거대 괴물이 시계탑 계단(10번)을 부수면 지상 ↔ 지하가 끊긴다. 탈출구 4개가 모두 지하라, 지상에 남은 쿠키는 탈출 불가 | §68에서 "지하 끊김 허용"으로 정했다. 거대 괴물은 마녀 시간(첫 탈출 뒤)에만 나오므로 의도된 압박이지만, **탈출 불가는 맞다** — 바꿀지 Q20 |
+| R2 | 무너진 건물 자리의 상자·바닥 아이템 | 건물이 무너져도 재료 꽂는 곳은 남긴다(§66). 무너진 건물 **안의 상자**가 잔해 밑에서 열리는지는 확인 필요 — 안 열리면 안전장치가 그 상자를 "닿는 곳"으로 세는 문제가 된다 |
+| R3 | 모든 쿠키가 스파이·괴물만 남는 인원 구성 | 판정(`EscapeRules.Evaluate`)이 "모두 해결"로 끝낸다 — 막히지 않음 |
+| R4 | 사이렌 함정을 P12로 바꾼 뒤 | 재료가 꽂힌 건물엔 못 놓으므로 탈출을 막는 새 경로는 없다 |
+| R5 | 방장이 판 도중 나감 | 새 방장이 이어받는다(§72 E4). P17로 나간 사람 AI도 정리 |
+
+- **Q20**: R1(계단이 부서지면 지상 쿠키 탈출 불가)을 그대로 둘까, 아니면 계단은 부서지지 않게 / 지상에도 탈출구를 열까? 권장: 그대로(마녀 시간의 긴장 요소) — 단 R2는 이번에 시험으로 확인하고 문제면 고친다.
+
+### 74.21 확인할 것(모음)
+
+| # | 질문 | 권장 |
+| --- | --- | --- |
+| Q1 | "포물선 제거" = 미리보기 선(이미 제거) 맞는지, 날아가는 궤적을 직선으로 바꾸라는 뜻인지 | 미리보기 선(추가 변경 없음, 옛 코드만 정리) |
+| Q4 | 괴물에게 건물 색(룬 색 건물)도 보일까 | 목록만 |
+| Q7 | 안 쓰는 옛 분홍 룬 에셋을 백업 폴더로 | 옮김 |
+| Q11 | 가린 상자: 상자를 옮김 / 수풀을 치움 | 배치도에서 자리별 제안 → 승인 |
+| Q12 | 사이렌 발동 표시는 모든 괴물에게 | 모든 괴물 |
+| Q15 | 괴물 1인칭: 촉수만 숨김 / 팔도 숨김 | 촉수만 |
+| Q16 | AI 춤 = 다른 행동과 같은 비중(약 20 %) | 맞음 |
+| Q19 | Test_ 씬 4개: 백업 폴더로 / 완전 삭제 | 백업 폴더로 |
+| Q20 | 계단이 부서지면 지상 쿠키 탈출 불가(R1) 유지? | 유지 |
+| Q21 | 수리키트 새 모델 방향: 작은 빨간 구급 가방 느낌 / 다른 안 | 사진으로 2안 제시 |
+
+#### 74.21.1 확정(2026-11-13 사용자 답)
+
+| # | 확정 |
+| --- | --- |
+| Q1 | "포물선" = 미리보기 선(이미 제거됨) — 옛 포물선 코드만 정리 |
+| Q4 | 괴물에게는 재료 목록만(건물 색은 그대로) |
+| Q15 | 촉수만 숨김. 공격(잡기)·돌진 때는 보여야 한다. 팔은 그대로 |
+| Q16 | AI 춤 = 다른 행동과 같은 비중(약 20 %) |
+| Q12 | 사이렌 발동 표시는 모든 괴물에게 |
+| Q19 | Test_ 씬 4개는 백업 폴더로 |
+| Q7 | 옛 분홍 룬 에셋도 백업 폴더로 |
+| Q20 | 계단이 부서지면 지상 쿠키 탈출 불가 — 유지 |
+| — | 구현은 아직 하지 않는다(추가 질문 확인 뒤) |
+
+#### 74.21.2 추가 확정(2026-11-13 사용자 답)
+
+| 항목 | 확정 |
+| --- | --- |
+| P9 공구상자 | 사용자는 어느 화면이었는지 기억 안 남. Play Mode 확인: 쿠키 화면은 정상("공구상자"·`Icon_Toolbox`), **스파이 화면만** "?"·회색 칸 → 계획대로 스파이 공구상자 예외 |
+| P18 무너진 건물 | 작은 조각만 서서히 사라짐. 큰 잔해 8개·바닥 판은 유지 |
+| P12 사이렌 함정 | 전체 최대 3개 유지. 이번 판에 쓰는(활성) 재료 건물에만 설치 |
+| P6 준비 시간 | **모든 사람이 입장했을 때 시작**(45초 제한 없앰). 로딩 중 끊긴 사람은 방에서 빠지므로 남은 사람 기준. 방에 남아 있는데 영영 못 들어오는 경우만 **2분 뒤 그 사람 없이 시작**(a안). 괴물 도착 확인도 같은 규칙: 괴물이 방에 있는 동안은 기다리고, **괴물이 방에서 빠졌을 때만** 대기실로(시간 제한으로 돌려보내지 않음) |
+| P3 로켓 칸 | 계획대로(칸마다 서로 다른 재료 1개, 판마다 무작위, 쿠키 건물이 안 쓰는 색 우선) |
+| P5 마우스 감도 | 슬라이더 하나(쿠키·괴물 공용, 0.2~3.0, 기본 1.0) |
+| P10 수리키트 모델 | 몽키스패너와 드라이버가 X자로 겹친 형태(사진 승인 뒤 적용) |
+| P13 뿅망치 | 어깨에 걸친 자세, 사진으로 확인 |
+| P4 괴물 재료 목록 | 그림과 이름만(진행도 % 없음) |
+
+P6 구현 메모: `RoomLifecycleWatcher.MaxArrivalWait` 45 → 120초(안전 상한), 시작 때 임시 `PrepareEndTime = 지금 + 3 + 120 + 15`. `CheckMonsterArrival`의 "시간이 지나면 대기실로"는 지우고, 괴물이 방을 나간 경우(`OnPlayerLeftRoom`)만 남긴다. 2분이 지나도 맵에 없는 괴물이 방에 남아 있으면 그 괴물 없이 시작한다(a안과 같은 규칙).
+
+### 74.22 단계
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| R0 | 코드·에셋 조사, 계획(이 절) | ✅ |
+| R1 | 확인(Q1~Q21) | ✅ 74.21.1·74.21.2 |
+| C1 | 코드 1: P2 빛기둥·P4 괴물 재료 목록·P9 공구상자·P17 나간 사람 AI·P16 AI 춤·P1 옛 포물선 코드 정리 + 시험 | ✅ 구현 완료 |
+| C2 | 코드 2: P3 로켓 칸 확정·P12 사이렌 함정(상태 버전 +1·거절 알림·철창 빛기둥) + 시험 | ✅ 구현 완료 |
+| C3 | 코드 3: P6 준비 시간(임시 시각 + 카운트다운 숨김)·P8 마녀 10분 고정(방 만들기·방 설정 UI) + 시험 | ✅ 구현 완료 |
+| C4 | 코드 4: P5 마우스 감도(설정 창 줄)·P15 1인칭 촉수·P18 조각 사라짐 | ✅ 구현 완료 |
+| A1 | 에셋: P7 초록 룬 재질·P14 모자/함정 모델 적용·7종 점검 사진 | ✅ 초록 룬·모자·함정 구현 완료(나머지 4종은 손 모델 그대로 사용) |
+| B1 | Blender: P10 수리키트 모델(사진 승인)·P13 망치 자세 클립(사진 승인)·필요하면 모자 프로펠러 분리 → Unity 적용 | ✅ 구현 완료(모자 프로펠러 분리·수리키트 모델·망치 어깨 걸침 자세 — 사진 승인 뒤 적용) |
+| M1 | 맵: P11 사탕 숲 상자 검사 → 배치도 승인 → 적용 | ✅ 구현 완료(가려진 7곳 옮김 — 배치 그림 승인 뒤 적용) |
+| S1 | P19 Test_ 씬 4개 정리(확인 뒤) + 참조 정리 | ✅ 구현 완료 |
+| T | EditMode 전체 + Play Mode(쿠키·스파이·괴물 화면 각각) + R2 확인 | ✅ 완료(74.24) |
+| DOC | 결과·README | ✅ 완료 |
+
+순서: R1 → C1 → C2 → C3 → C4 → A1 → B1 → M1 → S1 → T → DOC. Blender·배치도처럼 승인이 필요한 것은 사진을 먼저 보내고 기다리는 동안 코드 단계를 진행한다.
+
+### 74.23 위험과 주의
+
+- P3·P12는 탈출 상태(`EscapeState`) 내용이 바뀐다 → 상태 버전을 올린다. 옛 빌드와 섞이면 안 되므로 빌드 버전(Player Settings)을 올려 배포한다.
+- P8은 방 설정 이벤트 형식을 건드린다 — 길이는 유지하고 값만 무시한다.
+- P13·P10은 사진 승인 전에는 Unity에 넣지 않는다. FBX 100 MB 미만.
+- P19는 되돌리기 어려운 작업이라 확인 뒤, 백업 폴더로 옮기는 방식으로 한다.
+- 규칙: Play Mode 중 업로드·컴파일 금지, 맵 빌더(Build Map Scenes)·Compact 실행 안 함, 코드에 한국어는 주석만(문구는 에셋).
+
+### 74.24 결과(2026-11-13)
+
+| 항목 | 한 일 | 확인 |
+| --- | --- | --- |
+| P1 포물선 | 옛 투척 미리보기 코드 정리(`ThrowPreview` 삭제, `BalloonAimPreview`·`ToolShotFx`·`ToolHitReceiver` 안 쓰는 부분 제거) | 컴파일 0 |
+| P2 빛기둥 | 재료를 꽂으면 건물 빛기둥(`ESC_Glow`) 끔, 지붕 표시는 그대로 | 코드 |
+| P3 로켓 칸 | 칸마다 재료 하나(`Accepts` 1개), 두 칸은 서로 다르게, 쿠키 건물이 안 쓰는 재료 먼저(`EscapeRules.PickRocketMaterial`) | Play Mode: 칸 [Rune_Green]/[Rune_Blue], [Rune_Red]/[Rune_Blue] — 모두 쓰지 않는 건물 재료 |
+| P4 괴물 재료 목록 | 괴물 HUD는 그림·이름만(진행 상태 없음), 건물 색은 그대로 숨김 | 코드 |
+| P5 마우스 감도 | `MouseSensitivity`(0.2~3.0, 기본 1.0, PlayerPrefs) — 시점 회전 입력에 곱함. 설정 창 조작키 탭 아래 왼쪽에 "마우스 감도" 줄(`MouseSensitivityRow`) | Play Mode: 막대 2.4 → 값 2.4 저장·표시, 범위 0.2~3 |
+| P6 준비 시간 | 시작 때 준비 끝 시각 = 임시 값(+최대 대기 120초), 모두 맵에 들어오면(또는 2분 뒤) "지금 + 준비 시간". 임시 값인 동안 카운트다운 숨김. 시간 지났다고 괴물 때문에 대기실로 돌아가지 않음(괴물이 방을 나갈 때만) | 시험 `ArrivalWait_IsTwoMinutes`, Play Mode 1/1 도착 즉시 시작 |
+| P7 초록 룬 | 가져오기 후처리(`EscapeModelImportPostprocessor`)가 매번 이름으로 분홍 재질에 다시 연결하던 것이 원인 → 파일별 예외(`ITEM_Rune_Green`: ME_Rune_Pink → ME_Rune_Green) | 모델 재질 ME_Rune_Green 확인 |
+| P8 마녀 10분 | `RoomState.WitchTimerMinutes = 10` 고정, 방 만들기·방 설정의 마녀 타이머 줄 숨김, 방 속성에 더 쓰지 않음(설정 이벤트 셋째 칸은 0으로 형식 유지) | Play Mode 600초, 두 씬 줄 숨김 확인 |
+| P9 공구상자 | 스파이 화면에서 공구상자를 아는 아이템으로 | Play Mode(스파이): 모름 = false |
+| P12 사이렌 함정 | 쓰는 재료 건물마다 하나(재료 꽂힌 건물·쓰지 않는 건물 불가, 스파이가 빼면 다시 가능), 최대 3개 유지, 거절 이유 알림 3종, 철창이 서 있는 동안 괴물 모두에게 빛기둥. 상태 버전 11(`Bomb.Site`) | 시험 `CanPlaceBomb_*`·`BombSite_*` |
+| P14 모자·함정 모델 | 모자: Blender에서 프로펠러를 따로 떼어 다시 내보내고(`ITEM_HeliHat` + `Propeller`), 머리에 손 모델을 씌워 프로펠러만 돌림. 놓인 함정도 `ITEM_NoiseBomb` 모델. **추가 버그 수정**: 모자가 머리뼈를 못 찾아(`mixamorig:Head`) 몸 기준 2.1 m에 떠 있던 것 → Humanoid 머리뼈·정수리 뼈 기준 | Play Mode 사진(모자 머리 위·함정 모델) |
+| P15 1인칭 촉수 | 팔·촉수 메시 따로, 촉수는 잡기·돌진(준비 포함, 끝난 뒤 1.2초)·잡기 키·수색 폭탄·사이렌 함정 때만 | Play Mode: 평소 촉수 꺼짐·팔 켜짐, 잡기/동작 때 켜짐 |
+| P16 AI 춤 | 춤 비중 = 다른 행동 평균(4종이면 20 %) | 시험 `DanceProbability_*` |
+| P17 나간 사람 AI | 나간 사람 AI 지움(방장 교체 뒤에도 정리) | 코드 |
+| P18 조각 사라짐 | 작은 조각은 제자리에서 1.5초 동안 투명해지며 사라짐(원본 재질마다 Standard Fade 복사본 하나, 끝나면 지움), 큰 잔해 8개·바닥 판 유지 | Play Mode(느리게): 조각 44개 투명도 95 → 75 %…, 끝난 뒤 복사 재질 0 |
+| P19 씬 정리 | Test_ 씬 4개·옛 진저브레드 Test NavMesh·안 쓰는 분홍 에셋 3개(`ITEM_Rune_Pink.fbx`·`Icon_Rune_Pink.png`·`GIN_RUNE_Pink_rough.jpg`) → `_CleanupBackup/2026-11-13/`, 빌드 목록에서 뺌, 맵 빌더 원본 경로 갱신. `ME_Rune_Pink.mat`·`GIN_RUNE_Pink.fbx`는 아직 쓰여 남김 | 빌드 목록 확인 |
+| P10 수리키트 | Blender 몽키스패너 + 드라이버 X자 → `ITEM_RepairKit.fbx`(0.55 m, 재질은 기존 ME_Gray_Light·ME_Gray_Dark·ME_Red_Button·ME_Gold에 연결), `Item_RepairKit` 모델 교체(공구상자는 그대로 `ITEM_Toolbox`). 손에 들 때 세워서 앞을 보게(`holdEuler (-90,0,0)`·`holdOffset (0.12,0,0.15)`) | 사진 승인 뒤 적용, Play Mode 손 사진 |
+| P13 망치 자세 | Blender `Cookie_HammerHold`(두 손으로 자루를 쥐고 오른쪽 어깨에 걸침, 반복) → Action 층 `HammerHold` 상태(`ActionLayerBuilder`), `PlayerActionPose.SetHammerHold` — 망치를 든 동안 켬(휘두르기·조준이 우선). `HeldItemPresenter`: 들고만 있을 때 자루를 몸 기준 오른쪽·위·뒤 방향으로(망치 머리가 등 뒤) | 사진 승인 뒤 적용, Play Mode 앞·옆 사진 |
+| P11 사탕 숲 상자 | 상자 40곳을 8방향 렌더로 검사 → 수풀(이끼 바닥 타일의 덩굴)에 가려진 7곳(10·17·18·20·23·26·37)을 2~7 m 옆 빈자리로 옮겨 `CandyForest` 씬 저장(맵 빌더는 실행하지 않음) | 배치 그림 승인 뒤 적용 |
+
+- 시험: 새 `Request1114Tests` 8/8. EditMode 전체 455개 중 454 통과 — 남은 1개 `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`(거대 괴물 등장 확률이 에셋에서 100 %, 기대 30 %)는 §70부터 있던 실패로 이번 작업과 무관. `EscapeTests` 맵 검사는 옮긴 Test_ 씬 대신 실제 맵 씬을 열도록 고침(진저브레드 상자 48 = 지하 포함) 48/48.
+- Play Mode(진저브레드·사탕 숲, 오프라인): 쿠키·스파이·괴물(1인칭) 화면, 망치·수리키트 들기, 콘솔 오류·경고 0. 승인 뒤 적용분 포함 다시 돌린 시험도 같은 결과(실패는 위 1개뿐).

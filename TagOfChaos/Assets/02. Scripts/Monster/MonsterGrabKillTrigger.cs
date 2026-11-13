@@ -43,7 +43,11 @@ public class MonsterGrabKillTrigger : MonoBehaviour
         AimTarget = null;
         AimDecoy = null;
         if (!onCooldown && monsterController.CanInteract) FindAimTarget();
-        if (PlayerInput.MonsterGrabPressed) TryGrabAimTarget(); // 잡기 키(기본 마우스 왼쪽, §69 F3)
+        if (PlayerInput.MonsterGrabPressed)
+        {
+            MonsterViewSwitcher.ShowActionLocal(); // 1인칭 촉수를 잡는 동안 보인다(§74 P15)
+            TryGrabAimTarget(); // 잡기 키(기본 마우스 왼쪽, §69 F3)
+        }
     }
 
     // 돌진하다 몸이 닿았다(§69 F2 — 25번): 조준과 상관없이 그 쿠키(스파이 포함)나 AI를 같은 잡기 동작으로 잡는다. 방장은 보통 잡기와 같이 판정한다.

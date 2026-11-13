@@ -66,6 +66,9 @@ public class EscapeTextsSO : ScriptableObject
     public string skillBomb = "Noise bomb";
     public string skillBombPlaced = "Placed";
     public string bombNeedsBuilding = "Place it near a material building"; // 사이렌 함정: 재료 건물 둘레 밖(§69 F5)
+    public string bombInactiveBuilding = "This building isn't used this round"; // 사이렌 함정: 이번 판에 쓰지 않는 재료 건물(§74 P12)
+    public string bombMaterialInstalled = "A material is already installed here"; // 사이렌 함정: 재료가 꽂힌 건물
+    public string bombAlreadyThere = "This building already has a trap"; // 사이렌 함정: 건물당 하나
     public string skillDodge = "Dodge";
     public string skillUnknown = "TBD";        // 생존자 스킬(아직 미정)
     public string skillSearch = "Search bomb"; // 술래 수색 폭탄(§68 GP5)

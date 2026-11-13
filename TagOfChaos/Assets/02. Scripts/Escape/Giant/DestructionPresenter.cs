@@ -7,14 +7,14 @@ using UnityEngine;
 // - 소품: 0.1초 부풀었다가 숨기고, 그 재질의 조각이 튀고 먼지.
 // - 텐트: 기울며 주저앉은 뒤 숨기고 조각·먼지.
 // - 건물: 원본을 숨기고 Blender 조각 모델을 같은 자리에 켜서 아래부터 무너뜨린다(가벼운 자체 낙하 — 물리 엔진 안 씀).
-//   4초 뒤 작은 조각은 가라앉아 사라지고 큰 잔해 몇 개만 남는다. 동시에 MaxCollapsing채까지, 멀면(FarDistance) 조각 없이 먼지만.
+//   4초 뒤 작은 조각은 제자리에서 투명해지며 사라지고(§74 P18) 큰 잔해 몇 개만 남는다. 동시에 MaxCollapsing채까지, 멀면(FarDistance) 조각 없이 먼지만.
 // - 늦게 들어온 화면(animate = false): 연출 없이 숨긴다.
 public class DestructionPresenter : MonoBehaviour
 {
     private const int MaxCollapsing = 3;
     private const float FarDistance = 60f;
     private const float Gravity = 18f;
-    private const float SettleSeconds = 4f, SinkSeconds = 1.5f, SinkDepth = 2.5f;
+    private const float SettleSeconds = 4f, FadeSeconds = 1.5f, FadeEndScale = 0.7f;
     private const int RubbleKept = 8;
     private const int MaxPieces = 120;
     private const float PieceLife = 2.2f;
@@ -234,6 +234,64 @@ public class DestructionPresenter : MonoBehaviour
         public bool Resting;
     }
 
+    // 사라지는 조각의 재질(§74 P18): 원본 재질마다 Standard Fade 복사본을 하나씩 만들어 이 붕괴의 조각들이 함께 쓴다
+    // (조각마다 복사하지 않아 재질 수가 원본 재질 수만큼만 는다). 끝나면 복사본을 지운다. Standard가 아닌 재질은 그대로 두고 AllFade = false.
+    private sealed class FragmentFader
+    {
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private readonly Dictionary<Material, Material> copies = new Dictionary<Material, Material>();
+        public bool AllFade { get; private set; } = true;
+
+        public void Add(Transform root)
+        {
+            foreach (Renderer r in root.GetComponentsInChildren<Renderer>())
+            {
+                Material[] mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    Material fade = FadeCopy(mats[i]);
+                    if (fade != null) mats[i] = fade; else AllFade = false;
+                }
+                r.sharedMaterials = mats;
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; // 투명해지는 동안 그림자가 남지 않게
+            }
+        }
+
+        private Material FadeCopy(Material src)
+        {
+            if (src == null || src.shader == null || src.shader.name != "Standard" || !src.HasProperty(ColorId)) return null;
+            if (copies.TryGetValue(src, out Material copy)) return copy;
+            copy = new Material(src) { name = src.name + "_Fade" };
+            copy.SetFloat("_Mode", 2f);
+            copy.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            copy.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            copy.SetInt("_ZWrite", 0);
+            copy.DisableKeyword("_ALPHATEST_ON");
+            copy.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            copy.EnableKeyword("_ALPHABLEND_ON");
+            copy.EnableKeyword("_NORMALMAP"); // 금 간 데칼(M_GiantCrack)과 같은 변형 — 빌드에 들어 있는 조합을 쓴다
+            copy.renderQueue = 3000;
+            copies[src] = copy;
+            return copy;
+        }
+
+        public void SetAlpha(float alpha)
+        {
+            foreach (KeyValuePair<Material, Material> pair in copies)
+            {
+                Color c = pair.Key.GetColor(ColorId);
+                c.a *= Mathf.Clamp01(alpha);
+                pair.Value.SetColor(ColorId, c);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (Material m in copies.Values) if (m != null) Destroy(m);
+            copies.Clear();
+        }
+    }
+
     private IEnumerator Collapse(DestructibleUnit u)
     {
         collapsing++;
@@ -303,17 +361,34 @@ public class DestructionPresenter : MonoBehaviour
                 }
                 yield return null;
             }
-            // 큰 잔해 몇 개만 남기고 나머지는 가라앉아 사라진다
+            // 큰 잔해 몇 개만 남기고 나머지는 제자리에서 투명해지며 사라진다(§74 P18 — 예전에는 땅속으로 가라앉았다)
             frags.Sort((a, b) => b.Volume.CompareTo(a.Volume));
-            var sinking = frags.GetRange(Mathf.Min(RubbleKept, frags.Count), Mathf.Max(0, frags.Count - RubbleKept));
-            var from = new Vector3[sinking.Count];
-            for (int i = 0; i < sinking.Count; i++) from[i] = sinking[i].T != null ? sinking[i].T.position : Vector3.zero;
-            for (float e = 0f; e < SinkSeconds; e += Time.deltaTime)
+            var fading = frags.GetRange(Mathf.Min(RubbleKept, frags.Count), Mathf.Max(0, frags.Count - RubbleKept));
+            var fader = new FragmentFader();
+            var scales = new Vector3[fading.Count];
+            for (int i = 0; i < fading.Count; i++)
             {
-                for (int i = 0; i < sinking.Count; i++) if (sinking[i].T != null) sinking[i].T.position = from[i] - Vector3.up * SinkDepth * (e / SinkSeconds);
-                yield return null;
+                if (fading[i].T == null) continue;
+                scales[i] = fading[i].T.localScale;
+                fader.Add(fading[i].T);
             }
-            foreach (Fragment f in sinking) if (f.T != null) Destroy(f.T.gameObject);
+            try
+            {
+                for (float e = 0f; e < FadeSeconds; e += Time.deltaTime)
+                {
+                    float k = e / FadeSeconds;
+                    fader.SetAlpha(1f - k);
+                    // 투명하게 못 그리는 재질(특수 셰이더)은 크기로 대신 사라지고, 투명해지는 재질도 살짝 줄어든다
+                    float scale = fader.AllFade ? Mathf.Lerp(1f, FadeEndScale, k) : 1f - k;
+                    for (int i = 0; i < fading.Count; i++) if (fading[i].T != null) fading[i].T.localScale = scales[i] * scale;
+                    yield return null;
+                }
+            }
+            finally
+            {
+                foreach (Fragment f in fading) if (f.T != null) Destroy(f.T.gameObject);
+                fader.Dispose();
+            }
         }
         finally
         {

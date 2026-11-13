@@ -67,6 +67,7 @@ public class LobbyController : MonoBehaviourPunCallbacks
         // #Critical: LoadLevel()이 방 전체에 씬 전환을 자동 동기화하게 함 (PunBasics-Tutorial 관례)
         PhotonNetwork.AutomaticallySyncScene = true;
         PhotonNetwork.GameVersion = GameVersion;
+        RoomState.HideSettingRow(witchTimerField); // 마녀 타이머는 10분 고정(§74 P8)
         Debug.Log($"[Lobby] Game version {GameVersion} — only players with the same build version can see and join each other's rooms.");
     }
 
@@ -270,14 +271,12 @@ public class LobbyController : MonoBehaviourPunCallbacks
         GameSettingsSO settings = GameSettings.Current;
         int players = playersField != null ? playersField.Value : settings.DefaultPlayers;
         int spies = settings.ClampSpies(spyCountField != null ? spyCountField.Value : settings.DefaultSpies, players);
-        int witchMinutes = witchTimerField != null ? witchTimerField.Value : settings.DefaultTimeAttackMinutes;
         var options = new RoomOptions
         {
             MaxPlayers = players,
             CustomRoomProperties = new ExitGames.Client.Photon.Hashtable
             {
-                { NetKeys.RoomSpyCount, spies },
-                { NetKeys.TimeAttackDuration, witchMinutes * 60 },
+                { NetKeys.RoomSpyCount, spies }, // 마녀 타이머는 방 속성으로 쓰지 않는다(10분 고정, §74 P8)
             },
         };
         string region = createRegion != null ? createRegion.Code : CurrentRegion;

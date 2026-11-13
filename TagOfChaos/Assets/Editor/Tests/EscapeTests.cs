@@ -396,7 +396,14 @@ public class EscapeTests
         }
     }
 
-    // §25.5 O: 테스트 맵마다 건물 4·탈출구 4·술래문·상자 40·로켓 자리·무지개 자리·마녀가 연결돼 있다
+    // 판에 쓰는 맵 씬: Test_ 씬이 남아 있으면 그것(HauntedBakery), 아니면 실제 모델 맵(§74 P19 — 나머지 Test_ 씬 4개는 백업 폴더로 옮겼다).
+    private static string PlayableMapPath(string map)
+    {
+        string test = TestMapBuilder.ScenePath(map);
+        return System.IO.File.Exists(test) ? test : $"Assets/Scenes/Maps/{map}.unity";
+    }
+
+    // §25.5 O: 판에 쓰는 맵마다 건물 4·탈출구 4·술래문·상자 40·로켓 자리·무지개 자리·마녀가 연결돼 있다
     [TestCase("CandyForest")]
     [TestCase("GingerbreadVillage")]
     [TestCase("ChocolateFactory")]
@@ -404,7 +411,7 @@ public class EscapeTests
     [TestCase("HauntedBakery")]
     public void TestMap_EscapeSetupComplete(string map)
     {
-        EditorSceneManager.OpenScene(TestMapBuilder.ScenePath(map), OpenSceneMode.Single);
+        EditorSceneManager.OpenScene(PlayableMapPath(map), OpenSceneMode.Single);
         GameObject root = GameObject.Find(EscapeMapSetup.RootName);
         Assert.NotNull(root, "EscapeSetup");
         var manager = root.GetComponent<EscapeManager>();
@@ -412,7 +419,7 @@ public class EscapeTests
         var so = new SerializedObject(manager);
         Assert.AreEqual(4, so.FindProperty("buildings").arraySize, "buildings");
         Assert.AreEqual(4, so.FindProperty("exits").arraySize, "exits");
-        Assert.AreEqual(EscapeMapSetup.ChestSlotCount, so.FindProperty("chestAnchors").arraySize, "chests");
+        Assert.GreaterOrEqual(so.FindProperty("chestAnchors").arraySize, EscapeMapSetup.ChestSlotCount, "chests"); // 진저브레드는 지하 상자까지 48(§69)
         Assert.AreEqual(6, so.FindProperty("rocketAnchors").arraySize, "rocket spots");
         Assert.AreEqual(8, so.FindProperty("rainbowAnchors").arraySize, "rainbow spots");
         Assert.NotNull(so.FindProperty("rocket").objectReferenceValue, "rocket");
@@ -438,7 +445,7 @@ public class EscapeTests
     [TestCase("HauntedBakery")]
     public void TestMap_BuildingsAndExitsReachable(string map)
     {
-        EditorSceneManager.OpenScene(TestMapBuilder.ScenePath(map), OpenSceneMode.Single);
+        EditorSceneManager.OpenScene(PlayableMapPath(map), OpenSceneMode.Single);
         Vector3 spawn = GameObject.Find("Spawn_Cookie_Q1").transform.position;
         for (int q = 1; q <= 4; q++)
         {

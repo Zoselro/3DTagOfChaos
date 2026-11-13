@@ -11,18 +11,6 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/GameLobbyScene.unity
     guid: 65e6d029e4f25ed47bcc06f1ce0fb6d1
-  - enabled: 0
-    path: Assets/Scenes/Maps/Test/Test_CandyForest.unity
-    guid: e289d731d0dfe274ab7d5a2a9b1f2415
-  - enabled: 0
-    path: Assets/Scenes/Maps/Test/Test_GingerbreadVillage.unity
-    guid: 09b5c9c657ca1de4caa61c7647d58e79
-  - enabled: 0
-    path: Assets/Scenes/Maps/Test/Test_ChocolateFactory.unity
-    guid: d4351d24aff9ed241906ea70b129e7a1
-  - enabled: 0
-    path: Assets/Scenes/Maps/Test/Test_CursedCandyCarnival.unity
-    guid: 390aab2c5281a7d4993d7efdfcf85196
   - enabled: 1
     path: Assets/Scenes/Maps/Test/Test_HauntedBakery.unity
     guid: 7e9f2590d5e2d4649a972588c337d2f3

@@ -17,7 +17,7 @@ public class EscapeModelImportPostprocessor : AssetPostprocessor
     public static bool SkipRemap;
 
     // 규칙이 바뀌면 숫자를 올려 재임포트를 강제한다.
-    public override uint GetVersion() => 4;
+    public override uint GetVersion() => 5;
 
     private void OnPreprocessModel()
     {
@@ -36,7 +36,31 @@ public class EscapeModelImportPostprocessor : AssetPostprocessor
         importer.importNormals = ModelImporterNormals.Import;
         importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
         importer.materialLocation = ModelImporterMaterialLocation.InPrefab;
-        if (!SkipRemap) RemapMaterials(importer);
+        if (!SkipRemap)
+        {
+            RemapMaterials(importer);
+            ApplyOverrides(importer, System.IO.Path.GetFileNameWithoutExtension(assetPath));
+        }
+    }
+
+    // 파일별 재질 바꿔 끼우기(이름 기준 연결 뒤에 덮어쓴다). 초록 룬 모델은 분홍 룬 FBX의 복사본이라 안의 재질 이름이 ME_Rune_Pink다(§74 P7 —
+    // 예전에는 이름 기준 연결이 매번 분홍 재질로 되돌려 초록 룬이 분홍으로 보였다).
+    private static readonly Dictionary<string, (string from, string to)[]> Overrides = new Dictionary<string, (string, string)[]>
+    {
+        ["ITEM_Rune_Green"] = new[] { ("ME_Rune_Pink", "ME_Rune_Green") },
+    };
+
+    private static void ApplyOverrides(ModelImporter importer, string file)
+    {
+        if (!Overrides.TryGetValue(file, out var pairs)) return;
+        foreach (var (from, to) in pairs)
+        {
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(MaterialFolder + "/" + to + ".mat");
+            if (mat == null) { Debug.LogWarning($"[EscapeModelImport] {to}.mat not found for {file}"); continue; }
+            var id = new AssetImporter.SourceAssetIdentifier(typeof(Material), from);
+            importer.RemoveRemap(id);
+            importer.AddRemap(id, mat);
+        }
     }
 
     // (메시 이름, 머티리얼 이름) → 키울 배율. 바깥에 덮이는 부품일수록 크게: 몸통 껍질 1 < 받침 < 띠 < 걸쇠, 뚜껑 껍질 > 몸통 띠 < 뚜껑 띠 < 뚜껑 걸쇠.

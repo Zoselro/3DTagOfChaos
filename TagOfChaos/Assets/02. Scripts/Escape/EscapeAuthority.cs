@@ -98,20 +98,19 @@ public sealed class EscapeAuthority
         var activeIds = new HashSet<string>();
         foreach (EscapeState.Building b in s.Buildings) if (b.Active) activeIds.Add(b.MaterialId);
         var spyExtras = new List<ItemSO>(); // 이번 판 수리 대상이 아니라 상자에 없는 로켓 재료 → 스파이 상자에 1개씩(Q5·Q20)
+        // §74 P3: 칸마다 재료 하나로 확정한다 — 예전에는 칸이 레시피의 후보(사탕 숲·진저브레드 4색)를 모두 받아 다른 색이 끼워졌다.
+        var takenRocket = new HashSet<string>();
         foreach (EscapeRecipeSO.RocketSlot r in recipe.RocketSlots)
         {
-            var accepts = new List<string>();
-            bool present = false;
+            var options = new List<string>();
             if (r.accepts != null)
                 foreach (ItemSO a in r.accepts)
-                {
-                    if (a == null) continue;
-                    accepts.Add(a.ItemId);
-                    if (activeIds.Contains(a.ItemId)) present = true;
-                }
-            if (accepts.Count == 0) continue;
-            s.RocketSlots.Add(new EscapeState.Slot { Label = string.Empty, Accepts = accepts.ToArray(), ItemIndex = -1, Anchor = s.RocketSlots.Count });
-            if (!present && spies > 0) spyExtras.Add(catalog.Find(accepts[rng.Next(accepts.Count)]));
+                    if (a != null && !options.Contains(a.ItemId)) options.Add(a.ItemId);
+            if (options.Count == 0) continue;
+            string pick = EscapeRules.PickRocketMaterial(options, takenRocket, activeIds, rng.Next());
+            takenRocket.Add(pick);
+            s.RocketSlots.Add(new EscapeState.Slot { Label = string.Empty, Accepts = new[] { pick }, ItemIndex = -1, Anchor = s.RocketSlots.Count });
+            if (!activeIds.Contains(pick) && spies > 0) spyExtras.Add(catalog.Find(pick)); // 상자에 없는 로켓 재료 → 스파이 상자에 1개
         }
         int kitCount = spies > 0 ? Mathf.Max(1, recipe.RepairKitCount > 0 ? recipe.RepairKitCount : s.RocketSlots.Count) : 0; // 키트 수 = 로켓 칸 수(§26)
         s.RocketAnchor = manager.RocketAnchorCount > 0 ? rng.Next(manager.RocketAnchorCount) : -1;
@@ -887,8 +886,15 @@ public sealed class EscapeAuthority
     {
         if (!RoomState.IsMonster(actor) || !IsNear(actor, pos, 4f)) return false;
         if (State.BombChargesLeft(actor, BombMaxCharges, PhotonNetwork.Time, BombCooldown) <= 0) return false;
-        if (!manager.IsNearMaterialBuilding(pos, BombBuildingRadius)) return false; // 재료 건물 둘레에서만(§69 F5 — 밖에 놓으면 끼워도 안 걸렸다)
-        State.Bombs.Add(new EscapeState.Bomb { Id = State.NextId++, Owner = actor, Pos = manager.SnapToGround(pos), Building = -1 });
+        // 재료 건물 둘레에서만(§69 F5), 이번 판에 쓰는 건물에, 재료가 꽂히지 않은 건물에, 건물당 하나(§74 P12)
+        int site = manager.MaterialBuildingAt(pos, BombBuildingRadius);
+        EscapeRules.BombPlace verdict = EscapeRules.CanPlaceBomb(State, site);
+        if (verdict != EscapeRules.BombPlace.Ok)
+        {
+            NoticeTo(actor, EscapeNoticeKind.BombRejected, ((byte)verdict).ToString());
+            return false;
+        }
+        State.Bombs.Add(new EscapeState.Bomb { Id = State.NextId++, Owner = actor, Pos = manager.SnapToGround(pos), Building = -1, Site = site });
         return true;
     }
 
@@ -911,7 +917,8 @@ public sealed class EscapeAuthority
         for (int i = 0; i < State.Bombs.Count; i++)
         {
             EscapeState.Bomb bomb = State.Bombs[i];
-            if (bomb.Spent || bomb.Caged || Flat(bomb.Pos - point) > BombBuildingRadius) continue;
+            if (bomb.Spent || bomb.Caged) continue;
+            if (bomb.Site >= 0 ? bomb.Site != building : Flat(bomb.Pos - point) > BombBuildingRadius) continue; // 놓은 건물로(§74 P12)
             bomb.Building = building;
             bomb.CagedAt = now;
             bomb.Mash = 0;
@@ -1220,10 +1227,7 @@ public sealed class EscapeAuthority
         if (it.Charges <= 0) it.Loc = ItemLocation.Gone;
         State.Items[item] = it;
 
-        // 물풍선: 맞는 시각(PhotonNetwork.Time)을 방장이 정해 모두가 같은 순간에 가둔다 — 손을 떠나는 0.35초 + 거리로 정한 비행 시간(§45.7).
-        double hitAt = PhotonNetwork.Time;
-        if (def.Tool.IsThrown && lastPositions.TryGetValue(r.Sender, out Vector3 thrower)) // 물풍선·섬광탄
-            hitAt += PlayerActionPose.ThrowRelease + ToolAim.FlightSeconds(thrower + Vector3.up * 1.3f, r.Pos + Vector3.up);
+        double hitAt = PhotonNetwork.Time; // 던지는 도구(물풍선·섬광탄)는 위에서 막았다 — 투사체가 닿을 때 따로 알린다(§70.3)
         bool knock = def.Tool.Kind == ToolKind.BoxingGlove && targets.Length > 0 && gloveCombo.Register(targets[0], PhotonNetwork.Time); // 3초 안 3대 = 쓰러짐(§68 GP3)
         var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B, hitAt, knock };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
@@ -1415,6 +1419,7 @@ public sealed class EscapeAuthority
         Vector3 pos = lastPositions.TryGetValue(player.ActorNumber, out Vector3 p) ? p : manager.FallbackDropPoint(rng.Next()); // 원점 = 술래방이라 쓰지 않는다(§26 B)
         bool changed = DropAll(player.ActorNumber, pos); // 나간 쿠키·스파이의 모든 아이템을 그 자리에(D28)
         changed |= ClearPersonal(player.ActorNumber);
+        changed |= RemoveDecoysOf(player.ActorNumber); // 나간 사람(끊김·강제 종료·나가기)의 AI도 지운다(§74 P17 — 잡혔을 때와 같게)
         if (changed) Commit();
         TryLaunchRocket();
     }
@@ -1436,6 +1441,19 @@ public sealed class EscapeAuthority
             Notice(EscapeNoticeKind.CookieCaught, player.ActorNumber.ToString());
         if (RoomState.IsSpy(player.ActorNumber)) Notice(EscapeNoticeKind.SpyCaught, null);
         Reevaluate();
+    }
+
+    // 방 안에 없는 주인의 AI를 지운다(§74 P17) — 방장이 나가며 그 사람의 AI를 지우지 못했을 때 새 방장이 이어받으며 정리한다.
+    public bool RemoveDecoysOfAbsentPlayers()
+    {
+        if (State == null || !RoomState.IsInRoom()) return false;
+        var owners = new HashSet<int>();
+        foreach (EscapeState.Decoy d in State.Decoys) owners.Add(d.Owner);
+        bool changed = false;
+        foreach (int owner in owners)
+            if (PhotonNetwork.CurrentRoom.GetPlayer(owner) == null) changed |= RemoveDecoysOf(owner);
+        if (changed) Commit();
+        return changed;
     }
 
     // 그 사람의 AI 중 아직 잡히지 않은 것을 모두 지운다(잡히는 중인 AI는 동작을 끝까지 보여 준 뒤 Tick이 지운다).

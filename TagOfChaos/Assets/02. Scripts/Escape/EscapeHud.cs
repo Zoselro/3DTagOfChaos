@@ -135,7 +135,7 @@ public class EscapeHud : MonoBehaviour
                 break;
             case EscapeNoticeKind.NoiseBomb:
                 Toast(t.noiseBombAlarm, alert: true);
-                if (RoomState.IsLocalMonster() && int.TryParse(itemId, out int building)) AlarmBeacon.Show(instance.manager.BuildingRepairPoint(building));
+                // 빛기둥은 철창이 서 있는 동안 SirenTrapPresenter가 보인다(§74 P12)
                 break;
         }
     }
@@ -314,6 +314,7 @@ public class EscapeHud : MonoBehaviour
     // 스파이는 건물 재료가 무엇인지 모른다(§25 요청) — 수리키트·도구·로켓에 필요한 재료는 안다(§26 H4).
     private bool IsUnknownToLocal(ItemSO item) =>
         RoomState.IsLocalSpy() && item.Category == ItemCategory.Material && (manager.Catalog.RepairKit == null || item != manager.Catalog.RepairKit)
+        && (manager.Recipe == null || item != manager.Recipe.SpyToolbox) // 스파이에게 주는 공구상자는 아는 물건(§74 P9)
         && !RocketAccepts(manager.State, item.ItemId);
 
     private static bool RocketAccepts(EscapeState s, string itemId)
@@ -333,7 +334,8 @@ public class EscapeHud : MonoBehaviour
         if (s != null && RoomState.IsLocalSpy()) AddRocketEntries(s, entries);
         else if (s != null)
         {
-            bool seesMaterials = !RoomState.IsLocalSpy() && !RoomState.IsLocalMonster();
+            bool monster = RoomState.IsLocalMonster();
+            bool seesMaterials = !RoomState.IsLocalSpy(); // 괴물도 어떤 재료가 필요한지 안다(§74 P4 — 그림·이름만, 진행도 없음)
             double now = PhotonNetwork.Time;
             foreach (EscapeState.Building b in s.Buildings)
             {
@@ -343,7 +345,8 @@ public class EscapeHud : MonoBehaviour
                 if (seesMaterials && item != null)
                 {
                     string state = done ? "OK" : $"{Mathf.RoundToInt(b.ProgressAtTime(now) * 100f)}%";
-                    entries.Add((item.Icon != null ? item.Icon : WhiteSprite(), item.Icon != null ? Color.white : item.Tint, $"{item.DisplayName}  {state}", done));
+                    string label = monster ? item.DisplayName : $"{item.DisplayName}  {state}";
+                    entries.Add((item.Icon != null ? item.Icon : WhiteSprite(), item.Icon != null ? Color.white : item.Tint, label, !monster && done));
                 }
                 else entries.Add((WhiteSprite(), new Color(0.5f, 0.5f, 0.55f), $"{texts.unknownMaterial}  {(done ? "OK" : "...")}", done));
             }

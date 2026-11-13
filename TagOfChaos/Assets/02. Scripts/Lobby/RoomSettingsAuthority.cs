@@ -17,20 +17,20 @@ public static class RoomSettingsAuthority
     public static bool CanLocalEdit() => RoomState.IsInRoom() && RoomState.IsLocalHost();
 
     // 호스트 화면에서 호출. 방장이면 바로 반영하고, 아니면 방장에게 요청한다(결과는 Room Props로 모두에게 보인다).
-    public static Result Request(int players, int spies, int witchMinutes, string region = KeepRegion)
+    public static Result Request(int players, int spies, string region = KeepRegion)
     {
         if (!RoomState.IsInRoom() || PhotonNetwork.LocalPlayer == null) return Result.NotInRoom;
         if (!CanLocalEdit()) return Result.NotHost;
-        if (PhotonNetwork.IsMasterClient) return TryApply(PhotonNetwork.LocalPlayer.ActorNumber, players, spies, witchMinutes, region);
+        if (PhotonNetwork.IsMasterClient) return TryApply(PhotonNetwork.LocalPlayer.ActorNumber, players, spies, region);
 
         int regionIndex = PhotonRegions.IndexOf(region);
-        MasterRequestResend.Send(NetEventCodes.RoomSettingsRequest, new[] { players, spies, witchMinutes, regionIndex }); // §72 E3
+        MasterRequestResend.Send(NetEventCodes.RoomSettingsRequest, new[] { players, spies, 0, regionIndex }); // §72 E3 — 셋째 칸(옛 마녀 타이머)은 비워 둔다(§74 P8, 형식 유지)
         // 방장도 같은 규칙으로 맞추므로 결과를 미리 알 수 있다
         return ClampPlayers(players) > players ? Result.PlayersRaised : Result.Applied;
     }
 
     // 방장 쪽 실행. 요청자가 호스트인지 확인하고, 값은 설정 SO의 허용 범위(인원은 지금 들어온 사람 수 이상)로 맞춘다.
-    public static Result TryApply(int requesterActor, int players, int spies, int witchMinutes, string region = KeepRegion)
+    public static Result TryApply(int requesterActor, int players, int spies, string region = KeepRegion)
     {
         if (!RoomState.IsInRoom()) return Result.NotInRoom;
         if (!PhotonNetwork.IsMasterClient) return Result.NotMaster;
@@ -42,8 +42,7 @@ public static class RoomSettingsAuthority
         room.MaxPlayers = clampedPlayers;
         var props = new Hashtable
         {
-            { NetKeys.RoomSpyCount, settings.ClampSpies(spies, clampedPlayers) },
-            { NetKeys.TimeAttackDuration, Mathf.Clamp(witchMinutes, settings.MinTimeAttackMinutes, settings.MaxTimeAttackMinutes) * 60 },
+            { NetKeys.RoomSpyCount, settings.ClampSpies(spies, clampedPlayers) }, // 마녀 타이머는 10분 고정(§74 P8)
         };
         // 지역 옮기기는 판이 시작되기 전(대기실)에만. 방을 닫아 옮기는 동안 새로 들어오는 사람이 없게 한다.
         if (ShouldMoveRegion(region, PhotonRegions.Current, GamePhaseState.Current))
@@ -61,7 +60,7 @@ public static class RoomSettingsAuthority
     {
         if (!(photonEvent.CustomData is int[] values) || values.Length < 3) return;
         string region = values.Length > 3 && values[3] >= 0 && values[3] < PhotonRegions.Codes.Length ? PhotonRegions.Codes[values[3]] : KeepRegion;
-        Result result = TryApply(photonEvent.Sender, values[0], values[1], values[2], region);
+        Result result = TryApply(photonEvent.Sender, values[0], values[1], region);
         Debug.Log($"[RoomSettings] Request from actor {photonEvent.Sender}: {result}");
     }
 

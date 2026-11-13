@@ -14,6 +14,7 @@ public class SirenTrapPresenter : MonoBehaviour
 
     private EscapeManager manager;
     private readonly Dictionary<int, GameObject> cages = new Dictionary<int, GameObject>();
+    private readonly Dictionary<int, AlarmBeacon> beacons = new Dictionary<int, AlarmBeacon>(); // 괴물 화면: 철창이 선 건물 빛기둥(§74 P12)
     private readonly List<int> stale = new List<int>();
     private float nextSiren, lastMash;
     private Material biscuit, chocolate;
@@ -31,6 +32,7 @@ public class SirenTrapPresenter : MonoBehaviour
     {
         if (manager != null) manager.StateChanged -= Sync;
         if (biscuit != null) Destroy(biscuit);
+        foreach (AlarmBeacon beacon in beacons.Values) if (beacon != null) Destroy(beacon.gameObject);
         if (chocolate != null) Destroy(chocolate);
     }
 
@@ -47,6 +49,8 @@ public class SirenTrapPresenter : MonoBehaviour
         {
             if (cages[id] != null) BreakCage(cages[id]);
             cages.Remove(id);
+            if (beacons.TryGetValue(id, out AlarmBeacon beacon) && beacon != null) Destroy(beacon.gameObject);
+            beacons.Remove(id);
         }
         if (s == null) return;
         foreach (EscapeState.Bomb b in s.Bombs)
@@ -55,6 +59,7 @@ public class SirenTrapPresenter : MonoBehaviour
             if (!SirenCage.Ring(manager.BuildingTransform(b.Building), out Vector3 c, out float r)) continue;
             cages[b.Id] = BuildCage(c, r);
             GameAudio.PlayAt(SoundId.UiToastAlert, c); // 걸린 순간
+            if (RoomState.IsLocalMonster()) beacons[b.Id] = AlarmBeacon.Create(manager.BuildingRepairPoint(b.Building)); // 모든 괴물에게(§74 P12)
         }
     }
 

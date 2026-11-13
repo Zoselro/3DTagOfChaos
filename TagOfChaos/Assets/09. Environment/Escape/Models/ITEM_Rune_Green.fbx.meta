@@ -258,7 +258,7 @@ ModelImporter:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: ME_Rune_Pink
-    second: {fileID: 2100000, guid: c5f4e12d65fd02245a390dec216e9c50, type: 2}
+    second: {fileID: 2100000, guid: 13ab80b3b86f0354cb2db8c6d1343b4f, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule

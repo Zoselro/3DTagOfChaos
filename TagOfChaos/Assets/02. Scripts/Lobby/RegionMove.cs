@@ -42,7 +42,6 @@ public static class RegionMove
         Room room = PhotonNetwork.CurrentRoom;
         var props = new Hashtable { { NetKeys.RegionMoveToken, token } };
         if (RoomState.TryGetInt(NetKeys.RoomSpyCount, out int spies)) props[NetKeys.RoomSpyCount] = spies;
-        if (RoomState.TryGetInt(NetKeys.TimeAttackDuration, out int attack)) props[NetKeys.TimeAttackDuration] = attack;
         PendingRegion = region;
         PendingRoomName = room.Name;
         PendingToken = token;

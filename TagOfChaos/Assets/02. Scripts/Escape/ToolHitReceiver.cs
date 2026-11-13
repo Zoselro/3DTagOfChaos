@@ -26,7 +26,6 @@ public static class ToolHitReceiver
         bool mine = PhotonNetwork.LocalPlayer != null && senderActor == PhotonNetwork.LocalPlayer.ActorNumber;
         bool thrownObject = d.Length > 7 && d[7] is int;
         if (!mine && !thrownObject) GameAudio.PlayAt(ToolUser.UseSound(item.Tool.Kind), from ?? point);
-        bool balloon = item.Tool.Kind == ToolKind.WaterBalloon;
         bool knock = d.Length > 6 && d[6] is bool k && k;
         // 던진 물체가 끝났다(§70.3): 날아가는 모습·던지는 동작·소리는 ProjectileSystem이 이미 보였다. 그 자리로 옮겨 지우고 효과만.
         if (d.Length > 7 && d[7] is int projectileId)
@@ -40,17 +39,7 @@ public static class ToolHitReceiver
             if (item.Tool.IsThrown) pose.Play(PlayerActionPose.OneShot.Throw);
             else if (item.Tool.Kind == ToolKind.Hammer || item.Tool.Kind == ToolKind.BoxingGlove) pose.Play(PlayerActionPose.OneShot.Swing);
         }
-        if (balloon && user != null)
-        {
-            Transform target = targets.Length > 0 && PhotonView.Find(targets[0]) != null ? PhotonView.Find(targets[0]).transform : null;
-            ToolShotFx.ThrowBalloon(user.gameObject.transform, target, point, hitAt, () => Apply(item, targets, point, color, hitAt, knock));
-            return;
-        }
-        if (item.Tool.Kind == ToolKind.Flashbang && user != null)
-        {
-            ToolShotFx.ThrowCanister(user.gameObject.transform, point, hitAt, () => Apply(item, targets, point, color, hitAt, knock));
-            return;
-        }
+        // 물풍선·섬광탄은 투사체(ProjectileSystem)로만 날아간다 — 옛 포물선 연출(ToolShotFx.ThrowBalloon/ThrowCanister)은 지웠다(§74 P1).
         if (item.Tool.Kind == ToolKind.StunGun && from.HasValue) ToolShotFx.Beam(from.Value, point, new Color(0.55f, 1f, 0.95f, 1f));
         Apply(item, targets, point, color, hitAt, knock);
     }

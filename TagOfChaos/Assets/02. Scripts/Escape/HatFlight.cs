@@ -18,6 +18,10 @@ public class HatFlight : MonoBehaviour
     private HideOrSeekPlayer cookie;
     private Rigidbody body;
     private Transform hat, propeller;
+    private Vector3 spinAxis = Vector3.up; // 프로펠러 자기 좌표에서 모자 위쪽 방향(모델은 Blender Z-up이라 Y가 아닐 수 있다)
+    private const float HeadTopOffset = 0.30f; // 정수리 뼈가 없을 때: 머리뼈에서 모자 자리까지
+    private const float HatSink = 0.12f;       // 정수리에서 모자를 내려 씌우는 깊이
+    private const float HatModelScale = 1.8f; // 손에 드는 모델(폭 0.28 m)을 머리에 맞는 크기로
     private bool flying;
     private float startY;
     private float nextRequest;
@@ -46,7 +50,7 @@ public class HatFlight : MonoBehaviour
             if (flying) { startY = transform.position.y; cruiseDirection = Vector3.zero; }
             if (cookie.IsMine) SetPhysics(!flying);
         }
-        if (propeller != null && flying) propeller.Rotate(0f, 900f * Time.deltaTime, 0f, Space.Self);
+        if (propeller != null && flying) propeller.Rotate(spinAxis, 900f * Time.deltaTime, Space.Self);
         if (!flying || !cookie.IsMine) return;
 
         float since = (float)(PhotonNetwork.Time - s.Flights[f].StartAt);
@@ -87,7 +91,7 @@ public class HatFlight : MonoBehaviour
         }
     }
 
-    // 머리 위 모자(무지개 원뿔 + 프로펠러). 모델이 생기면 ItemSO 모델로 바꾼다.
+    // 머리 위 모자: 손에 드는 것과 같은 Blender 모델(ITEM_HeliHat)을 씌우고 Propeller 노드를 돌린다(§74 P14). 모델이 없으면 기본 도형.
     private void SetHat(bool on)
     {
         if (on && hat == null) BuildHat();
@@ -96,10 +100,24 @@ public class HatFlight : MonoBehaviour
 
     private void BuildHat()
     {
-        Transform head = EscapeCue.FindDeep(transform, "Head");
+        // 머리뼈(Humanoid Head — 쿠키 뼈 이름은 mixamorig:Head라 예전 "Head" 찾기는 늘 실패해 몸 기준 2.1 m에 떠 있었다, §74 P14).
+        Animator animator = GetComponentInChildren<Animator>();
+        Transform head = animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Head) : null;
         hat = new GameObject("HeliHat").transform;
         hat.SetParent(head != null ? head : transform, false);
-        hat.localPosition = head != null ? Vector3.up * 0.25f : Vector3.up * 2.1f;
+        if (head != null)
+        {
+            // 뼈의 크기·방향과 상관없이 세상 기준으로 맞춘다: 머리뼈 위 HeadTopOffset, 몸 방향, 크기 1.
+            // 정수리 뼈(HeadTop_End)가 있으면 그 조금 아래(모자가 머리를 덮게), 없으면 머리뼈 위 HeadTopOffset.
+            Transform top = null;
+            foreach (Transform c in head) if (c.name.EndsWith("HeadTop_End")) top = c;
+            Vector3 at = top != null ? top.position - transform.up * HatSink : head.position + transform.up * HeadTopOffset;
+            hat.SetPositionAndRotation(at, transform.rotation);
+            Vector3 ls = head.lossyScale;
+            hat.localScale = new Vector3(1f / Mathf.Max(1e-4f, ls.x), 1f / Mathf.Max(1e-4f, ls.y), 1f / Mathf.Max(1e-4f, ls.z));
+        }
+        else hat.localPosition = Vector3.up * 2.1f;
+        if (BuildModelHat()) return;
         var cap = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         Destroy(cap.GetComponent<Collider>());
         cap.transform.SetParent(hat, false);
@@ -117,5 +135,20 @@ public class HatFlight : MonoBehaviour
             blade.transform.localRotation = Quaternion.Euler(0f, i * 90f, 0f);
             EscapeVisuals.Tint(blade, i == 0 ? new Color(0.3f, 0.8f, 1f) : new Color(1f, 0.9f, 0.2f), 0.5f);
         }
+    }
+
+    // 아이템 모델로 모자를 만든다. 모델이 없으면 false(기본 도형으로).
+    private bool BuildModelHat()
+    {
+        EscapeCatalogSO catalog = EscapeCatalogSO.Current;
+        ItemSO def = catalog != null ? catalog.HeliHat : null;
+        if (def == null || def.ModelPrefab == null) return false;
+        GameObject model = EscapeVisuals.CreateItemModel(def, hat);
+        model.transform.localScale *= HatModelScale;
+        foreach (Renderer r in model.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        propeller = EscapeCue.FindDeep(model.transform, "Propeller");
+        if (propeller == null) return true; // 프로펠러 노드가 없는 옛 모델: 돌지 않을 뿐
+        spinAxis = propeller.InverseTransformDirection(hat.up).normalized;
+        return true;
     }
 }

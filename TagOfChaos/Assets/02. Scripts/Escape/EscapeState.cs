@@ -26,7 +26,7 @@ public enum RainbowState : byte { None = 0, Closed = 1, Opened = 2, Broken = 3 }
 // v10(§69 E3): 대포 비행 천장(Ceiling — 지하처럼 위가 막힌 곳에서 포물선이 천장을 넘지 않게).
 public sealed class EscapeState
 {
-    public const byte FormatVersion = 10;
+    public const byte FormatVersion = 11; // §74 P12: 사이렌 함정에 놓은 건물(Site)
     public const int BuildingCount = 4;
     public const int ExitCount = 4;
     public const float RepairSeconds = 10f;      // 재료 넣기(수리) 게이지가 다 차는 시간(§25.5 E)
@@ -132,6 +132,7 @@ public sealed class EscapeState
         public bool Spent;
         public double SpentAt;
         public int Building;     // 갇힌 건물(-1 = 아직)
+        public int Site;         // 놓은 재료 건물(§74 P12 — 건물당 하나). -1 = 모름
         public double CagedAt;   // 철창이 선 시각(0 = 아직)
         public int Mash;         // 철창 연타 수
 
@@ -368,7 +369,7 @@ public sealed class EscapeState
             w.Write(Flights.Count);
             foreach (Flight f in Flights) { w.Write(f.Actor); w.Write(f.StartAt); }
             w.Write(Bombs.Count);
-            foreach (Bomb b in Bombs) { w.Write(b.Id); w.Write(b.Owner); WriteVector(w, b.Pos); w.Write(b.Spent); w.Write(b.SpentAt); w.Write(b.Building); w.Write(b.CagedAt); w.Write(b.Mash); }
+            foreach (Bomb b in Bombs) { w.Write(b.Id); w.Write(b.Owner); WriteVector(w, b.Pos); w.Write(b.Spent); w.Write(b.SpentAt); w.Write(b.Building); w.Write(b.CagedAt); w.Write(b.Mash); w.Write(b.Site); }
             w.Write(Decoys.Count);
             foreach (Decoy d in Decoys) { w.Write(d.Id); w.Write(d.Owner); WriteVector(w, d.Pos); w.Write(d.Yaw); w.Write(d.VoiceAt); w.Write(d.Seed); w.Write(d.CaughtBy); w.Write(d.CaughtAt); }
             w.Write(Carriages.Count);
@@ -431,7 +432,7 @@ public sealed class EscapeState
                 for (int i = 0; i < flights; i++) s.Flights.Add(new Flight { Actor = r.ReadInt32(), StartAt = r.ReadDouble() });
                 int bombs = r.ReadInt32();
                 for (int i = 0; i < bombs; i++)
-                    s.Bombs.Add(new Bomb { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Spent = r.ReadBoolean(), SpentAt = r.ReadDouble(), Building = r.ReadInt32(), CagedAt = r.ReadDouble(), Mash = r.ReadInt32() });
+                    s.Bombs.Add(new Bomb { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Spent = r.ReadBoolean(), SpentAt = r.ReadDouble(), Building = r.ReadInt32(), CagedAt = r.ReadDouble(), Mash = r.ReadInt32(), Site = r.ReadInt32() });
                 int decoys = r.ReadInt32();
                 for (int i = 0; i < decoys; i++)
                     s.Decoys.Add(new Decoy { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), VoiceAt = r.ReadDouble(), Seed = r.ReadInt32(), CaughtBy = r.ReadInt32(), CaughtAt = r.ReadDouble() });

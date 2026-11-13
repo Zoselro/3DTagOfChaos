@@ -16,7 +16,7 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
     // (GameStartAuthority), 방장이 모두 맵에 들어온 것을 보면 "지금 + 준비 시간"으로 당긴다. 방장이 가장 늦게 와도, 로드 중에 방장이
     // 바뀌어도 새 방장이 같은 일을 한다. 괴물 도착 확인도 MaxArrivalWait까지 미룬다. 예전에는 방장 로드 뒤 13초에 괴물이
     // 아직 로딩 중이면 "괴물이 오지 않음"으로 보고 모두 대기실로 돌려보냈다(방이 터진 것처럼 보임).
-    public const float MaxArrivalWait = 45f;
+    public const float MaxArrivalWait = 120f; // §74 P6: 모든 사람이 들어올 때까지 — 방에 남아 있는데 2분 넘게 못 들어오는 사람만 빼고 시작
     private const float ArrivalPollSeconds = 1f;
 
     private double? monstersGoneAt;
@@ -60,7 +60,8 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
         Debug.Log($"[RoomLifecycle] {reason}. Returning to lobby in {GameSettings.Current.MonsterDepartureReturnDelay}s.");
     }
 
-    // 준비 유예 + 도착 대기 시간이 지나면 한 번 확인한다. 그 사이 늦은 괴물은 RoomSceneFollower가 맵으로 끌어온다.
+    // 준비 유예 + 도착 대기 시간이 지나면 한 번 확인해 기록만 남긴다. 그 사이 늦은 괴물은 RoomSceneFollower가 맵으로 끌어온다.
+    // §74 P6: 시간이 지났다고 대기실로 돌려보내지 않는다 — 괴물이 방을 나갔을 때(OnPlayerLeftRoom)만 돌아간다.
     private void CheckMonsterArrival(bool final)
     {
         int[] monsters = MonsterRoster.Remaining(MonsterRoster.Current(), PhotonNetwork.CurrentRoom.Players.Keys);
@@ -72,15 +73,8 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
         if (arrived == 0 && !final) return; // 아직 로딩 중일 수 있다 — MaxArrivalWait까지 기다린다(§73 L4)
         arrivalChecked = true;
         RoomSyncLog.Note($"Monster arrival check: {arrived}/{monsters.Length} in {map}");
-        if (!MonsterArrival.ShouldReturn(monsters.Length, arrived)) return;
-
-        bool spyRocketLaunched = RoomState.TryGetDouble(NetKeys.TimeAttackEndTime, out _);
-        bool resultDecided = RoomState.TryGetInt(NetKeys.GameResult, out _);
-        if (!MonsterRoster.ReturnWhenMonstersGone(spyRocketLaunched, resultDecided)) return;
-
-        var props = new Hashtable();
-        BeginMonstersGoneReturn(props, $"No monster arrived in {map} (monsters: {string.Join(",", monsters)})");
-        AuthorityProps.SetRoom(props);
+        if (MonsterArrival.ShouldReturn(monsters.Length, arrived))
+            Debug.LogWarning($"[RoomLifecycle] No monster in {map} yet (monsters: {string.Join(",", monsters)}) — waiting while they stay in the room.");
     }
 
     // 경고 도중 방장이 바뀌면 새 방장이 복귀를 이어받는다 — 시각은 Room Prop에 남아 있다.
@@ -96,7 +90,8 @@ public class RoomLifecycleWatcher : MonoBehaviourPunCallbacks
         foreach (Player p in PhotonNetwork.CurrentRoom.Players.Values) loadedScenes[p.ActorNumber] = RoomState.LoadedScene(p);
     }
 
-    // 모두 맵에 들어오면(또는 MaxArrivalWait가 지나면) 준비 시간을 지금부터 PrepareSeconds로 맞춘다.
+    // 모두 맵에 들어오면(또는 MaxArrivalWait가 지나면) 준비 시간을 지금부터 PrepareSeconds로 맞춘다(§74 P6).
+    // 방을 나간 사람은 Players에서 빠지므로 자연히 셈에서 빠진다.
     private void StartPrepareWhenEveryoneArrives()
     {
         if (everyoneArrived || Time.unscaledTime < nextArrivalPoll) return;

@@ -28,6 +28,7 @@ public class RoomSettingsMenu : MonoBehaviour
     private void Awake()
     {
         if (applyButton != null) applyButton.onClick.AddListener(Apply);
+        RoomState.HideSettingRow(witchTimerField); // 마녀 타이머는 10분 고정(§74 P8)
     }
 
     public void Open()
@@ -39,7 +40,6 @@ public class RoomSettingsMenu : MonoBehaviour
         // 지금 방의 값으로 채운다
         if (playersField != null) playersField.SubmitText(PhotonNetwork.CurrentRoom.MaxPlayers.ToString());
         if (spyCountField != null) spyCountField.SubmitText(RoomState.SpyCount().ToString());
-        if (witchTimerField != null && RoomState.TryGetInt(NetKeys.TimeAttackDuration, out int attack)) witchTimerField.SubmitText((attack / 60).ToString());
         if (regionField != null) regionField.SetCode(PhotonRegions.Current ?? PhotonRegions.Saved);
     }
 
@@ -56,10 +56,9 @@ public class RoomSettingsMenu : MonoBehaviour
         Photon.Realtime.Room room = PhotonNetwork.CurrentRoom;
         int players = playersField != null ? playersField.Value : room.MaxPlayers;
         int spies = spyCountField != null ? spyCountField.Value : RoomState.SpyCount();
-        int attack = witchTimerField != null ? witchTimerField.Value : CurrentMinutes(NetKeys.TimeAttackDuration, GameSettings.Current.DefaultTimeAttackMinutes);
 
         string region = regionField != null ? regionField.Code : RoomSettingsAuthority.KeepRegion;
-        RoomSettingsAuthority.Result result = RoomSettingsAuthority.Request(players, spies, attack, region);
+        RoomSettingsAuthority.Result result = RoomSettingsAuthority.Request(players, spies, region);
         if (result == RoomSettingsAuthority.Result.PlayersRaised && playersField != null)
             playersField.SubmitText(Mathf.Max(players, room.PlayerCount).ToString());
         if (result == RoomSettingsAuthority.Result.Applied)

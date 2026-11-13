@@ -9,7 +9,7 @@ public static class DecoyRules
     public const float FleeReleaseSeconds = 3f;       //   3초 머물면
     public const float SameFloorHeight = 4f;          // 이 높이 차 안이면 같은 층
     public const float ZigzagDistance = 6f;           // 이 안이면 1~2초마다 방향을 튼다
-    public const float DanceChance = 0.03f;           // 한 행동을 끝낼 때마다 춤출 확률(§44.9 — 아주 가끔)
+    public const float DanceChance = 0.03f;           // (옛 값, 쓰지 않음) 한 행동을 끝낼 때마다 춤출 확률(§44.9) — §74 P16에서 다른 행동과 같은 비중으로
     public const int BuildingCapacity = 3;
 
     public enum Activity : byte { None, Wander, Rest, Visit, Hide, Flee, Dance }
@@ -50,6 +50,20 @@ public static class DecoyRules
     }
 
     public static bool RollDance(double roll) => roll < DanceChance;
+
+    // 춤 비중(§74 P16 — 다른 행동과 같게): 고를 수 있는 행동들의 평균 가중치. 춤출 확률 = 춤 / (다른 행동 합 + 춤).
+    public static float DanceProbability(Personality p, bool prepare, bool hasBuildings, bool hasHideSpots)
+    {
+        int visit = prepare || !hasBuildings ? 0 : p.Visit;
+        int hide = prepare || !hasHideSpots ? 0 : p.Hide;
+        int kinds = 2 + (visit > 0 ? 1 : 0) + (hide > 0 ? 1 : 0);
+        int others = p.Wander + p.Rest + visit + hide;
+        float dance = Mathf.Max(1f, others / (float)kinds);
+        return dance / (others + dance);
+    }
+
+    public static bool RollDance(double roll, Personality p, bool prepare, bool hasBuildings, bool hasHideSpots) =>
+        roll < DanceProbability(p, prepare, hasBuildings, hasHideSpots);
 
     public static float FleeStartDistance(float audibleRadius, Personality p) => audibleRadius * p.Fear;
 

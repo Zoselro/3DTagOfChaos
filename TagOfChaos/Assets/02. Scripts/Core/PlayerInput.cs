@@ -144,7 +144,9 @@ public static class PlayerInput
     public static bool CameraRotateHeld => Held(KeyAction.CameraRotate);
     public static bool CameraRotatePressed => !IsMenuOpen && Down(KeyAction.CameraRotate);
     public static bool CameraRotateReleased => Up(KeyAction.CameraRotate);
-    public static Vector2 CameraRotateDelta => IsMenuOpen ? Vector2.zero : new Vector2(Input.GetAxis(Bindings.MouseXAxis), Input.GetAxis(Bindings.MouseYAxis)) + EditorLook;
+    // 마우스 감도(§74 P5, 쿠키·괴물 공용)를 곱한다. 시험용 EditorLook은 감도와 무관하게 그대로 더한다.
+    public static Vector2 CameraRotateDelta => IsMenuOpen ? Vector2.zero
+        : new Vector2(Input.GetAxis(Bindings.MouseXAxis), Input.GetAxis(Bindings.MouseYAxis)) * MouseSensitivity.Value + EditorLook;
     public static Vector2 EditorLook; // 마우스를 움직인 것처럼(Play Mode 시점 시험, §59 CL5)
 
     // 참가자 목록(§59 PL1): 누르고 있는 동안. 채팅 입력 중에는 열지 않는다.

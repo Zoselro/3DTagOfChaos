@@ -1,8 +1,6 @@
 using UnityEngine;
 
-// 물풍선을 들고 있는 동안(본인 화면만) 맞을 대상과 예상 궤적을 보여 준다(Request1009Plan.md §45.7 WB0).
-// - 전방 10 m·45° 안 가장 가까운 대상 발밑에 하늘색 고리, 손에서 대상 몸 가운데까지 포물선(던질 때와 같은 ToolAim.ArcPoint).
-// - 대상이 없으면 보는 곳 앞 땅까지 흐린 궤적만.
+// 바닥 고리 표시(본인 화면만): 녹음기로 고른 AI·사이렌 함정 놓을 자리. 물풍선·섬광탄 궤적 미리보기는 지웠다(§74 P1).
 public class BalloonAimPreview : MonoBehaviour
 {
     private const int Segments = 24;
@@ -58,26 +56,6 @@ public class BalloonAimPreview : MonoBehaviour
         ring.material = new Material(sprite);
     }
 
-    // 떨어질 자리와 터지는 반경(섬광탄): 대상 고리 대신 땅에 반경 원.
-    public void ShowArea(Vector3 from, Vector3 to, float radius, Color color)
-    {
-        if (!gameObject.activeSelf) gameObject.SetActive(true);
-        line.positionCount = Segments + 1;
-        float apex = ToolAim.ApexHeight(from, to);
-        for (int i = 0; i <= Segments; i++) points[i] = ToolAim.ArcPoint(from, to, apex, i / (float)Segments);
-        line.SetPositions(points);
-        line.startColor = line.endColor = color;
-        ring.gameObject.SetActive(true);
-        ring.startColor = ring.endColor = color;
-        var centre = to + Vector3.up * 0.12f;
-        for (int i = 0; i < RingSegments; i++)
-        {
-            float a = i * Mathf.PI * 2f / RingSegments;
-            ringPoints[i] = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
-        }
-        ring.SetPositions(ringPoints);
-    }
-
     // 사이렌 함정 놓을 자리(§69 F5): 그 자리 고리만(궤적 없음).
     public void ShowSpot(Vector3 at, float radius, Color color)
     {
@@ -108,51 +86,6 @@ public class BalloonAimPreview : MonoBehaviour
         Bounds b = WaterBubbleView.BodyBounds(target);
         float radius = Mathf.Max(0.5f, Mathf.Max(b.size.x, b.size.z) * 0.55f);
         var centre = new Vector3(b.center.x, target.position.y + 0.12f, b.center.z);
-        for (int i = 0; i < RingSegments; i++)
-        {
-            float a = i * Mathf.PI * 2f / RingSegments;
-            ringPoints[i] = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
-        }
-        ring.SetPositions(ringPoints);
-    }
-
-    public void Show(Vector3 from, Vector3 to, Transform target)
-    {
-        if (!gameObject.activeSelf) gameObject.SetActive(true);
-        line.positionCount = Segments + 1;
-        float apex = ToolAim.ApexHeight(from, to);
-        for (int i = 0; i <= Segments; i++) points[i] = ToolAim.ArcPoint(from, to, apex, i / (float)Segments);
-        line.SetPositions(points);
-        Color c = target != null ? HitColor : MissColor;
-        line.startColor = c;
-        line.endColor = c;
-        ring.gameObject.SetActive(target != null);
-        if (target != null)
-        {
-            Bounds b = WaterBubbleView.BodyBounds(target);
-            float radius = Mathf.Max(b.size.x, b.size.z) * 0.45f;
-            var centre = new Vector3(b.center.x, target.position.y + 0.12f, b.center.z);
-            for (int i = 0; i < RingSegments; i++)
-            {
-                float a = i * Mathf.PI * 2f / RingSegments;
-                ringPoints[i] = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius;
-            }
-            ring.SetPositions(ringPoints);
-        }
-    }
-
-    // 던지는 물체의 예상 궤적(§70.3.6): 계산한 점들을 그대로 잇고, 끝(멈추거나 터질 자리)에 반경 고리.
-    public void ShowPath(Vector3[] path, int count, Vector3 end, float radius, Color color)
-    {
-        if (!gameObject.activeSelf) gameObject.SetActive(true);
-        count = Mathf.Clamp(count, 2, path.Length);
-        if (line.positionCount != count) line.positionCount = count;
-        for (int i = 0; i < count; i++) line.SetPosition(i, path[i]);
-        line.startColor = line.endColor = color;
-        ring.gameObject.SetActive(radius > 0f);
-        if (radius <= 0f) return;
-        ring.startColor = ring.endColor = color;
-        var centre = end + Vector3.up * 0.1f;
         for (int i = 0; i < RingSegments; i++)
         {
             float a = i * Mathf.PI * 2f / RingSegments;

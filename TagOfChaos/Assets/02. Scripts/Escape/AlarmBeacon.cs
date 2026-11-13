@@ -1,12 +1,10 @@
 using UnityEngine;
 
-// 소음폭탄 비상벨(Request1009Plan.md §25.5 K): 괴물 화면에 터진 건물 위치를 5초 동안 하늘로 솟는 빨간 빛기둥으로 보여 준다(벽 너머로도 — 투시).
+// 사이렌 함정 발동 표시(Request1009Plan.md §25.5 K, §74 P12): 괴물 화면에 철창이 선 재료 건물 위로 빨간 빛기둥을 세운다(벽 너머로도 — 투시).
+// 예전에는 5초 뒤 사라졌다 — 이제 철창이 서 있는 동안 계속 보이고, 철창이 부서지면 SirenTrapPresenter가 지운다(탈출구 빛기둥처럼).
 public class AlarmBeacon : MonoBehaviour
 {
-    public const float ShowSeconds = 5f;
-    private float until;
-
-    public static void Show(Vector3 at)
+    public static AlarmBeacon Create(Vector3 at)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         Destroy(go.GetComponent<Collider>());
@@ -17,14 +15,9 @@ public class AlarmBeacon : MonoBehaviour
         var xray = go.AddComponent<XRayMarker>();
         xray.Init(new Color(1f, 0.2f, 0.15f));
         xray.SetVisible(true);
-        go.AddComponent<AlarmBeacon>().until = Time.time + ShowSeconds;
         GameAudio.PlayAt(SoundId.UiToastAlert, at);
+        return go.AddComponent<AlarmBeacon>();
     }
 
-    private void Update()
-    {
-        float left = until - Time.time;
-        if (left <= 0f) { Destroy(gameObject); return; }
-        transform.Rotate(0f, 120f * Time.deltaTime, 0f);
-    }
+    private void Update() => transform.Rotate(0f, 120f * Time.deltaTime, 0f);
 }

@@ -27,6 +27,7 @@ public static class SettingsMenuInstaller
         public string micLabel = "Microphone", refresh = "Refresh", levelLabel = "Input level", talkModeLabel = "Talk mode";
         public string noMicrophone = "No microphone", pushToTalk = "Push to talk", alwaysOn = "Always on", keyHintFormat = "Talk key: {0}";
         public string roomSettings = "Room settings", settings = "Settings";
+        public string mouseSensitivity = "Mouse sensitivity";
         public string menuTitle = "Menu", resume = "Resume", quit = "Quit game", quitConfirm = "Quit the game?", yes = "Yes", no = "No";
     }
 
@@ -157,6 +158,8 @@ public static class SettingsMenuInstaller
         Button reset = S.CreateButton(page, "ResetButton", tx.reset, style);
         S.SetRect((RectTransform)reset.transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(0f, 4f), new Vector2(300f, 56f), new Vector2(1f, 0f));
 
+        AddSensitivityRow(page, style, tx);
+
         var comp = page.gameObject.AddComponent<KeyBindingsPage>();
         var so = new SerializedObject(comp);
         so.FindProperty("content").objectReferenceValue = contentRt;
@@ -196,6 +199,45 @@ public static class SettingsMenuInstaller
     }
 
     // 이미 있는 프리팹의 조작키 탭에 확인창만 넣는다(프리팹 전체를 다시 만들지 않는다 — 다른 문구·배치 보존).
+    // 조작키 탭 아래 왼쪽(초기화 버튼 옆)에 마우스 감도 줄(§74 P5): 이름 + 막대 + 배율.
+    private static void AddSensitivityRow(RectTransform page, S.Style style, Texts tx)
+    {
+        Transform old = page.Find("MouseSensitivityRow");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        RectTransform row = S.Child(page, "MouseSensitivityRow");
+        S.SetRect(row, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 4f), new Vector2(600f, 56f), new Vector2(0f, 0f));
+        TMP_Text label = S.Text(row, "Label", tx.mouseSensitivity, 26f, style.font, style.textColor, TextAlignmentOptions.MidlineLeft);
+        S.SetRect(label.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(10f, 0f), new Vector2(180f, 0f), new Vector2(0f, 0.5f));
+        Slider slider = S.CreateSlider(row, style);
+        S.SetRect((RectTransform)slider.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(200f, 0f), new Vector2(300f, 20f), new Vector2(0f, 0.5f));
+        slider.minValue = MouseSensitivity.Min; slider.maxValue = MouseSensitivity.Max; slider.value = MouseSensitivity.Default;
+        TMP_Text value = S.Text(row, "Value", "1.0", 26f, style.font, style.textColor, TextAlignmentOptions.MidlineLeft);
+        S.SetRect(value.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(515f, 0f), new Vector2(80f, 0f), new Vector2(0f, 0.5f));
+        var comp = row.gameObject.AddComponent<MouseSensitivityRow>();
+        var so = new SerializedObject(comp);
+        so.FindProperty("slider").objectReferenceValue = slider;
+        so.FindProperty("valueText").objectReferenceValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // 이미 있는 설정 창 프리팹에 마우스 감도 줄만 넣는다(전체 다시 만들기 없이).
+    public static string AddSensitivityRowToPrefab(Texts tx)
+    {
+        GameObject core = PrefabUtility.LoadPrefabContents(S.CorePrefabPath);
+        S.Style style = S.ReadStyle(core.GetComponentInChildren<EscMenu>(true));
+        PrefabUtility.UnloadPrefabContents(core);
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            KeyBindingsPage page = root.GetComponentInChildren<KeyBindingsPage>(true);
+            if (page == null) return "no KeyBindingsPage";
+            AddSensitivityRow((RectTransform)page.transform, style, tx);
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            return "ok";
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+    }
+
     public static string AddResetConfirmToPrefab(Texts tx)
     {
         GameObject core = PrefabUtility.LoadPrefabContents(S.CorePrefabPath);

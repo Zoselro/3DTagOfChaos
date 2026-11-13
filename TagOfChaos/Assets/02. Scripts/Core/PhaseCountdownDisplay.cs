@@ -34,12 +34,17 @@ public class PhaseCountdownDisplay : MonoBehaviour
     {
         if (GamePhaseState.Current == GamePhase.Result) { SetVisible(false); return; } // 결과 화면 뒤로 남은 시간이 비치지 않게
 
-        bool running = GamePhaseState.TryGetActiveEndTime(ToGamePhase(phase), out double endTime) && PhotonNetwork.Time < endTime;
+        bool running = GamePhaseState.TryGetActiveEndTime(ToGamePhase(phase), out double endTime) && PhotonNetwork.Time < endTime
+            && !IsProvisional(phase, endTime);
         SetVisible(running);
         if (!running) return;
 
         ShowSeconds(Mathf.Max(0, Mathf.CeilToInt((float)(endTime - PhotonNetwork.Time))));
     }
+
+    // 모두 맵에 들어오기 전의 임시 준비 끝 시각(§74 P6)은 보이지 않는다 — 남은 시간이 준비 시간보다 길면 아직 세기 전이다.
+    private static bool IsProvisional(CountdownPhase countdownPhase, double endTime) =>
+        countdownPhase == CountdownPhase.Prepare && endTime - PhotonNetwork.Time > GameSettings.Current.PrepareSeconds + 1f;
 
     private void ShowSeconds(int seconds)
     {
