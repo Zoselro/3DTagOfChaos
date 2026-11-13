@@ -35,6 +35,9 @@ public class ItemSO : ScriptableObject
     [SerializeField] private Vector3 holdEuler;
     // 손에 들었을 때 크기 배율(뿅망치 3배 — 들고 있는 내내 거대, Request1009Plan.md §45.5).
     [SerializeField, Min(0.1f)] private float heldScale = 1f;
+    [Tooltip("한 손 아이템: 켜면 모델의 이 점(모델 기준, 크기 전)을 손이 쥔다 — 기울이거나 주먹 위에 올리지 않는다(총 손잡이 등, §75.14).")]
+    [SerializeField] private bool useGripPoint;
+    [SerializeField] private Vector3 gripPoint;
 
     public string ItemId => itemId;
     public string DisplayName => displayName;
@@ -47,6 +50,8 @@ public class ItemSO : ScriptableObject
     public Vector3 HoldOffset => holdOffset;
     public Vector3 HoldEuler => holdEuler;
     public float HeldScale => heldScale;
+    public bool UseGripPoint => useGripPoint;
+    public Vector3 GripPoint => gripPoint;
     public bool LocksSlotSwitch => holdType == HoldType.TwoHanded;
     public bool IsTool => category == ItemCategory.Tool && tool != null;
 
@@ -63,6 +68,8 @@ public class ItemSO : ScriptableObject
     }
 
     public void EditorSetHeldScale(float scale) => heldScale = Mathf.Max(0.1f, scale);
+
+    public void EditorSetGripPoint(bool use, Vector3 point) { useGripPoint = use; gripPoint = point; }
 
     public void EditorSetVisuals(Sprite iconSprite, GameObject model)
     {

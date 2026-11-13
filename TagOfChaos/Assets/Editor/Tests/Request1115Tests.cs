@@ -106,6 +106,17 @@ public class Request1115Tests
         Assert.IsFalse(HammerClearance.Overlaps(head + Vector3.right * 1.2f, 0.3f, head, radii));
     }
 
+    // §75.14: 스턴건은 손잡이를 쥔다(기울이거나 주먹 위에 올리지 않음).
+    [Test]
+    public void StunGun_IsHeldByItsGrip()
+    {
+        var gun = AssetDatabase.LoadAssetAtPath<ItemSO>("Assets/03. SO/Escape/Items/Item_StunGun.asset");
+        Assert.NotNull(gun);
+        Assert.IsTrue(gun.UseGripPoint, "grip point on");
+        Assert.Less(gun.GripPoint.y, 0f, "grip below the barrel");
+        Assert.Less(gun.GripPoint.z, 0f, "grip behind the muzzle");
+    }
+
     private static AnimationClip Clip(string name)
     {
         AnimationClip c = DanceStateBuilder.LoadClip(ActionLayerBuilder.Dir + name + ".fbx");

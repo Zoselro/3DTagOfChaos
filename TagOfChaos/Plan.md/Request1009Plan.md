@@ -9754,3 +9754,20 @@ animator.SetLayerWeight(holdLayer, Mathf.MoveTowards(holdWeight, oneHandedHeld ?
 | W1 | 뒷걸음 = 앞으로 걷기 클립 `Cookie_Walking`을 거꾸로 재생(Base 층 `WalkBack` 상태 speed −1, 걷기와 같은 빠르기). 따로 만든 `Cookie_WalkBack`은 쓰지 않음 | ✅ |
 | W2 | 옆걸음 2개 Blender 다시: 다리 IK + 발 회전 고정(발바닥 평평·발끝 앞, 발목 꺾임 없음), 무릎 앞으로 굽힘, 두 발 간격이 서 있는 폭(±0.23 m)보다 좁아지지 않는 "벌렸다 모으기" 걸음(가장 넓을 때 ±0.39 m), 발 들기 0.09 m, 엉덩이 살짝 내림·위아래·좌우 흔들림 | ✅ |
 | W3 | 다시 가져오기·`ActionLayerBuilder` 다시 실행, 시험 `Request1115Tests` 6/6(뒷걸음 = 걷기 거꾸로 확인 추가), Play Mode(쿠키·마카롱) 오른쪽·왼쪽·뒤 입력 → StrafeRight·StrafeLeft·WalkBack(−1배), 콘솔 오류·경고 0, 사진 `sfx_preview/w76_*`·`w76m_*` | ✅ |
+
+### 75.14 스턴건 팔 꼬임·손에 떠 있음(2026-11-13)
+
+요청: "레이저 건을 들었을 때 팔이 뒤틀려있는 모습과 레이저건이 손에 떠다녀 이를 고쳐줘"
+
+원인
+- 한 손 들기 클립 `Cookie_ItemHold`의 팔꿈치가 가슴 가운데(몸 안쪽)에 있었다 → 위팔이 몸을 가로질러 꼬여 보임.
+- 한 손 아이템은 "주먹 위에 올려 35° 기울여 든다"(§75 D1, 작은 아이템이 손에 묻히지 않게) → 손잡이가 있는 스턴건은 손잡이 아래 끝이 주먹 위 0.09 m에 떠서 세워져 보였다.
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| G1 | Blender `Cookie_ItemHold` 다시: 팔꿈치는 어깨 아래·옆, 아래팔은 앞으로, 손은 오른쪽 배 앞(총을 낮게 든 자세). 다른 한 손 아이템도 같은 자세 | ✅ |
+| G2 | `ItemSO`에 손잡이 점(`useGripPoint`·`gripPoint`, 모델 기준) 추가 — 켜면 그 점을 손이 쥐고, 기울이거나 주먹 위에 올리지 않는다(`HeldItemPresenter`) | ✅ |
+| G3 | `Item_StunGun`: 손잡이 점 (0, −0.088, −0.089)(Blender로 잰 손잡이 가운데), 손 위치 보정 (0, −0.01, 0.06) | ✅ |
+| T | `Request1115Tests` 7/7(스턴건 손잡이 시험 추가)·`Request1011Tests` 39/39, Play Mode 사진: 들기(앞·옆·뒤)·우클릭 조준·섬광탄 — 총구가 앞을 보고 손잡이가 손 안, 콘솔 오류·경고 0 | ✅ |
+
+- MCP 주소: 새 터널 주소로 `.mcp.json`을 바꿔 `Zoselro/3DTagOfChaos`의 `feature/gameplay-overhaul`에 올림(새 세션은 이 저장소·브랜치로).

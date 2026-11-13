@@ -20,6 +20,8 @@ MonoBehaviour:
   holdType: 0
   category: 1
   tool: {fileID: 11400000, guid: 906449bd7f2464644ac2e007838a4e60, type: 2}
-  holdOffset: {x: 0, y: 0, z: 0}
+  holdOffset: {x: 0, y: -0.01, z: 0.06}
   holdEuler: {x: 0, y: 0, z: 0}
   heldScale: 1.2
+  useGripPoint: 1
+  gripPoint: {x: 0, y: -0.088, z: -0.089}

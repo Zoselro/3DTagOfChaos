@@ -122,9 +122,11 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
             hammerHeadRadius = Mathf.Max(mb.extents.x, mb.extents.z) * scale;
         }
         bool oneHanded = holdType == HoldType.OneHanded;
-        holdRotation = (oneHanded ? OneHandedTilt : Quaternion.identity) * Quaternion.Euler(def.HoldEuler);
+        bool gripPoint = oneHanded && def.UseGripPoint; // 총처럼 손잡이가 있는 아이템: 손잡이를 쥐고 앞을 겨눈다(§75.14)
+        holdRotation = (oneHanded && !gripPoint ? OneHandedTilt : Quaternion.identity) * Quaternion.Euler(def.HoldEuler);
         holdOffset = def.HoldOffset;
-        if (oneHanded) model.transform.localPosition += OneHandedGripOffset(model); // 쥔 곳이 소켓(손)에 오게 — 기울기는 쥔 곳을 축으로
+        if (gripPoint) model.transform.localPosition -= model.transform.localRotation * Vector3.Scale(def.GripPoint, model.transform.localScale);
+        else if (oneHanded) model.transform.localPosition += OneHandedGripOffset(model); // 쥔 곳이 소켓(손)에 오게 — 기울기는 쥔 곳을 축으로
         LateUpdate();
     }
 
