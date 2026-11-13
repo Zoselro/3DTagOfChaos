@@ -22,4 +22,4 @@ MonoBehaviour:
   tool: {fileID: 0}
   holdOffset: {x: 0.12, y: 0, z: 0.15}
   holdEuler: {x: -90, y: 0, z: 0}
-  heldScale: 1
+  heldScale: 1.2

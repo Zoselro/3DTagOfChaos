@@ -3,11 +3,13 @@ using UnityEngine;
 
 // 손에 든 도구 쓰기(EscapePlan.md §1.8). 맞힌 대상은 쓰는 사람 화면에서 고르고, 방장이 횟수·쿨다운을 확인해
 // 모두에게 명중(ToolHit)을 알린다 — 기절·떨어뜨리기·색칠은 맞은 사람 본인이 처리한다(ToolHitReceiver).
-// - 뿅망치(§45.5): 두 손으로 휘두르고, 망치가 닿는 순간(0.32초) 전방 5 m·60° 안에서 가장 가까운 대상 한 명.
+// - 뿅망치(§45.5, §75 A4): 어깨에서 내려찍는 동안 망치 머리가 지나간 길(직전 → 지금 위치 캡슐)에 처음 닿은 대상 한 명.
+//   물리 트리거 대신 매 프레임 길을 훑어, 프레임이 낮아도 빠른 휘두름을 놓치지 않는다. 방장 검사(거리·회피 무적)는 그대로.
+// - 쓰는 순간 몸이 카메라가 보는 쪽(수평)으로 돌아선다(§75 B1). 스턴건은 우클릭으로 조준하는 동안 계속(§75 B2).
 // - 스턴건: 카메라가 보는 방향 사거리(20 m, §45.6) 안 첫 대상. 우클릭을 누르고 있는 동안만 조준(조준점 + 약간 확대 + 조준 자세)되고, 그때 좌클릭해야 쏜다.
 // - 물풍선·섬광탄(§70.3): 화면 가운데가 보는 곳으로 던진다(자동 조준 없음). 손을 떠나면 실제로 날아가 물풍선은 사람 몸에 닿으면 가두고
 //   벽·바닥에 먼저 닿으면 그냥 터지며, 섬광탄은 튕기고 구르다 첫 충돌 2초 뒤 터진다. 들고 있는 동안 조준점과 점선 궤적이 보인다.
-// - 권투 글러브(§68 GP3): 뿅망치처럼 휘둘러 주먹이 닿는 순간 앞 짧은 부채꼴 안 가장 가까운 쿠키 한 명(술래 제외).
+// - 권투 글러브(§68 GP3, §75 C1): 양손에 끼고 오른손 → 왼손 번갈아 친다. 뻗는 주먹이 지나간 길에 처음 닿은 쿠키 한 명(술래 제외).
 // 괴물은 충돌 캡슐(반지름 약 0.31 m)이 몸 겉모습보다 훨씬 작으므로, 몸 크기의 트리거(잡기 범위 구)도 맞힘 판정에 넣는다.
 public class ToolUser : MonoBehaviour
 {
@@ -29,6 +31,13 @@ public class ToolUser : MonoBehaviour
 
     private AudioHandle aimHum;
     private PlayerActionPose pose;
+    private HideOrSeekPlayer cookie;
+    private HeldItemPresenter held;
+    private HideOrSeekPlayer Cookie => cookie != null ? cookie : cookie = GetComponent<HideOrSeekPlayer>();
+    private HeldItemPresenter Held => held != null ? held : held = GetComponent<HeldItemPresenter>();
+    private const float AimFaceRefresh = 0.2f;   // 스턴건 조준 중 몸을 돌려 두는 시간(매 프레임 다시 늘린다)
+    private bool lastPunchWasRight;
+    private float lastPunchAt = -10f;
 
     public void Init(PlayerInventory owner, EscapeManager escape)
     {
@@ -59,6 +68,7 @@ public class ToolUser : MonoBehaviour
             zoom = Mathf.MoveTowards(zoom, Aiming ? AimZoom : 1f, AimZoomSpeed * Time.deltaTime);
             cam.fieldOfView = baseFov * zoom;
         }
+        if (Aiming && cam != null && Cookie != null) Cookie.FaceAim(cam.transform.forward, AimFaceRefresh); // 조준 쪽으로 몸을 돌린다(§75 B2)
         UpdateAimHum(Aiming);
         if (Aiming && crosshair == null) crosshair = CreateCrosshair();
         if (crosshair != null && crosshair.activeSelf != Aiming) crosshair.SetActive(Aiming);
@@ -195,19 +205,28 @@ public class ToolUser : MonoBehaviour
         switch (tool.Kind)
         {
             case ToolKind.Hammer:
-                // 휘두르기 동작을 먼저 하고, 망치가 닿는 순간에 대상을 골라 보낸다
+                // 보는 쪽으로 돌아서며 내려찍고, 망치 머리가 지나간 길을 훑어 대상을 고른다(§75 A3·A4)
+                if (Cookie != null) Cookie.FaceAim(aim, PlayerActionPose.SwingSeconds);
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
                 if (pose != null) pose.Play(PlayerActionPose.OneShot.Swing);
-                StartCoroutine(HammerHit(slot, tool, PlayerActionPose.SwingHit, ToolAim.HammerHalfAngle));
+                StartCoroutine(Sweep(slot, tool, false, false));
                 return;
             case ToolKind.BoxingGlove:
+            {
+                // 오른손부터, 이어 치면 왼손·오른손 번갈아(§75 C1). 어느 손인지는 요청 B 칸으로 다른 화면에 간다.
+                bool left = AimMotion.NextPunchIsLeft(lastPunchWasRight, Time.time - lastPunchAt);
+                lastPunchWasRight = !left;
+                lastPunchAt = Time.time;
+                if (Cookie != null) Cookie.FaceAim(aim, PlayerActionPose.PunchSeconds + 0.1f);
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
-                if (pose != null) pose.Play(PlayerActionPose.OneShot.Swing);
-                StartCoroutine(HammerHit(slot, tool, GloveHitDelay, GloveHalfAngle));
+                if (pose != null) pose.Play(left ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR);
+                StartCoroutine(Sweep(slot, tool, true, left));
                 return;
+            }
             case ToolKind.Flashbang:
             case ToolKind.WaterBalloon:
                 if (tool.Projectile == null) { readyAt = 0f; return; }
+                if (Cookie != null) Cookie.FaceAim(aim, PlayerActionPose.ThrowSeconds); // 던지는 쪽으로 돌아선다(§75 B1)
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
                 if (pose != null) pose.Play(PlayerActionPose.OneShot.Throw);
                 StartCoroutine(ReleaseThrow(slot, item)); // 대상은 날아가 닿을 때 방장이 정한다(§70.3)
@@ -289,20 +308,62 @@ public class ToolUser : MonoBehaviour
         manager.Request(EscapeOp.ToolUse, slot, color, point, targets.ToArray());
     }
 
-    private const float GloveHitDelay = 0.15f;  // 주먹이 닿는 순간(뿅망치보다 빠름)
-    private const float GloveHalfAngle = 45f;
+    // 훑는 구간(동작 시작부터 초): 뿅망치는 머리 위에서 내려오기 시작해 땅에 닿을 때까지, 주먹은 뻗는 동안.
+    public const float HammerSweepFrom = 0.18f, HammerSweepTo = 0.48f;
+    public const float GloveSweepFrom = 0.03f, GloveSweepTo = 0.26f;
+    public const float FistRadius = 0.32f;
 
-    // 뿅망치·권투 글러브: 휘두른 것이 닿는 순간 전방 부채꼴에서 가장 가까운 한 명을 골라 보낸다(§45.5 HM1, §68 GP3).
-    private System.Collections.IEnumerator HammerHit(int slot, ToolSO tool, float delay, float halfAngle)
+    // 뿅망치 머리·주먹이 지나간 길을 매 프레임 캡슐로 훑어 처음 닿은 한 명을 방장에게 보낸다(§75 A4). 못 맞히면 빈 대상으로(쿨타임·소리는 같다).
+    private System.Collections.IEnumerator Sweep(int slot, ToolSO tool, bool glove, bool left)
     {
-        yield return new WaitForSeconds(delay);
-        Camera cam = Camera.main;
-        Vector3 aim = cam != null ? cam.transform.forward : transform.forward;
-        Vector3 flat = Vector3.ProjectOnPlane(aim, Vector3.up);
-        if (flat.sqrMagnitude < 0.01f) flat = transform.forward;
-        IGameCharacter target = PickTarget(flat, tool.Range, halfAngle, tool.CanHitMonster);
-        Vector3 point = target != null ? target.gameObject.transform.position + Vector3.up : transform.position + Vector3.up + flat.normalized * tool.Range * 0.5f;
-        manager.Request(EscapeOp.ToolUse, slot, 0, point, target != null ? new[] { target.View.ViewID } : new int[0]);
+        float from = glove ? GloveSweepFrom : HammerSweepFrom, to = glove ? GloveSweepTo : HammerSweepTo;
+        bool have = TryTip(glove, left, out Vector3 last, out float radius);
+        float t = 0f;
+        IGameCharacter hit = null;
+        while (t < to && hit == null)
+        {
+            yield return null;
+            t += Time.deltaTime;
+            if (!TryTip(glove, left, out Vector3 now, out radius)) { have = false; break; } // 그사이 다른 칸으로 바꿨다
+            if (have && t >= from) hit = FirstInPath(last, now, radius, tool.CanHitMonster);
+            last = now;
+            have = true;
+        }
+        Vector3 point = hit != null ? hit.gameObject.transform.position + Vector3.up : have ? last : transform.position + transform.forward;
+        manager.Request(EscapeOp.ToolUse, slot, left ? 1 : 0, point, hit != null ? new[] { hit.View.ViewID } : new int[0]);
+    }
+
+    private bool TryTip(bool glove, bool left, out Vector3 tip, out float radius)
+    {
+        radius = FistRadius;
+        tip = default;
+        if (Held == null) return false;
+        if (glove) return Held.TryGetFist(left, out tip);
+        return Held.TryGetHammerHead(out tip, out radius);
+    }
+
+    // a → b 캡슐(반지름 r)에 닿은 캐릭터 중 b에 가장 가까운 것(나·부서진·나간 사람 제외, includeMonsters=false면 괴물 제외).
+    private IGameCharacter FirstInPath(Vector3 a, Vector3 b, float r, bool includeMonsters)
+    {
+        int n = Physics.OverlapCapsuleNonAlloc(a, b, r, overlap, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+        IGameCharacter best = null;
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < n; i++)
+        {
+            IGameCharacter c = overlap[i].GetComponentInParent<IGameCharacter>();
+            if (!IsHittable(c, includeMonsters)) continue;
+            float d = (overlap[i].ClosestPoint(b) - b).sqrMagnitude;
+            if (d < bestDistance) { bestDistance = d; best = c; }
+        }
+        return best;
+    }
+
+    private bool IsHittable(IGameCharacter c, bool includeMonsters)
+    {
+        if (c == null || !CharacterRegistry.IsAlive(c) || c.gameObject == gameObject || c.View == null || c.View.Owner == null) return false;
+        if (c is HideOrSeekPlayer other && other.IsBroken) return false;
+        if (!includeMonsters && c.Role == CharacterRole.Monster) return false;
+        return !EscapeManager.HasLeftMap(c.View.Owner.ActorNumber);
     }
 
     // 앞 부채꼴 안의 가장 가까운 캐릭터(나·부서진·나간 사람 제외). 몸 방향이 아니라 카메라가 보는 수평 방향 기준.

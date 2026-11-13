@@ -37,7 +37,8 @@ public static class ToolHitReceiver
         if (!mine && user != null && user.gameObject.TryGetComponent(out PlayerActionPose pose))
         {
             if (item.Tool.IsThrown) pose.Play(PlayerActionPose.OneShot.Throw);
-            else if (item.Tool.Kind == ToolKind.Hammer || item.Tool.Kind == ToolKind.BoxingGlove) pose.Play(PlayerActionPose.OneShot.Swing);
+            else if (item.Tool.Kind == ToolKind.Hammer) pose.Play(PlayerActionPose.OneShot.Swing);
+            else if (item.Tool.Kind == ToolKind.BoxingGlove) pose.Play(color == 1 ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR); // 어느 손인지 = 요청 B 칸(§75 C1)
         }
         // 물풍선·섬광탄은 투사체(ProjectileSystem)로만 날아간다 — 옛 포물선 연출(ToolShotFx.ThrowBalloon/ThrowCanister)은 지웠다(§74 P1).
         if (item.Tool.Kind == ToolKind.StunGun && from.HasValue) ToolShotFx.Beam(from.Value, point, new Color(0.55f, 1f, 0.95f, 1f));

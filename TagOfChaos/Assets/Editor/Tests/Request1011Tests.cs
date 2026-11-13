@@ -114,9 +114,9 @@ public class Request1011Tests
     [Test]
     public void OneHandedGrip_HoldsNearTheBottom()
     {
-        // 망치: 가운데 0.04, 반높이 0.285 → 아래 끝(-0.245)에서 0.12 위(-0.125)가 손에 오도록 0.125 올린다.
-        Assert.AreEqual(0.125f, HeldItemPresenter.GripLift(0.04f, 0.285f), 1e-4f);
-        Assert.AreEqual(0f, HeldItemPresenter.GripLift(0f, 0.12f), 1e-4f);
+        // 가운데 0.04, 반높이 0.285 → 아래 끝(-0.245)이 손목 0.09 m 위에 오도록 0.335 올린다(§75 D1 — 주먹 위에 올려 든다).
+        Assert.AreEqual(0.335f, HeldItemPresenter.GripLift(0.04f, 0.285f), 1e-4f); // 아래 끝이 손목 0.09 m 위(§75 D1)
+        Assert.AreEqual(0.21f, HeldItemPresenter.GripLift(0f, 0.12f), 1e-4f);
     }
 
     // ---- §17 출력 장치(실제 장치 선택) ----

@@ -41,6 +41,20 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     }
 
     // 호박마차(§25.5 I): 본인 화면에서 순간이동. 물리 위치로 옮겨야 Rigidbody가 되돌리지 않는다.
+    // 도구를 쓰는 동안 몸이 조준 방향(수평)을 본다(Request1009Plan.md §75 B1·B2): seconds 동안 이동 입력보다 우선하고,
+    // 그동안 움직이면 옆걸음·뒷걸음이 된다. 본인 화면에서만 부른다 — 회전·이동 상태는 기존 위치 동기화로 다른 화면에 간다.
+    private Vector3 aimFaceDir = Vector3.forward;
+    private float aimFaceUntil = -1f;
+    public bool IsAimFacing => Time.time < aimFaceUntil && !isDodge;
+
+    public void FaceAim(Vector3 worldDir, float seconds)
+    {
+        worldDir.y = 0f;
+        if (worldDir.sqrMagnitude < 1e-4f) return;
+        aimFaceDir = worldDir.normalized;
+        aimFaceUntil = Mathf.Max(aimFaceUntil, Time.time + seconds);
+    }
+
     public void TeleportTo(Vector3 position)
     {
         if (!IsMine) return;
@@ -470,7 +484,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         }
 
         bool wantsMove = PlayerInput.Move != Vector2.zero || isDodge;
-        runningNow = TickStamina(PlayerInput.RunHeld && !isDodge, wantsMove);
+        runningNow = TickStamina(PlayerInput.RunHeld && !isDodge && !IsAimFacing, wantsMove); // 조준 방향을 보는 동안은 걷기만(§75 Q7)
         CheckMovementInput(); // 이동 입력 체크 + 회전 갱신(좌표 이동은 FixedUpdate의 Move()가 담당)
         CheckJumpInput(); // 점프 입력 체크(의도만 기록, 실제 적용은 FixedUpdate)
         CheckDodgeInput(); // 회피 입력 체크
@@ -566,7 +580,9 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
             if (!isJump && !isDodge) // 점프와 회피 중이 아닐 때만 이동 애니메이션 상태 변경
             {
-                animationDriver.ChangeState(runningNow ? PlayerMoveState.Run : PlayerMoveState.Walk); // 지쳤으면 Shift를 눌러도 걷는다(§46.3)
+                // 조준 방향을 보는 동안은 몸 기준 옆걸음·뒷걸음(§75 Q2·Q6), 아니면 걷기·달리기. 지쳤으면 Shift를 눌러도 걷는다(§46.3)
+                PlayerMoveState moveState = IsAimFacing ? AimMotion.Classify(moveDir, aimFaceDir) : runningNow ? PlayerMoveState.Run : PlayerMoveState.Walk;
+                animationDriver.ChangeState(moveState);
             }
         }
         else
@@ -695,7 +711,9 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         // MoveRotation으로 갱신된 회전만 인식한다. transform.rotation을 직접 대입하면 Rigidbody가
         // 추적하는 회전값과 어긋나 매 물리 스텝마다 회전이 튀었다 되돌아가길 반복해 걷는 모습이
         // 버벅거리고 미끄러지는 것처럼 보이는 버그가 있었다(Bug-fix-plan.md §13).
-        if (lookDir != Vector3.zero)
+        if (!isDodge && IsAimFacing)
+            rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, Quaternion.LookRotation(aimFaceDir), AimMotion.AimTurnDegreesPerSecond * Time.fixedDeltaTime)); // 도구를 쓰는 쪽(§75 B1)
+        else if (lookDir != Vector3.zero)
             rb.MoveRotation(Quaternion.LookRotation(lookDir));
 
         Vector3 horizontal = new Vector3(dir.x * vel, 0f, dir.z * vel);

@@ -9466,3 +9466,291 @@ P6 구현 메모: `RoomLifecycleWatcher.MaxArrivalWait` 45 → 120초(안전 상
 
 - 시험: 새 `Request1114Tests` 8/8. EditMode 전체 455개 중 454 통과 — 남은 1개 `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`(거대 괴물 등장 확률이 에셋에서 100 %, 기대 30 %)는 §70부터 있던 실패로 이번 작업과 무관. `EscapeTests` 맵 검사는 옮긴 Test_ 씬 대신 실제 맵 씬을 열도록 고침(진저브레드 상자 48 = 지하 포함) 48/48.
 - Play Mode(진저브레드·사탕 숲, 오프라인): 쿠키·스파이·괴물(1인칭) 화면, 망치·수리키트 들기, 콘솔 오류·경고 0. 승인 뒤 적용분 포함 다시 돌린 시험도 같은 결과(실패는 위 1개뿐).
+
+## 75. 2026-11-13 요청 — 아이템 드는 모습·쓰는 동작 다듬기(계획)
+
+요청: 망치 덜렁거림·내려찍기 동작·뒤로 써짐, 권투 글러브 양손 원투, 던질 때·레이저 총 조준할 때 카메라 쪽으로 돌아보기, 한 손 아이템이 안 보임, 마카롱 바퀴 Z-Fighting. 질문: 망치 머리에 콜라이더를 붙이는 방식.
+
+### 75.0 요약
+
+| 번호 | 증상 | 원인(코드·에셋에서 확인) | 고칠 방향 |
+| --- | --- | --- | --- |
+| A1 | 망치를 들고 있을 때 덜렁거림 | `HeldItemPresenter.LateUpdate`가 망치를 **두 손 가운데 점**에 놓고 방향은 **몸 기준 고정값**으로 준다. 손은 걷기·숨쉬기로 움직이는데 방향은 손을 안 따라가서 자루가 손안에서 미끄러진다. Carry 층(머리 위 두 손)과 Action 층(어깨 걸침)이 섞이는 순간도 있다 | 망치를 **오른손 뼈에 고정**(잡는 점·방향을 클립에서 잰 값으로). 망치일 때 Carry 층은 켜지 않음 |
+| A2 | 내려찍기가 예전 동작 | `Swing` 상태가 옛 클립 `Cookie_HammerSwing`(머리 위 두 손 → 앞) 그대로. 어깨 걸침 자세와 시작 자세가 다르다 | Blender 새 클립: 오른쪽 어깨에서 시작 → 머리 위 → 앞 아래 → 어깨로 복귀(사진 승인) |
+| A3 | 망치가 뒤로 써짐 | 판정은 **카메라 방향**(`HammerHit`의 `cam.transform.forward`), 동작은 **몸 방향**. 쿠키는 자유 시점(§59)이라 몸은 마지막으로 걸은 쪽을 본다 → 카메라와 몸이 반대면 뒤로 휘두르는 것처럼 보임 | 쓰는 순간 몸을 카메라 쪽으로 돌림(B1과 같은 기능) + 판정을 망치 머리 기준으로(A4) |
+| A4 | (질문) 망치 머리 콜라이더 | 지금: 닿는 순간(0.32초) 전방 5 m·60° 부채꼴에서 가장 가까운 한 명 | **찬성 — 다만 물리 콜라이더 대신 "머리가 지나간 길 훑기"**(75.4) |
+| B1 | 던질 때 몸이 던지는 쪽을 안 봄 | `ToolUser.Use`는 조준만 카메라로 하고 몸은 그대로(`Move()`의 `lookDir`은 이동 입력뿐) | `HideOrSeekPlayer.FaceAim` 추가, 던지기·휘두르기·주먹에서 부름 |
+| B2 | 레이저 총 조준 중 몸이 안 돌아봄 | 같음(`Aiming`일 때 회전 없음) | 조준하는 동안 매 프레임 `FaceAim` |
+| C1 | 권투 글러브가 망치 동작 | `ToolUser.Use`·`ToolHitReceiver` 모두 `OneShot.Swing` 재사용. 모델도 한 손에 하나 | 양손에 글러브, 가드 자세, 오른손 → 왼손 번갈아 치는 클립 2개 |
+| D1 | 한 손 아이템이 안 보임 | 한 손 아이템은 오른손 뼈(팔을 내린 허리 옆)에 붙고 크기 8~30 cm. 카메라가 등 뒤라 몸에 가린다 | 한 손 들기 자세(팔꿈치를 굽혀 가슴 옆 앞) + 작은 아이템 손 크기 키움 |
+| E1 | 마카롱 바퀴 Z-Fighting | `ITEM_MacaronWheel.fbx` 위쪽 껍질이 **0.11 m 낮게** 들어가 크림 속에 묻혔고, 껍질 윗면(z 0.075)과 크림 윗면(z 0.075)이 같은 평면 | Blender에서 위 껍질을 0.11 m 올림 + 다른 아이템 모델 같은 문제 검사 |
+
+### 75.1 A1 망치 덜렁거림 — 손뼈에 고정
+
+지금(`HeldItemPresenter.LateUpdate`):
+
+```csharp
+Vector3 anchor = holdType == HoldType.TwoHanded || rightHand == null
+    ? CarryPose.HandsCenter(transform, animator)   // 두 손 가운데 — 걷는 동안 계속 움직인다
+    : rightHand.position;
+...
+Vector3 up = pose != null && pose.IsSwinging && dir.sqrMagnitude > 0.01f ? dir.normalized : body * ShoulderCarryDirection; // 몸 기준 고정
+hammerUp = Vector3.Slerp(hammerUp, up, Mathf.Clamp01(Time.deltaTime * 30f));
+socket.SetPositionAndRotation(anchor + body * holdOffset, rotation);
+```
+
+바꿈: 망치는 **오른손 → 왼손을 잇는 선이 자루**가 되게 매 프레임 두 손뼈에서 직접 계산한다(휘두르는 동안도 같은 식 — 클립이 자루 방향을 정한다).
+
+```csharp
+// HeldItemPresenter.LateUpdate (망치)
+Vector3 r = rightHand.position, l = leftHand.position;
+Vector3 shaft = (r - l).normalized;                         // 자루 아래(왼손) → 위(오른손) → 망치 머리
+Vector3 side = Vector3.Cross(shaft, body * Vector3.forward).normalized;
+Quaternion rot = Quaternion.LookRotation(Vector3.Cross(side, shaft), shaft) * holdRotation;
+socket.SetPositionAndRotation(r - shaft * HammerGripBelowHead, rot);   // 오른손이 쥐는 점(머리 아래 일정 거리)
+```
+
+- 두 손뼈가 클립에서 늘 자루 위 두 점에 있으므로(Blender에서 IK로 맞춤) 자루가 손에서 미끄러지지 않는다.
+- `PlayerAnimationDriver.SetCarry(CarryReason.TwoHandedItem, …)`는 망치일 때 부르지 않는다(Carry 층의 "머리 위 두 손" 자세가 섞이지 않게). `HammerHold`가 Action 층에서 온 상체를 맡는다.
+- `hammerUp` Slerp·`HammerPivotHeight`·`ShoulderCarryDirection`·`HammerGripLift`는 지운다.
+
+### 75.2 A2 내려찍기 새 클립(Blender)
+
+- `Cookie_HammerSwing`을 다시 만든다(같은 파일 이름·길이 0.7초·닿는 순간 0.32초 유지 → `PlayerActionPose.SwingSeconds/SwingHit` 그대로).
+  - 0프레임 = `Cookie_HammerHold` 자세(오른쪽 어깨에 걸침) → 0.15초 머리 위 뒤로 젖힘 → **0.32초 앞 아래로 내려찍음** → 0.7초 어깨로 복귀.
+  - 두 손은 내내 자루를 쥔다(IK 대상 2개를 자루에 자식으로 붙여 굽기).
+- 사진(연속 4장, 앞·옆) 승인 뒤 내보내기. `ActionLayerBuilder.Rebuild()`로 다시 연결.
+
+### 75.3 A3·B1·B2 쓰는 쪽으로 몸 돌리기
+
+지금 몸 회전은 이동 입력뿐이다(`HideOrSeekPlayer.Move`):
+
+```csharp
+lookDir = new Vector3(rotation.x, 0f, rotation.z);          // rotation = 카메라 기준 이동 입력
+if (lookDir != Vector3.zero) rb.MoveRotation(Quaternion.LookRotation(lookDir));
+```
+
+추가:
+
+```csharp
+// HideOrSeekPlayer
+private Vector3 aimFaceDir; private float aimFaceUntil;
+// 도구를 쓰는 동안 몸이 조준 방향(수평)을 본다. seconds 동안 이동 입력보다 우선한다(본인 화면 — 회전은 기존 위치 동기화로 퍼진다).
+public void FaceAim(Vector3 worldDir, float seconds)
+{
+    worldDir.y = 0f;
+    if (worldDir.sqrMagnitude < 1e-4f) return;
+    aimFaceDir = worldDir.normalized;
+    aimFaceUntil = Mathf.Max(aimFaceUntil, Time.time + seconds);
+}
+
+// Move(): 회피 중이 아니면 조준 방향이 우선
+if (!isDodge && Time.time < aimFaceUntil) lookDir = aimFaceDir;
+if (lookDir != Vector3.zero)
+    rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, Quaternion.LookRotation(lookDir), AimTurnSpeed * Time.fixedDeltaTime)); // 720°/초 — 조준일 때만 부드럽게, 평소는 지금처럼 즉시
+```
+
+부르는 곳(`ToolUser`):
+
+```csharp
+// Use(): 망치·글러브·던지기 — 동작 길이만큼
+cookie.FaceAim(aim, tool.Kind == ToolKind.Hammer ? PlayerActionPose.SwingSeconds : PlayerActionPose.ThrowSeconds);
+// Update(): 스턴건 조준 중 매 프레임
+if (Aiming && cam != null) cookie.FaceAim(cam.transform.forward, 0.15f);
+```
+
+- 조준하며 옆·뒤로 걸으면 몸은 조준 쪽을 본 채 이동한다(걷기 동작은 그대로 — 옆걸음 전용 동작은 없음).
+- 수색 폭탄(술래)은 1인칭이라 해당 없음.
+- 확인할 것: 회전이 다른 화면에 그대로 가는지(`PlayerNetworkSync`의 회전 동기화) — 구현 때 두 창으로 본다.
+
+### 75.4 A4 망치 판정 — 머리가 지나간 길 훑기(질문 답)
+
+**의견: 망치 머리에 닿아야 맞는 방식이 맞습니다.** 지금 부채꼴(5 m·60°)은 화면에 보이는 망치와 판정이 달라 "안 닿았는데 맞음 / 닿았는데 안 맞음"이 생깁니다. 다만 Unity 물리 트리거 콜라이더를 뼈에 붙이면 0.17초 만에 끝나는 빠른 휘두름에서 프레임 사이를 **건너뛰어**(터널링) 놓칠 수 있고, 프레임 수가 낮은 PC일수록 불리합니다. 그래서:
+
+- 휘두르는 사람 화면에서, 내려찍는 구간(0.20~0.45초) 동안 **매 프레임 "직전 머리 위치 → 지금 머리 위치"를 캡슐로 훑어** 처음 닿은 캐릭터 한 명을 고른다(프레임이 낮아도 길 전체를 훑으므로 놓치지 않음).
+- 방장 검사는 지금 그대로(`ValidTargets` — 거리·회피 무적·괴물 제외). 구조(쓴 사람이 고르고 방장이 확인)는 안 바뀐다.
+
+```csharp
+// ToolUser — HammerHit 대신
+private IEnumerator HammerSweep(int slot, ToolSO tool)
+{
+    Transform head = heldPresenter.HammerHead;            // 망치 모델 머리 가운데(모델 경계에서 한 번 계산)
+    Vector3 last = head.position; float t = 0f; IGameCharacter hit = null;
+    while (t < PlayerActionPose.SwingSeconds && hit == null)
+    {
+        yield return null; t += Time.deltaTime;
+        if (t >= SweepFrom && t <= SweepTo)
+            hit = FirstCharacterInCapsule(last, head.position, HammerHeadRadius, tool.CanHitMonster); // OverlapCapsuleNonAlloc, 나·부서진·나간 사람 제외
+        last = head.position;
+    }
+    Vector3 point = hit != null ? hit.gameObject.transform.position + Vector3.up : head.position;
+    manager.Request(EscapeOp.ToolUse, slot, 0, point, hit != null ? new[] { hit.View.ViewID } : new int[0]);
+}
+```
+
+- 머리 반지름: 모델 머리 지름 0.32 m × 3배 = 약 0.5 m 반지름 캡슐.
+- **범위가 바뀝니다**: 지금 5 m → 망치가 실제로 닿는 약 2.2 m(자루 1.7 m + 팔). → **Q1**.
+- 권투 글러브도 같은 방식(주먹 뼈 훑기, 반지름 0.35 m)으로 맞춘다.
+
+### 75.5 C1 권투 글러브 — 양손·원투
+
+- **모델**: 글러브 아이템을 들면 `HeldItemPresenter`가 모델을 **두 개** 만들어 오른손·왼손 뼈에 끼운다(왼손은 좌우 뒤집기). 소켓 하나에 놓는 지금 방식 대신 뼈에 직접.
+
+```csharp
+// HeldItemPresenter.Refresh (글러브)
+if (isGlove)
+{
+    gloveR = EscapeVisuals.CreateItemModel(def, rightHand);  gloveR.transform.localPosition = GloveLocalPos; gloveR.transform.localRotation = GloveLocalRot;
+    gloveL = EscapeVisuals.CreateItemModel(def, leftHand);   gloveL.transform.localScale = Vector3.Scale(gloveL.transform.localScale, new Vector3(-1, 1, 1));
+}
+```
+
+- **클립 3개(Blender, 사진 승인)**: `Cookie_GloveGuard`(두 주먹을 턱 앞에 든 가드, 반복) · `Cookie_PunchR`(오른손 스트레이트, 0.4초, 닿는 순간 0.15초) · `Cookie_PunchL`(왼손).
+- **순서**: 첫 타 오른손, 다음 왼손, 번갈아. 1.5초 동안 안 치면 다시 오른손부터.
+
+```csharp
+// PlayerActionPose
+public enum OneShot { Throw, Swing, PunchR, PunchL }
+public const string GuardState = "GloveGuard", PunchRState = "PunchR", PunchLState = "PunchL";
+public void SetGloveGuard(bool on) => gloveGuard = on;      // HammerHold와 같은 방식(들고 있는 동안)
+
+// ToolUser.Use (글러브)
+bool left = Time.time - lastPunchAt < PunchComboWindow && lastPunchWasRight;
+pose.Play(left ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR);
+lastPunchWasRight = !left; lastPunchAt = Time.time;
+manager.Request(EscapeOp.ToolUse, slot, left ? 1 : 0, point, targets);   // B 칸(지금 0)에 손을 실어 보낸다
+```
+
+- 다른 화면: `ToolHitReceiver`가 받은 `color`(B 칸) 값으로 `PunchR/PunchL`을 고른다(형식 변화 없음 — 지금도 B가 그대로 전달됨: `payload = { it.Id, r.Sender, targets, r.Pos, r.B, … }`).
+- 3초 안 3대 = 쓰러짐(`gloveCombo`)·쿨타임 0.5초는 그대로.
+
+### 75.6 D1 한 손 아이템이 안 보임
+
+지금 한 손 아이템 크기(모델 경계): 섬광탄 0.09×0.18, 녹음기 0.08×0.18, 해체 도구 0.20×0.07, 호박 0.22×0.24, 스케이트 0.10×0.28, 스턴건 0.10×0.27×0.42, 물풍선 0.27×0.35 — 키 2 m 쿠키의 허리 옆(내린 오른손)에 붙어 등 뒤 카메라에서는 몸에 가린다.
+
+- **자세**: 새 클립 `Cookie_ItemHold`(오른 팔꿈치를 굽혀 손을 가슴 옆·앞쪽 어깨 높이 아래에 듦, 반복). **오른팔만** 덮는 새 마스크(`RightArm.mask`)의 "Hold" 층 — 왼팔·몸은 걷기 동작 그대로.
+
+```csharp
+// ActionLayerBuilder — 새 층(Carry 위, Action 아래)
+AddLayer(controller, PlayerActionPose.HoldLayer, rightArmMask, new[] { (PlayerActionPose.ItemHoldState, "Cookie_ItemHold") });
+// PlayerActionPose.Update — 한 손 아이템을 든 동안 무게 1(던지기·조준·휘두르기 중에는 Action 층이 위에서 덮는다)
+animator.SetLayerWeight(holdLayer, Mathf.MoveTowards(holdWeight, oneHandedHeld ? 1f : 0f, BlendSpeed * Time.deltaTime));
+```
+
+- **크기**: 손에 든 동안만 `ItemSO.HeldScale`을 키운다(바닥·상자 위 크기는 그대로) — 섬광탄·녹음기 2배, 해체 도구·스케이트·호박·사이렌 함정·모자 1.5배, 스턴건·물풍선·수리키트 1.2배(값은 사진 보고 조정).
+- **방향**: 한 손 아이템은 지금 "몸 방향 + 35° 기울임"(`OneHandedTilt`). 새 자세에서는 손뼈 위치 + 몸 방향 그대로 두되 아이템별 `HoldEuler`로 앞면이 카메라(뒤)에서도 보이게 맞춘다.
+- 4종 캐릭터 모두 사진(뒤·옆)으로 확인.
+
+### 75.7 E1 마카롱 바퀴 Z-Fighting
+
+`ITEM_MacaronWheel.fbx` 부품(높이 축 z, m):
+
+| 부품 | z 범위 | 비고 |
+| --- | --- | --- |
+| 아래 껍질 | −0.185 ~ −0.075 | 정상 |
+| 크림 | −0.075 ~ 0.075 | 정상 |
+| **위 껍질** | **−0.035 ~ 0.075** | 0.075 ~ 0.185여야 함 — 0.11 낮음. 윗면이 크림 윗면과 같은 평면 → 깜빡임 |
+| 축 | −0.14 ~ 0.14 | 정상 |
+
+- Blender에서 위 껍질만 +0.11 m 올려 다시 내보낸다(모양·재질 그대로). 조각 모델·꽂힌 모습도 같은 FBX를 쓰므로 함께 고쳐진다.
+- 같은 문제 검사: `Models/ITEM_*.fbx` 전체에서 "서로 다른 부품의 같은 방향 면이 1 mm 안에 겹치는 곳"을 찾는 스크립트를 돌려 결과를 보고한다(고칠 것이 더 나오면 목록으로 확인받음).
+
+### 75.8 확인할 것
+
+- **Q1 망치 범위**: 머리에 닿아야 맞게 하면 범위가 5 m → 약 2.2 m로 줄어든다. ① 그대로 받아들임(권장 — 보이는 대로 맞음) ② 망치를 더 크게(지금 3배 → 4배, 약 2.9 m) ③ 지금 부채꼴 유지하고 방향만 고침.
+- **Q2 조준 중 이동**: 레이저 총을 조준한 채 걸을 때 몸은 조준 쪽을 본 채 옆·뒤로 미끄러지듯 걷는다(전용 옆걸음 동작 없음). 괜찮은지, 아니면 조준 중에는 걷는 속도를 줄일지.
+- **Q3 한 손 들기 자세**: 가슴 옆 앞(권장)인지, 머리 위로 치켜드는지.
+- **Q4 글러브 가드**: 들고만 있을 때 두 주먹을 턱 앞에 든 가드 자세(권장)인지, 팔을 내린 채 글러브만 끼고 있는지.
+- **Q5**: 망치·글러브로 쿠키뿐 아니라 AI(미끼)도 맞는 지금 규칙은 그대로 둔다(변경 없음) — 확인만.
+
+#### 75.8.1 답(2026-11-13)
+
+| 질문 | 답 |
+| --- | --- |
+| Q1 망치 범위 | ① 그대로 받아들임 — 머리에 닿아야 맞음(약 2.2 m) |
+| Q2 조준 중 이동 | **옆걸음·뒷걸음 전용 동작을 만든다**(Blender) — 범위·속도는 추가 질문 Q6~Q8 |
+| Q3 한 손 들기 | 가슴 옆 앞 |
+| Q4 글러브 | 들고만 있을 때 가드 자세 |
+| Q5 맞는 대상 | 그대로(쿠키·AI) |
+
+추가 질문: **Q6** 옆걸음·뒷걸음이 나오는 때 — 몸이 조준 쪽으로 돌아가 있는 동안 전부(스턴건 조준·던지기·휘두르기·주먹, 권장) / 스턴건 조준 때만. **Q7** 조준 중 달리기(Shift) — 조준 중에는 걷기 속도만(권장: 달리기 옆걸음 클립을 안 만들어도 됨) / 달리기도 허용(클립 3개 더). **Q8** 뒤로 걸을 때 속도 — 앞과 같게(권장, 조작감 유지) / 느리게.
+
+### 75.9 단계
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| R0 | 코드·에셋 조사, 계획(이 절) | ✅ |
+| R1 | 확인(Q1~Q8) | ✅ Q6~Q8 모두 권장안 |
+| E1 | 마카롱 바퀴 모델 고침 + 아이템 모델 겹친 면 검사 | ✅ 구현 완료 |
+| B1 | `FaceAim`(던지기·휘두르기·주먹·스턴건 조준) | ✅ 구현 완료 |
+| BL1 | Blender 클립 8개: 망치 내려찍기(새)·글러브 가드·오른 주먹·왼 주먹·한 손 들기·왼쪽 옆걸음·오른쪽 옆걸음·뒷걸음 → 사진 승인 | ✅ 구현 완료(+ 어깨 걸침 다시 만듦, 사진은 Play Mode에서) |
+| A1 | 망치 손뼈 고정·Carry 층 끔·새 내려찍기 연결 | ✅ 구현 완료 |
+| A4 | 망치·글러브 판정 = 머리/주먹 훑기 | ✅ 구현 완료 |
+| C1 | 글러브 양손 모델·가드·원투 순서(B 칸으로 손 전달) | ✅ 구현 완료 |
+| D1 | 한 손 들기 층(오른팔 마스크)·손 크기·아이템별 방향 | ✅ 구현 완료 |
+| T | EditMode 시험(원투 순서·훑기 캡슐 계산·FaceAim 우선순위) + Play Mode 사진(4종 캐릭터) | ✅ 완료(Play Mode 사진은 기본 캐릭터, 75.11) |
+| DOC | 결과·README | ✅ 완료 |
+
+순서: R1 → E1 → B1 → BL1(사진 승인) → A1 → A4 → C1 → D1 → T → DOC.
+
+### 75.10 위험과 주의
+
+- 클립 5개는 Humanoid 4종 캐릭터가 함께 쓴다 — 팔 길이가 달라 손이 자루·몸을 뚫는지 4종 모두 사진으로 본다.
+- Action 층 상태가 늘어난다(`HammerHold`·`GloveGuard`) — 우선순위: 한 번 동작(던지기·휘두르기·주먹) > 스턴건 조준 > 들기 자세.
+- 판정 범위 변경(Q1)은 밸런스에 영향 — 결정 뒤 `Item_Hammer`의 Range도 방장 검사 여유에 맞춰 정리.
+- 규칙: Play Mode 중 업로드·컴파일 금지, 코드에 한국어는 주석만, Blender 결과는 사진 승인 뒤 적용, FBX 100 MB 미만.
+
+### 75.11 결과(2026-11-13)
+
+| 항목 | 한 일 | 확인 |
+| --- | --- | --- |
+| E1 겹친 면 | 마카롱 바퀴 위 껍질 +0.11 m. 아이템 모델 전체를 "다른 부품·재질의 같은 방향 면이 같은 평면에서 겹치는 곳"으로 검사해 2개 더 찾음 — 콜라 대포 바퀴의 흰 원판 면(빨간 바퀴 면과 같은 평면)·헬리콥터 모자 챙 아래면(챙·차양 겹침) → 작은 쪽 면을 1 mm 띄움. 원본은 `Temp/bak75/` | 다시 검사: 겹친 면 0 |
+| B1·B2 몸 돌리기 | `HideOrSeekPlayer.FaceAim(방향, 초)` — 그동안 이동 입력보다 우선해 몸이 조준 쪽(수평)을 본다(초당 720°). 망치·주먹·던지기는 동작 길이만큼, 스턴건은 우클릭 조준 중 매 프레임 | Play Mode: 몸이 오른쪽을 보던 상태에서 휘두르자 0.16초 안에 카메라 쪽으로 돌아섬 |
+| Q2 옆걸음·뒷걸음 | Blender 클립 3개(`Cookie_StrafeLeft/Right`·`Cookie_WalkBack`, 다리 IK로 발 걸음·무릎 앞) → Base 층 상태 3개(1.5배 재생). `AimMotion.Classify`: 조준 쪽을 보는 동안 이동 방향이 몸 앞 ±60° = 걷기, 뒤 = 뒷걸음, 나머지 = 옆걸음. 조준 중에는 달리기 없음(Q7), 뒤로도 같은 속도(Q8). 이동 상태는 끝에 덧붙여(9·10·11) 동기화 번호 유지 | Play Mode: 오른쪽·왼쪽·뒤 입력 → StrafeRight·StrafeLeft·WalkBack, 몸 방향 그대로, Shift를 눌러도 Run 아님 |
+| A1 망치 덜렁거림 | 망치 = 오른손 뼈에 소켓, 자루 = 왼손 → 오른손 선(클립이 두 손을 늘 자루 위에 둔다). 망치일 때 Carry 층(머리 위 두 손) 끔. 옛 몸 기준 고정 방향·Slerp 삭제 | Play Mode: 어깨 걸침(머리가 오른쪽 어깨 뒤), Carry 층 무게 0 |
+| A2 내려찍기 | `Cookie_HammerSwing` 새로(0.7초): 어깨 걸침 → 0.17초 머리 위로 젖힘 → 0.27초 머리 위 → 0.33초 앞 아래로 내려찍음 → 0.47초 끝까지 → 0.7초 어깨로. `Cookie_HammerHold`도 같은 손 위치로 다시 | Play Mode(0.02배속 사진): 머리 위 → 앞 아래 |
+| A4 머리 닿아야 맞음 | `ToolUser.Sweep`: 0.18~0.48초 동안 매 프레임 "직전 → 지금 망치 머리 위치" 캡슐(반지름 = 머리 반지름 0.48 m)에 처음 닿은 캐릭터 한 명. 부채꼴 판정(`HammerHit`) 삭제 | Play Mode: 머리가 지나는 길의 캐릭터만 골라짐, 옆 길은 0, 괴물 제외 규칙 그대로 |
+| C1 글러브 | 양손에 모델 2개(왼손 좌우 뒤집기, 손목 → 주먹 방향), 들고 있는 동안 가드(두 주먹을 어깨 너비로 턱 앞에 — 뒤에서도 보이게), `Cookie_PunchR/L`(0.4초). 첫 주먹 오른손, 1.5초 안에 이어 치면 왼손·오른손 번갈아. 주먹 판정도 주먹 훑기(반지름 0.32 m). 다른 화면에는 요청 B 칸(0 = 오른손, 1 = 왼손)으로 같은 손 | Play Mode: 두 글러브 보임, 오른 주먹(앞으로 0.3 m) → 왼 주먹 |
+| D1 한 손 아이템 | 새 Hold 층(오른팔 마스크 `RightArm.mask`) — 한 손 아이템을 든 동안 `Cookie_ItemHold`(가슴 옆 앞). 아이템은 주먹 위에 올려 든다(예전: 위에서 0.12 m 아래를 쥐어 작은 아이템이 손 속에 묻힘). 손에 든 크기: 섬광탄·녹음기 2배, 해체 도구·스케이트·호박·사이렌 함정·모자·콜라 대포 1.5배, 스턴건·물풍선·수리키트 1.2배, 글러브 1.3배 | Play Mode(뒤에서 사진): 섬광탄·스턴건·녹음기·물풍선이 어깨 옆에 보임 |
+
+- 시험: 새 `Request1115Tests` 5개(옆걸음 분류·원투 순서·이동 상태 번호·애니메이터 층/상태/클립·클립 길이와 판정 시각). EditMode 전체 460개 중 459 통과 — 남은 1개는 §70부터 있던 거대 괴물 등장 확률(에셋 100 %, 시험 30 %).
+- Play Mode(진저브레드, 오프라인, 기본 쿠키 캐릭터): 망치·글러브·한 손 아이템·옆걸음·몸 돌리기 확인, 콘솔 오류·경고 0. 다른 캐릭터 3종과 두 대 멀티(다른 화면에서 주먹 손·옆걸음이 보이는지)는 아직 확인하지 않음.
+
+### 75.12 후속: 망치가 몸을 뚫음 + 캐릭터별 시험(2026-11-13)
+
+요청: "망치로 내려 찍을 때 몸을 뚫는 현상이 있어. 이것만 고친 후 캐릭터 별로 고쳤던 아이템 하나씩 테스트 진행해줘"
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| F1 | 쿠키 클립 고침: `Cookie_HammerHold`·`Cookie_HammerSwing` 손 위치를 몸 오른쪽 바깥으로(머리 위를 지나지 않고 오른쪽 어깨 옆으로 올렸다 내려찍기) — Blender에서 매 프레임 망치 머리와 머리·몸통 거리 검사 후 내보내기 | ✅ |
+| F2 | 큰 머리 캐릭터: `HammerClearance`(새) — 몸 메시에서 목 위 꼭짓점으로 머리 타원체를 재고(캐릭터가 바뀔 때 한 번), 망치 머리·자루가 겹치면 쥔 손을 축으로 머리에서 먼 쪽(바깥·앞)으로 돌린다. 원래 방향에 가장 가까운 트인 방향, 부드럽게 따라가되 아직 머리 속이면 바로. 쿠키는 겹치지 않아 그대로 | ✅ |
+| T1 | 캐릭터 5종(쿠키·마카롱·몽블랑·레모네이드·붕어빵) × 망치·글러브·한 손 아이템(섬광탄)·옆걸음/뒷걸음·몸 돌리기 Play Mode 시험 + 사진 | ✅ |
+| T2 | EditMode 시험 `HammerClearance_TiltsOnlyWhenHeadIsInTheWay` 추가 | ✅ |
+
+원인
+- 쿠키: 예전 클립은 0.22~0.26초에 망치 머리가 정수리 위(몸 축에서 0.17 m)를 지났다 → 손을 오른쪽 바깥으로 옮겨 이제 내려찍기 내내 몸 축에서 0.8 m 이상.
+- 다른 4종: 뼈대는 쿠키의 절반 크기(손 높이 0.3~0.4 m)인데 머리는 목(0.8 m)부터 2.0 m까지로 아주 크다. 같은 Humanoid 동작을 쓰면 들기·내려찍기 모두 망치가 머리 속을 지난다 — 클립 하나로는 못 고쳐 코드로 비킨다.
+- 덤으로 고친 것: 모델 Transform 크기가 100인 캐릭터는 `BakeMesh(…, true)`가 크기를 두 번 적용해 머리 크기가 0으로 재졌다 → `BakeMesh(…, false)` + 회전·위치만.
+
+| 캐릭터 | 망치(들기·내려찍기, 머리와 겹침) | 글러브(가드 → 오른 → 왼) | 한 손(섬광탄) | 옆걸음·뒷걸음 | 몸 돌리기 |
+| --- | --- | --- | --- | --- | --- |
+| 쿠키 | 비킴 0°, 겹침 0, 몸 축에서 최소 0.82 m | ✅ | 보임(Hold 층 1.0) | ✅ | 0.5초 뒤 0° |
+| 마카롱 | 겹침 0(들기는 바깥으로 약 85° 돌림) | ✅ | 보임 | ✅ | 0° |
+| 몽블랑 | 겹침 0 | ✅ | 보임 | ✅ | 0° |
+| 레모네이드 | 0.7초 중 한 순간(0.14초) 경계에 살짝 — 사진에선 머리 옆 | ✅ | 보임 | ✅ | 0° |
+| 붕어빵 | 겹침 0 | ✅ | 보임 | ✅ | 0° |
+
+- 옆걸음 판정은 "그 순간 속도·몸 방향으로 계산한 기대값"과 비교해 일치(에디터에서 마우스가 움직이면 카메라가 돌아 입력 방향이 바뀌므로 고정 기대값 대신).
+- 사진: `sfx_preview/fix_*.png`(쿠키 들기·내려찍기), `h1~h4_*`(4종 망치), `c1~c4_*`, `c0_*`(글러브·한 손·옆걸음).
+- 남은 점: 작은 캐릭터에게 망치(손에 든 크기 3배)가 상대적으로 크다 — 판정 범위를 같게 두려고 크기는 그대로 둠. 두 대 멀티 확인은 아직.
+- 시험: EditMode 전체 461개 중 460 통과 — 남은 1개는 §70부터 있던 거대 괴물 등장 확률(에셋 100 %, 시험 30 %). 콘솔 오류·경고 0.
+
+### 75.13 옆걸음·뒷걸음 다시(2026-11-13)
+
+요청: "옆뒤로 걷는 동작이 뭔가 발목이 꺾이고, 부자연스럽게 다리가 움직이는거같은데 일반적으로 움직이는거처럼 할 수 없을까?"
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| W1 | 뒷걸음 = 앞으로 걷기 클립 `Cookie_Walking`을 거꾸로 재생(Base 층 `WalkBack` 상태 speed −1, 걷기와 같은 빠르기). 따로 만든 `Cookie_WalkBack`은 쓰지 않음 | ✅ |
+| W2 | 옆걸음 2개 Blender 다시: 다리 IK + 발 회전 고정(발바닥 평평·발끝 앞, 발목 꺾임 없음), 무릎 앞으로 굽힘, 두 발 간격이 서 있는 폭(±0.23 m)보다 좁아지지 않는 "벌렸다 모으기" 걸음(가장 넓을 때 ±0.39 m), 발 들기 0.09 m, 엉덩이 살짝 내림·위아래·좌우 흔들림 | ✅ |
+| W3 | 다시 가져오기·`ActionLayerBuilder` 다시 실행, 시험 `Request1115Tests` 6/6(뒷걸음 = 걷기 거꾸로 확인 추가), Play Mode(쿠키·마카롱) 오른쪽·왼쪽·뒤 입력 → StrafeRight·StrafeLeft·WalkBack(−1배), 콘솔 오류·경고 0, 사진 `sfx_preview/w76_*`·`w76m_*` | ✅ |
