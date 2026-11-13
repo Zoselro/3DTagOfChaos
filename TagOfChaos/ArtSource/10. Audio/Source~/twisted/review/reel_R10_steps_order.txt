@@ -1,6 +1,0 @@
-   0.0s  old walk (now in game, 0.5 s steps)  (5.60s, peak -3 dB)
-   6.8s  new walk (candidate)  (5.60s, peak -3 dB)
-  13.6s  new MonsterStep_1  (0.50s, peak -3 dB)
-  15.3s  new MonsterStep_2  (0.50s, peak -3 dB)
-  17.0s  new MonsterStep_3  (0.50s, peak -3 dB)
-  18.7s  new walk again  (5.60s, peak -3 dB)

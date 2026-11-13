@@ -1,8 +1,0 @@
-   0.0s  old sequence (now in game)  (3.80s, peak -3 dB)
-   5.0s  2nd candidate (horror)  (3.80s, peak -3 dB)
-  10.0s  3rd candidate (more grotesque)  (3.80s, peak -3 dB)
-  15.0s  3rd MonsterGrab  (1.55s, peak -3 dB)
-  17.8s  3rd CookieGrab  (0.50s, peak -3 dB)
-  19.4s  3rd MonsterSquash  (0.80s, peak -3 dB)
-  21.4s  3rd CookieCrumble  (1.80s, peak -3 dB)
-  24.4s  3rd candidate again  (3.80s, peak -3 dB)

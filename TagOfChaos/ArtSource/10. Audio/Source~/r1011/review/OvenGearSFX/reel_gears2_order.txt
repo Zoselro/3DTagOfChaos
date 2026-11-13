@@ -1,5 +1,0 @@
-   0.0s  v1 GearA (with thud)  (8.00s, peak -3 dB)
-   9.2s  GearA2 x2  (16.00s, peak -3 dB)
-  26.4s  GearB2 x2  (16.00s, peak -3 dB)
-  43.6s  GearC2 x2  (16.00s, peak -3 dB)
-  60.8s  GearD2 x2  (16.00s, peak -3 dB)

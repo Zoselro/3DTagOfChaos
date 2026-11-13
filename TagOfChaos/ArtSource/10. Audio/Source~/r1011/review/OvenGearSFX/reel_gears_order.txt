@@ -1,5 +1,0 @@
-   0.0s  current OvenBroken (steam-like)  (8.00s, peak -3 dB)
-   9.2s  GearA x2  (16.00s, peak -3 dB)
-  26.4s  GearB x2  (16.00s, peak -3 dB)
-  43.6s  GearC x2  (16.00s, peak -3 dB)
-  60.8s  GearD x2  (16.00s, peak -3 dB)

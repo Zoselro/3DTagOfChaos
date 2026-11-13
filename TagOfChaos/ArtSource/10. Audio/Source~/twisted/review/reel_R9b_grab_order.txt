@@ -1,7 +1,0 @@
-   0.0s  old sequence (now in game)  (3.60s, peak -3 dB)
-   4.8s  new sequence (horror candidate)  (3.60s, peak -3 dB)
-   9.6s  new MonsterGrab  (1.55s, peak -3 dB)
-  12.3s  new CookieGrab  (0.45s, peak -3 dB)
-  14.0s  new MonsterSquash  (0.70s, peak -3 dB)
-  15.9s  new CookieCrumble  (1.60s, peak -3 dB)
-  18.7s  new sequence again  (3.60s, peak -3 dB)

@@ -1,9 +1,0 @@
-   0.0s  Result_A (first 40s)  (40.00s, peak -6 dB)
-  41.5s  Result_B (first 40s)  (40.00s, peak -6 dB)
-  83.0s  Result_C (first 40s)  (40.00s, peak -6 dB)
- 124.5s  Result_D (first 40s)  (40.00s, peak -6 dB)
-
-   0.0s  JgEscapeFail -> Result_A  (29.50s, peak -3 dB)
-  31.0s  JgEscapeFail -> Result_B  (29.50s, peak -3 dB)
-  62.0s  JgEscapeFail -> Result_C  (29.50s, peak -3 dB)
-  93.0s  JgEscapeFail -> Result_D  (29.50s, peak -3 dB)
