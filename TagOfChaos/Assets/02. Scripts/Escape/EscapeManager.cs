@@ -662,6 +662,40 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         return NavPath.Reaches(anchor, hit.position, reachPath);   // 긴 길은 탐색 한도를 넘으므로 끝에서 이어 찾는다(§54)
     }
 
+    // from(이미 서 있던 곳)에서 feet까지 걸어서 이어지는지(§78 P2 — 지하 호박 마차: 스폰에서 재면 나선 계단을 지나는 긴 길이라 가끔 놓친다).
+    public bool IsWalkableFrom(Vector3 from, Vector3 feet)
+    {
+        if (!DecoyNavMesh.Ready) return true;
+        if (!NavMesh.SamplePosition(feet, out NavMeshHit hit, 1.2f, DecoyNavMesh.Filter) || Mathf.Abs(hit.position.y - feet.y) > WalkableSnapHeight) return false;
+        if (!NavMesh.SamplePosition(from, out NavMeshHit start, 3f, DecoyNavMesh.Filter)) return IsWalkableFromSpawn(feet);
+        if (reachPath == null) reachPath = new NavMeshPath();
+        return NavPath.Reaches(start.position, hit.position, reachPath);
+    }
+
+    // ---------------- 두 층 맵(진저브레드 지하, §78) ----------------
+
+    public const float LowerLevelBelow = -5f;   // 이보다 낮고 위가 막혀 있으면 아래층(RoofMarker.UndergroundBelow와 같은 기준)
+    private const float LevelProbeUp = 3f;      // 같은 층 바닥 찾기: 기준 높이 + 3 m에서 아래로(지하 건물 안도 잡힌다 — 지붕 위에서 쏘지 않는다)
+    private const float LevelBand = 3f;         // 기준 높이 ±3 m 안의 바닥만
+
+    // 위가 막힌 아래층(진저브레드 지하)인지. 한 층짜리 맵에서는 늘 false.
+    public bool IsLowerLevel(Vector3 p) => p.y < LowerLevelBelow && TryCeilingAbove(p, 80f, out _);
+
+    // near와 같은 층의 무작위 자리(§78 P1 — 지하 호박 마차, 사용자: 지하 건물 안 포함·걸어서 갈 수 있는 곳): 바닥이 있고, 술래방 밖,
+    // 캐릭터가 끼지 않고, near에서 걸어서 이어진다. 못 찾으면 false.
+    public bool TryRandomPointOnLevel(System.Random random, Vector3 near, out Vector3 point)
+    {
+        for (int i = 0; i < 60; i++)
+        {
+            Vector2 xz = area.RandomPoint(random, MapInset);
+            if (!TryGroundBelow(new Vector3(xz.x, near.y + LevelProbeUp, xz.y), LevelProbeUp + LevelBand, out point)) continue;
+            if (Mathf.Abs(point.y - near.y) > LevelBand || InMonsterRoom(point)) continue;
+            if (IsClearForCharacter(point) && IsWalkableFrom(near, point)) return true;
+        }
+        point = default;
+        return false;
+    }
+
     private bool TryReachAnchor(out Vector3 anchor)
     {
         if (!reachAnchorSet)
@@ -743,17 +777,21 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         return SnapToGround(center + dir * 2.5f + Vector3.up * 2f);
     }
 
-    // pos 위로 천장(막힌 면)까지의 월드 높이, 없으면 0(§69 E3 — 지하 동굴에서 콜라 대포 비행 한계).
-    public float CeilingAbove(Vector3 pos, float maxUp)
+    // pos 위로 처음 막힌 면(천장)의 월드 높이(§69 E3 — 지하 동굴에서 콜라 대포 비행 한계). 없으면 false.
+    // 아래에서 위로만 쏘면 한 면짜리 충돌체(진저브레드 지상 바닥 = 지하 천장)를 뚫고 지나가 "천장 없음"이 됐다(§78 C1) —
+    // 위에서 아래로도 쏘아 pos 위에 있는 면 중 가장 낮은 것을 천장으로 본다.
+    public bool TryCeilingAbove(Vector3 pos, float maxUp, out float ceiling)
     {
-        float best = 0f;
-        foreach (RaycastHit h in Physics.RaycastAll(pos + Vector3.up * 0.5f, Vector3.up, maxUp, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
-        {
-            if (h.collider.GetComponentInParent<IGameCharacter>() != null || h.collider.GetComponentInParent<DecoyView>() != null) continue;
-            if (best <= 0f || h.point.y < best) best = h.point.y;
-        }
-        return best;
+        ceiling = float.PositiveInfinity;
+        Vector3 from = pos + Vector3.up * 0.5f;
+        foreach (RaycastHit h in Physics.RaycastAll(from, Vector3.up, maxUp, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (!IsBody(h.collider) && h.point.y < ceiling) ceiling = h.point.y;
+        foreach (RaycastHit h in Physics.RaycastAll(from + Vector3.up * maxUp, Vector3.down, maxUp, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (!IsBody(h.collider) && h.point.y > from.y && h.point.y < ceiling) ceiling = h.point.y;
+        return !float.IsPositiveInfinity(ceiling);
     }
+
+    private static bool IsBody(Collider c) => c.GetComponentInParent<IGameCharacter>() != null || c.GetComponentInParent<DecoyView>() != null;
 
     // from에서 아래로 처음 닿는 바닥(캐릭터·AI 몸은 건너뜀). SnapToGround와 달리 시작 높이 위는 보지 않는다 — 천장 위층 바닥이 잡히지 않게.
     public bool TryGroundBelow(Vector3 from, float maxDown, out Vector3 ground)

@@ -881,7 +881,7 @@ public static class GingerbreadVillageMapBuilder
             if (!cells.TryGetValue(key, out var l)) cells[key] = l = new List<(Vector2, int)>();
             l.Add((c, rng.Next(4)));
         }
-        int count = Mathf.CeilToInt(MapRadius + 1f);
+        int count = TileLoopHalf; // 지하(105 m)·출구 굴(117 m)까지 — 예전에는 지상 반지름(101)까지만 돌아 지하 큰길 끝이 비었다(§78 F1)
         for (int ix = -count; ix < count; ix++)
             for (int iz = -count; iz < count; iz++)
             {
@@ -919,6 +919,77 @@ public static class GingerbreadVillageMapBuilder
             total += kv.Value.Count;
         }
         return total;
+    }
+
+    private static int TileLoopHalf => Mathf.CeilToInt(Mathf.Max(MapRadius, UgRadius + 12f) + 1f);
+    private const int OldTileLoopHalf = 101; // §78 이전 BuildTiles가 돌던 범위(CeilToInt(MapRadius + 1))
+
+    private static bool UgTileCell(Vector2 c)
+    {
+        float r = c.magnitude, ax = Mathf.Abs(c.x), az = Mathf.Abs(c.y);
+        return r <= UgRadius + 1f || (ax < ExitGapHalf && r < UgRadius + 12f) || (az < ExitGapHalf && r < UgRadius + 12f);
+    }
+
+    // 맵을 다시 만들지 않고, 예전 범위(|x|·|z| < 101) 밖이라 빠진 지하 타일만 덧붙인다(§78 F2 — 큰길 끝·동굴 벽 앞·출구 굴 바닥).
+    // 이미 덧붙였으면(Tiles_U_*_Patch) 지우고 다시 만든다. 충돌체·NavMesh·조명은 건드리지 않는다.
+    [MenuItem(MenuRoot + "Gingerbread Patch Underground Floor Tiles")]
+    private static void PatchUndergroundTilesMenu()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[GingerbreadMap] stop Play Mode first"); return; }
+        Debug.Log(PatchUndergroundTiles());
+    }
+
+    public static string PatchUndergroundTiles()
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ScenePath) scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        GameObject mapGo = scene.GetRootGameObjects().FirstOrDefault(g => g.name == "Map");
+        Transform ug = mapGo != null ? mapGo.transform.Find("Underground") : null;
+        if (ug == null) return "[GingerbreadMap] Map/Underground not found";
+        Transform uTiles = Group(ug, "Tiles");
+        foreach (Transform t in uTiles.Cast<Transform>().ToList())
+            if (t.name.EndsWith("_Patch")) Object.DestroyImmediate(t.gameObject);
+        foreach (string old in AssetDatabase.FindAssets("GIN_Tiles_U_ t:Mesh", new[] { GeneratedFolder }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(old);
+            if (path.EndsWith("_Patch.asset")) AssetDatabase.DeleteAsset(path);
+        }
+
+        var rng = new System.Random(7801);
+        var cells = new Dictionary<string, List<(Vector2 p, int rot)>>();
+        int count = TileLoopHalf;
+        for (int ix = -count; ix < count; ix++)
+            for (int iz = -count; iz < count; iz++)
+            {
+                if (ix >= -OldTileLoopHalf && ix < OldTileLoopHalf && iz >= -OldTileLoopHalf && iz < OldTileLoopHalf) continue; // 이미 있는 칸
+                var c = new Vector2(ix + 0.5f, iz + 0.5f);
+                if (!UgTileCell(c)) continue;
+                float r = c.magnitude, ax = Mathf.Abs(c.x), az = Mathf.Abs(c.y);
+                string kind = ax < UgRoadHalf || az < UgRoadHalf || r < 14f ? "CrownPurple" : rng.NextDouble() < 0.06 ? "CrackedGlow" : "StoneBrick";
+                string key = $"{kind}_{Mathf.FloorToInt(c.x / TileChunk)}_{Mathf.FloorToInt(c.y / TileChunk)}";
+                if (!cells.TryGetValue(key, out var l)) cells[key] = l = new List<(Vector2, int)>();
+                l.Add((c, rng.Next(4)));
+            }
+        int total = 0;
+        Vector2[] uv = { new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f) };
+        foreach (var kv in cells)
+        {
+            var mb = new MeshBuild();
+            float y = UgY + TileY;
+            foreach ((Vector2 p, int rot) in kv.Value)
+            {
+                Vector3 a = new Vector3(p.x - 0.5f, y, p.y - 0.5f), b = new Vector3(p.x - 0.5f, y, p.y + 0.5f), c = new Vector3(p.x + 0.5f, y, p.y + 0.5f), d = new Vector3(p.x + 0.5f, y, p.y - 0.5f);
+                mb.Quad(a, b, c, d, uv[rot % 4], uv[(rot + 1) % 4], uv[(rot + 2) % 4], uv[(rot + 3) % 4]);
+            }
+            string kind = kv.Key.Split('_')[0];
+            var go = MeshObject(uTiles, "Tiles_U_" + kv.Key + "_Patch", mb.ToMesh("GIN_Tiles_U_" + kv.Key + "_Patch"), Mat("GIN_FL_" + kind), false);
+            go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            total += kv.Value.Count;
+        }
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        return $"[GingerbreadMap] patched {total} underground floor tile(s) in {cells.Count} mesh(es)";
     }
 
     private static bool UnderOwnFloor(Vector2 c)

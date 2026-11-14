@@ -97,14 +97,18 @@ public static class ColaCannonRules
     public static Vector3 Inside(Vector3 pos, float worldYaw, float pitch) => Pivot(pos) - BarrelDirection(worldYaw, pitch) * 0.6f + Vector3.down * 0.9f;
 
     // 발사 뒤 t초의 위치: 입구 → Dest 포물선(꼭대기 = 둘 중 높은 쪽 + ApexHeight).
-    // ceiling > 0이면(지하 등 위가 막힘) 꼭대기를 천장 CeilingClearance 아래로 낮춘다(§69 E3).
-    public static Vector3 FlightPoint(Vector3 mouth, Vector3 dest, float t, float flightSeconds, float ceiling = 0f)
+    // 천장 없음(§78 C3): 예전에는 0이었으나 진저브레드 지하 천장이 정확히 y 0이라 "없음"과 섞였다. 상태 칸(float)은 그대로.
+    public const float NoCeiling = float.PositiveInfinity;
+    public static bool HasCeiling(float ceiling) => !float.IsInfinity(ceiling) && !float.IsNaN(ceiling);
+
+    // 천장이 있으면(지하 등 위가 막힘) 꼭대기를 천장 CeilingClearance 아래로 낮춘다(§69 E3).
+    public static Vector3 FlightPoint(Vector3 mouth, Vector3 dest, float t, float flightSeconds, float ceiling = NoCeiling)
     {
         float k = Mathf.Clamp01(t / Mathf.Max(0.01f, flightSeconds));
         float dist = Vector2.Distance(new Vector2(mouth.x, mouth.z), new Vector2(dest.x, dest.z));
         float low = Mathf.Max(mouth.y, dest.y);
         float apex = low + ApexHeight(dist);
-        if (ceiling > 0f) apex = Mathf.Max(low + 1f, Mathf.Min(apex, ceiling - CeilingClearance));
+        if (HasCeiling(ceiling)) apex = Mathf.Max(low + 1f, Mathf.Min(apex, ceiling - CeilingClearance));
         Vector3 flat = Vector3.Lerp(mouth, dest, k);
         // 세 점(입구, 꼭대기, 도착)을 지나는 2차 곡선: y(k) = (1-k)²·a + 2k(1-k)·c + k²·b, c는 k=0.5에서 apex가 되게
         float c = 2f * apex - 0.5f * (mouth.y + dest.y);

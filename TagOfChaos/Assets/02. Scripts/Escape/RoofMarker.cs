@@ -46,9 +46,10 @@ public class RoofMarker : MonoBehaviour
     {
         // 지하 건물: 동굴 천장(지상 바닥)을 뚫고 지상에 보이지 않게 천장 아래에 둔다
         float iconY = roofY + IconLift, pillarHeight = PillarHeight;
-        float ceiling = EscapeManager.Instance != null ? EscapeManager.Instance.CeilingAbove(new Vector3(repairPoint.x, roofY + 0.2f, repairPoint.z), 300f) : 0f;
-        if (ceiling == 0f && repairPoint.y < UndergroundBelow) ceiling = SurfaceY; // 동굴 천장에 콜라이더가 없으면 지상 바닥 높이로
-        if (ceiling != 0f && ceiling > repairPoint.y)
+        float ceiling = 0f;
+        bool hasCeiling = EscapeManager.Instance != null && EscapeManager.Instance.TryCeilingAbove(new Vector3(repairPoint.x, roofY + 0.2f, repairPoint.z), 300f, out ceiling);
+        if (!hasCeiling && repairPoint.y < UndergroundBelow) { ceiling = SurfaceY; hasCeiling = true; } // 동굴 천장에 콜라이더가 없으면 지상 바닥 높이로
+        if (hasCeiling && ceiling > repairPoint.y)
         {
             iconY = Mathf.Min(iconY, ceiling - IconSize - 1f);
             pillarHeight = Mathf.Max(0f, ceiling - iconY - IconSize * 0.5f - 0.3f);

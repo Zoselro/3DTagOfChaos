@@ -966,7 +966,15 @@ public sealed class EscapeAuthority
         if (c.Owner != actor || c.Boarded || !IsActiveEscaper(actor)) return false;
         if (PumpkinCarriageRules.StageAt(c.SummonedAt, 0, now) != PumpkinCarriageRules.Stage.Waiting) return false;
         if (!IsNear(actor, PumpkinCarriageRules.DoorPoint(c.Pos, c.Yaw), PumpkinCarriageRules.BoardReach + 1f)) return false;
-        if (!manager.TryRandomMapPoint(new System.Random(rng.Next()), out Vector3 dest)) return false;
+        // 같은 층으로(§78 P3): 진저브레드 지하에서 부르면 지하의 무작위 자리(지하 건물 안 포함·마차 자리에서 걸어서 이어지는 곳), 그 밖은 맵 안 무작위
+        bool lower = manager.IsLowerLevel(c.Pos);
+        var pick = new System.Random(rng.Next());
+        bool found = lower ? manager.TryRandomPointOnLevel(pick, c.Pos, out Vector3 dest) : manager.TryRandomMapPoint(pick, out dest);
+        if (!found)
+        {
+            Debug.LogWarning($"[EscapeAuthority] Pumpkin carriage {id}: no destination on the {(lower ? "lower" : "main")} level.");
+            return false;
+        }
         c.BoardAt = now;
         c.Dest = dest;
         State.Carriages[i] = c;
@@ -1061,7 +1069,7 @@ public sealed class EscapeAuthority
     {
         Vector3 mouth = ColaCannonRules.Mouth(pos, aimYaw, ColaCannonRules.FirePitch);
         Vector3 dir = ColaCannonRules.Rotation(aimYaw) * Vector3.forward;
-        ceiling = manager.CeilingAbove(mouth, 80f);
+        if (!manager.TryCeilingAbove(mouth, 80f, out ceiling)) ceiling = ColaCannonRules.NoCeiling; // 천장 y 0도 천장이다(§78 C2)
         float edge = ColaCannonRules.MinRange;
         for (float d = ColaCannonRules.MinRange; d <= ColaCannonRules.MaxRange; d += ColaCannonRules.EdgeStep)
         {
@@ -1071,7 +1079,7 @@ public sealed class EscapeAuthority
         for (float d = edge; d >= ColaCannonRules.MinRange; d -= ColaCannonRules.RangeStep)
         {
             Vector3 probe = mouth + dir * d;
-            probe.y = ceiling > 0f ? Mathf.Min(mouth.y + 40f, ceiling - 0.6f) : mouth.y + 40f;
+            probe.y = ColaCannonRules.HasCeiling(ceiling) ? Mathf.Min(mouth.y + 40f, ceiling - 0.6f) : mouth.y + 40f;
             if (!manager.TryGroundBelow(probe, 100f, out Vector3 ground) || ground.y > mouth.y + 20f) continue; // 바닥 없음·너무 높은 곳
             if (!manager.IsValidTeleport(ground) || !manager.IsWalkableFromSpawn(ground)) continue;
             dest = ground;

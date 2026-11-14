@@ -10084,3 +10084,195 @@ public class CookieAimCamera : MonoBehaviour
   - 던짐: Throw
   - 끝: 다시 ThrowReady(StunAim으로 가지 않음) ✅
 - 사용자가 쿠키 시점 올려다보기 한계를 −25°로 바꿈(`Camera_Ctrl.vMinLimit`). 확인함.
+
+## 78. 몸 회전 부드럽게·호박 마차 층 유지·콜라 대포 지하 버그·진저브레드 지하 바닥 구멍(2026-11-14 계획)
+
+요청(2026-11-14):
+
+- ① 키 방향으로 몸이 한 번에 휙 돈다(0·90·180·−90°처럼 보임). 0~360° 사이를 거쳐 돌게(이전 답의 1번 = 부드러운 회전).
+- ② 진저브레드 마을에서 호박 마차를 지상에서 쓰면 지상의 무작위 자리로, 지하에서 쓰면 지하의 무작위 자리로.
+- ③ 진저브레드 지하에서 콜라 대포가 써지지 않는다.
+- ④ 맵 바닥이 뚫려 보인다(받은 사진: 지하 보라 타일 끝과 동굴 벽 사이가 검다).
+
+> 이 절은 계획만 적는다. 코드는 아직 바꾸지 않았다.
+> 원인은 Unity 에디터·Play Mode에서 직접 재고 확인했다(아래 "확인한 값").
+
+### 78.1 ① 몸 회전 — 지금 코드
+
+- `Unit/HideOrSeekPlayer.cs`
+  - 570~574행: `moveDir = PlayerInput.CameraRelativeMove(cam)`가 그대로 `rotation` → `lookDir`이 된다.
+  - 717행: `rb.MoveRotation(Quaternion.LookRotation(lookDir))` — 한 물리 스텝 만에 목표 방향으로 돈다.
+- `Monster/MonsterController.cs` 347행: 3인칭 술래도 `rb.MoveRotation(Quaternion.LookRotation(moveInput))`로 같은 방식이다.
+- `Core/PlayerInput.cs` 45~51행
+  - 키 입력은 눌림 1, 안 눌림 0이다.
+  - 그래서 카메라 정면 기준 8방향만 나온다. 키 하나만 누르면 정확히 0/90/180/−90°다.
+- 이미 부드러운 것: 우클릭 조준 중 `HideOrSeekPlayer.cs:715` `RotateTowards(..., AimMotion.AimTurnDegreesPerSecond * dt)`.
+- 몸 방향을 판정에 쓰는 곳을 찾아보았다. 잡기 판정은 거리로 재므로 몸 방향을 쓰지 않는다. 몸 방향은 아래처럼 모습에만 쓴다.
+  - `CookieLifeStatePresenter.cs:200`·`DecoyView.cs:267`: 들린 몸을 놓는 방향
+  - `PlayerGrabController.cs:101`: 내려놓는 자리
+  - 결과: 회전이 조금 늦어도 판정은 바뀌지 않는다.
+
+**설계**
+
+| 단계 | 내용 |
+| --- | --- |
+| R1 | 공용 규칙 `MoveTurn`(새 파일 `Core/MoveTurn.cs`) 하나를 만든다. 값은 `DegreesPerSecond = 720f`(180° = 0.25초), 함수는 `Step(Quaternion from, Vector3 lookDir, float dt) => RotateTowards(from, LookRotation(lookDir), DegreesPerSecond·dt)`. |
+| R2 | 쿠키 717행을 `rb.MoveRotation(MoveTurn.Step(rb.rotation, lookDir, Time.fixedDeltaTime))`로 바꾼다. 회피(Ctrl) 중에는 지금처럼 즉시 돈다(`isDodge`면 그대로). |
+| R3 | 술래 347행도 같게 바꾼다. 아래는 지금 그대로 둔다. ① 1인칭(`viewSwitcher.IsFirstPerson` → `YawRotation`) ② 돌진 준비(324행 `dashWindupForward`) ③ 돌진 중 |
+| R4 | 이동 방향(속도)은 지금처럼 키를 누르는 순간 바뀐다. 몸이 도는 모습만 바뀐다. 회전은 원래 동기화되므로 다른 화면도 부드럽게 보인다. |
+
+### 78.2 ② 호박 마차 — 지금 코드
+
+- 탈 때 도착지를 고르는 곳: `EscapeAuthority.CarriageBoard`(968행) `manager.TryRandomMapPoint(...)`
+- `EscapeManager.TryRandomMapPoint`(636행)
+  - 높이 30 m에서 아래로 `SnapToGround` → 가장 높은 면을 잡는다.
+  - `point.y > 20` 이면 버리고 30번까지 다시 고른다.
+  - 진저브레드는 지상 바닥(y 0)이 지하(y −36) 위를 덮고 있어 늘 지상만 나온다.
+- 걸어 갈 수 있는지는 `IsWalkableFromSpawn`이 쿠키 스폰(지상) → 도착지 NavMesh 길로 확인한다.
+  - 지하 자리 5곳을 재 보니 1곳이 실패했다. 나선 계단을 지나는 긴 길이라 그렇다.
+
+**설계**
+
+| 단계 | 내용 |
+| --- | --- |
+| P1 | `EscapeManager.TryRandomPointOnLevel(System.Random, Vector3 near, out Vector3)`를 새로 만든다. 무작위 xz에서 `near.y + 12 m`부터 아래로 `TryGroundBelow`(시작 높이 위는 보지 않음)로 바닥을 찾는다. 받아들이는 조건은 셋이다. ① `|바닥.y − near.y| ≤ 8 m` ② 술래방 밖·캐릭터가 끼지 않음 ③ `near`에서 걸어서 이어짐. 60번까지 시도한다. |
+| P2 | 걸어서 이어지는지는 스폰이 아니라 마차를 부른 자리(`c.Pos`, 이미 걸어 들어온 곳)에서 잰다. `IsWalkableFrom(anchor, feet)`를 `IsWalkableFromSpawn`에서 떼어 낸다(지금 함수는 anchor = 스폰으로 그대로 둔다). |
+| P3 | `CarriageBoard`: 마차 자리 위가 막혀 있고(`TryCeilingAbove`, ③의 고친 함수) `c.Pos.y < −5 m`(`RoofMarker.UndergroundBelow`와 같은 기준)이면 지하로 보고 P1을 쓴다. 그 밖(지상, 한 층짜리 맵)은 지금 `TryRandomMapPoint` 그대로다. 결과: 다른 맵은 바뀌지 않는다. |
+| P4 | 지하에서 자리를 못 찾으면 탑승을 거절한다(지금과 같다 — 마차는 그대로 있고 다시 E 가능). 로그에 이유를 남긴다. |
+| P5 | 받는 쪽(`PumpkinCarriageView`)은 `Dest`로 옮기기만 하므로 바꿀 것이 없다. 이동 검사 예외(`moveExemptUntil`)도 그대로다. |
+
+### 78.3 ③ 콜라 대포 지하 — 원인(재현함)
+
+- 지하에서 설치(`VehicleSpot.TryFind`)는 된다. 지하 65/67곳에서 설치 자리를 찾았다.
+- 그런데 **E로 타서 쏠 때** 방장의 `TryCannonLanding`(1060행)이 내릴 곳을 못 찾아 거절한다.
+
+| 층 | 착지 성공 |
+| --- | --- |
+| 지상 | 256/260 |
+| 지하 | 21/260 |
+
+- 원인: `EscapeManager.CeilingAbove`(747행)는 천장이 없으면 **0**을 돌려준다. 진저브레드 지하의 천장(= 지상 바닥 충돌체)은 **정확히 y 0.0**에 있다.
+  - 그래서 `TryCannonLanding`의 `ceiling > 0f`가 거짓이 되어 "천장 없음"으로 본다.
+  - 바닥을 지상 위 +7 m에서 찾게 되고, 지상 바닥(y 0)이 잡혀 "너무 높음"으로 모두 걸러진다(§69 E3에서 고친 것이 이 경우를 놓쳤다).
+  - 성공한 21번은 위에 지상 소품이 있어 천장이 0.1 m로 잡힌 곳뿐이다.
+- 같은 문제가 하나 더 있다. 날아가는 곡선(`ColaCannonRules.FlightPoint` 107행 `if (ceiling > 0f)`)도 천장 0을 "없음"으로 본다. 그래서 착지를 고쳐도 대포가 천장(지상 바닥)을 뚫고 올라갔다 내려오는 모습이 된다.
+- `RoofMarker.cs:49`도 `CeilingAbove`를 쓴다. 지하 건물 지붕 표시는 천장이 y 0이면 "없음"으로 본다(같이 고친다).
+
+**설계**
+
+| 단계 | 내용 |
+| --- | --- |
+| C1 | `EscapeManager.TryCeilingAbove(Vector3 pos, float maxUp, out float y)`(bool)를 새로 만든다. 천장 높이가 0이어도 "있음"과 "없음"을 가른다. `CeilingAbove`는 이것을 부르는 옛 이름으로 남기거나 쓰는 곳을 모두 바꾼다. |
+| C2 | `TryCannonLanding`: `TryCeilingAbove`로 바꾼다. 천장이 있으면 `probe.y = min(mouth.y + 40, ceiling − 0.6)`. |
+| C3 | 상태의 `Cannon.Ceiling`은 그대로 float 한 칸이다. "없음"을 0이 아니라 `ColaCannonRules.NoCeiling = float.PositiveInfinity`로 둔다. `FlightPoint`는 `!float.IsPositiveInfinity(ceiling)`일 때만 천장 아래로 낮춘다. 저장 형식(바이트 수)은 같다. 같은 빌드끼리만 들어오므로(§71 V1 버전 확인) 옛 클라이언트 문제는 없다. |
+| C4 | `RoofMarker.cs:49`도 `TryCeilingAbove`로 바꾼다. |
+
+### 78.4 ④ 진저브레드 지하 바닥 구멍 — 원인(확인함)
+
+- 지하 바닥은 두 가지로 되어 있다.
+  - 충돌체 `Floor`: y −36. 보이지 않는다. 반 폭은 `UgFloorHalf` = 135 m라 다 덮는다.
+  - 보이는 바닥: 1 m 타일 메시 `Tiles_U_*`
+- 타일은 `Editor/Maps/GingerbreadVillageMapBuilder.cs`의 `BuildTiles`(874행)가 만든다. 이 반복문이 원인이다.
+  ```csharp
+  int count = Mathf.CeilToInt(MapRadius + 1f);          // 지상 반지름 100 → 101
+  for (int ix = -count; ix < count; ix++) for (int iz = -count; iz < count; iz++) { ... 지상 ... 지하(r ≤ UgRadius+1 = 106, 출구 굴 r < 117) ... }
+  ```
+  - 지하 반지름(`UgRadius` = 105)과 출구 굴(117 m까지)이 지상(100 m)보다 크다. 그런데 칸을 |x|, |z| < 101 안에서만 돈다.
+  - 그래서 **|x| 또는 |z|가 101 m를 넘는 곳에는 지하 타일이 하나도 없다.** 네 방향(북·동·남·서) 큰길 끝, 그리고 동굴 벽(105.5 m)까지와 출구 굴 안이 그렇다.
+  - 충돌체는 있어 걸을 수는 있지만 보이는 바닥이 없어 검게 뚫려 보인다.
+  - 위에서 찍은 사진(`sfx_preview/ug_floor_hole_north.png`)에서 북쪽 타일이 z 101에서 끝나고 그 뒤가 비었다. 타일 조각 경계도 모두 ±101에서 끝난다(에디터에서 잼).
+- 지상은 반지름 100이라 해당 없다.
+
+**설계**
+
+| 단계 | 내용 |
+| --- | --- |
+| F1 | `BuildTiles` 반복 범위를 `CeilToInt(Mathf.Max(MapRadius, UgRadius + 12f) + 1f)`로 넓힌다. 다음에 맵을 다시 만들 때도 안 생기게 한다. |
+| F2 | 맵 전체를 다시 만들지는 않는다. 건물·소품·NavMesh가 다시 배치되는 위험이 있다. 대신 **빠진 지하 타일만 덧붙이는 에디터 메뉴** `GingerbreadVillageMapBuilder.PatchUndergroundTiles()`를 만든다. 지금 씬의 `Tiles_U_*`가 덮는 칸을 빼고 남은 칸만 같은 규칙(종류·재질·1 m·회전)으로 새 메시 `Tiles_U_*_Patch`를 만든다. 지하 `Tiles` 묶음 아래에 넣고 씬을 저장한다. |
+| F3 | 확인 방법: ① 위에서 다시 찍어 빨간 빈칸이 없는지 본다(네 출구 끝·굴 안). ② Play Mode에서 그 자리에 서서 사진을 찍는다. ③ 충돌체·NavMesh·조명은 바꾸지 않는다. |
+
+### 78.5 단계·시험
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| R0 | 코드 조사·재현·계획(이 절) | ✅ |
+| R1~R4 | 몸 회전 720°/초(쿠키·술래 3인칭, 회피·돌진 준비·1인칭 술래 제외) | 보류(사용자: 회전은 아직 고치지 말 것) |
+| P1~P5 | 호박 마차 같은 층 무작위(지하면 지하, 걸어서 이어짐은 마차 자리에서) | ✅ |
+| C1~C4 | 천장 0과 "없음" 구분(`TryCeilingAbove`·`NoCeiling`) — 콜라 대포 지하 착지·비행 곡선·지붕 표시 | ✅ |
+| F1~F2 | 지하 타일 범위 고침 + 빠진 칸만 덧붙이기 | ✅ |
+| T | EditMode와 Play Mode 시험(아래) | ✅(회전 제외) |
+| DOC | 결과·README | ✅ |
+
+T 단계 시험 내용:
+
+- EditMode
+  - `MoveTurn.Step`: 180°를 0.25초에, 한 스텝에 4.8°보다 많이 돌지 않음
+  - `FlightPoint`: 천장 y 0이면 곡선 꼭대기가 0 − 여유 아래, `NoCeiling`이면 원래 높이
+  - `TryRandomPointOnLevel`: 층 판정 계산
+  - 진저브레드 씬: 지하 타일이 |x|·|z| 101~105 칸과 출구 굴을 덮음
+- Play Mode(진저브레드 오프라인)
+  - 90°·180° 돌 때 매 프레임 각도 기록(쿠키·술래)
+  - 호박 마차: 지상 10번 → 모두 지상 / 지하 10번 → 모두 지하, 걸어서 이어짐
+  - 콜라 대포: 지하 여러 자리 × 4방향 착지 성공률(목표: 지상과 비슷하게 95 % 이상), 날아가는 동안 천장 아래
+  - 바닥: 네 출구 끝 사진
+
+### 78.6 확인 질문
+
+- Q1. 몸 회전 빠르기: 초당 720°(뒤돌기 0.25초)로 할까요? 더 빠르게(1080°, 0.17초) 또는 느리게(540°, 0.33초)도 됩니다.
+- Q2. 호박 마차 지하 도착지: 지하 어디든(지하 건물 안 포함, 걸어서 갈 수 있는 곳) 무작위로 할까요? 아니면 건물 밖 길·광장만으로 할까요?
+- Q3. 바닥 구멍은 맵을 통째로 다시 만들지 않고 빠진 지하 타일만 덧붙이는 방식(F2)으로 할까요? 다시 만들면 건물·소품 배치와 NavMesh가 바뀔 수 있어 권하지 않습니다.
+- Q4. 나선 계단(지상↔지하 경사로) 위에서 호박 마차를 쓰면, 서 있는 높이가 −5 m보다 낮으면 지하, 높으면 지상으로 보면 될까요?
+
+### 78.7 확인한 값(2026-11-14 에디터·Play Mode)
+
+- 콜라 대포
+  - 지하 무작위 67곳 중 설치 자리 찾음 65곳
+  - E 착지 성공: 지상 256/260, 지하 21/260
+  - 실패 예: (−6, −36, 20) 북쪽 — 천장 0, 시작 높이 7.1 m → 모든 거리에서 지상 바닥(0.0)이 잡혀 "너무 높음"
+- 천장: 지하에서 위로 쏘면 지상 바닥 충돌체에 y 0.0으로 닿는다.
+- 지하 타일 조각: x·z 범위가 모두 −101~101 안
+- 동굴 벽: 반지름 105.5 m
+
+### 78.8 확인 답·결과(2026-11-14)
+
+**확인 답**
+
+- 회전(R): 아직 고치지 않는다.
+- Q2: 지하 건물 안 포함, 걸어서 갈 수 있는 곳.
+- Q3: 빠진 타일만 덧붙이기.
+- Q4: −5 m 기준 그대로.
+
+**원인 정정(C)**
+
+- 실제로는 천장이 y 0에서 "잡혀서" 0이 된 것이 아니었다. 지하에서 **위로 쏜 광선이 지상 바닥 충돌체(한 면짜리)를 그냥 뚫고 지나가** 아무것에도 닿지 않았다.
+  - 그래서 `CeilingAbove`가 "없음"(0)을 돌려주었다.
+  - 결과(착지 시작 높이가 지상 위가 되어 모두 걸러짐)는 같았다.
+- 고침: `TryCeilingAbove`가 위로 쏘기와 함께 **위에서 아래로도 쏘아**, 그 자리 위에 있는 가장 낮은 면을 천장으로 본다.
+  - "없음"을 0이 아니라 무한대(`ColaCannonRules.NoCeiling`)로 둔다.
+  - 착지(`TryCannonLanding`)·날아가는 곡선(`FlightPoint`)·지하 건물 지붕 표시(`RoofMarker`)가 모두 이것을 쓴다.
+
+**바꾼 파일**
+
+- `Escape/EscapeManager.cs` — `TryCeilingAbove`·`IsLowerLevel`·`TryRandomPointOnLevel`·`IsWalkableFrom`
+- `Escape/EscapeAuthority.cs` — `CarriageBoard` 같은 층, `TryCannonLanding`
+- `Escape/ColaCannonRules.cs` — `NoCeiling`·`HasCeiling`
+- `Escape/RoofMarker.cs`
+- `Editor/Maps/GingerbreadVillageMapBuilder.cs` — 타일 범위·`PatchUndergroundTiles` 메뉴
+- `Scenes/Maps/GingerbreadVillage.unity`(덧붙인 타일 24개)
+- `09. Environment/GingerbreadVillage/Generated/GIN_Tiles_U_*_Patch.asset` 24개
+- `Editor/Tests/Request1117Tests.cs`(새)
+
+**Play Mode(진저브레드 오프라인)**
+
+- 콜라 대포 착지 성공
+  - 지하: 21/260 → **260/260**. 모든 도착지가 지하이고, 날아가는 꼭대기는 천장보다 1.9 m 이상 아래다.
+  - 지상: 256/260으로 그대로다.
+- 호박 마차
+  - 지하에서 부름: 19곳 모두 지하로 판정, 18곳에서 지하 도착지를 찾음(2곳은 지하 건물 안). 못 찾으면 탑승이 거절되고 다시 E를 누를 수 있다.
+  - 지상에서 부름: 15곳 모두 지상.
+  - 실제 소환 → E 탑승 → 이동: 지하 (30, −36, −20) → (−26.3, −36, −8.4) ✅, 지상 → (68.4, 0, 23.5) ✅
+- 바닥: 빠진 지하 타일 1,224칸(24 메시)을 덧붙였다. 위에서 다시 찍은 사진(`sfx_preview/hole_n_fixed.png`·`ugx_e_fixed.png`)에서 동굴 벽·출구까지 타일이 깔렸다.
+
+**EditMode**
+
+- `Request1117Tests` 2/2, `Request1108CnTests`·`Request1108PcTests`까지 17/17 ✅
