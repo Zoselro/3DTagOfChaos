@@ -24,6 +24,20 @@ public class Request1117Tests
         Assert.AreEqual(b, ColaCannonRules.FlightPoint(a, b, f, f, 0f), "still lands on the spot");
     }
 
+    // R1: 몸 회전 720°/초 — 물리 한 번(0.02초)에 14.4°, 뒤돌기는 0.25초에 끝나고 그 사이 각도를 거친다.
+    [Test]
+    public void MoveTurn_TurnsAt720DegreesPerSecond()
+    {
+        Quaternion q = Quaternion.LookRotation(Vector3.right);
+        Quaternion step = MoveTurn.Step(q, Vector3.left, 0.02f);
+        Assert.AreEqual(14.4f, Quaternion.Angle(q, step), 0.05f);
+        for (int i = 0; i < 12; i++) q = MoveTurn.Step(q, Vector3.left, 0.02f);
+        Assert.Greater(Quaternion.Angle(q, Quaternion.LookRotation(Vector3.left)), 1f, "0.24 s: not there yet");
+        q = MoveTurn.Step(q, Vector3.left, 0.02f);
+        Assert.Less(Quaternion.Angle(q, Quaternion.LookRotation(Vector3.left)), 0.5f, "0.26 s: done");
+        Assert.AreEqual(q, MoveTurn.Step(q, Vector3.zero, 0.02f), "no input: keep facing");
+    }
+
     // F2: 지하 큰길 끝(|x|·|z| 101 m 너머)·출구 굴에도 보이는 바닥 타일이 있다.
     [Test]
     public void GingerbreadUnderground_TilesReachCaveWallAndExits()

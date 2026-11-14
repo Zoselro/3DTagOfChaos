@@ -10196,7 +10196,7 @@ public class CookieAimCamera : MonoBehaviour
 | 단계 | 내용 | 상태 |
 | --- | --- | --- |
 | R0 | 코드 조사·재현·계획(이 절) | ✅ |
-| R1~R4 | 몸 회전 720°/초(쿠키·술래 3인칭, 회피·돌진 준비·1인칭 술래 제외) | 보류(사용자: 회전은 아직 고치지 말 것) |
+| R1~R4 | 몸 회전 720°/초(쿠키·술래 3인칭, 회피·돌진 준비·1인칭 술래 제외) | ✅ (78.9) |
 | P1~P5 | 호박 마차 같은 층 무작위(지하면 지하, 걸어서 이어짐은 마차 자리에서) | ✅ |
 | C1~C4 | 천장 0과 "없음" 구분(`TryCeilingAbove`·`NoCeiling`) — 콜라 대포 지하 착지·비행 곡선·지붕 표시 | ✅ |
 | F1~F2 | 지하 타일 범위 고침 + 빠진 칸만 덧붙이기 | ✅ |
@@ -10276,3 +10276,15 @@ T 단계 시험 내용:
 **EditMode**
 
 - `Request1117Tests` 2/2, `Request1108CnTests`·`Request1108PcTests`까지 17/17 ✅
+
+### 78.9 몸 회전 720°/초 결과(2026-11-14)
+
+- 사용자: 720°로 먼저 해 보고, 마음에 안 들면 되돌린다(앞 작업은 커밋·푸시함).
+- 새 파일 `Core/MoveTurn.cs`
+  - `DegreesPerSecond = 720`
+  - `Step(from, lookDir, dt)` = `RotateTowards`. 입력이 없으면 그대로.
+- 쿠키 `HideOrSeekPlayer.Move`: 걷기·달리기는 `MoveTurn.Step`으로 돈다. 회피 중에는 지금처럼 바로 돈다.
+- 술래 `MonsterController.FixedUpdate`: 3인칭 이동만 `MoveTurn.Step`으로 바꿨다. 1인칭(`YawRotation`)과 돌진 준비는 그대로다.
+- Play Mode(쿠키, 시간 1/100): 오른쪽을 보다가 왼쪽 키를 누르면 물리 한 번마다 14.4°씩 돈다(0 → −14 → −29 → −43 → −58 → −72 → −86 …). 한 번에 꺾이지 않는다 ✅
+- 술래는 같은 함수를 쓴다. 오프라인 방에 술래가 없어 Play Mode로 직접 보지는 못했다.
+- EditMode: `Request1117Tests.MoveTurn_TurnsAt720DegreesPerSecond` 등 10/10 ✅

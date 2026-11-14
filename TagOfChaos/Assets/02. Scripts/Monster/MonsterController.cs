@@ -344,7 +344,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         if (viewSwitcher != null && viewSwitcher.IsFirstPerson)
             rb.MoveRotation(viewSwitcher.YawRotation);
         else if (moveInput != Vector3.zero)
-            rb.MoveRotation(Quaternion.LookRotation(moveInput));
+            rb.MoveRotation(MoveTurn.Step(rb.rotation, moveInput, Time.fixedDeltaTime)); // 3인칭 이동은 720°/초로 따라 돈다(§78 R3) — 1인칭·돌진 준비는 위에서 바로
 
         Vector3 horizontal = moveInput * speed;
         // 공중에서 벽을 향해 밀면 마찰로 벽에 붙는다 — 쿠키와 같은 규칙으로 벽을 향한 성분을 뺀다(§41 ㊴).

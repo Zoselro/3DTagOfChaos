@@ -714,7 +714,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         if (!isDodge && IsAimFacing)
             rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, Quaternion.LookRotation(aimFaceDir), AimMotion.AimTurnDegreesPerSecond * Time.fixedDeltaTime)); // 도구를 쓰는 쪽(§75 B1)
         else if (lookDir != Vector3.zero)
-            rb.MoveRotation(Quaternion.LookRotation(lookDir));
+            rb.MoveRotation(isDodge ? Quaternion.LookRotation(lookDir) : MoveTurn.Step(rb.rotation, lookDir, Time.fixedDeltaTime)); // 회피는 바로, 걷기·달리기는 720°/초로 따라 돈다(§78 R2)
 
         Vector3 horizontal = new Vector3(dir.x * vel, 0f, dir.z * vel);
         // 공중에서 벽·사물을 향해 계속 밀면 그 수직항력에 비례한 마찰이 중력을 이겨 벽에 붙는다 — 벽을 향한 성분만 뺀다(§41 ㊴).
