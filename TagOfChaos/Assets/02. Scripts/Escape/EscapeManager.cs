@@ -58,6 +58,12 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public static bool IsCarriageProtected(int actor) => CarriageTimeCheck(actor, PumpkinCarriageRules.Protected);
 
     // 개발용(OfflineModeBootstrap 아이템 시험): 오프라인 방의 방장일 때만 방장 판정 객체를 내준다. 온라인에서는 늘 null.
+    // 방장: 투사체가 AI를 맞혔다(§76 A4) — 세워 두기·도망·갇힘 기록(EscapeAuthority.ApplyDecoyHits).
+    public void ApplyDecoyHits(int sender, ToolSO tool, int[] targets)
+    {
+        if (PhotonNetwork.IsMasterClient && authority != null && authority.State != null) authority.ApplyDecoyHits(sender, tool, targets);
+    }
+
     public EscapeAuthority OfflineAuthority => Photon.Pun.PhotonNetwork.OfflineMode && Photon.Pun.PhotonNetwork.IsMasterClient ? authority : null;
 
     // 콜라 대포(§68.9): 탄 순간부터 착지까지 이동 잠금, 해치가 닫힌 뒤 착지까지 잡히지 않는다.

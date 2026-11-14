@@ -49,8 +49,18 @@ public class DecoyView : MonoBehaviour
     public Vector3 RoutePosition => transform.position - correction;
 
     public int Id => id;
-    // 괴물 조준에 잡히는지(아직 잡히지 않았고, 방금 잡기 요청을 보내지 않았다).
-    public bool IsCatchable => !caught && EscapeManager.ActionsAllowed && Time.unscaledTime - requestedAt > RequestRetrySeconds;
+    // 괴물 조준에 잡히는지(아직 잡히지 않았고, 방금 잡기 요청을 보내지 않았고, 물풍선에 갇히지 않았다 — §76 A8).
+    public bool IsCatchable => !caught && !IsJailed && EscapeManager.ActionsAllowed && Time.unscaledTime - requestedAt > RequestRetrySeconds;
+    // 도구(스턴건·물풍선·섬광탄)에 맞을 수 있는지(§76 A2): 잡히는 중이 아니면.
+    public bool IsHittable => !caught && !crushed;
+    public bool IsJailed => stun != null && stun.IsJailed;
+    public StunReceiver Stun => stun;
+
+    // 화면에 있는 AI(번호 → 모습). 도구 명중(ToolHitReceiver)이 AI 번호로 찾는다(§76 A7).
+    private static readonly System.Collections.Generic.Dictionary<int, DecoyView> live = new System.Collections.Generic.Dictionary<int, DecoyView>();
+    public static bool TryFind(int decoyId, out DecoyView view) => live.TryGetValue(decoyId, out view) && view != null;
+    private StunReceiver stun;
+    public const float BodyHeight = 1.9f;
 
     public void Init(EscapeManager owner, int decoyId, Color[] characterCrumbs = null)
     {
@@ -58,6 +68,10 @@ public class DecoyView : MonoBehaviour
         manager = owner;
         id = decoyId;
         originalScale = transform.localScale;
+        live[decoyId] = this;
+        stun = GetComponent<StunReceiver>();
+        if (stun == null) stun = gameObject.AddComponent<StunReceiver>();
+        stun.Init(BodyHeight);
         foreach (SkinnedMeshRenderer r in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             if (r.sharedMaterial != null && r.sharedMaterial.HasProperty("_Color")) { crumbColor = r.sharedMaterial.color; break; }
         Animator animator = GetComponentInChildren<Animator>(true);
@@ -76,6 +90,23 @@ public class DecoyView : MonoBehaviour
     }
 
     // 상태가 바뀔 때: 경로가 없는 AI만 상태의 자리에 놓는다(경로가 있으면 Tick이 따라간다).
+    private void OnDestroy()
+    {
+        if (live.TryGetValue(id, out DecoyView v) && v == this) live.Remove(id);
+    }
+
+    // 물풍선에 갇힌 AI의 높이(§76 A7): 진짜 쿠키(WaterTrapMotion)와 같은 시각표 — 0.6초 동안 5 m 떠올라 머물고, 풀리면 떨어진다(FallStunSeconds).
+    private float LiftNow()
+    {
+        if (stun == null || stun.JailStartedAt < 0f) return 0f;
+        float t = Time.time;
+        if (t < stun.JailReleaseAt) return WaterTrapMotion.LiftAt(t - stun.JailStartedAt);
+        float fall = (t - stun.JailReleaseAt) / StunReceiver.FallStunSeconds;
+        if (fall >= 1f) return 0f;
+        float top = WaterTrapMotion.LiftAt(stun.JailReleaseAt - stun.JailStartedAt);
+        return top * (1f - fall * fall);
+    }
+
     public void Apply(EscapeState.Decoy d)
     {
         if (caught || manager.Routes.TryGet(d.Id, out _)) return;
@@ -106,7 +137,7 @@ public class DecoyView : MonoBehaviour
     // 경로를 따라간다: 위치·방향·애니메이션·발소리.
     private void Follow(EscapeState.Decoy d, double now)
     {
-        if (!manager.Routes.TryActive(d.Id, now, out DecoyRoute route)) { SetMotion(PlayerMoveState.Idle, 0); return; }
+        if (!manager.Routes.TryActive(d.Id, now, out DecoyRoute route)) { SetMotion(PlayerMoveState.Idle, 0); ApplyLiftOnly(); return; }
         DecoyRoute.Pose pose = DecoyRoute.Sample(route, now, yawSet ? yaw : d.Yaw);
 
         if (Time.time >= nextGroundCheck)
@@ -118,7 +149,8 @@ public class DecoyView : MonoBehaviour
                 targetGroundOffset = Mathf.Clamp(hit.point.y - pose.Position.y, -MaxGroundOffset, MaxGroundOffset);
         }
         groundOffset = Mathf.MoveTowards(groundOffset, targetGroundOffset, Time.deltaTime * 2f);
-        Vector3 target = pose.Position + Vector3.up * groundOffset;
+        Vector3 target = pose.Position + Vector3.up * (groundOffset + LiftNow());
+        appliedLift = 0f;
         if (manager.Routes.Revision != seenRouteRevision)
         {
             // 새 경로를 받았다: 화면 위치와 새 경로 위치의 차이를 이음(6 m 넘으면 진짜 순간이동으로 보고 그냥 옮김)
@@ -146,6 +178,16 @@ public class DecoyView : MonoBehaviour
         }
         else if (route.Gait == DecoyGait.Dance && now < route.StartAt + route.HoldUntil) SetMotion(PlayerMoveState.Dance, route.DanceId);
         else SetMotion(PlayerMoveState.Idle, 0);
+    }
+
+    // 경로가 없는(서 있는) AI도 갇히면 떠오른다 — 지금 보탠 높이만 바꾼다.
+    private float appliedLift;
+    private void ApplyLiftOnly()
+    {
+        float lift = LiftNow();
+        if (Mathf.Approximately(lift, appliedLift)) return;
+        transform.position += Vector3.up * (lift - appliedLift);
+        appliedLift = lift;
     }
 
     private void SetMotion(PlayerMoveState state, byte danceId)

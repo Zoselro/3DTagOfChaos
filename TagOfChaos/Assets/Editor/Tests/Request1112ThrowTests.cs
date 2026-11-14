@@ -199,7 +199,17 @@ public class Request1112ThrowTests
         Assert.IsNotNull(balloon);
         Assert.IsNotNull(search);
         Assert.AreEqual(balloon.launchAngle, search.launchAngle, 1e-4f);
-        Assert.AreEqual(balloon.gravity, search.gravity, 1e-4f);
+        Assert.AreEqual(14.2f, search.gravity, 1e-4f, "search bomb keeps the §71 throw");
+        // 2026-11-14: 물풍선만 1.5배 더 빠르게 — 같은 각도에서 중력 × 2.25 → 속도 × 1.5, 떨어지는 자리는 같다
+        Assert.AreEqual(14.2f * 2.25f, balloon.gravity, 1e-3f);
+        foreach (float d in new[] { 6f, 12f, 20f })
+        {
+            Vector3 t = new Vector3(0f, 0f, d);
+            float before = ThrowSolver.LaunchVelocity(Vector3.zero, t, 20f, 14.2f).magnitude;
+            Vector3 v = ThrowSolver.LaunchVelocity(Vector3.zero, t, balloon.launchAngle, balloon.gravity);
+            Assert.AreEqual(1.5f, v.magnitude / before, 0.01f);
+            Assert.AreEqual(d, new Vector2(v.x, v.z).magnitude * (2f * v.y / balloon.gravity), 0.05f, "still lands on the aimed spot");
+        }
         Assert.IsFalse(search.burstOnImpact);
         Assert.AreEqual(1f, search.fuseAfterImpact, 1e-4f);
     }

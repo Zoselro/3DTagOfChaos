@@ -16,7 +16,7 @@ MonoBehaviour:
   maxRange: 20
   launchAngle: 20
   radius: 0.2
-  gravity: 14.2
+  gravity: 31.949999
   bounciness: 0.4
   surfaceFriction: 0.2
   rollDeceleration: 4

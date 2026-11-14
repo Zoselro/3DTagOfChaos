@@ -22,6 +22,9 @@ public class StunReceiver : MonoBehaviour
     private Animator trappedAnimator;
     private float animatorSpeed = 1f;
     public bool IsJailed => Time.time < jailedUntil;
+    // 갇힌 시각표(Time.time) — 몸을 직접 옮길 수 없는 AI(DecoyView)가 떠오름·떨어짐을 이 값으로 그린다(§76 A7).
+    public float JailStartedAt { get; private set; } = -10f;
+    public float JailReleaseAt => jailedUntil;
 
     public void Trap(double hitAt, float seconds)
     {
@@ -29,6 +32,7 @@ public class StunReceiver : MonoBehaviour
         float start = Time.time - (float)(Photon.Pun.PhotonNetwork.Time - hitAt);
         float release = start + seconds;
         if (release <= Time.time) return;
+        if (!IsJailed) JailStartedAt = start;
         jailedUntil = Mathf.Max(jailedUntil, release);
         stunnedUntil = Mathf.Max(stunnedUntil, release + FallStunSeconds);
         if (starRoot != null) starRoot.gameObject.SetActive(false);

@@ -748,7 +748,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
         if (stream.IsWriting) // 로컬 플레이어의 상태 정보 송신
         {
-            networkSync.Write(stream, transform, animationDriver.CurrentState, grabController != null && grabController.IsCarrying, carryFollower.CarrierViewId, animationDriver.DanceId, ToolUser.Aiming);
+            networkSync.Write(stream, transform, animationDriver.CurrentState, grabController != null && grabController.IsCarrying, carryFollower.CarrierViewId, animationDriver.DanceId, ToolUser.AimView); // 조준 자세는 세 도구 모두(§77 TP3)
         }
         else // 원격 플레이어의 상태 정보 수신
         {

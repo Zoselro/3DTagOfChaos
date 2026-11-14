@@ -99,6 +99,7 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
             // 들기 자세(§74 P13·§75): 뿅망치 = 어깨 걸침, 글러브 = 가드, 다른 한 손 아이템 = 오른팔만 가슴 옆 앞
             pose.SetHold(isHammer ? PlayerActionPose.Hold.Hammer : isGlove ? PlayerActionPose.Hold.Glove : PlayerActionPose.Hold.None);
             pose.SetOneHandHold(def != null && !isHammer && !isGlove && def.HoldType == HoldType.OneHanded);
+            pose.SetThrowAim(def != null && def.IsTool && def.Tool.IsThrown); // 조준 = 던지기 준비 자세(§77 TP1)
         }
         // 두 손 들기(Carry 층, 머리 위 두 손)는 재료 같은 두 손 아이템만 — 뿅망치는 Action 층의 어깨 걸침이 상체를 맡는다(§75 A1)
         if (cookie != null) cookie.SetCarry(CarryReason.TwoHandedItem, def != null && def.LocksSlotSwitch && !isHammer);
@@ -266,6 +267,13 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
             ? CarryPose.HandsCenter(transform, animator)
             : rightHand.position;
         socket.SetPositionAndRotation(anchor + body * holdOffset, body * holdRotation);
+        FirstPersonThrowItem();
+    }
+
+    // 1인칭에서도 던지는 도구는 던지기 준비 손에 그대로 둔다(§77.1 — 예전 FP3의 "오른손 앞에 작게"는 없앴다). 줄여 둔 크기만 되돌린다.
+    private void FirstPersonThrowItem()
+    {
+        if (socket.localScale != Vector3.one) socket.localScale = Vector3.one;
     }
 
     private const float HeldBalloonSize = 0.38f;

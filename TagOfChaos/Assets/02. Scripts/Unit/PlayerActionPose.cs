@@ -4,7 +4,10 @@ using UnityEngine;
 // - "Action" 층(상체): 한 번 동작(던지기·뿅망치 내려찍기·오른/왼 주먹) > 스턴건 조준(우클릭 유지) > 들기 자세(뿅망치 어깨 걸침·글러브 가드).
 // - "Hold" 층(오른팔만): 한 손 아이템을 가슴 옆 앞에 드는 자세(§75 D1). Action 층이 켜지면 그 위에서 덮는다.
 // - "Trapped" 층(온몸): 물풍선에 갇힘.
-// 조준은 본인 화면 ToolUser.Aiming → 동기화(PlayerNetworkSync), 한 번 동작은 도구 사용(ToolUser·ToolHitReceiver), 들기 자세는 HeldItemPresenter(모든 화면).
+// 조준은 본인 화면 ToolUser.AimView → 동기화(PlayerNetworkSync), 한 번 동작은 도구 사용(ToolUser·ToolHitReceiver), 들기 자세는 HeldItemPresenter(모든 화면).
+// 조준 모양(§77 TP1): 스턴건 = StunAim(두 손으로 겨눔), 물풍선·섬광탄 = 던지기 동작을 팔을 뒤로 젖힌 순간(ThrowReadyAt)에 멈춘 자세.
+// 스턴건 반동(§77 TP2): 쏜 순간 0.18초 동안 팔·가슴을 위로 튕긴다(애니메이션 뒤 LateUpdate, 손에 든 아이템보다 먼저).
+[DefaultExecutionOrder(-20)]
 public class PlayerActionPose : MonoBehaviour
 {
     public const string ActionLayer = "Action";
@@ -26,6 +29,11 @@ public class PlayerActionPose : MonoBehaviour
     public const float PunchSeconds = 0.4f;   // 가드 → 뻗기 → 가드(Cookie_PunchR/L)
     public const float PunchHit = 0.13f;      // 주먹이 다 뻗은 순간
     private const float BlendSpeed = 8f;
+    public const string ThrowReadyState = "ThrowReady"; // 실제 상태가 아니라 Throw를 멈춘 자세의 이름
+    public const float ThrowReadyAt = 0.28f;  // Throw(0.8초)의 정규화 시각 — 팔을 뒤로 젖힌 순간(손을 떠나는 0.44보다 앞)
+    public const float KickSeconds = 0.18f;
+    public const float KickArmDegrees = 14f;
+    public const float KickChestDegrees = 4f;
 
     public enum OneShot { Throw, Swing, PunchR, PunchL }
     public enum Hold { None, Hammer, Glove }
@@ -35,6 +43,10 @@ public class PlayerActionPose : MonoBehaviour
     private int holdLayer = -2;
     private int trappedLayer = -2;
     private bool aiming;
+    private bool throwAim;
+    private float kickAt = -10f;
+    private Avatar boneAvatar;
+    private Transform chest, leftUpperArm, rightUpperArm, rightLowerArm;
     private bool trapped;
     private bool oneHandHold;
     private Hold hold;
@@ -52,6 +64,26 @@ public class PlayerActionPose : MonoBehaviour
     private void Awake() => animator = GetComponent<Animator>();
 
     public void SetAiming(bool on) => aiming = on;
+
+    // 들고 있는 것이 던지는 도구(물풍선·섬광탄)면 true — 조준 자세가 던지기 준비가 된다(HeldItemPresenter가 모든 화면에서 정한다).
+    public void SetThrowAim(bool on) => throwAim = on;
+
+    public bool IsThrowReady => aiming && throwAim && actionState == ThrowReadyState;
+
+    // 본인 1인칭 조준 화면인지(CookieAimCamera가 정한다). 던지는 도구는 1인칭에서도 던지기 준비 자세를 그대로 유지한다
+    // (§77.1 — 사용자: 1인칭으로 바뀌며 스턴건 자세로 바뀌면 안 되고 던지는 동작이 계속돼야 한다).
+    public bool FirstPersonView { get; set; }
+    public bool HoldsThrowAim => aiming && throwAim;
+
+    // 스턴건 반동(본인은 ToolUser.Use, 다른 화면은 ToolHit).
+    public void Kick() => kickAt = Time.time;
+
+    // 반동 세기(0~1): 0.25까지 빠르게 올라 천천히 돌아온다.
+    public static float KickWeight(float t)
+    {
+        if (t < 0f || t >= 1f) return 0f;
+        return t < 0.25f ? t / 0.25f : 1f - (t - 0.25f) / 0.75f;
+    }
 
     public void SetTrapped(bool on) => trapped = on;
 
@@ -94,7 +126,13 @@ public class PlayerActionPose : MonoBehaviour
             string holdState = HoldStateName;
             if (!shot)
             {
-                if (aiming)
+                if (aiming && throwAim && HasState(actionLayer, ThrowState))
+                {
+                    // 던지기 준비: Throw를 팔을 젖힌 순간에 매 프레임 다시 세운다
+                    animator.Play(ThrowState, actionLayer, ThrowReadyAt);
+                    actionState = ThrowReadyState;
+                }
+                else if (aiming)
                 {
                     if (actionState != StunAimState) { animator.Play(StunAimState, actionLayer, 0f); actionState = StunAimState; }
                 }
@@ -119,6 +157,31 @@ public class PlayerActionPose : MonoBehaviour
             trappedWeight = Mathf.MoveTowards(trappedWeight, trapped ? 1f : 0f, BlendSpeed * Time.deltaTime);
             animator.SetLayerWeight(trappedLayer, trappedWeight);
         }
+    }
+
+    private void LateUpdate()
+    {
+        float w = KickWeight((Time.time - kickAt) / KickSeconds);
+        if (w <= 0f || animator == null || !animator.isHuman) return;
+        if (boneAvatar != animator.avatar)
+        {
+            boneAvatar = animator.avatar;
+            chest = animator.GetBoneTransform(HumanBodyBones.UpperChest);
+            if (chest == null) chest = animator.GetBoneTransform(HumanBodyBones.Chest);
+            leftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            rightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            rightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
+        }
+        Vector3 axis = transform.right; // 오른쪽 축으로 음의 각 = 앞이 위로
+        Rotate(chest, axis, -KickChestDegrees * w);
+        Rotate(rightUpperArm, axis, -KickArmDegrees * w);
+        Rotate(leftUpperArm, axis, -KickArmDegrees * 0.8f * w);
+        Rotate(rightLowerArm, axis, -KickArmDegrees * 0.5f * w);
+    }
+
+    private static void Rotate(Transform bone, Vector3 axis, float degrees)
+    {
+        if (bone != null) bone.rotation = Quaternion.AngleAxis(degrees, axis) * bone.rotation;
     }
 
     private bool HasState(int layer, string state) => animator.HasState(layer, Animator.StringToHash(state));

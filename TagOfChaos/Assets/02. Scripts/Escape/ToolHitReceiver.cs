@@ -38,6 +38,7 @@ public static class ToolHitReceiver
         {
             if (item.Tool.IsThrown) pose.Play(PlayerActionPose.OneShot.Throw);
             else if (item.Tool.Kind == ToolKind.Hammer) pose.Play(PlayerActionPose.OneShot.Swing);
+            else if (item.Tool.Kind == ToolKind.StunGun) pose.Kick(); // 쏜 사람의 반동(§77 TP2)
             else if (item.Tool.Kind == ToolKind.BoxingGlove) pose.Play(color == 1 ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR); // 어느 손인지 = 요청 B 칸(§75 C1)
         }
         // 물풍선·섬광탄은 투사체(ProjectileSystem)로만 날아간다 — 옛 포물선 연출(ToolShotFx.ThrowBalloon/ThrowCanister)은 지웠다(§74 P1).
@@ -106,6 +107,14 @@ public static class ToolHitReceiver
 
         foreach (int viewId in targets)
         {
+            if (DecoyHit.IsDecoy(viewId))
+            {
+                // AI(§76 A7): 진짜 쿠키와 같은 별·물방울(위치 멈춤·도망은 방장 두뇌가 경로로)
+                                if (!DecoyHit.CanHit(item.Tool.Kind) || !DecoyView.TryFind(DecoyHit.DecoyId(viewId), out DecoyView decoy) || decoy.Stun == null) continue;
+                if (balloon) decoy.Stun.Trap(hitAt, item.Tool.StunSecondsCookie);
+                else decoy.Stun.Stun(item.Tool.StunSecondsCookie);
+                continue;
+            }
             PhotonView view = PhotonView.Find(viewId);
             if (view == null) continue;
             IGameCharacter character = view.GetComponent<IGameCharacter>();

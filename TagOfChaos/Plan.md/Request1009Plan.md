@@ -9786,3 +9786,301 @@ animator.SetLayerWeight(holdLayer, Mathf.MoveTowards(holdWeight, oneHandedHeld ?
 
 - 덤으로 고침: `Camera_Ctrl` 벽 막힘 검사에서 회전 보간 뒤 방향이 아주 살짝 길이 1이 아니어서 `Assertion failed: IsNormalized(direction)`가 한 번 떴다 → 방향을 정규화. 다시 Play Mode에서 콘솔 오류·경고 0.
 - 사진: `sfx_preview/t0~t4_*`(망치·글러브·섬광탄·스턴건·옆걸음).
+
+### 75.16 쿠키 시점 올려다보기 20 %·물풍선 1.5배 빠르게(2026-11-14)
+
+요청: "술래시점이 아닌 시점에서 올려다 보는 각도를 지금보다 20%정도 올려줘 그리고 물풍선 속도도 지금보다 1.5배 더 빠르게 해줘"
+
+| 항목 | 바꾼 것 | 확인 |
+| --- | --- | --- |
+| 올려다보기 | `Camera_Ctrl.vMinLimit` −7° → −8.4°(쿠키·관전 3인칭 카메라, 술래 1인칭은 그대로) | Play Mode에서 값 −8.4 |
+| 물풍선 | `Projectile_WaterBalloon.gravity` 14.2 → 31.95(× 2.25). 같은 각도(20°)에서 속도 × 1.5, 겨눈 자리에 그대로 떨어짐. 미리보기·방장 판정 상한(33.6 → 50.4 m/s)도 같은 값으로 자동 | 12 m 16.3 → 24.4 m/s, 20 m 21.0 → 31.5 m/s. Play Mode 던지기 정상, 콘솔 오류 0 |
+
+- 수색 폭탄은 그대로(20°·중력 14.2). `Request1112ThrowTests.SearchBomb_IsThrownLikeTheBalloon`을 "수색 폭탄 14.2 유지 + 물풍선 1.5배·같은 자리 착지"로 고침 — 11/11 통과.
+
+## 76. AI도 맞음·우클릭 1인칭 조준·물풍선 3개(2026-11-14 계획)
+
+요청:
+1. AI한테도 스턴건, 물풍선, 섬광탄을 맞았을 때 적용되도록 수정.
+2. 스턴건, 물풍선, 섬광탄은 우클릭을 한 번 눌렀을 때 3인칭에서 0.5초 동안 1인칭으로 전환. 스턴건의 3인칭 조준선은 폐기.
+3. 물풍선은 한 번 얻었을 때 3개를 얻을 수 있도록 수정.
+
+> 이 절은 계획만 적는다. 코드는 아직 바꾸지 않았다. 아래 "76.6 확인 질문"에 답을 받은 뒤 구현한다.
+
+### 76.1 지금 코드(읽은 파일)
+
+| 파일 | 지금 하는 일 |
+| --- | --- |
+| `Escape/ToolUser.cs` | 스턴건: 우클릭을 **누르고 있는 동안** `Aiming`(조준 자세·FOV 0.72배·화면 가운데 십자선 `CreateCrosshair`). 좌클릭이면 카메라 가운데 `SphereCastAll`로 첫 충돌체까지 — `IGameCharacter`만 대상(`ToolUser.cs:239~248`). 물풍선·섬광탄: 좌클릭 → 던지기 동작 → 0.35초 뒤 `ThrowAim.FromCamera`로 카메라 가운데를 겨눠 던짐(`ReleaseThrow`) |
+| `Escape/Projectile/ProjectileSystem.cs` | 방장이 투사체를 진행. 물풍선은 처음 닿은 충돌체가 `IGameCharacter`일 때만 그 사람(`DirectTarget`), 섬광탄은 터진 곳 둘레 `CharacterRegistry.All`만(`AreaTargets`) |
+| `Escape/EscapeAuthority.cs` | `ToolUse`(스턴건 등) → `ValidTargets`(PhotonView 번호만 검사) → `ToolHit` 이벤트. `Throw`(물풍선·섬광탄)는 횟수·쿨타임·속도 검사 뒤 `AuthorizeSpawn` |
+| `Escape/ToolHitReceiver.cs` | 대상 번호를 `PhotonView.Find`로 찾아 `StunReceiver.Stun`(별)·`Trap`(물방울)·`FlashbangFx.Blind`(본인 화면 흰색) |
+| `Escape/DecoyPresenter.cs`·`DecoyView.cs` | AI = 쿠키 프리팹의 겉모습 + **트리거가 아닌 CapsuleCollider**(`DecoyPresenter.cs:92`). PhotonView·`IGameCharacter`·`StunReceiver`가 없다 |
+| `Escape/DecoyAI/DecoyBrain.cs`·`DecoyRoute.cs` | 방장이 AI마다 경로(`DR_<id>`)를 쓰고 모든 화면이 같은 시각으로 따라간다. `DecoyGait.Idle` + `HoldUntil`로 제자리 서기 가능 |
+| `Escape/EscapeState.cs` | `Decoy { Id, Owner, Pos, Yaw, VoiceAt, Seed, CaughtBy, CaughtAt }` — 맞음 상태 칸이 없다(형식 v11) |
+| `Camera/Camera_Ctrl.cs`·`MonsterFirstPersonCamera.cs`·`MonsterViewSwitcher.cs` | 쿠키는 3인칭 궤도 카메라만. 1인칭은 괴물 전용(눈 소켓·몸 렌더러 그림자만 남기기) |
+| `03. SO/Escape/Tools/Tool_WaterBalloon.asset` | **횟수(charges) = 3** — 상자·바닥에서 얻는 새 아이템은 `NewItem`이 `Tool.Charges`로 채운다(`EscapeAuthority.cs:207`) |
+
+#### 왜 지금 AI는 안 맞나
+- AI 충돌체는 캐릭터가 아니라 **벽처럼** 취급된다.
+  - 스턴건 광선은 AI 몸에서 "벽에 맞음"으로 멈춘다(`c == null && !isTrigger` → `point = hit.point; break`).
+  - 물풍선은 AI 몸에 닿으면 "벽에 닿음"으로 그냥 터진다(`DirectTarget` → `CharacterOf` = null → 0명).
+  - 섬광탄 둘레 검사는 `CharacterRegistry`만 돈다.
+- 맞혀도 효과를 줄 곳이 없다. AI에는 PhotonView·`StunReceiver`가 없다. 위치도 방장 경로로 정해지므로 화면마다 따로 멈추게 할 수 없다.
+
+#### 물풍선 3개
+- 지금도 물풍선 하나를 얻으면 **3번** 던질 수 있다. 상자·무지개 상자·DevGive 모두 `Tool.Charges = 3`으로 채우고, 칸 오른쪽 위 숫자도 3이다.
+- 요청의 뜻이 다르면(76.6 Q5) 그에 맞춰 바꾼다.
+
+### 76.2 설계 — ① AI도 맞음(A)
+
+원칙: 진짜 쿠키와 **같은 효과·같은 시간**을 낸다. 판정은 방장이 하고, 모든 화면이 같은 시각표로 보인다.
+
+| 도구 | 쿠키(지금) | AI(새로) |
+| --- | --- | --- |
+| 스턴건 | 2초 기절 + 별 | 2초 제자리 + 별, 끝나면 하던 일 다시 |
+| 물풍선 | 5초 물방울에 갇혀 5 m 떠오름 → 터지고 떨어짐(+0.8초) | 같은 물방울·떠오름. 갇힌 동안 괴물이 잡지 못함 |
+| 섬광탄 | 둘레 6 m, 3초 기절 + 본인 화면 흰색 | 둘레 6 m, 3초 제자리 + 별(화면 효과는 없음) |
+
+**A1 대상 번호.**
+- `ToolHit`의 `targets`(int[])에 AI를 **음수 `-DecoyId`**로 넣는다.
+- PhotonView 번호는 늘 양수(1001~)이므로 겹치지 않는다. 이벤트 형식은 그대로라 옛 클라이언트도 음수는 `PhotonView.Find` 실패로 건너뛴다.
+
+```csharp
+// 새 파일 Escape/DecoyHit.cs — AI 대상 번호 규칙(순수 계산, 시험 가능)
+public static class DecoyHit
+{
+    public static int ToTarget(int decoyId) => -decoyId;
+    public static bool IsDecoy(int target) => target < 0;
+    public static int DecoyId(int target) => -target;
+}
+```
+
+**A2 쓰는 사람 화면(스턴건).**
+- `ToolUser.Use` 스턴건 반복에서 `IGameCharacter`가 없으면 `DecoyView`를 본다.
+
+```csharp
+IGameCharacter c = hit.collider.GetComponentInParent<IGameCharacter>();
+DecoyView decoy = c == null ? hit.collider.GetComponentInParent<DecoyView>() : null;
+...
+point = hit.point;
+if (decoy != null && decoy.IsHittable && Flat(decoy.transform.position - transform.position) <= tool.Range)
+    targets.Add(DecoyHit.ToTarget(decoy.Id));
+else if (c != null && ...) targets.Add(c.View.ViewID);
+break;
+```
+
+**A3 방장 판정 — 스턴건.**
+- `EscapeAuthority.ValidTargets`에서 음수 대상은 AI 검사로 보낸다.
+  - 상태에 있는지, 잡히는 중(`Caught`)이 아닌지 본다.
+  - `manager.Routes.PositionOf(d, now)`가 쓴 사람 기록 위치에서 사거리 + 여유 안인지 본다.
+  - 지금 맞음 효과 중이면 갇힘만 덧씌우지 않는다.
+
+**A4 방장 판정 — 투사체.** `ProjectileSystem`에서:
+- `DirectTarget`: `CharacterOf(touched) == null`이면 `touched.GetComponentInParent<DecoyView>()` → 그 AI 한 명(물풍선).
+- `AreaTargets`: `CharacterRegistry.All`에 더해 `State.Decoys`(잡히지 않은 것)를 `Routes.PositionOf`로 돌며 둘레 안을 넣는다(섬광탄). 수색 폭탄은 지금처럼 AI를 빼서, 진짜 사람만 기침하는 규칙을 유지한다.
+
+**A5 상태(형식 v12).**
+- `EscapeState.Decoy`에 `HitKind`(byte: 0 없음, 1 기절, 2 갇힘)·`HitAt`(double)·`HitUntil`(double)을 더한다.
+- 방장이 `ToolHit`을 보낼 때 같이 쓴다(`Commit`). 방장이 바뀌거나 늦게 들어온 사람도 같은 상태를 본다.
+
+```csharp
+public struct Decoy
+{
+    ... // 기존 칸
+    public byte HitKind;    // 0 = 없음, 1 = 기절(스턴건·섬광탄), 2 = 물풍선에 갇힘
+    public double HitAt, HitUntil;
+    public bool IsHeldStill(double now) => HitKind != 0 && now < HitUntil;
+    public bool IsJailed(double now) => HitKind == 2 && now < HitUntil;
+}
+```
+
+**A6 방장 AI 두뇌.**
+- `DecoyBrain.Think`에서 `IsHeldStill(now)`인 AI는 건너뛴다.
+- 맞는 순간 그 AI 경로를 "지금 자리 `DecoyGait.Idle`, `HoldUntil = 남은 시간`"으로 다시 쓴다(`Write(a, …)`). 그래서 모든 화면이 그 자리에 멈춘다.
+- 끝나면 `DecideAt = HitUntil`로 하던 일을 다시 고른다. 술래가 가까우면 기존 규칙대로 도망부터.
+
+**A7 모든 화면 — 모습(`DecoyView`).**
+- `StunReceiver`를 붙인다(`DecoyPresenter.Template` 또는 `Create`에서 `AddComponent`, `Init(1.9f)`).
+- `ToolHitReceiver.Apply`에서 음수 대상은 `DecoyPresenter.TryGetView(id)` → `Stun`/`Trap`을 쿠키와 같은 값으로 부른다.
+- 물풍선 떠오름(`WaterTrapMotion`)은 본인 캐릭터를 직접 옮기는 코드라 AI에 맞지 않는다. 그래서 `DecoyView.Tick`이 갇힌 동안 경로 위치에 높이(0 → 5 m → 0)만 더한다. 시각표는 `WaterTrapMotion`과 같게 한다.
+- 별·물방울은 `StunReceiver`가 그대로 그린다.
+
+**A8 괴물이 잡기.**
+- 갇힌 AI는 진짜 쿠키처럼 잡지 못한다.
+  - 화면: `DecoyView.IsCatchable`에 `!jailed`를 넣는다.
+  - 방장: `DecoyCatch`에서 `d.IsJailed(now)`면 거절한다.
+- 기절(스턴건·섬광탄)은 쿠키와 같게 잡을 수 있다.
+
+### 76.3 설계 — ② 우클릭 0.5초 1인칭 조준(F)
+
+해석(76.6 Q1·Q2에서 확정): 스턴건·물풍선·섬광탄을 든 채 **우클릭을 한 번 누르면** 조준 모드로 들어간다. 이때 카메라가 3인칭 자리에서 머리(눈) 자리로 **0.5초 동안 부드럽게** 옮겨 1인칭이 된다. **다시 우클릭**하면 0.5초 동안 3인칭으로 돌아간다. 조준 중 좌클릭으로 쏘기·던지기.
+
+| 단계 | 내용 |
+| --- | --- |
+| F1 새 `Camera/CookieAimCamera.cs` | Main Camera에 `Camera_Ctrl`과 함께 붙는다. 0~1 섞음 값(`blend`)을 0.5초에 걸쳐 올리고 내린다. 카메라 위치·회전 = `Lerp(3인칭 결과, 눈 위치·같은 시선, blend)`. 시선 회전(가로·세로)은 `Camera_Ctrl`의 값을 그대로 이어 받아, 전환 중에도 겨눈 방향이 튀지 않게 한다. 1인칭 근접 클립 0.1 m(괴물 카메라와 같은 이유) |
+| F2 눈 위치 | 쿠키 프리팹·캐릭터 4종 모두 `Animator.GetBoneTransform(Head)`에서 앞 0.12 m·위 0.05 m(큰 머리 캐릭터는 머리 메시 밖으로 나가도록 `HammerClearance.MeasureHead` 결과의 앞쪽 끝을 쓴다) |
+| F3 내 몸 숨기기 | 1인칭이 된 뒤(blend > 0.7)에는 본인 화면에서만 몸 렌더러를 "그림자만"으로 바꾼다(`MonsterViewSwitcher`와 같은 방식, `CharacterModelSwap.BodyRenderers`). 든 아이템(`HeldItemPresenter` 모델)은 보인다 — 화면 오른쪽 아래에 총·물풍선이 보이게 |
+| F4 `ToolUser` | `Aiming`을 "누르고 있는 동안"에서 **켜고 끄기(우클릭 `CameraRotatePressed`)**로 바꾼다. 대상: 스턴건·물풍선·섬광탄(`ToolKind`). 칸을 바꾸거나 기절·갇힘·메뉴 열림·아이템이 없어지면 자동으로 끈다. FOV 확대(0.72배)는 1인칭과 겹치므로 0.85배로 줄인다(또는 없앤다 — Q4) |
+| F5 십자선 폐기 | `CreateCrosshair`·`crosshair` 필드·켜고 끄는 코드를 지운다(요청 "3인칭 조준선 폐기"). 1인칭에서 겨눌 점이 없으면 맞히기 어려우므로, 1인칭일 때만 화면 가운데 **작은 점 하나**를 남길지 Q3로 묻는다 |
+| F6 던지기 | 물풍선·섬광탄은 지금처럼 카메라 가운데로 던진다(`ThrowAim.FromCamera`). 1인칭이면 손 위치가 카메라 바로 앞이므로 `cameraToOrigin`(카메라 → 손 깊이)이 작아진다. 계산은 그대로 맞는다. 조준하지 않고 좌클릭했을 때 던질지는 Q2 |
+| F7 다른 화면 | 1인칭은 본인 화면만. 다른 사람에게는 지금처럼 조준 자세(`PlayerActionPose.SetAiming` — 스턴건만 동기화 중)를 보인다. 물풍선·섬광탄 조준 자세는 새로 만들지 않고 몸이 조준 쪽을 보는 것(`FaceAim`)만 |
+
+```csharp
+// CookieAimCamera(뼈대) — Camera_Ctrl.LateUpdate 뒤에 돈다(스크립트 실행 순서 +10)
+public class CookieAimCamera : MonoBehaviour
+{
+    public const float BlendSeconds = 0.5f;
+    private float blend;           // 0 = 3인칭, 1 = 1인칭
+    public bool Want;              // ToolUser가 켜고 끈다
+    private Transform eye;
+    private void LateUpdate()
+    {
+        blend = Mathf.MoveTowards(blend, Want ? 1f : 0f, Time.deltaTime / BlendSeconds);
+        if (eye == null || blend <= 0f) return;
+        float k = Mathf.SmoothStep(0f, 1f, blend);
+        Vector3 firstPerson = eye.position;
+        transform.position = Vector3.Lerp(transform.position, firstPerson, k); // Camera_Ctrl이 정한 3인칭 자리에서 눈으로
+        // 회전은 Camera_Ctrl의 시선을 그대로 — 겨눈 방향 유지
+    }
+}
+```
+
+### 76.4 설계 — ③ 물풍선 3개(B)
+- 지금 횟수 3은 유지한다.
+- Q5 답에 따라:
+  - **(a) 지금 그대로(3번 던짐)면:** 바꿀 것 없음. 확인 시험만 넣는다.
+  - **(b) "3번 쓰는 물풍선 1개"가 아니라 칸 하나에 물풍선 3개가 쌓여 보이고, 줍는 만큼 늘어나게(+3, 최대 9)면:**
+    - `EscapeAuthority`의 줍기(`PickUp`, `EscapeAuthority.cs:527`)에서 같은 칸에 이미 물풍선이 있으면 `Charges += Tool.Charges`(상한 `MaxStack`)로 합친다. 새 칸을 쓰지 않는다.
+    - `ToolSO`에 `stackable`·`maxStack`을 더하고, 물풍선만 켠다.
+  - **(c) 손에 3개가 보이게:** `HeldItemPresenter`에서 남은 횟수만큼 물풍선 모델 1~3개를 손에 겹쳐 놓는다.
+
+### 76.5 단계·시험
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| R0 | 코드 조사·계획(이 절) | ✅ |
+| R1 | 확인 질문 Q1~Q7(76.8) | ✅ |
+| A1~A4 | AI 대상 번호·스턴건 광선·투사체 직격/둘레·방장 검사 | ✅ |
+| A5~A6 | ~~상태 v12~~ → 방장 경로(제자리 Idle 경로)·방장 갇힘 기록으로 대신(76.9)·방장 두뇌 제자리 → 도망 | ✅ |
+| A7~A8 | AI 별·물방울·떠오름 모습, 갇힌 AI 잡기 막기 | ✅ |
+| F1~F3 | `CookieAimCamera`(0.5초 섞기·눈 위치·내 몸 숨기기) | ✅ |
+| F4~F7 | 우클릭 켜고 끄기(3종), 십자선 폐기, 던지기 확인 | ✅ |
+| B1 | 물풍선 3개(Q5 답대로) | ✅ |
+| T | EditMode: `DecoyHit` 번호 규칙, v12 직렬화 왕복, 투사체 둘레에 AI 포함·수색 폭탄은 AI 빼기, 조준 켜고 끄기 상태 전이, 섞기 0.5초. Play Mode: 오프라인에서 AI에게 스턴건·물풍선·섬광탄(별·물방울·떠오름·멈춤·다시 움직임), 갇힌 AI를 괴물이 못 잡음, 우클릭 → 0.5초 1인칭 → 다시 우클릭 3인칭(사진), 캐릭터 5종 눈 위치 | ✅ (76.9 — v12는 쓰지 않아 해당 없음) |
+| DOC | 결과·README | ✅ |
+
+### 76.6 확인 질문
+
+- **Q1 우클릭 방식:**
+  - (가) 한 번 누르면 조준을 켜고, 다시 누르면 끈다(토글, 추천).
+  - (나) 누르고 있는 동안만 1인칭(지금처럼), 전환에만 0.5초.
+  - (다) 한 번 누르면 0.5초 동안만 1인칭이었다가 저절로 3인칭으로 돌아온다.
+- **Q2 조준 없이 좌클릭:**
+  - (가) 물풍선·섬광탄은 조준 없이도 지금처럼 던지고, 스턴건만 조준해야 쏜다(추천).
+  - (나) 셋 다 조준해야만 쓴다.
+- **Q3 1인칭 가운데 점:** 3인칭 십자선은 없애고, 1인칭일 때 화면 가운데 작은 점 하나는 둘까요(추천: 둔다)?
+- **Q4 확대:** 조준할 때 지금의 약간 확대(0.72배)를 유지할지, 1인칭이니 없앨지(추천: 0.85배로 약하게).
+- **Q5 물풍선 3개:** 지금도 한 번 얻으면 3번 던질 수 있습니다(칸 숫자 3). 원하시는 것은?
+  - (a) 지금 그대로 확인만.
+  - (b) 물풍선을 또 주우면 같은 칸에 +3씩 쌓이게(최대 9).
+  - (c) 손에 물풍선 3개가 보이게.
+- **Q6 AI 섬광탄:** AI가 섬광탄에 맞으면 3초 제자리(별) — 괜찮은지, 아니면 맞은 뒤 반대쪽으로 도망치게 할지.
+
+### 76.7 위험과 주의
+- **상태 형식 v12:** 방 안의 모든 클라이언트가 같은 빌드여야 한다(버전 확인 `Application.version` 그대로).
+- **AI 떠오름:** 경로 위치 + 높이 보정만 한다. 바닥 검사(0.2초마다)와 겹치지 않게, 갇힌 동안은 바닥 보정을 멈춘다.
+- **1인칭 시야:** 큰 머리 캐릭터 4종은 머리 메시가 시야를 가릴 수 있다 → F3에서 머리까지 그림자만으로 바꾼다.
+- **규칙:** Play Mode 중 업로드·컴파일 금지. 코드에 한국어는 주석만. `3DTagOfChaos` git은 건드리지 않는다(바뀐 파일 목록만 알린다).
+
+### 76.8 확인 답(2026-11-14)
+
+| 질문 | 답 | 반영 |
+| --- | --- | --- |
+| Q1 우클릭 방식 | 기본 (가) 한 번 누르면 켜고 다시 누르면 끔. (나) "누르고 있는 동안"은 설정에서 고를 수 있게 | F4: `GameSettings`(PlayerPrefs)에 조준 방식(토글/누르고 있기) — 설정 메뉴 조작 탭에 항목 하나. 문구는 `EscapeTextsSO`/설정 텍스트 에셋 |
+| Q2 조준 없이 좌클릭 | 물풍선·섬광탄은 조준 없이도 지금처럼 던짐. 우클릭하면 에임(가운데 점)이 생기고 그걸로도 던짐. 스턴건은 조준해야 쏨(지금 그대로) | F4·F6 |
+| Q3 1인칭 가운데 점 | 둔다 — 3인칭 십자선은 지우고 1인칭일 때만 작은 점 | F5 |
+| Q3-2 던지기 조준 | 가운데 점만(점선 궤적 없음) | F5 |
+| Q4 확대 | 0.85배로 약하게 | F4 |
+| Q5 물풍선 | 지금 그대로(얻으면 3번) — 확인 시험만 | B1 |
+| Q6 AI 섬광탄 | 3초 기절(별) 뒤 도망 | A6 |
+| Q6-2 AI 스턴건·물풍선 | 세 가지 모두 효과가 끝나면 쓴 사람 반대쪽으로 도망(기존 `Flee` 경로, 지친 규칙 그대로) | A6: 맞은 AI에 `FleeFrom = 쓴 사람 위치`를 남기고 `HitUntil`에 `Flee` 시작 |
+| Q7 내 AI | 모든 AI가 맞음(내 AI도) | A2·A4: 주인 검사 없음(던진 사람 본인 몸만 제외 — 지금 그대로) |
+
+- 76.5 단계표 R1 → ✅.
+
+### 76.9 결과(2026-11-14)
+
+**설계에서 바뀐 점**
+
+- A5 상태 v12 칸은 만들지 않았다. 그 대신 방장 두뇌가 맞은 AI에게 **제자리 Idle 경로**(`DecoyBrain.OnHit`)를 써서 모든 화면이 멈춰 서게 한다. 방장은 갇힘이 풀리는 시각을 `EscapeAuthority.decoyJailedUntil`에 적어 잡기 요청을 막는다(`DecoyCatchRejected`).
+- 별·물방울·떠오름은 ToolHit을 받은 모든 화면이 AI의 `StunReceiver`로 그린다.
+- 결과: 저장 형식이 바뀌지 않아 옛 방과도 호환된다.
+
+**고친 문제(구현 중 발견)**
+
+- 방장의 `lastPositions`는 늦을 수 있다. 그래서 사거리 검사는 쏜 사람의 지금 몸 위치로 한다.
+- 도망길을 못 찾으면 0.2초 간격으로 최대 3초까지 다시 찾는다.
+
+**Play Mode(오프라인 GingerbreadVillage, 실제 `ToolUser.Use` 경로)**
+
+| 도구 | 흐름 | 결과 |
+| --- | --- | --- |
+| 스턴건 | 광선 → 대상 `-7` → 방장 유지 → `OnHit`(2초) → 받는 쪽 `Stun` | 2초 기절·제자리 → 바로 Run 경로로 쓴 사람 반대쪽 도망 ✅ |
+| 물풍선 | 투사체 직격, 1명 | 갇힘(`jailed=True`)·5 m 떠오름(y=5.00)·`catchable=False`. 풀린 뒤 떨어지고 도망 ✅ |
+| 섬광탄 | 2초 뒤 터짐, 둘레 | 3초 기절 → 도망 ✅ |
+
+- 우클릭 조준 켜짐: 0.5초 섞기 뒤 `Blend=1`. 시야각 60 → 51(0.85배). 가운데 점이 켜지고 위로 넓게 보기도 켜진다 ✅
+- 설정 조작키 탭에 **"조준 방식"** 줄이 있다. 버튼을 누를 때마다 "우클릭 한 번(켜기/끄기)"과 "누르고 있는 동안"이 바뀌고 저장된다 ✅
+  - 처음에는 조작키 목록 마지막 줄과 겹쳤다. 목록 아래 끝을 줄 위로 올려 고쳤다.
+- 물풍선을 한 번 얻으면 칸에 3이 표시된다 ✅
+- 시험 중 착각 하나: MCP 호출 한 번이 약 3.5초 걸려 "0.3초 뒤" 측정이 실제로는 3초 뒤였다. 동작 오류가 아니었다.
+
+**확인하지 못한 것**
+
+- 갇힌 AI를 괴물이 잡으려 할 때 방장이 거절하는 장면은 실제로 보지 못했다. 오프라인 방에 괴물이 없었다. 코드 경로(`DecoyCatch` → `decoyJailedUntil`)와 `catchable=False`까지만 확인했다.
+- 실제 두 사람 화면 동기화는 시험하지 못했다. 쓰는 코드는 모든 화면이 같다.
+
+**EditMode**
+
+- `Request1116Tests` 10/10 통과.
+- 전체 472개 중 471개 통과. 실패 1개는 `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`다.
+  - `GiantSettings.SpawnChance`가 1.0이고, 시험은 0.3을 기대한다.
+  - 이번 작업에서 바꾼 값이 아니다(시험용으로 바꿔 둔 값으로 보인다). 손대지 않았다.
+
+## 77. FPS처럼 보이는 1인칭 조준 + 다른 사람에게 보이는 쏘기·던지기 동작(2026-11-14)
+
+요청: 오버워치처럼 1인칭에서 손과 든 아이템이 오른쪽 아래에 보이게. 상대 화면에서는 가만히 서서 쏘는 것처럼 보이지 않게.
+
+| 단계 | 내용 | 상태 |
+| --- | --- | --- |
+| FP1 | `CookieFirstPersonArms`: 몸 메시에서 위팔 두 개와 그 아래 뼈(아래팔·손·손가락)에 붙은 삼각형만 골라 팔 메시를 만든다(`MonsterFirstPersonLimbs` 방식). 본인 1인칭에서만 켠다. 캐릭터 모델을 바꾸면 다시 만든다(옛 쿠키 몸 팔이 남던 버그를 고침) | ✅ |
+| FP2 | 눈 자리 = 머리 뼈에서 뒤 0.3·위 0.15·왼쪽 0.08 m. 사진 네 장을 비교해 골랐다 — 두 손과 스턴건이 화면 오른쪽 아래 | ✅ |
+| FP3 | 물풍선·섬광탄의 1인칭: 던지기 준비는 팔을 머리 위로 젖혀 손이 화면에 안 보인다. 그래서 본인 1인칭에서만 두 손을 앞으로 모으고, 풍선을 오른손 앞에 0.55배로 든다. 다른 화면은 아래 TP1 | ✅ |
+| FP4 | 가운데 점 8 px + 어두운 테두리, 1080p 기준 크기 고정 | ✅ |
+| TP1 | 3인칭 조준 자세: 스턴건 = StunAim(두 손 겨눔), 물풍선·섬광탄 = Throw 동작을 팔 젖힌 순간(정규화 0.28)에 멈춘 "던지기 준비". 던지면 Throw를 끝까지 재생 | ✅ |
+| TP2 | 스턴건 반동: 0.18초 동안 팔(14°)·가슴(4°)을 위로 튕긴다(애니메이션 뒤, 든 아이템보다 먼저). 본인은 쏠 때, 다른 화면은 ToolHit을 받을 때 | ✅ |
+| TP3 | 조준 동기화: 예전에는 스턴건만(`ToolUser.Aiming`) 보냈다. 이제 세 도구 모두(`ToolUser.AimView`) 보낸다. 자세 모양은 각 화면이 든 아이템으로 정한다(`HeldItemPresenter` → `SetThrowAim`) | ✅ |
+| T | EditMode(`Request1116Tests`): 반동 곡선, 준비 시각 < 손 떠나는 시각, 팔 뼈 고르기. Play Mode 사진: 캐릭터 5종 × 스턴건·물풍선 1인칭/3인칭, 반동 전후 | ✅ |
+
+바꾼 파일:
+
+- 새 파일: `Camera/CookieFirstPersonArms.cs`
+- `Camera/CookieAimCamera.cs`
+- `Unit/PlayerActionPose.cs`
+- `Escape/HeldItemPresenter.cs`
+- `Escape/ToolUser.cs`
+- `Escape/ToolHitReceiver.cs`
+- `Unit/HideOrSeekPlayer.cs`
+
+### 77.1 후속(2026-11-14): 1인칭에서도 던지기 동작 유지
+
+- 사용자: 물풍선·섬광탄을 들고 우클릭하면, 1인칭으로 넘어가는 순간 스턴건 자세로 바뀐다. 던지는 동작이 계속 보여야 한다.
+- 원인: FP3가 본인 1인칭에서만 StunAim 자세를 쓰게 했다.
+- 고침: 1인칭에서도 던지기 준비 자세(Throw 0.28)를 유지한다. 풍선도 손에 원래 크기로 든다.
+- 바꾼 파일: `PlayerActionPose.cs`, `HeldItemPresenter.cs`
+- Play Mode(1인칭 Blend=1):
+  - 조준: ThrowReady
+  - 던짐: Throw
+  - 끝: 다시 ThrowReady(StunAim으로 가지 않음) ✅
+- 사용자가 쿠키 시점 올려다보기 한계를 −25°로 바꿈(`Camera_Ctrl.vMinLimit`). 확인함.

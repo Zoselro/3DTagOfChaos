@@ -28,6 +28,7 @@ public static class SettingsMenuInstaller
         public string noMicrophone = "No microphone", pushToTalk = "Push to talk", alwaysOn = "Always on", keyHintFormat = "Talk key: {0}";
         public string roomSettings = "Room settings", settings = "Settings";
         public string mouseSensitivity = "Mouse sensitivity";
+        public string aimMode = "Aim (right click)", aimToggle = "Click to toggle", aimHold = "Hold to aim";
         public string menuTitle = "Menu", resume = "Resume", quit = "Quit game", quitConfirm = "Quit the game?", yes = "Yes", no = "No";
     }
 
@@ -133,7 +134,7 @@ public static class SettingsMenuInstaller
 
         RectTransform scroll = S.Child(page, "Scroll", typeof(Image), typeof(ScrollRect), typeof(RectMask2D));
         S.SetRect(scroll, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-        scroll.offsetMin = new Vector2(0f, 70f);
+        scroll.offsetMin = new Vector2(0f, AimRowTop + 6f); // 아래에 마우스 감도·조준 방식 두 줄(§76 F4)
         scroll.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.25f);
         RectTransform contentRt = S.Child(scroll, "Content", typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
         S.SetRect(contentRt, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(0f, 0f), new Vector2(0.5f, 1f));
@@ -159,6 +160,7 @@ public static class SettingsMenuInstaller
         S.SetRect((RectTransform)reset.transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(0f, 4f), new Vector2(300f, 56f), new Vector2(1f, 0f));
 
         AddSensitivityRow(page, style, tx);
+        AddAimModeRow(page, style, tx);
 
         var comp = page.gameObject.AddComponent<KeyBindingsPage>();
         var so = new SerializedObject(comp);
@@ -218,6 +220,49 @@ public static class SettingsMenuInstaller
         so.FindProperty("slider").objectReferenceValue = slider;
         so.FindProperty("valueText").objectReferenceValue = value;
         so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private const float AimRowTop = 62f + 56f;
+
+    // 조작키 탭 아래 왼쪽, 마우스 감도 줄 위에 "조준 방식" 줄(§76 F4): 이름 + 버튼(누를 때마다 토글 ↔ 누르고 있기).
+    private static void AddAimModeRow(RectTransform page, S.Style style, Texts tx)
+    {
+        Transform old = page.Find("AimModeRow");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        RectTransform row = S.Child(page, "AimModeRow");
+        S.SetRect(row, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 62f), new Vector2(600f, 56f), new Vector2(0f, 0f));
+        // 조작키 목록이 이 줄과 겹치지 않게 목록 아래 끝을 올린다(목록은 스크롤된다)
+        if (page.Find("Scroll") is RectTransform scroll) scroll.offsetMin = new Vector2(scroll.offsetMin.x, AimRowTop + 6f);
+        TMP_Text label = S.Text(row, "Label", tx.aimMode, 26f, style.font, style.textColor, TextAlignmentOptions.MidlineLeft);
+        S.SetRect(label.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(10f, 0f), new Vector2(190f, 0f), new Vector2(0f, 0.5f));
+        Button button = S.CreateButton(row, "AimModeButton", tx.aimToggle, style);
+        S.SetRect((RectTransform)button.transform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(200f, 0f), new Vector2(300f, 48f), new Vector2(0f, 0.5f));
+        UiSoundInstaller.Attach(new[] { button });
+        var comp = row.gameObject.AddComponent<AimModeRow>();
+        var so = new SerializedObject(comp);
+        so.FindProperty("button").objectReferenceValue = button;
+        so.FindProperty("valueText").objectReferenceValue = button.GetComponentInChildren<TMP_Text>(true);
+        so.FindProperty("toggleText").stringValue = tx.aimToggle;
+        so.FindProperty("holdText").stringValue = tx.aimHold;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // 이미 있는 설정 창 프리팹에 조준 방식 줄만 넣는다(§76 F4, 전체 다시 만들기 없이).
+    public static string AddAimModeRowToPrefab(Texts tx)
+    {
+        GameObject core = PrefabUtility.LoadPrefabContents(S.CorePrefabPath);
+        S.Style style = S.ReadStyle(core.GetComponentInChildren<EscMenu>(true));
+        PrefabUtility.UnloadPrefabContents(core);
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            KeyBindingsPage page = root.GetComponentInChildren<KeyBindingsPage>(true);
+            if (page == null) return "no KeyBindingsPage";
+            AddAimModeRow((RectTransform)page.transform, style, tx);
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+            return "ok";
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
     }
 
     // 이미 있는 설정 창 프리팹에 마우스 감도 줄만 넣는다(전체 다시 만들기 없이).

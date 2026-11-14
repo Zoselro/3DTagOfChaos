@@ -205,6 +205,7 @@ public class ProjectileSystem : MonoBehaviour
         p.DoneAt = Time.time;
         int[] targets = p.Config.burstOnImpact ? DirectTarget(p, touched) : AreaTargets(p);
         Vector3 at = p.State.Position;
+        if (manager != null) manager.ApplyDecoyHits(p.Owner, p.Item.Tool, targets); // AI도 맞는다(§76 A4) — 세워 두기·도망·갇힘 기록
         // ToolHit 형식(EscapeAuthority.ToolUse와 같음) 뒤에 투사체 번호를 덧붙인다.
         var payload = new object[] { p.Item.ItemId, p.Owner, targets, at, p.Color, NetAuthority.Time, false, p.Id };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
@@ -215,7 +216,13 @@ public class ProjectileSystem : MonoBehaviour
     private int[] DirectTarget(Live p, Collider touched)
     {
         IGameCharacter c = ProjectileWorld.CharacterOf(touched);
-        return c != null && IsValidTarget(c, p, includeMonsters: p.Item.Tool.CanHitMonster) ? new[] { c.View.ViewID } : new int[0];
+        if (c == null)
+        {
+            // AI 몸(§76 A4): 진짜 쿠키처럼 직접 닿으면 그 AI 한 명
+            DecoyView decoy = touched != null ? touched.GetComponentInParent<DecoyView>() : null;
+            return decoy != null && decoy.IsHittable && DecoyHit.CanHit(p.Item.Tool.Kind) ? new[] { DecoyHit.ToTarget(decoy.Id) } : new int[0];
+        }
+        return IsValidTarget(c, p, includeMonsters: p.Item.Tool.CanHitMonster) ? new[] { c.View.ViewID } : new int[0];
     }
 
     // 섬광탄·수색 폭탄: 터진 자리 둘레 HitRadius. 섬광탄은 술래 포함(던진 사람 제외), 수색 폭탄은 진짜 사람만(AI는 캐릭터가 아니라 빠진다).
@@ -229,6 +236,17 @@ public class ProjectileSystem : MonoBehaviour
             if (search ? c.Role == CharacterRole.Monster : !IsValidTarget(c, p, tool.CanHitMonster)) continue;
             if (search && !IsValidTarget(c, p, false)) continue;
             if (Vector3.Distance(c.gameObject.transform.position, p.State.Position) <= tool.HitRadius) targetBuffer.Add(c.View.ViewID);
+        }
+        // AI(§76 A4): 섬광탄 둘레의 AI도(수색 폭탄은 진짜 사람만 — 지금 규칙 그대로). 위치는 모든 화면이 같은 경로 위치.
+        EscapeState s = manager != null ? manager.State : null;
+        if (!search && DecoyHit.CanHit(tool.Kind) && s != null)
+        {
+            double now = NetAuthority.Time;
+            foreach (EscapeState.Decoy d in s.Decoys)
+            {
+                if (d.Caught) continue;
+                if (Vector3.Distance(manager.Routes.PositionOf(d, now), p.State.Position) <= tool.HitRadius) targetBuffer.Add(DecoyHit.ToTarget(d.Id));
+            }
         }
         return targetBuffer.ToArray();
     }

@@ -20,14 +20,22 @@ public class ToolUser : MonoBehaviour
     // 방장이 던지기를 받지 않았다(§71 T1): 쿨타임을 돌려준다.
     public void RefundCooldown() => readyAt = 0f;
     private readonly Collider[] overlap = new Collider[16];
-    private const float AimZoom = 0.72f;          // 조준 중 시야각 배율(약간 확대)
+    public const float AimZoom = 0.85f;           // 조준 중 시야각 배율(약하게 확대, §76 Q4 — 예전 0.72)
     private const float AimZoomSpeed = 8f;
     private float baseFov = -1f;
     private float zoom = 1f;
-    private GameObject crosshair;
 
-    // 로컬 플레이어가 스턴건을 조준하는 중인지.
+    // 로컬 플레이어가 스턴건을 조준하는 중인지(조준 자세 동기화용).
     public static bool Aiming { get; private set; }
+    // 1인칭 조준 중인지(스턴건·물풍선·섬광탄, §76 F4) — 우클릭으로 켜고 끈다(설정: 누르고 있는 동안만).
+    public static bool AimView { get; private set; }
+    private bool aimOn;
+    private ItemSO aimItem;
+    private StunReceiver selfStun;
+    private CookieAimCamera aimCamera;
+
+    // 우클릭 1인칭 조준을 쓰는 도구(§76 요청 2).
+    public static bool IsAimTool(ToolKind kind) => kind == ToolKind.StunGun || kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
 
     private AudioHandle aimHum;
     private PlayerActionPose pose;
@@ -56,22 +64,30 @@ public class ToolUser : MonoBehaviour
     {
         if (inventory == null || PlayerInventory.Local != inventory) return;
         ItemSO held = inventory.HeldItem;
-        bool canAim = held != null && held.IsTool && held.Tool.Kind == ToolKind.StunGun
-                      && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed;
-        Aiming = canAim && PlayerInput.CameraRotateHeld; // 우클릭(시점 회전 버튼)을 누르고 있는 동안
+        if (selfStun == null) selfStun = GetComponent<StunReceiver>();
+        bool locked = selfStun != null && (selfStun.IsStunned || selfStun.IsJailed);
+        bool canAim = held != null && held.IsTool && IsAimTool(held.Tool.Kind)
+                      && !PlayerInput.IsGameplaySuppressed && EscapeManager.ActionsAllowed && !locked;
+        // 우클릭 한 번 = 켜기/끄기(기본), 설정에서 "누르고 있는 동안"(§76 Q1). 칸을 바꾸거나 쓸 수 없게 되면 끈다.
+        if (!canAim || held != aimItem) aimOn = false;
+        aimItem = held;
+        if (canAim) aimOn = AimModeSetting.Next(aimOn, AimModeSetting.HoldToAim, PlayerInput.CameraRotateHeld, PlayerInput.CameraRotatePressed);
+        AimView = aimOn;
+        Aiming = aimOn && held.Tool.Kind == ToolKind.StunGun;
         if (pose == null) pose = GetComponent<PlayerActionPose>();
-        if (pose != null) pose.SetAiming(Aiming); // 조준 자세(§45.4 AN0)
+        if (pose != null) pose.SetAiming(aimOn); // 조준 자세(§45.4 AN0, §77 TP1): 스턴건 = 겨눔, 물풍선·섬광탄 = 던지기 준비
         Camera cam = Camera.main;
         if (cam != null)
         {
             if (baseFov < 0f) baseFov = cam.fieldOfView;
-            zoom = Mathf.MoveTowards(zoom, Aiming ? AimZoom : 1f, AimZoomSpeed * Time.deltaTime);
+            zoom = Mathf.MoveTowards(zoom, aimOn ? AimZoom : 1f, AimZoomSpeed * Time.deltaTime);
             cam.fieldOfView = baseFov * zoom;
+            if (aimCamera == null) aimCamera = CookieAimCamera.For(cam);
+            aimCamera.Track(transform);
+            aimCamera.Want = aimOn; // 0.5초에 걸쳐 1인칭으로(§76 F1)
         }
-        if (Aiming && cam != null && Cookie != null) Cookie.FaceAim(cam.transform.forward, AimFaceRefresh); // 조준 쪽으로 몸을 돌린다(§75 B2)
+        if (aimOn && cam != null && Cookie != null) Cookie.FaceAim(cam.transform.forward, AimFaceRefresh); // 조준 쪽으로 몸을 돌린다(§75 B2)
         UpdateAimHum(Aiming);
-        if (Aiming && crosshair == null) crosshair = CreateCrosshair();
-        if (crosshair != null && crosshair.activeSelf != Aiming) crosshair.SetActive(Aiming);
         UpdateRecorderTarget(held, cam);
     }
 
@@ -153,40 +169,14 @@ public class ToolUser : MonoBehaviour
     {
         ProjectileSystem.ThrowRejected -= OnThrowRejected;
         aimHum.Stop();
-        if (crosshair != null) Destroy(crosshair);
         Camera cam = Camera.main;
         if (cam != null && baseFov > 0f) cam.fieldOfView = baseFov;
+        if (aimCamera != null) aimCamera.Want = false;
         Aiming = false;
+        AimView = false;
     }
 
-    // 화면 가운데 조준점(작은 점 + 네 갈래 선). 조준하는 동안만 보인다.
-    private static GameObject CreateCrosshair()
-    {
-        var root = new GameObject("StunGunCrosshair", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler));
-        var canvas = root.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 80;
-        var color = new Color(0.55f, 1f, 0.95f, 0.95f);
-        void Bar(Vector2 pos, Vector2 size)
-        {
-            var go = new GameObject("Bar", typeof(RectTransform), typeof(UnityEngine.UI.Image));
-            go.transform.SetParent(root.transform, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = size;
-            var img = go.GetComponent<UnityEngine.UI.Image>();
-            img.color = color;
-            img.raycastTarget = false;
-        }
-        Bar(Vector2.zero, new Vector2(5f, 5f));
-        Bar(new Vector2(0f, 16f), new Vector2(3f, 12f));
-        Bar(new Vector2(0f, -16f), new Vector2(3f, 12f));
-        Bar(new Vector2(16f, 0f), new Vector2(12f, 3f));
-        Bar(new Vector2(-16f, 0f), new Vector2(12f, 3f));
-        root.SetActive(false);
-        return root;
-    }
+    // (3인칭 스턴건 십자선은 없앴다 — §76 F5. 1인칭 조준의 가운데 점은 CookieAimCamera가 그린다.)
 
     public void Use(int slot, ItemSO item)
     {
@@ -233,6 +223,8 @@ public class ToolUser : MonoBehaviour
                 return;
             case ToolKind.StunGun:
             {
+                if (pose == null) pose = GetComponent<PlayerActionPose>();
+                if (pose != null) pose.Kick(); // 반동(§77 TP2) — 다른 화면은 ToolHit에서
                 Ray ray = cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)) : new Ray(origin, aim);
                 float camOffset = cam != null ? Vector3.Distance(cam.transform.position, origin) : 0f;
                 point = ray.origin + ray.direction * (tool.Range + camOffset);
@@ -242,6 +234,13 @@ public class ToolUser : MonoBehaviour
                     if (c != null && c.gameObject == gameObject) continue; // 자기 몸은 지나친다
                     if (c == null && hit.collider.isTrigger) continue;      // 캐릭터가 아닌 트리거는 무시
                     point = hit.point;
+                    DecoyView decoy = c == null ? hit.collider.GetComponentInParent<DecoyView>() : null;
+                    if (decoy != null)
+                    {
+                        // AI도 맞는다(§76 A2) — 진짜 쿠키와 같은 사거리(몸 중심까지 수평 20 m)
+                        if (decoy.IsHittable && Flat(decoy.transform.position - transform.position) <= tool.Range) targets.Add(DecoyHit.ToTarget(decoy.Id));
+                        break;
+                    }
                     // 전방 20 m 안에 있는 대상만(몸 겉면이 아니라 몸 중심까지의 수평 거리, §45.6) — 큰 괴물 몸 겉면이 먼저 닿아도 멀면 빗나간다
                     if (c != null && c.View != null && Flat(c.gameObject.transform.position - transform.position) <= tool.Range) targets.Add(c.View.ViewID);
                     break;                                                  // 처음 맞은 것(벽 포함)에서 멈춘다

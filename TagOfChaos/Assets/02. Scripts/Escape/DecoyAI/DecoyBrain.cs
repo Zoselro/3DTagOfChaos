@@ -42,6 +42,36 @@ public class DecoyBrain : MonoBehaviour
         public Vector3 ContinueTo;
         public DecoyGait ContinueGait;
         public float ContinueRest, ContinueYaw;
+        // 도구에 맞음(§76 A6): HitUntil까지 제자리, 그 뒤 쓴 사람(FleeFrom) 반대쪽으로 도망.
+        public double HitUntil;
+        public bool FleeAfterHit;
+        public Vector3 FleeFrom;
+        public double FleeRetryUntil;   // 길을 못 찾으면 이때까지 다시 시도
+    }
+
+    // 방장: AI가 스턴건·물풍선·섬광탄에 맞았다(§76 A6). 그 자리에 seconds 동안 세우고(모든 화면이 같은 경로로 멈춘다),
+    // 끝나면 쓴 사람 반대쪽으로 도망친다(Q6 — 세 가지 모두).
+    public void OnHit(int decoyId, Vector3 from, float seconds)
+    {
+        if (!PhotonNetwork.IsMasterClient || seconds <= 0f || !agents.TryGetValue(decoyId, out Agent a) || manager.State == null) return;
+        int i = manager.State.DecoyIndex(decoyId);
+        if (i < 0 || manager.State.Decoys[i].Caught) return;
+        double now = PhotonNetwork.Time;
+        Vector3 pos = manager.Routes.PositionOf(manager.State.Decoys[i], now);
+        Release(a);
+        a.Continue = false;
+        a.SafeSince = -1;
+        a.Act = DecoyRules.Activity.Rest;
+        Write(a, new DecoyRoute
+        {
+            StartAt = now, Gait = DecoyGait.Idle, Speed = 0f, HoldUntil = seconds,
+            FaceYaw = float.NaN, Points = new[] { DecoyRoute.Quantize(pos) },
+        });
+        a.HitUntil = Mathf.Max((float)(a.HitUntil - now), seconds) + now;
+        a.DecideAt = a.HitUntil;
+        a.FleeAfterHit = true;
+        a.FleeFrom = from;
+        a.FleeRetryUntil = a.HitUntil + 3.0;
     }
 
     public const float AdoptedStamina = 50f; // 방장이 바뀌면 남은 값을 모르므로 50에서 시작(순간 회복 꼼수 방지, §46.4 ST7)
@@ -208,6 +238,16 @@ public class DecoyBrain : MonoBehaviour
             int i = s.DecoyIndex(a.Id);
             if (i < 0) continue;
             Vector3 pos = manager.Routes.PositionOf(s.Decoys[i], now);
+            if (now < a.HitUntil) continue; // 맞아서 서 있는 중(§76 A6)
+            if (a.FleeAfterHit && !prepare)
+            {
+                Flee(a, pos, a.FleeFrom, now);
+                bool fled = a.HasRoute && a.Route.Moves && a.Route.StartAt >= now; // 지쳤으면 걷기로 도망(§46.4)
+                if (fled || now > a.FleeRetryUntil) a.FleeAfterHit = false; // 길을 못 찾았으면 다음 판단 때 다시(최대 3초)
+                else a.DecideAt = now + 0.2;
+                continue;
+            }
+            a.FleeAfterHit = false;
 
             if (!prepare && a.Act != DecoyRules.Activity.Dance && monsters.Count > 0)
             {

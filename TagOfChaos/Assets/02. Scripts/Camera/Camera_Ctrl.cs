@@ -10,8 +10,10 @@ public class Camera_Ctrl : MonoBehaviour
     float m_RotV = 0.0f;
     float hSpeed = 5.0f;
     float vSpeed = 2.4f;
-    float vMinLimit = -7.0f;
+    float vMinLimit = -25f; // 올려다보는 한계(음수 = 카메라가 캐릭터보다 낮아져 위를 봄)
     float vMaxLimit = 80.0f;
+    const float AimMinLimit = -60f;     // 1인칭 조준 중 올려다보는 한계(§76)
+    const float PitchReturnSpeed = 180f; // 조준을 끝낸 뒤 원래 한계로 돌아오는 빠르기(도/초)
     // --- 카메라 회전 관련 설정 ---
     // (줌은 없앴다 — 마우스 휠은 인벤토리 칸 고르기)
 
@@ -156,8 +158,11 @@ public class Camera_Ctrl : MonoBehaviour
             Vector2 delta = PlayerInput.LookDelta;
             m_RotH += delta.x * hSpeed;
             m_RotV -= delta.y * vSpeed;
-            m_RotV = ClampAngle(m_RotV, vMinLimit, vMaxLimit);
         }
+        // 1인칭 조준(CookieAimCamera, §76) 중에는 위를 AimMinLimit까지 올려다본다. 끝나면 원래 한계로 부드럽게 내려온다.
+        float lo = CookieAimCamera.WideLook ? AimMinLimit : vMinLimit;
+        m_RotV = Mathf.Min(Mathf.DeltaAngle(0f, m_RotV), vMaxLimit);
+        if (m_RotV < lo) m_RotV = CookieAimCamera.WideLook ? lo : Mathf.MoveTowards(m_RotV, lo, PitchReturnSpeed * Time.deltaTime);
 
         m_TargetRotation = Quaternion.Euler(m_RotV, m_RotH, 0.0f);
         m_CurrentRotation = Quaternion.Slerp(m_CurrentRotation, m_TargetRotation,

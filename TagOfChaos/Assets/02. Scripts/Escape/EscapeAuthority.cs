@@ -1116,6 +1116,11 @@ public sealed class EscapeAuthority
         // 움직이는 AI는 경로 위치로 잰다(모든 화면이 같은 경로로 그린다, Request1009Plan.md §44.6).
         DecoyRoute.Pose pose = manager.Routes.PoseOf(d, now);
         if (d.Caught) return false; // 이미 잡히는 중(같은 요청이 겹침) — 진행 중인 잡기를 끊지 않게 거절 알림도 보내지 않는다
+        if (decoyJailedUntil.TryGetValue(id, out double jailed) && now < jailed)
+        {
+            NoticeTo(actor, EscapeNoticeKind.DecoyCatchRejected, id.ToString()); // 물풍선에 갇힌 AI는 진짜 쿠키처럼 잡지 못한다(§76 A8)
+            return false;
+        }
         if (!DecoyWithinReach(actor, d, pose, seen, seenStamp, now))
         {
             NoticeTo(actor, EscapeNoticeKind.DecoyCatchRejected, id.ToString()); // 술래 화면이 빈손 잡기 동작을 바로 끊는다(§70.2.5 D5)
@@ -1228,6 +1233,7 @@ public sealed class EscapeAuthority
         State.Items[item] = it;
 
         double hitAt = PhotonNetwork.Time; // 던지는 도구(물풍선·섬광탄)는 위에서 막았다 — 투사체가 닿을 때 따로 알린다(§70.3)
+        ApplyDecoyHits(r.Sender, def.Tool, targets); // AI도 맞는다(§76 A3) — 스턴건
         bool knock = def.Tool.Kind == ToolKind.BoxingGlove && targets.Length > 0 && gloveCombo.Register(targets[0], PhotonNetwork.Time); // 3초 안 3대 = 쓰러짐(§68 GP3)
         var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B, hitAt, knock };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
@@ -1362,6 +1368,15 @@ public sealed class EscapeAuthority
         {
             if (kept.Count >= max) break;
             if (kept.Contains(viewId)) continue;
+            if (DecoyHit.IsDecoy(viewId))
+            {
+                // AI(§76 A3): 도구가 AI를 맞히는 종류이고, 아직 있고 잡히는 중이 아니며, 경로 위치가 사거리 안
+                IGameCharacter shooter = CharacterRegistry.FindByOwner(sender); // 쓴 사람의 지금 몸 위치(기록이 늦을 수 있다)
+                Vector3 origin = area ? point : shooter != null ? shooter.gameObject.transform.position : from;
+                if (!DecoyHit.CanHit(tool.Kind) || !DecoyReachable(DecoyHit.DecoyId(viewId), origin, (area ? tool.HitRadius : tool.Range) + ToolReachSlack)) continue;
+                kept.Add(viewId);
+                continue;
+            }
             PhotonView view = PhotonView.Find(viewId);
             if (view == null) continue;
             if (view.TryGetComponent(out HideOrSeekPlayer dodger) && dodger.IsDodgeInvulnerable) continue; // 구르는 중(§69 C3)
@@ -1375,6 +1390,38 @@ public sealed class EscapeAuthority
     }
 
     private const float ToolReachSlack = 3f;
+
+    // ---------------- AI도 맞음(§76 A3·A6) ----------------
+
+    private readonly Dictionary<int, double> decoyJailedUntil = new Dictionary<int, double>(); // AI 번호 → 갇힘이 풀리는 시각(PhotonNetwork.Time)
+
+    private bool DecoyReachable(int decoyId, Vector3 center, float limit)
+    {
+        int i = State.DecoyIndex(decoyId);
+        if (i < 0 || State.Decoys[i].Caught) return false;
+        Vector3 at = manager.Routes.PositionOf(State.Decoys[i], PhotonNetwork.Time);
+        return Vector3.Distance(at + Vector3.up * 0.95f, center) <= limit + 1f || Flat(at - center) <= limit;
+    }
+
+    // 방장이 보낼 ToolHit 대상 중 AI(음수 번호)에게: 맞은 동안 제자리 → 끝나면 쓴 사람 반대쪽으로 도망(DecoyBrain.OnHit), 물풍선이면 갇힘 기록.
+    // 시간은 진짜 쿠키와 같다(스턴건 2초·물풍선 5초 + 떨어짐·섬광탄 3초).
+    public void ApplyDecoyHits(int sender, ToolSO tool, int[] targets)
+    {
+        if (targets == null || tool == null || !DecoyHit.CanHit(tool.Kind)) return;
+        DecoyBrain brain = manager.GetComponent<DecoyBrain>();
+        Vector3 from = lastPositions.TryGetValue(sender, out Vector3 p) ? p : Vector3.zero;
+        IGameCharacter user = CharacterRegistry.FindByOwner(sender);
+        if (user != null) from = user.gameObject.transform.position;
+        double now = PhotonNetwork.Time;
+        float seconds = DecoyHit.HoldSeconds(tool);
+        foreach (int t in targets)
+        {
+            if (!DecoyHit.IsDecoy(t)) continue;
+            int id = DecoyHit.DecoyId(t);
+            if (tool.Kind == ToolKind.WaterBalloon) decoyJailedUntil[id] = now + tool.StunSecondsCookie;
+            if (brain != null) brain.OnHit(id, from, seconds);
+        }
+    }
 
     private static int[] WithoutMonsters(int[] targets)
     {
