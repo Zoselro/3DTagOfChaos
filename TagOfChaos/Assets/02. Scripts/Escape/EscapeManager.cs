@@ -248,6 +248,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         gameObject.AddComponent<GiantBrain>().Init(this);           // 거대 괴물 판단 — 방장만 돈다(§64)
         StallWatch.Mark("EscapeManager.Start GiantPresenter");
         gameObject.AddComponent<GiantPresenter>().Init(this);       // 거대 괴물 연출(§64)
+        gameObject.AddComponent<MonsterRoomBreak>().Init(this);     // 거대 괴물이 술래방을 부수며 나옴(§81 R)
         StallWatch.Mark("EscapeManager.Start VoiceNet.EnsureSent");
         VoiceNet.EnsureSent();                                      // 대기실에서 못 받은 사람에게만 목소리를 보낸다(§25.3 Q6, §72 E2)
         StallWatch.Mark("EscapeManager.Start ReadStateFromRoom");
@@ -613,6 +614,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     // 술래방 안인지(수평 + 방 높이). 호박마차·AI는 술래방에 들어가지 않는다.
     // 높이도 본다(Request1009Plan.md §57): 두 층 맵(진저브레드 지하 −36 m)에서 술래방 바로 밑 지하가 방 안으로 판정됐다.
+    public Transform MonsterRoom => monsterRoom; // §81 R — 거대 괴물이 부수며 나오는 술래방
+
     public bool InMonsterRoom(Vector3 p)
     {
         Vector3 c = monsterRoom != null ? monsterRoom.position : Vector3.zero;

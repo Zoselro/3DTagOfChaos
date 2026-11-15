@@ -42,6 +42,10 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private int lastKnownPlayerCount = -1;
     private int lastKnownHostActor = -1;
+    // 강퇴 버튼을 보여 줄 수 있는 상태(내가 호스트 + 대기실 단계)가 바뀌면 목록을 다시 그린다. 판이 끝나 대기실로 돌아오면
+    // 이전 판 방 속성(준비 끝 시각·결과)이 RoundStateResetter가 지울 때까지 잠깐 남아 단계가 대기실이 아니다 — 예전에는 그때 그린 목록이
+    // 남아 강퇴 버튼이 사람이 새로 들어올 때까지 안 보였다.
+    private bool lastKickable;
     private readonly StringBuilder nameBuilder = new StringBuilder();
 
     // 강퇴: 응답하지 않는 대상은 방장이 연결을 끊는다 — PUN 2.55는 보내는 쪽·받는 쪽 모두 켜 두어야 한다.
@@ -71,8 +75,10 @@ public class GameLobbyController : MonoBehaviourPunCallbacks, IOnEventCallback
         int currentCount = PhotonNetwork.CurrentRoom.PlayerCount;
         int currentHost = RoomState.HostActor();
 
-        if (currentCount != lastKnownPlayerCount || currentHost != lastKnownHostActor)
+        bool kickable = RoomState.IsLocalHost() && GamePhaseState.Current == GamePhase.Lobby;
+        if (currentCount != lastKnownPlayerCount || currentHost != lastKnownHostActor || kickable != lastKickable)
         {
+            lastKickable = kickable;
             if (lastKnownHostActor > 0 && currentHost > 0 && currentHost != lastKnownHostActor) AnnounceHost(currentHost);
             lastKnownPlayerCount = currentCount;
             lastKnownHostActor = currentHost;

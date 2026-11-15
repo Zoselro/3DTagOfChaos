@@ -126,8 +126,16 @@ public static class GiantNavMeshBaker
         var c = s.component as Collider;
         if (c == null) return false;
         if (c.isTrigger || c.GetComponentInParent<InteractableDoor>() != null || c.GetComponentInParent<IGameCharacter>() != null) return true;
+        Transform room = MonsterRoomOf(c.transform);
+        if (room != null && !MonsterRoomBreak.Keep(c, c.bounds, room.position.y)) return true; // §81 R: 거대 괴물이 술래방을 부수며 나온다 — 벽·지붕은 길을 막지 않음(바닥·엘리베이터는 남김)
         Vector3 size = c.bounds.size;
         return size.x < GiantNavMesh.PropFootprint && size.z < GiantNavMesh.PropFootprint && size.y < GiantNavMesh.PropHeight;
+    }
+
+    private static Transform MonsterRoomOf(Transform t)
+    {
+        for (; t != null; t = t.parent) if (t.name == "MonsterRoom") return t;
+        return null;
     }
 
     private static bool InScene(NavMeshBuildSource s, Scene scene) => s.component == null || s.component.gameObject.scene == scene;

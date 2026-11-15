@@ -26,7 +26,7 @@ public class GiantBrain : MonoBehaviour
     private const float GoalReach = 10f;           // 대상에서 거대 괴물 길까지 이 거리 안이면 바깥에 있다고 본다
     private const float IndoorGap = 4f;            // 목표점이 대상에서 이만큼 넘게 떨어져 있으면 건물 안
     private const float DoorSearch = 30f;
-    private const int SpawnTries = 40, WarpTries = 16;
+    private const int SpawnTries = 80, WarpTries = 24; // §81 G1: 건물 안 후보를 버리므로 넉넉히
     private const float SweepSeconds = 0.1f;        // 걸으며 소품 부수기 검사 주기
 
     private EscapeManager manager;
@@ -316,6 +316,7 @@ public class GiantBrain : MonoBehaviour
             float r = Mathf.Lerp(GiantRules.WarpMinDistance, GiantRules.WarpMaxDistance, (float)rng.NextDouble());
             Vector3 c = target + Quaternion.Euler(0f, a, 0f) * Vector3.forward * r;
             if (!GiantNavMesh.Sample(c, 3f, out Vector3 p) || GiantRules.OtherFloor(target.y, p.y) || manager.IsOutsideMap(p, -3f)) continue;
+            if (!GiantSpawnRules.ClearOfBuildings(p, Units)) continue; // §81 G1(Q1): 큰 건물·계단 구역 안에 솟지 않는다
             if (!ReachableOnFoot(p, goal)) continue; // 내려선 곳에서 목표점까지 걸어갈 수 있어야 한다
             return p;
         }
@@ -397,11 +398,22 @@ public class GiantBrain : MonoBehaviour
         return rng.NextDouble() < GiantSettingsSO.Current.SpawnChance;
     }
 
-    // 나오는 자리: 지상(쿠키 스폰 높이) 거대 괴물 길 중 모두에게서 가장 먼 곳. 맵 가운데를 바라본다.
+    // 나오는 자리(§81 R, 사용자 결정): 술래방 가운데 — 술래방을 부수며 나온다(MonsterRoomBreak). 맵 가운데를 바라본다.
+    // 술래방이 없는 맵만 예전처럼 지상 거대 괴물 길 중 큰 건물·계단 구역 밖에서 모두에게서 가장 먼 곳.
     public static bool TryPickSpawn(EscapeManager manager, System.Random rng, out GiantState s)
     {
         s = default;
         if (manager == null || !GiantNavMesh.Ready) return false;
+        Transform room = manager.MonsterRoom;
+        if (room != null)
+        {
+            Vector3 at = room.position;
+            if (GiantNavMesh.Sample(at, 6f, out Vector3 onMesh) && GiantRules.FlatDistance(onMesh, at) <= 4f) at = onMesh; // 엘리베이터 등을 비켜 길 위로
+            Vector3 mid = new Vector3(manager.Area.Center.x, at.y, manager.Area.Center.y);
+            float roomYaw = GiantRules.YawTo(at, mid, room.eulerAngles.y);
+            s = new GiantState { Spawn = at, SpawnYaw = roomYaw, Points = new[] { at }, Yaw = roomYaw };
+            return true;
+        }
         GameObject spawn = GameObject.Find(SceneSpawnPoints.Cookie);
         float groundY = spawn != null ? spawn.transform.position.y : 0f;
         var people = new List<IGameCharacter>();
@@ -415,6 +427,7 @@ public class GiantBrain : MonoBehaviour
             Vector2 xz = manager.Area.RandomPoint(rng, 15f);
             if (!GiantNavMesh.Sample(new Vector3(xz.x, groundY, xz.y), 4f, out Vector3 p)) continue;
             if (Mathf.Abs(p.y - groundY) > 4f || manager.InMonsterRoom(p)) continue;
+            if (!GiantSpawnRules.ClearOfBuildings(p, Units)) continue; // §81 G1: 큰 건물·계단 구역 안에서 나오지 않는다
             float nearest = float.MaxValue;
             foreach (IGameCharacter c in people) nearest = Mathf.Min(nearest, GiantRules.FlatDistance(p, c.gameObject.transform.position));
             float score = Mathf.Min(nearest, GiantRules.SpawnMinDistance * 2f);

@@ -20,6 +20,12 @@ public class MonsterRoomDoor : MonoBehaviour
     {
         if (door == null || Time.unscaledTime < nextCheck) return;
         nextCheck = Time.unscaledTime + CheckSeconds;
+        if (MonsterRoomBreak.Broken) // 거대 괴물이 술래방을 무너뜨렸다(§81 R) — 문도 없다
+        {
+            if (door.enabled) door.enabled = false;
+            if (look != null && look.enabled) look.enabled = false;
+            return;
+        }
         bool open = GamePhaseState.Current != GamePhase.Prepare && GamePhaseState.Current != GamePhase.Lobby;
         bool passable = open && LocalMonster() != null;
         // 괴물 본인 화면에서는 열린 문의 충돌체를 끈다. 예전에는 Physics.IgnoreCollision으로 괴물 몸과의 충돌만 껐지만, 괴물 몸은

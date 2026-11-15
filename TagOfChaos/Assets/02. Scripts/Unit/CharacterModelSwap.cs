@@ -6,6 +6,8 @@ using UnityEngine;
 // - 쿠키 뼈는 이름 끝에 HiddenSuffix를 붙이고 끈다(같은 이름 뼈가 두 벌이면 Humanoid 연결이 꼬인다). 쿠키 몸(Mesh_0) 렌더러는 끈다 —
 //   Mesh_0의 콜라이더(괴물 조준·시야 검사용)는 그대로 둔다.
 // - 모델이 없는 칸(0번 쿠키)이면 되돌린다. Rebind 뒤 Animator는 기본 상태(Idle, 팔 내림)부터 돈다 — T-Pose가 보이지 않는다(§45.2 자세 규칙).
+// - 이미 돌던 Animator(대기실에서 움직이는 중 스킨 교체)는 Rebind 앞뒤로 상태·층 가중치·파라미터를 기억했다가 되돌린다
+//   (Request1009Plan.md §81 S1, AnimatorSnapshot) — 들고 달리던 중이면 Run + 드는 자세 그대로.
 // 플레이어(PlayerSkinApplier)·AI 본보기(DecoyPresenter)가 같은 코드를 쓴다. 마녀 대역은 살아 있는 캐릭터를 복제하므로 따라온다.
 public static class CharacterModelSwap
 {
@@ -23,6 +25,7 @@ public static class CharacterModelSwap
         string wanted = modelPrefab != null ? modelPrefab.name : null;
         string shown = current != null && current.childCount > 0 ? current.GetChild(0).name : null;
         if (wanted == shown) return false;
+        AnimatorSnapshot snap = AnimatorSnapshot.Take(animator); // 지금 동작(§81 S1) — 아직 돌지 않은 Animator면 null
 
         if (current != null)
         {
@@ -34,7 +37,7 @@ public static class CharacterModelSwap
         if (modelPrefab == null)
         {
             SetCookieVisible(root, true);
-            if (animator != null && CookieAvatar != null) { animator.avatar = CookieAvatar; animator.Rebind(); }
+            if (animator != null && CookieAvatar != null) { animator.avatar = CookieAvatar; animator.Rebind(); snap?.Restore(animator); }
             return true;
         }
 
@@ -59,6 +62,7 @@ public static class CharacterModelSwap
         {
             animator.avatar = avatar;
             animator.Rebind();
+            snap?.Restore(animator);
         }
         return true;
     }

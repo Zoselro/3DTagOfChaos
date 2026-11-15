@@ -638,7 +638,6 @@ GameObject:
   - component: {fileID: 8310582807333831719}
   - component: {fileID: 2823187119534102814}
   - component: {fileID: 7619858575023646508}
-  - component: {fileID: 2663378938043337967}
   m_Layer: 5
   m_Name: UserIdInput
   m_TagString: Untagged
@@ -723,7 +722,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -805,22 +804,6 @@ MonoBehaviour:
   isAlert: 0
   m_InputValidator: {fileID: 0}
   m_ShouldActivateOnSelect: 1
---- !u!114 &2663378938043337967
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1036087553478208087}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7d86134805a88b449c2e1dbd247c9d9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  glowColor: {r: 0.72, g: 0.32, b: 1, a: 0.9}
-  padding: 20
-  glowWhenSelected: 1
-  idleGlow: 0
 --- !u!1 &1479948118297395452
 GameObject:
   m_ObjectHideFlags: 0
@@ -1081,7 +1064,6 @@ GameObject:
   - component: {fileID: 4430423169990348936}
   - component: {fileID: 8433052002249274858}
   - component: {fileID: 8891399191845600384}
-  - component: {fileID: 7411515455544925853}
   m_Layer: 5
   m_Name: Input
   m_TagString: Untagged
@@ -1166,7 +1148,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -1248,22 +1230,6 @@ MonoBehaviour:
   isAlert: 0
   m_InputValidator: {fileID: 0}
   m_ShouldActivateOnSelect: 1
---- !u!114 &7411515455544925853
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1658315323266225277}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7d86134805a88b449c2e1dbd247c9d9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  glowColor: {r: 0.72, g: 0.32, b: 1, a: 0.9}
-  padding: 16
-  glowWhenSelected: 1
-  idleGlow: 0
 --- !u!1 &1660246775807879977
 GameObject:
   m_ObjectHideFlags: 0
@@ -1948,7 +1914,6 @@ GameObject:
   - component: {fileID: 733450398144275821}
   - component: {fileID: 3600271744199885087}
   - component: {fileID: 6938194484932432694}
-  - component: {fileID: 4389591397477710181}
   m_Layer: 5
   m_Name: Input
   m_TagString: Untagged
@@ -2033,7 +1998,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -2115,22 +2080,6 @@ MonoBehaviour:
   isAlert: 0
   m_InputValidator: {fileID: 0}
   m_ShouldActivateOnSelect: 1
---- !u!114 &4389591397477710181
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2328238272037707101}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7d86134805a88b449c2e1dbd247c9d9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  glowColor: {r: 0.72, g: 0.32, b: 1, a: 0.9}
-  padding: 16
-  glowWhenSelected: 1
-  idleGlow: 0
 --- !u!1 &2507027153995599398
 GameObject:
   m_ObjectHideFlags: 0
@@ -2653,7 +2602,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4281479730
+    rgba: 4278719531
   m_fontColor: {r: 0.17, g: 0.08, b: 0.03, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -4024,7 +3973,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uBCFC \uAD6D\uAC00"
+  m_text: "\uAD6D\uAC00"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: a04b00bb5ee22f5468123589eee7aca2, type: 2}
   m_sharedMaterial: {fileID: -4628378689022734480, guid: a04b00bb5ee22f5468123589eee7aca2, type: 2}
@@ -4033,7 +3982,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4290964479
   m_fontColor: {r: 1, g: 0.92, b: 0.76, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -4205,7 +4154,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 11.160002, y: 0}
-  m_SizeDelta: {x: -99.2, y: 0}
+  m_SizeDelta: {x: -99.20001, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7705441736670578496
 CanvasRenderer:
@@ -5068,7 +5017,6 @@ GameObject:
   - component: {fileID: 2629830013377175141}
   - component: {fileID: 2966049991399818652}
   - component: {fileID: 5156430533173206621}
-  - component: {fileID: 585838882594476376}
   m_Layer: 5
   m_Name: RoomNameInput
   m_TagString: Untagged
@@ -5153,7 +5101,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -5235,22 +5183,6 @@ MonoBehaviour:
   isAlert: 0
   m_InputValidator: {fileID: 0}
   m_ShouldActivateOnSelect: 1
---- !u!114 &585838882594476376
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5533150030666409891}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7d86134805a88b449c2e1dbd247c9d9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  glowColor: {r: 0.72, g: 0.32, b: 1, a: 0.9}
-  padding: 20
-  glowWhenSelected: 1
-  idleGlow: 0
 --- !u!1 &5854058013057252918
 GameObject:
   m_ObjectHideFlags: 0

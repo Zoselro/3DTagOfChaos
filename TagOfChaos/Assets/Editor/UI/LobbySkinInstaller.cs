@@ -270,7 +270,7 @@ public static class LobbySkinInstaller
             SetImage(val.GetComponent<Image>(), "Field").pixelsPerUnitMultiplier = SmallPpu;
             foreach (var t in val.GetComponentsInChildren<TMP_Text>(true)) { t.font = Font; t.fontSize = 24f; t.color = InkStrong; t.fontStyle = FontStyles.Bold; t.alignment = TextAlignmentOptions.Center; }
             var input = val.GetComponent<TMP_InputField>();
-            if (input != null) Ensure<UiHoverGlow>(val.gameObject).Configure(Purple, 16f, true, 0f);
+            if (input != null) NoSelectEffect(input); // 입력칸을 눌러도 빛·색 변화 없음(사용자 요청)
         }
         if (inc != null) { inc.anchoredPosition = new Vector2(x0 + 64f + valueWidth, 0f); inc.sizeDelta = new Vector2(52f, 46f); StyleArrow(inc, "Btn_ArrowR"); }
         var warn = row.Find("Warning") as RectTransform;
@@ -339,7 +339,15 @@ public static class LobbySkinInstaller
         if (input.placeholder is TMP_Text ph) { ph.text = placeholder; ph.font = Font; ph.fontSize = 22f; ph.color = InkFaint; ph.fontStyle = FontStyles.Italic; ph.alignment = TextAlignmentOptions.MidlineLeft; }
         input.caretColor = Ink; input.customCaretColor = true;
         input.selectionColor = new Color(0.72f, 0.32f, 1f, 0.35f);
-        Ensure<UiHoverGlow>(input.gameObject).Configure(Purple, 20f, true, 0f);
+        NoSelectEffect(input);
+    }
+
+    // 입력칸: 눌렀을 때 빛(UiHoverGlow)과 색 변화를 모두 뺀다
+    private static void NoSelectEffect(TMP_InputField input)
+    {
+        var glow = input.GetComponent<UiHoverGlow>();
+        if (glow != null) Object.DestroyImmediate(glow, true);
+        input.transition = Selectable.Transition.None;
     }
 
     private static string StyleRoomItem(Texts tx)

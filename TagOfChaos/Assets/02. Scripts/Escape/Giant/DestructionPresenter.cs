@@ -83,6 +83,19 @@ public class DestructionPresenter : MonoBehaviour
         }
     }
 
+    // 부서지는 목록 밖 물체(술래방, §81 R)를 건물처럼 무너뜨린다. 늦게 들어온 화면(animate false)은 숨기기만.
+    public void PresentExtra(DestructibleUnit u, bool animate)
+    {
+        if (u == null) return;
+        if (!animate)
+        {
+            DestructionNet.SetBroken(u, true);
+            RubbleGround(u);
+            return;
+        }
+        waiting.Enqueue(u);
+    }
+
     private void Update()
     {
         while (collapsing < MaxCollapsing && waiting.Count > 0) StartCoroutine(Collapse(waiting.Dequeue()));

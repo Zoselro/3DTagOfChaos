@@ -10338,3 +10338,356 @@ T 단계 시험 내용:
 - 남은 점
   - 배경 그림은 받은 시트에서 약 785 px 너비를 1920으로 키운 것이라 조금 흐리다. 더 큰 원본을 주면 바꿔 넣는다.
   - 랜덤 입장은 실제 서버의 다른 방에 들어갈 수 있어 눌러 보지 않았다(코드·연결은 그대로).
+
+### 79.3 후속(2026-11-15)
+
+- 스크롤 손잡이가 두 개로 보임: 홈 그림(`ScrollTrack.png`) 가운데에 보라 보석 손잡이가 그려져 있었다 → 그 부분을 빈 홈으로 칠함. 이제 움직이는 손잡이 하나만 보인다 ✅
+- 입력칸(닉네임·방 이름·인원·스파이)을 눌렀을 때 효과 삭제: `UiHoverGlow` 제거 + 색 변화(Transition) 없음 ✅
+- Play Mode 확인(`sfx_preview/lobby_f_crop.png`), 콘솔 오류 0
+
+## 80. 판이 끝나 대기실로 돌아온 뒤 호스트에게 강퇴 버튼이 안 보임(2026-11-16)
+
+- 처음 보고: 방장(술래)이 팅기면 방장이 없어진다 → 시험해 보니 방장은 정상(아래), 사용자가 다시 확인: **강퇴 버튼이 안 보이는 것**.
+- 시험(에디터 + 빌드 3, 방 `crashtest`)
+  - 방장(쿠키)이 맵에서 정상 퇴장: 방장 1 → 2로 바로 넘어감 ✅
+  - 호스트 = 술래가 맵에서 팅김(패킷 100% 손실로 흉내): 괴물 0명 → 5초 뒤 대기실, 빌드 기록 `master 2 host 2 desired 2` ✅
+- 원인: 대기실에 들어오는 순간 목록을 그리는데, 이전 판 방 속성(준비 끝 시각·결과)이 `RoundStateResetter`가 지우기 전이라 단계가 대기실이 아니어서 강퇴 버튼을 숨긴다. 목록은 인원·호스트가 바뀔 때만 다시 그려서, 누가 새로 들어올 때까지 버튼이 안 보였다(전 방장이 다시 들어오면 보이던 이유).
+- 고침: `GameLobbyController.Update` — "내가 호스트이고 대기실 단계"가 바뀌면 목록을 다시 그린다(`lastKickable`) ✅
+- 확인: 컴파일·콘솔 0, Play Mode에서 목록을 "강퇴 불가" 상태로 만들면 다음 프레임에 스스로 다시 그려짐 ✅. 빌드에는 새로 빌드해야 반영된다.
+
+## 81. 대기실 스킨 바꾸면 동작이 Idle로 풀림·거대 괴물이 건물 안에서 나옴(2026-11-16 계획)
+
+- 요청
+  1. GameLobbyScene에서 동작 도중 스킨을 바꾸면 동작이 Idle로 바뀐다. 예: 다른 사람을 들고 달리다 바꾸면 Idle 자세로 미끄러지듯 달리고, 멈췄다 다시 달리면 드는 자세 없이 그냥 달린다(들린 사람은 계속 들려 있음).
+  2. 마녀의 괴물(거대 괴물 MixedMonster, §64)이 소환될 때 건물 안에서 나온다 → 건물이 아닌 곳에서만 나오게.
+- 상태: **✅ 구현 완료(2026-11-16, 결과 §81.8)** — ②는 사용자 결정으로 "술래방 가운데에서 부수며 나옴"으로 바뀜(§81.7)
+
+### 81.1 ① 스킨 바꾸면 동작이 풀림 — 원인(코드 확인)
+
+**흐름:** 스킨 버튼 → `PlayerSkinSelector`가 `SkinIndex`(Player Prop) 저장 → 모든 화면의 `PlayerSkinApplier.OnPlayerPropertiesUpdate` → `CharacterModelSwap.Apply` → 아바타 바꾸고 **`animator.Rebind()`**.
+
+`Unit/CharacterModelSwap.cs`
+```csharp
+if (animator != null)
+{
+    animator.avatar = avatar;
+    animator.Rebind();   // ← 모든 층의 상태·가중치·파라미터가 기본값으로
+}
+```
+
+`Rebind()`는 Animator를 처음 켠 것처럼 되돌린다. `Assets/Animation/PlayerAnimator.controller`(에디터에서 확인):
+
+| 층 | 기본 가중치 | 상태 |
+|---|---|---|
+| Base Layer | — | Idle(기본)·Walk·Run·Jump·Dodge·Held·Carried·Dance_0·StrafeLeft/Right·WalkBack |
+| Carry | **0** | Carrying (두 손 드는 자세) |
+| Hold | 0 | ItemHold |
+| Action | 0 | StunAim·Throw·Swing·HammerHold·GloveGuard·PunchR·PunchL |
+| Trapped | 0 | Trapped |
+
+파라미터는 `DanceId`(Int) 말고 모두 Trigger다 → Rebind 뒤 바닥 층은 Idle, Carry 층 가중치는 0.
+
+그런데 코드는 "값이 바뀔 때만" Animator에 보낸다.
+
+`Unit/PlayerAnimationDriver.cs`
+```csharp
+public void ChangeState(PlayerMoveState newState)
+{
+    if (previousState == newState) return;   // ← 계속 Run이면 Run 트리거를 다시 안 보냄 → Idle 자세로 달림
+    animator.ResetTrigger(previousState.ToString());
+    animator.SetTrigger(newState.ToString());
+    ...
+}
+
+public void SetCarry(CarryReason reason, bool on)
+{
+    CarryReason next = on ? carryReasons | reason : carryReasons & ~reason;
+    if (next == carryReasons && carryLayerIndex != -1) return;   // ← 계속 들고 있으면 가중치 1을 다시 안 보냄
+    ...
+}
+```
+
+- 달리기 → Idle 자세: `ChangeState(Run)`이 같은 값이라 무시된다.
+- 멈춘 뒤 다시 달리면 Run은 돌아오지만 드는 자세는 없음: Carry 층 가중치가 0으로 남고, `SetCarry(Cookie, true)`는 이미 true라 무시된다. 들린 사람 쪽(`PlayerCarryFollower`·`CarriedBodyPresenter`)은 Animator와 상관없어 계속 들려 있다 — 보고와 같다.
+- 같은 문제가 더 있다(같은 원인)
+  - `Unit/PlayerActionPose.cs`: `if (actionState != holdState) animator.Play(...)` — 망치·글러브·스턴건 조준 자세도 같은 값이면 다시 틀지 않는다. 가중치는 매 프레임 넣지만 그 층 상태가 기본값으로 돌아가 엉뚱한 자세가 된다.
+  - 춤: `PlayDance`가 같은 춤이면 무시 → 춤추다 바꾸면 Idle.
+  - 다른 화면(원격): `HideOrSeekPlayer.UpdateRemote`도 같은 `ChangeState`·`SetCarry`를 쓰고, 다른 화면의 `PlayerSkinApplier`도 Rebind를 하므로 **모든 화면에서** 같이 풀린다.
+- 손·엉덩이 뼈 위치는 이미 아바타가 바뀌면 다시 찾는다(`HeldItemPresenter.RefreshBones`, `CarriedBodyPresenter.TryPose`) — 고칠 것 없음.
+
+### 81.2 ① 고치는 방법
+
+**A안(추천): Rebind 앞뒤로 Animator 상태를 찍어 두었다가 그대로 되돌린다** — 한 곳(`CharacterModelSwap`)에서 끝나고, 층·파라미터가 늘어도 따로 손볼 곳이 없다. 플레이어·AI 본보기(`DecoyPresenter`) 모두 같은 함수를 쓰므로 함께 고쳐진다.
+
+새 파일 `Unit/AnimatorSnapshot.cs`
+```csharp
+using UnityEngine;
+
+// Animator.Rebind()(아바타 교체) 앞뒤로 모든 층의 상태·재생 위치·가중치와 Int/Float/Bool 파라미터를 그대로 되돌린다(§81 S1).
+// Trigger는 이미 쓴 신호라 되돌리지 않는다 — 상태를 직접 틀므로 필요 없다.
+public sealed class AnimatorSnapshot
+{
+    private struct Layer { public int Hash; public float Time; public float Weight; }
+    private Layer[] layers;
+    private AnimatorControllerParameter[] pars;
+    private float[] floats; private int[] ints; private bool[] bools;
+    private float speed;
+
+    public static AnimatorSnapshot Take(Animator a)
+    {
+        if (a == null || a.runtimeAnimatorController == null || !a.isInitialized) return null;
+        var s = new AnimatorSnapshot { speed = a.speed, layers = new Layer[a.layerCount] };
+        for (int i = 0; i < a.layerCount; i++)
+        {
+            // 넘어가는 중이면 넘어갈 상태(다음 상태)를 기억한다
+            AnimatorStateInfo st = a.IsInTransition(i) ? a.GetNextAnimatorStateInfo(i) : a.GetCurrentAnimatorStateInfo(i);
+            s.layers[i] = new Layer { Hash = st.fullPathHash, Time = st.loop ? Mathf.Repeat(st.normalizedTime, 1f) : st.normalizedTime, Weight = i == 0 ? 1f : a.GetLayerWeight(i) };
+        }
+        s.pars = a.parameters;
+        s.floats = new float[s.pars.Length]; s.ints = new int[s.pars.Length]; s.bools = new bool[s.pars.Length];
+        for (int i = 0; i < s.pars.Length; i++)
+        {
+            int h = s.pars[i].nameHash;
+            switch (s.pars[i].type)
+            {
+                case AnimatorControllerParameterType.Float: s.floats[i] = a.GetFloat(h); break;
+                case AnimatorControllerParameterType.Int: s.ints[i] = a.GetInteger(h); break;
+                case AnimatorControllerParameterType.Bool: s.bools[i] = a.GetBool(h); break;
+            }
+        }
+        return s;
+    }
+
+    public void Restore(Animator a)
+    {
+        if (a == null || a.runtimeAnimatorController == null) return;
+        for (int i = 0; i < pars.Length; i++)
+        {
+            int h = pars[i].nameHash;
+            switch (pars[i].type)
+            {
+                case AnimatorControllerParameterType.Float: a.SetFloat(h, floats[i]); break;
+                case AnimatorControllerParameterType.Int: a.SetInteger(h, ints[i]); break;
+                case AnimatorControllerParameterType.Bool: a.SetBool(h, bools[i]); break;
+            }
+        }
+        for (int i = 0; i < layers.Length && i < a.layerCount; i++)
+        {
+            if (i > 0) a.SetLayerWeight(i, layers[i].Weight);
+            if (layers[i].Hash != 0 && a.HasState(i, layers[i].Hash)) a.Play(layers[i].Hash, i, layers[i].Time);
+        }
+        a.speed = speed; // 점프 정점 멈춤(speed 0)도 그대로
+    }
+}
+```
+
+`Unit/CharacterModelSwap.cs` — 두 군데(쿠키로 되돌리기·새 모델) 모두
+```csharp
+public static bool Apply(Transform root, GameObject modelPrefab)
+{
+    ...
+    if (wanted == shown) return false;
+    AnimatorSnapshot snap = Application.isPlaying ? AnimatorSnapshot.Take(animator) : null; // 지금 동작을 기억(§81 S1)
+    ...
+    if (modelPrefab == null)
+    {
+        SetCookieVisible(root, true);
+        if (animator != null && CookieAvatar != null) { animator.avatar = CookieAvatar; animator.Rebind(); snap?.Restore(animator); }
+        return true;
+    }
+    ...
+    if (animator != null)
+    {
+        animator.avatar = avatar;
+        animator.Rebind();
+        snap?.Restore(animator); // 들고 달리던 중이면 Run + Carry 층 1 그대로
+    }
+    return true;
+}
+```
+
+- 코드 쪽 기억 값(`PlayerAnimationDriver.previousState`·`carryReasons`, `PlayerActionPose.actionState`)과 Animator가 다시 같아지므로, "값이 바뀔 때만 보냄" 가드는 그대로 둬도 된다.
+- 지금 주석 "Rebind 뒤 Animator는 기본 상태(Idle, 팔 내림)부터 돈다 — T-Pose가 보이지 않는다"는 처음 생길 때(스냅샷 없음, `isInitialized` 전)에 그대로 맞다.
+
+**B안(보조, A안이 어떤 층에서 안 먹으면):** `PlayerAnimationDriver.Reapply()`를 두어 Rebind 뒤 지금 상태 트리거·Carry 가중치·춤 번호를 강제로 다시 넣고, `PlayerActionPose`의 `actionState`를 비운다.
+```csharp
+// PlayerAnimationDriver
+public void Reapply()
+{
+    if (animator == null) return;
+    if (currentState == PlayerMoveState.Dance) animator.SetInteger(DanceCatalogSO.IdParameter, DanceId);
+    animator.SetTrigger(currentState.ToString());       // 가드 없이
+    carryLayerIndex = -1;                               // 층 번호 다시 찾기
+    SetCarryLayerWeight(carryReasons != CarryReason.None ? 1f : 0f);
+}
+```
+(B안은 0.1초 넘어가기 블렌드가 보이고, 소리 이벤트(`StateChanged`)를 부르지 않게 주의해야 해서 A안을 먼저 한다.)
+
+### 81.3 ② 거대 괴물이 건물 안에서 나옴 — 원인(코드 확인)
+
+마녀 타이머가 켜질 때 방장이 자리를 고른다: `EscapeAuthority.cs:806`
+```csharp
+bool giant = GiantBrain.RollSpawn(rng) && GiantBrain.TryPickSpawn(manager, rng, out giantState);
+```
+
+`Escape/Giant/GiantBrain.cs` `TryPickSpawn`
+```csharp
+for (int i = 0; i < SpawnTries; i++)   // 40번
+{
+    Vector2 xz = manager.Area.RandomPoint(rng, 15f);
+    if (!GiantNavMesh.Sample(new Vector3(xz.x, groundY, xz.y), 4f, out Vector3 p)) continue;
+    if (Mathf.Abs(p.y - groundY) > 4f || manager.InMonsterRoom(p)) continue;   // ← 건물 검사 없음
+    float nearest = ...모든 사람과의 거리...;
+    float score = Mathf.Min(nearest, GiantRules.SpawnMinDistance * 2f);
+    if (score > bestScore) { bestScore = score; bestPoint = p; found = true; }
+}
+```
+
+- 거르는 것은 "거대 괴물 NavMesh 위·지상 높이·술래방 아님"뿐이다. 거대 괴물 NavMesh(`GiantNavMesh`, 반지름 3 m·키 10 m)는 "건물·벽은 막고 소품은 통과"로 굽지만, 큰 홀·넓은 문(진저브레드 6.6 m 양문, §50)·지붕 없는 통로처럼 몸이 들어갈 만한 실내에도 길이 생길 수 있다. 그리고 "모두에게서 가장 먼 곳"을 고르므로 사람이 없는 건물 안이 오히려 잘 뽑힌다.
+- 정확히 어떤 건물 안에 길이 있는지는 아직 재지 않았다 → G0에서 맵마다 잰다.
+- 같은 위험: 마법진으로 가라앉았다 솟는 순간이동 자리(`WarpPoint`)도 같은 검사만 한다.
+
+이미 있는 "건물 안" 판정 재료
+- `DestructibleCatalog.Units` — 텐트·건물·계단의 `Zone`(세계 경계). 거대 괴물 판정에 이미 쓴다(`GiantDestruction.IsProtected`).
+- `Audio/IndoorZone` — 숨는 곳(텐트·진저브레드 집) 안을 덮는 상자. `IndoorZone.At(point)`.
+- `EscapeManager.TryCeilingAbove(pos, maxUp, out ceiling)` — 위아래 두 방향 레이로 천장 찾기(§78).
+
+### 81.4 ② 고치는 방법
+
+"바깥인지"를 세 가지로 본다 — 하나라도 걸리면 그 자리를 버리고 다음 후보.
+1. 텐트·건물·계단 `Zone`(몸 반지름 + 여유만큼 넓힘) 안이 아님 — 몸 일부도 건물에 겹치지 않게
+2. `IndoorZone` 안이 아님
+3. 머리 위가 열려 있음: 몸 가운데와 둘레 4점에서 위로 12 m 안에 **건물·텐트에 속한** 천장이 없음(나뭇잎 같은 소품은 무시 — 거대 괴물은 소품을 지나간다)
+
+새 파일 `Escape/Giant/GiantSpawnRules.cs`(순수 계산 — 시험하기 쉽게)
+```csharp
+using System.Collections.Generic;
+using UnityEngine;
+
+// 거대 괴물이 나오는/솟는 자리 규칙(§81 G1): 건물·텐트·계단 구역과 몸이 겹치지 않는 바깥.
+public static class GiantSpawnRules
+{
+    public const float BodyClearance = GiantNavMesh.AgentRadius + 1.5f; // 몸 반지름 3 m + 여유
+    public const float SkyCheck = 12f;                                   // 키 10 m + 여유
+
+    // 이 자리 둘레(BodyClearance)가 서 있는 텐트·건물·계단 구역과 겹치면 false
+    public static bool ClearOfStructures(Vector3 p, IReadOnlyList<DestructibleUnit> units)
+    {
+        if (units == null) return true;
+        foreach (DestructibleUnit u in units)
+        {
+            if (u.Grade == DestructibleGrade.Prop || u.Broken) continue;
+            Bounds z = u.Zone;
+            if (p.y < z.min.y - 1f || p.y > z.max.y) continue;
+            if (GiantRules.FlatDistance(p, z.ClosestPoint(p)) < BodyClearance) return false;
+        }
+        return true;
+    }
+
+    // 몸 가운데·둘레 네 점에서 본 머리 위(소품은 무시)
+    public static readonly Vector2[] Footprint = { Vector2.zero, new Vector2(1, 0), new Vector2(-1, 0), new Vector2(0, 1), new Vector2(0, -1) };
+}
+```
+
+`GiantBrain.cs`
+```csharp
+// 바깥인지(§81 G1): 건물 구역·실내 상자·건물 천장
+private static bool IsOpenGround(EscapeManager manager, Vector3 p)
+{
+    if (!GiantSpawnRules.ClearOfStructures(p, Units)) return false;
+    if (IndoorZone.At(p + Vector3.up) != null) return false;
+    foreach (Vector2 o in GiantSpawnRules.Footprint)
+    {
+        Vector3 q = p + new Vector3(o.x, 0f, o.y) * GiantNavMesh.AgentRadius;
+        if (StructureAbove(q, GiantSpawnRules.SkyCheck)) return false;
+    }
+    return true;
+}
+
+// 위로 maxUp 안에 텐트·건물(부서지는 목록의 소품 아닌 것) 또는 부서지는 목록에 없는 큰 충돌체(지붕)가 있으면 true
+private static bool StructureAbove(Vector3 q, float maxUp)
+{
+    foreach (RaycastHit h in Physics.RaycastAll(q + Vector3.up * 0.5f, Vector3.up, maxUp, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+    {
+        if (h.collider.GetComponentInParent<IGameCharacter>() != null) continue;
+        if (Catalog != null && Catalog.TryGet(h.collider, out DestructibleUnit u) && u.Grade == DestructibleGrade.Prop) continue; // 나무·소품
+        if (GiantNavMesh.IsPropSized(h.collider.bounds)) continue;  // 굽기 때와 같은 "소품 크기" 기준(5 m 미만)
+        return true;
+    }
+    return false;
+}
+```
+
+`TryPickSpawn` 한 줄 + 후보 수
+```csharp
+private const int SpawnTries = 80;   // 40 → 80(바깥 조건이 늘어 버려지는 후보가 많아진다)
+...
+if (Mathf.Abs(p.y - groundY) > 4f || manager.InMonsterRoom(p)) continue;
+if (!IsOpenGround(manager, p)) continue;   // §81 G1: 건물 안·처마 밑 제외
+```
+
+`GiantNavMesh.cs` — 굽기와 같은 "소품" 기준을 함수로(지금은 굽는 도구에만 숫자로 있다)
+```csharp
+public static bool IsPropSized(Bounds b) =>
+    (b.size.x < PropFootprint && b.size.z < PropFootprint) && b.size.y < PropHeight;
+```
+
+- 순간이동(`WarpPoint`)에도 같은 줄을 넣을지 → 질문 Q1.
+- 80번 다 버려지면 지금처럼 `false` → 그 판은 거대 괴물이 안 나온다. 맵에 바깥 자리가 충분해서 거의 없겠지만, G0에서 맵마다 "바깥 후보 비율"을 재서 확인한다.
+- 판정은 방장만 하고 자리(`GiantState.Spawn`)는 방 속성으로 모두에게 가므로 네트워크 변경 없음.
+
+### 81.5 단계·시험
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| S0 | 재현: 대기실에서 (a) 다른 사람 들고 달리며 (b) 망치 들고 (c) 춤추며 (d) 점프 중 스킨 바꾸기 → 지금 Idle로 풀리는 것 Play Mode로 확인(본인·다른 화면) | |
+| S1 | `AnimatorSnapshot` + `CharacterModelSwap` 앞뒤 기억·되돌리기 | |
+| S2 | EditMode 시험: 쿠키 프리팹에 Run + Carry 층 1 + HammerHold를 틀고 `animator.Update` → 다른 모델로 `Apply` → `Update` 뒤 바닥 층 Run, Carry 가중치 1, Action 층 HammerHold인지. 쿠키 ↔ 모델, 모델 ↔ 모델 둘 다 | |
+| S3 | Play Mode: S0 네 경우 다시 — 동작 유지, 멈췄다 다시 달려도 드는 자세 유지, 다른 화면도 같음 | |
+| G0 | 재기: 맵 5개(사탕 숲·놀이공원·초콜릿 공장·진저브레드·베이커리)에서 `TryPickSpawn` 후보 1,000개를 뽑아 건물 구역·실내 상자·천장에 걸리는 비율, 지금 고른 자리가 건물 안인 비율 | |
+| G1 | `GiantSpawnRules` + `IsOpenGround` + `IsPropSized`, `SpawnTries` 80 | |
+| G2 | EditMode 시험: `ClearOfStructures`(건물 경계 안·가장자리 4 m·바깥), 천장 아래 점은 거절 | |
+| G3 | Play Mode: 맵 5개 × 소환 20번(오프라인 `GiantOverride`) — 모두 바깥, 마법진이 벽·지붕에 안 겹침, 소환 실패 0 | |
+| DOC | 결과 기록·README | |
+
+### 81.6 확인 질문
+
+- **Q1** 거대 괴물이 마법진으로 가라앉았다 대상 근처에서 솟아오르는 순간이동(`WarpPoint`)도 건물 안 금지를 같이 넣을까요? (추천: 넣음 — 지금도 건물 안에 솟을 수 있다)
+- **Q2** "마녀의 괴물" = 마녀 타이머 때 30 % 확률로 나오는 거대 괴물(MixedMonster) 맞나요? (코드상 마녀 타이머에 새로 소환되는 괴물은 이것뿐)
+- **Q3** 지붕은 없지만 벽으로 둘러싸인 마당(울타리 안 등)도 "건물"로 볼까요? 이번 계획은 부서지는 목록의 텐트·건물·계단 구역 + 실내 상자 + 지붕만 막습니다.
+
+### 81.7 결정·바뀐 계획(2026-11-16)
+
+- ① 추천안(A안 AnimatorSnapshot) 그대로.
+- ② 바뀜: 거대 괴물은 **술래방 정가운데**에서 솟아오르며 **술래방을 부수고** 나온다. Q2 맞음(마녀 타이머 거대 괴물).
+  - 부수는 범위: 방 전체(벽·지붕·문·장식), 바닥·진저브레드 엘리베이터는 남김
+  - 무너진 뒤 술래방 가드(쿠키 내보내기)·술래방 문은 끈다(그 판만)
+  - 그 순간 술래방 안의 사람(술래 포함)은 밟혀 죽음
+  - 순간이동(마법진) 자리는 큰 건물·계단 구역 안 금지(Q1 넣음, Q3 = 큰 건물·계단만)
+
+### 81.8 결과(2026-11-16 에디터·Play Mode)
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| S1 | `Unit/AnimatorSnapshot.cs`(새) + `CharacterModelSwap` Rebind 앞뒤 기억·되돌리기 | ✅ |
+| S2 | EditMode `Request1118Tests.SkinSwap_KeepsRunCarryAndActionPose`(쿠키 → 몽블랑 → 다른 모델 → 쿠키, Run·Carry 1·HammerHold·DanceId 유지), `Snapshot_NullForUninitializedAnimator` | ✅ |
+| S3 | Play Mode 대기실(온라인 방): 드는 자세 켜고 스킨 0 → 2: Carry 가중치 1·Carrying 그대로(예전 0) | ✅ |
+| R1 | `Escape/Giant/MonsterRoomBreak.cs`(새): 솟기 시작(RevealStart)에 모든 화면이 술래방을 건물 붕괴 연출로 무너뜨림(`DestructionPresenter.PresentExtra`), 가드 끔, 방장이 안의 사람 판정. `MonsterRoomDoor`는 무너진 뒤 꺼진 채 | ✅ |
+| R2 | `GiantBrain.TryPickSpawn`: 술래방 가운데(거대 괴물 길 위로 4 m 안 보정), 맵 가운데를 봄. 술래방 없는 맵만 예전 방식 + 건물 제외 | ✅ |
+| R3 | `GiantBrain.WarpPoint`: 큰 건물·계단 구역 안 제외(`GiantSpawnRules.ClearOfBuildings`, 몸 반지름 + 1.5 m) | ✅ |
+| R4 | `GiantNavMeshBaker`: 술래방 벽·지붕은 길을 막지 않게(바닥·엘리베이터 남김, `MonsterRoomBreak.Keep` 같은 규칙) → 맵 5개 다시 굽기 | ✅ |
+| T | EditMode `Request1118Tests` 5/5(술래방 남기는 것·건물 제외 규칙 포함). 관련 묶음 106/107 — 실패 1은 예전부터(`SpawnChance` 설정이 1.0, §76) | ✅ |
+
+**Play Mode(오프라인, 거대 괴물 강제, 맵 5개)**
+
+| 맵 | 나온 자리 | 무너짐(솟기 +1초) | 남은 충돌체 | 그 뒤 걸어 나간 거리(순간이동 없음) |
+|---|---|---|---|---|
+| 사탕 숲 | 술래방 가운데 | 렌더러 17 → 0 | 0 | 39 m(쿠키에게 5.9 m까지) |
+| 진저브레드 | 술래방 가운데 | 19 → 6(바닥·엘리베이터) | 0 | 27 m, 엘리베이터 그대로 |
+| 놀이공원 | 술래방 가운데 | 17 → 4(바닥) | 0 | 41 m |
+| 초콜릿 공장 | 술래방 가운데 | 17 → 4(바닥) | 0 | 47 m |
+| 베이커리(시험 맵) | 술래방 가운데 | 17 → 1(바닥) | 0 | 63 m |
+
+- 밟혀 죽음: 사탕 숲에서 쿠키를 술래방 안에 두고(가드 잠시 끔) 시험 → 무너지는 순간 `DeathCause = Giant`, 부서짐 ✅(술래도 같은 코드)
+- 사진: `sfx_preview/<맵>_room_grid.png`(앞·무너짐·솟음·뒤 4장: cf·gv·cc·ch·hb)
+- 남은 점: 빌드 두 대 이상 멀티에서 모든 화면이 같은 때 무너지는지(시각은 마녀 등장 시각 + 공통 시계로 정해지므로 같아야 함)
