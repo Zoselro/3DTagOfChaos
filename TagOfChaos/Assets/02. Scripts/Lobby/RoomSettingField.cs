@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public class RoomSettingField : MonoBehaviour
 {
     // 씬에 직렬화된 값이므로 순서를 바꾸지 않는다(1은 예전 제한시간 칸 자리 → 스파이 수).
-    public enum Kind { Players, SpyCount, WitchTimerMinutes }
+    public enum Kind { Players, SpyCount } // 마녀 타이머(2)는 §79에서 없앴다(10분 고정)
 
     [SerializeField] private Kind kind;
     [SerializeField] private Button decreaseButton;
@@ -37,7 +37,6 @@ public class RoomSettingField : MonoBehaviour
         switch (kind)
         {
             case Kind.SpyCount: return new RoomSettingStepper(0, s.MaxSpies, s.DefaultSpies);
-            case Kind.WitchTimerMinutes: return new RoomSettingStepper(s.MinTimeAttackMinutes, s.MaxTimeAttackMinutes, s.DefaultTimeAttackMinutes);
             default: return new RoomSettingStepper(s.MinPlayers, s.MaxPlayers, s.DefaultPlayers);
         }
     }

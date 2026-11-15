@@ -22,8 +22,6 @@ public class LobbyController : MonoBehaviourPunCallbacks
     [SerializeField] private RoomSettingField playersField;
     [UnityEngine.Serialization.FormerlySerializedAs("timeLimitField")]
     [SerializeField] private RoomSettingField spyCountField;
-    [UnityEngine.Serialization.FormerlySerializedAs("timeAttackField")]
-    [SerializeField] private RoomSettingField witchTimerField;
 
     // 서버 지역(EscapeVisualPlan.md §1.1, 2026-10-03 다시 살림 — Request1003Plan.md §1). 방은 한 지역 서버 안에만 있으므로
     // 지역을 고르지 않고 접속하면 PC마다 핑이 좋은 지역에 따로 붙어 서로의 방이 보이지 않는다 — 늘 고른 지역으로 접속한다.
@@ -67,7 +65,7 @@ public class LobbyController : MonoBehaviourPunCallbacks
         // #Critical: LoadLevel()이 방 전체에 씬 전환을 자동 동기화하게 함 (PunBasics-Tutorial 관례)
         PhotonNetwork.AutomaticallySyncScene = true;
         PhotonNetwork.GameVersion = GameVersion;
-        RoomState.HideSettingRow(witchTimerField); // 마녀 타이머는 10분 고정(§74 P8)
+        // 마녀 타이머 줄은 없앴다(§79 — 10분 고정, RoomState.WitchTimerMinutes)
         Debug.Log($"[Lobby] Game version {GameVersion} — only players with the same build version can see and join each other's rooms.");
     }
 

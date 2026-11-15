@@ -7,12 +7,12 @@ using UnityEngine.UI;
 // 서버 지역 고르기 줄을 만든다(2026-10-03, Request1003Plan.md §1).
 // - LobbyScene: 방 만들기 설정의 타임어택 칸 밑 "방 지역"(Row_Region) + 방 목록 아래 새로고침 옆 "볼 지역"(Row_ViewRegion).
 // - GameLobbyScene: 방 설정 창의 타임어택 칸 밑 "지역"(Row_Region).
-// 기존 마녀 타이머 줄(Row_WitchTimerMinutes)을 복제해 모양을 맞추고, 숫자 입력칸을 지역 이름 칸으로 바꾼다. 다시 실행하면 지우고 다시 만든다.
+// 기존 스파이 줄(Row_SpyCount, 예전에는 마녀 타이머 줄)을 복제해 모양을 맞추고, 숫자 입력칸을 지역 이름 칸으로 바꾼다. 다시 실행하면 지우고 다시 만든다.
 // 문구는 영문 기본값만 넣는다(코드에 한글 금지) — 한글 이름은 씬에서 입력한다.
 public static class RegionRowBuilder
 {
     private const string MenuPath = "Tools/TagOfChaos/UI/Build Region Rows";
-    private const string SourceRow = "Row_WitchTimerMinutes";
+    private const string SourceRow = "Row_SpyCount"; // 예전에는 마녀 타이머 줄 — §79에서 그 줄을 없앴다
     public const string RegionRow = "Row_Region";
     public const string ViewRegionRow = "Row_ViewRegion";
     private const float RowStep = 46f;   // 기존 설정 줄 간격

@@ -10288,3 +10288,53 @@ T 단계 시험 내용:
 - Play Mode(쿠키, 시간 1/100): 오른쪽을 보다가 왼쪽 키를 누르면 물리 한 번마다 14.4°씩 돈다(0 → −14 → −29 → −43 → −58 → −72 → −86 …). 한 번에 꺾이지 않는다 ✅
 - 술래는 같은 함수를 쓴다. 오프라인 방에 술래가 없어 Play Mode로 직접 보지는 못했다.
 - EditMode: `Request1117Tests.MoveTurn_TurnsAt720DegreesPerSecond` 등 10/10 ✅
+
+## 79. 로비(LobbyScene) 새 모양·마녀 타이머 설정 삭제(2026-11-15)
+
+- 요청: 받은 그림(고딕 판타지 보라·나무 UI)처럼 로비를 바꾸고, 쓰지 않는 마녀 타이머 설정을 없앤다.
+- 결정(사용자)
+  - 비밀번호 없음. 첫 칸 = 닉네임, 둘째 칸 = 방 이름(지금 기능 그대로).
+  - 마녀 타이머 줄을 지우고 남은 줄을 같은 간격으로 위로 당긴다.
+  - 국가는 ◀▶ 그대로(드롭다운 아님).
+  - 그림은 `ArtSource/LobbySource`의 4번째 시트에서 오려 쓴다.
+  - 효과: ① 마우스 올림·누름·선택 보라 빛 ② 보석 반짝임 ③ 방 만들기 빛줄기 + 마법 가루 ④ 배경 분위기(반딧불·포자·등불 깜빡임·달빛·안개).
+
+### 79.1 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| W1 | 마녀 타이머 줄 삭제: `RoomSettingField.Kind`에서 `WitchTimerMinutes` 빼기, `LobbyController`·`RoomSettingsMenu` 필드 정리, 두 씬의 `Row_WitchTimerMinutes` 삭제 후 위로 당김(`RoomState.WitchTimerMinutes = 10`은 그대로) | ✅ |
+| S1 | 시트에서 그림 20장 오려내기(체크 무늬 배경 지우기·가장자리 정리·2배 크기) → `Assets/08. Resources/LobbyUI/` | ✅ |
+| S2 | 9분할 가져오기 설정(버튼·입력칸·액자·목록 줄·스크롤·받침) | ✅ |
+| E1 | `UiHoverGlow` — 뒤에 보라 빛 0.15초, 누르면 0.96배, 입력칸은 선택하는 동안 | ✅ |
+| E2 | `UiGemSparkle` — 액자 네 귀퉁이·스크롤 손잡이 보석이 숨 쉬듯 빛나고 가끔 별 반짝임 | ✅ |
+| E3 | `UiShineSweep` — 방 만들기 버튼에 3.5초마다 빛줄기(버튼 모양으로 가림) + 보라 가루 | ✅ |
+| E4 | `LobbyAmbience` — 반딧불·포자 34개, 등불 5곳 깜빡임, 달빛, 안개 두 겹(위쪽은 서서히 사라짐) | ✅ |
+| I1 | 설치 도구 `Tools/TagOfChaos/UI/Apply Lobby Skin`(`LobbySkinInstaller`) — 기존 오브젝트에 그림·자리·글꼴·효과를 입힘(연결·기능 그대로), 한글 문구는 `Texts`로 받음, 여러 번 실행해도 같은 결과 | ✅ |
+| I2 | 방 목록 한 줄 프리팹(`RoomListItem`) 같은 모양 | ✅ |
+| T1 | 컴파일·콘솔·Play Mode 확인 | ✅ |
+
+- 효과는 모두 그림 파일 없이 코드로 만든 부드러운 빛·점·별·안개(`UiSoftSprites`)를 쓴다. 캔버스가 Screen Space - Overlay라 파티클 시스템 대신 UI 이미지 조각을 코드로 움직인다.
+
+### 79.2 결과(2026-11-15 에디터·Play Mode)
+
+- 바뀐 파일
+  - 코드: `Lobby/LobbyController.cs`, `GameManager/RoomSettingsMenu.cs`, `Lobby/RoomSettingField.cs`, `Editor/UI/RegionRowBuilder.cs`
+  - 새 코드: `UI/LobbySkin/UiSoftSprites.cs`·`UiHoverGlow.cs`·`UiGemSparkle.cs`·`UiShineSweep.cs`·`LobbyAmbience.cs`, `Editor/UI/LobbySkinInstaller.cs`
+  - 씬·프리팹: `Scenes/LobbyScene.unity`, `GameLobbyScene.unity`, `Resources/UI/Scene/LobbyPanel/LobbyPanel.prefab`, `Resources/UI/Scene/RoomListItem/RoomListItem.prefab`
+  - 그림: `08. Resources/LobbyUI/*.png` 20장 + meta
+- 고친 문제
+  - `LobbyPanel`이 프리팹 인스턴스라 장면에서 바꾼 값이 저장되지 않았다 → 덮어쓰기 기록 후 프리팹(이 장면만 씀)에 반영하고, 그리는 순서(목록 → 받침 → 버튼)는 프리팹 안에서 맞춘다. 처음에는 아래 받침이 방 만들기 버튼을 가렸다.
+  - 처음 실행 때 막 가져온 그림이 아직 스프라이트로 안 읽혀 일부가 빠졌다 → 다시 실행으로 해결(지금은 한 번에 됨).
+  - 안개 위 끝이 가로 줄로 보였다 → 안개 무늬 위쪽을 서서히 투명하게.
+  - 버튼 글자가 양 끝 장식에 겹쳤다 → 버튼 9분할 장식을 조금 작게(2.6), 글자 자동 크기, 작은 값 칸은 장식 3배 작게·굵은 진한 글씨.
+- Play Mode
+  - 화면: 배경·큰 액자·입력칸·랜덤 입장·장식선·설정 3줄(인원·스파이·국가)·방 목록 액자·스크롤·아래 받침(새로고침·볼 국가·방 만들기)·설정 버튼 모두 그림으로 나옴(`sfx_preview/lobby_e.png`)
+  - 마우스 올림 빛(랜덤 입장·새로고침)·입력칸 선택 빛 확인(`lobby_hover.png`)
+  - 방 목록 줄 4개 넣어 모양 확인(`lobby_list.png`)
+  - 기능: 볼 국가 ◀▶(한국 → 일본 → 한국)·인원 ◀▶(5 → 4 → 5)·스파이 ◀▶(0 → 1)·새로고침 오류 없음, 방 만들기 → `GameLobbyScene` 입장(최대 5명) 확인
+  - 대기실 방 설정 창: 인원·스파이·국가 3줄만 나옴(`gamelobby_settings.png`)
+  - 콘솔 오류·경고 0(창이 뒤에 있을 때 나오는 방장 1 fps 안내만)
+- 남은 점
+  - 배경 그림은 받은 시트에서 약 785 px 너비를 1920으로 키운 것이라 조금 흐리다. 더 큰 원본을 주면 바꿔 넣는다.
+  - 랜덤 입장은 실제 서버의 다른 방에 들어갈 수 있어 눌러 보지 않았다(코드·연결은 그대로).
