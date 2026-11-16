@@ -194,6 +194,7 @@ public static class SoundDefaults
             case 7: // 맵 연출
                 World(e, 60f, 2);
                 e.importance = SoundImportance.High;
+                if (id >= SoundId.BreakWood && id <= SoundId.CrumbleBody) e.maxInstances = 4; // 마녀가 내리치면 여럿이 한꺼번에 부서진다(§82)
                 if (id == SoundId.CoasterRoll || id == SoundId.CoasterChain)
                 {
                     e.pitchRange = Vector2.one; // 반복음 — 열차가 판 내내 돌므로 배경음보다 작게
@@ -271,7 +272,11 @@ public static class SoundDefaults
             case SoundId.BalloonSplash: falloff = SoundFalloff.Action; min = 2f; max = 22f; return;
             case SoundId.HammerSwing: falloff = SoundFalloff.Action; min = 1.5f; max = 12f; return;
             case SoundId.HammerBonk: falloff = SoundFalloff.Action; min = 2f; max = 20f; return;
-            case SoundId.FlashBang: falloff = SoundFalloff.Heavy; min = 3f; max = 35f; return;   // 섬광탄 — 반경(6 m)보다 훨씬 멀리
+            case SoundId.FlashBang: falloff = SoundFalloff.Heavy; min = 3f; max = 35f; return;
+            case SoundId.BreakWood: case SoundId.BreakMetal: case SoundId.BreakCandy: case SoundId.BreakTent:
+                falloff = SoundFalloff.Landmark; min = 4f; max = 45f; return;        // 부서짐(§82) — 거대 괴물이 지나가는 길이 들린다
+            case SoundId.CollapseBuilding: falloff = SoundFalloff.Landmark; min = 8f; max = 80f; return;
+            case SoundId.CrumbleBody: falloff = SoundFalloff.Action; min = 2f; max = 30f; return;   // 섬광탄 — 반경(6 m)보다 훨씬 멀리
             case SoundId.GlovePunch: falloff = SoundFalloff.Action; min = 2f; max = 18f; return;
             case SoundId.Cough: falloff = SoundFalloff.Action; min = 2f; max = 35f; return; // 술래(던진 자리 10 m 앞 + 반경 12 m)에게 들리게(§69 F6)
             case SoundId.SirenAlarm: falloff = SoundFalloff.Landmark; min = 8f; max = 60f; return; // 사이렌 — 멀리서도 '어디가 갇혔다'를 알 수 있게

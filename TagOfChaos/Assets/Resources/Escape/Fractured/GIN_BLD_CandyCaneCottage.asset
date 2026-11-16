@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_BLD_CandyCaneCottage
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 1fc9a2ba3313da74985bd1fd542334af, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 67da75c890f82c24ea570ea4849a2068, type: 3}
+  - {fileID: -1609281748187839663, guid: 67da75c890f82c24ea570ea4849a2068, type: 3}
+  - {fileID: 723096430288179899, guid: 67da75c890f82c24ea570ea4849a2068, type: 3}
+  - {fileID: 1963079803359675471, guid: 67da75c890f82c24ea570ea4849a2068, type: 3}
+  pushes:
+  - {x: -0.99679863, y: -0.079953626, z: 0}
+  - {x: 0.9993641, y: 0.03565839, z: 0}
+  - {x: 0.12681565, y: 0.9919263, z: 0.00000032301426}
+  - {x: -0.04072871, y: -0.9991702, z: -0.0000003259839}
+  style: 6

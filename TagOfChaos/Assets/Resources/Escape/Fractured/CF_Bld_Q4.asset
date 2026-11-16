@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: CF_Bld_Q4
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 9ce035110aa56aa418daa1e96afd767a, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 236bde97a1a22ab41ae0d5ecc9d22645, type: 3}
+  - {fileID: -1609281748187839663, guid: 236bde97a1a22ab41ae0d5ecc9d22645, type: 3}
+  - {fileID: 723096430288179899, guid: 236bde97a1a22ab41ae0d5ecc9d22645, type: 3}
+  - {fileID: 1963079803359675471, guid: 236bde97a1a22ab41ae0d5ecc9d22645, type: 3}
+  pushes:
+  - {x: -0.9984367, y: -0.05589476, z: 0}
+  - {x: 0.99986017, y: 0.016723787, z: 0}
+  - {x: 0.053821187, y: 0.9985506, z: 0.00000041204865}
+  - {x: 0.031047976, y: -0.99951786, z: -0.00000035944177}
+  style: 6

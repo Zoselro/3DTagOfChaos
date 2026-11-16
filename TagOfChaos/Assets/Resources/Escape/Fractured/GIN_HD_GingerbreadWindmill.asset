@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_HD_GingerbreadWindmill
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 2ec811b7dca45cd46a7e1e49c12c9791, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 36aeb8a135f2be242a026209ecc306ef, type: 3}
+  - {fileID: -1609281748187839663, guid: 36aeb8a135f2be242a026209ecc306ef, type: 3}
+  - {fileID: 723096430288179899, guid: 36aeb8a135f2be242a026209ecc306ef, type: 3}
+  - {fileID: 1963079803359675471, guid: 36aeb8a135f2be242a026209ecc306ef, type: 3}
+  pushes:
+  - {x: -0.9997872, y: 0.020626847, z: 0}
+  - {x: 0.99961144, y: 0.027875535, z: 0}
+  - {x: -0.08275704, y: 0.9965698, z: 0.00000043139062}
+  - {x: -0.057489954, y: -0.9983461, z: -0.00000043239672}
+  style: 6

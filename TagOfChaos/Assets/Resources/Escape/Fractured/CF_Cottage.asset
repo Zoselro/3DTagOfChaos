@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: CF_Cottage
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: a6b2ee7126be38d4ebd7e9e6006d690c, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 7cf6a17dd46e7fe4faa01c0594f03310, type: 3}
+  - {fileID: -1609281748187839663, guid: 7cf6a17dd46e7fe4faa01c0594f03310, type: 3}
+  - {fileID: 723096430288179899, guid: 7cf6a17dd46e7fe4faa01c0594f03310, type: 3}
+  - {fileID: 1963079803359675471, guid: 7cf6a17dd46e7fe4faa01c0594f03310, type: 3}
+  pushes:
+  - {x: -0.9992233, y: 0.039406255, z: 0}
+  - {x: 0.99996305, y: -0.008592271, z: 0}
+  - {x: -0.012489683, y: 0.999922, z: 0.0000004327852}
+  - {x: 0.0529531, y: -0.998597, z: -0.0000003821523}
+  style: 6

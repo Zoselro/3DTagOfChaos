@@ -6,7 +6,7 @@ using UnityEngine;
 
 // 거대 괴물이 술래방을 부수며 나온다(Request1009Plan.md §81 R, 사용자 결정). EscapeManager.Start가 붙인다.
 // - 거대 괴물은 술래방 가운데에서 솟아오른다(GiantBrain.TryPickSpawn). 솟기 시작하는 순간(GiantRules.RevealStart) 모든 화면이 같은 시각에
-//   술래방 전체(벽·지붕·문·장식)를 건물처럼 무너뜨린다(DestructionPresenter — 조각 모델 없는 건물 연출: 숨김·잔해·먼지·흔들림·소리).
+//   술래방 전체(벽·지붕·문·장식)를 건물처럼 무너뜨린다(DestructionPresenter — §82 조각 모델 MonsterRoom_<씬> + 구운 애니메이션·잔해·먼지·흔들림·소리).
 //   바닥(방 바닥 높이 + FloorTop 아래)과 진저브레드 괴물 엘리베이터는 남긴다.
 // - 무너진 뒤에는 술래방 가드(쿠키 내보내기)와 술래방 문을 끈다 — 그 판 동안 술래방 자리는 그냥 땅이다(다음 판은 맵을 다시 읽어 원래대로).
 // - 그 순간 술래방 안에 있던 사람(술래 포함)은 밟혀 죽는다 — 방장만 판정(거대 괴물 밟기와 같은 방 속성).
@@ -24,6 +24,7 @@ public class MonsterRoomBreak : MonoBehaviour
     {
         manager = owner;
         Broken = false;
+        if (owner != null && owner.MonsterRoom != null) FracturedModels.Request(FractureNameFor(owner.MonsterRoom)); // 솟기 전에 미리 읽어 둔다(§82)
     }
 
     private void OnDestroy() => Broken = false;
@@ -89,10 +90,13 @@ public class MonsterRoomBreak : MonoBehaviour
         return new DestructibleUnit
         {
             Id = -1, Grade = DestructibleGrade.Building, Root = room, ModelRoot = room,
+            FractureName = FractureNameFor(room), // §82: Blender로 미리 조각낸 술래방(바닥·엘리베이터 뺀 부분) + 바깥으로 무너지는 애니메이션
             Bounds = b, Zone = b, Level = (int)DestructibleGrade.Building,
             Renderers = renderers.ToArray(), Colliders = colliders.ToArray(), Lights = lights.ToArray(),
         };
     }
+
+    public static string FractureNameFor(Transform room) => "MonsterRoom_" + room.gameObject.scene.name;
 
     // 무너질 때 술래방 안에 있던 사람은 밟혀 죽는다(사용자 결정) — 거대 괴물 밟기(GiantBrain.Judge)와 같은 값.
     private void KillInside()

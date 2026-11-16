@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 부서지는 물체 연출(Request1009Plan.md §66.5·66.6). DestructionNet.LevelChanged를 받아 모든 화면이 각자 보여 준다(판정에는 쓰지 않음).
-// - 맞은 단계(부서지기 전): 밟힌 쪽 표면에 금 간 데칼(메시 판) + 흔들림 + 먼지.
-// - 소품: 0.1초 부풀었다가 숨기고, 그 재질의 조각이 튀고 먼지.
-// - 텐트: 기울며 주저앉은 뒤 숨기고 조각·먼지.
-// - 건물: 원본을 숨기고 Blender 조각 모델을 같은 자리에 켜서 아래부터 무너뜨린다(가벼운 자체 낙하 — 물리 엔진 안 씀).
-//   4초 뒤 작은 조각은 제자리에서 투명해지며 사라지고(§74 P18) 큰 잔해 몇 개만 남는다. 동시에 MaxCollapsing채까지, 멀면(FarDistance) 조각 없이 먼지만.
+// - 맞은 단계(부서지기 전): 밟힌 쪽 표면에 금 간 데칼(메시 판) + 흔들림 + 먼지. 무너지기 한 번 전에는 조각 모델에서
+//   맞은 자리의 작은 조각 2~3개가 떨어져 나간다(ChipPieces, §82 — 명세서 2단계 "큰 균열 + 소량 파편").
+// - 부서짐(§82): 모든 물체(소품·텐트·건물·계단·술래방)가 Blender로 미리 조각낸 모델 + 미리 구운 무너지는 애니메이션(FracturePlayer)으로
+//   원본 자리에서 무너진다. 예전의 큐브 조각은 없앴다. 소리는 재질 묶음별(나무·금속 껍데기·사탕/돌·텐트·건물 붕괴).
+//   - 소품·텐트: 바깥으로 터지는 애니메이션 → 잠시 뒤 작아지며 사라짐(같은 종류는 조각 인스턴스를 다시 씀).
+//   - 건물·계단·술래방: 맞은 방향(거대 괴물 → 물체) 애니메이션 → 작은 조각은 제자리에서 투명해지며 사라지고(§74 P18) 큰 잔해 몇 개만 남는다.
+//     구운 애니메이션이 없는 조각 모델은 예전처럼 가벼운 자체 낙하. 동시에 MaxCollapsing채까지.
+//   - 멀면(FarDistance) 또는 조각 모델이 없으면 조각 없이 먼지만(큐브 없음).
 // - 늦게 들어온 화면(animate = false): 연출 없이 숨긴다.
 public class DestructionPresenter : MonoBehaviour
 {
@@ -16,8 +19,8 @@ public class DestructionPresenter : MonoBehaviour
     private const float Gravity = 18f;
     private const float SettleSeconds = 4f, FadeSeconds = 1.5f, FadeEndScale = 0.7f;
     private const int RubbleKept = 8;
-    private const int MaxPieces = 120;
-    private const float PieceLife = 2.2f;
+    private const float PropHoldSeconds = 2.5f, TentHoldSeconds = 4f; // 소품·텐트 조각이 땅에 남아 있는 시간(그 뒤 작아지며 사라짐)
+    private const int ChipCount = 3;
     private const float ModelWaitSeconds = 3f; // 무너질 때 조각 모델을 아직 읽는 중이면 이만큼 기다린다(§73.11)
 
     private DestructionNet net;
@@ -25,11 +28,6 @@ public class DestructionPresenter : MonoBehaviour
     private readonly Dictionary<int, List<GameObject>> decals = new Dictionary<int, List<GameObject>>();
     private readonly Queue<DestructibleUnit> waiting = new Queue<DestructibleUnit>();
     private int collapsing;
-
-    // 튀는 조각(소품·텐트) — 풀
-    private struct Piece { public Transform T; public Rigidbody Body; public Renderer R; public float Born; public Vector3 Scale; }
-    private readonly List<Piece> pieces = new List<Piece>();
-    private readonly Stack<Piece> pool = new Stack<Piece>();
 
     private void Start()
     {
@@ -43,19 +41,55 @@ public class DestructionPresenter : MonoBehaviour
         if (quad != null) Destroy(quad);
     }
 
-    // 조각 모델(§73.11): 건물이 처음 맞으면 그 건물 것만 비동기로 읽기 시작한다(4번 맞아야 무너지므로 시간이 충분하다).
-    private static GameObject ResolveModel(DestructibleUnit u, out bool loading)
+    // 조각 모델(§73.11): 물체가 처음 맞으면 그 물체 것만 비동기로 읽기 시작한다(건물은 4번 맞아야 무너지므로 시간이 충분하다.
+    // 소품은 한 번에 부서지므로 읽는 몇 프레임 동안 원본이 그대로 서 있다가 무너진다).
+    public static FracturedModelSO ResolveSet(DestructibleUnit u, out bool loading)
     {
         loading = false;
-        if (u.FracturePrefab != null || string.IsNullOrEmpty(u.FractureName)) return u.FracturePrefab;
+        if (u.FractureSet != null || string.IsNullOrEmpty(u.FractureName)) return u.FractureSet;
         FracturedModels.Request(u.FractureName);
-        u.FracturePrefab = FracturedModels.Get(u.FractureName, out loading);
-        return u.FracturePrefab;
+        u.FractureSet = FracturedModels.GetSet(u.FractureName, out loading);
+        return u.FractureSet;
+    }
+
+    private IEnumerator WaitSet(DestructibleUnit u)
+    {
+        float waitUntil = Time.time + ModelWaitSeconds;
+        while (ResolveSet(u, out bool loading) == null && loading && Time.time < waitUntil) yield return null;
+    }
+
+    // 미는 방향(세계, 수평): 거대 괴물이 밟은 자리 → 물체. 모르면 0(첫 애니메이션).
+    public static Vector3 PushDirection(DestructibleUnit u)
+    {
+        if (!GiantState.TryGetCurrent(out GiantState s) || s.StompAt <= 0) return Vector3.zero;
+        Vector3 d = u.Center - s.StompCenter;
+        d.y = 0f;
+        return d.sqrMagnitude > 1e-4f ? d.normalized : Vector3.zero;
+    }
+
+    // 재질 묶음별 부서지는 소리(§82 Q3)
+    public static SoundId SoundFor(FracturedModelSO set, DestructibleGrade grade)
+    {
+        if (set == null) return grade == DestructibleGrade.Building || grade == DestructibleGrade.Stairs ? SoundId.CollapseBuilding : SoundId.BreakCandy;
+        switch (set.Style)
+        {
+            case FractureStyle.Wood: return SoundId.BreakWood;
+            case FractureStyle.Shell: return SoundId.BreakMetal;
+            case FractureStyle.Panel: return SoundId.BreakTent;
+            case FractureStyle.Room: case FractureStyle.Building: return SoundId.CollapseBuilding;
+            default: return grade == DestructibleGrade.Stairs ? SoundId.CollapseBuilding : SoundId.BreakCandy;
+        }
+    }
+
+    private static bool IsFar(DestructibleUnit u)
+    {
+        Camera cam = Camera.main;
+        return cam == null || Vector3.Distance(cam.transform.position, u.Center) > FarDistance + u.Bounds.extents.magnitude;
     }
 
     private void OnLevel(DestructibleUnit u, int from, int to, bool animate)
     {
-        ResolveModel(u, out _);
+        ResolveSet(u, out _);
         if (!animate)
         {
             ClearDecals(u);
@@ -69,14 +103,15 @@ public class DestructionPresenter : MonoBehaviour
         if (!u.Broken)
         {
             AddDecal(u, to);
+            if (to == u.HitsToBreak - 1 && u.Grade != DestructibleGrade.Tent) StartCoroutine(ChipPieces(u));
             StartCoroutine(Wobble(u, u.Grade == DestructibleGrade.Building ? 0.12f : 0.18f, 0.35f));
             Dust(u.Bounds.ClosestPoint(StompPoint(u)), Mathf.Clamp(Mathf.Max(u.Bounds.size.x, u.Bounds.size.z) * 0.15f, 1f, 3f), 14);
             return;
         }
         switch (u.Grade)
         {
-            case DestructibleGrade.Prop: StartCoroutine(PropBreak(u)); break;
-            case DestructibleGrade.Tent: StartCoroutine(TentBreak(u)); break;
+            case DestructibleGrade.Prop: StartCoroutine(SmallBreak(u, PropHoldSeconds, 0f)); break;
+            case DestructibleGrade.Tent: StartCoroutine(SmallBreak(u, TentHoldSeconds, 0.25f)); break;
             default:
                 waiting.Enqueue(u);
                 break;
@@ -99,7 +134,6 @@ public class DestructionPresenter : MonoBehaviour
     private void Update()
     {
         while (collapsing < MaxCollapsing && waiting.Count > 0) StartCoroutine(Collapse(waiting.Dequeue()));
-        UpdatePieces();
     }
 
     // ---------------- 데칼 ----------------
@@ -200,41 +234,64 @@ public class DestructionPresenter : MonoBehaviour
         if (t != null) t.localPosition = rest;
     }
 
-    private IEnumerator PropBreak(DestructibleUnit u)
+    // 소품·텐트(§82): 원본을 숨기고 그 자리에서 조각 모델이 바깥으로 터진다 → hold초 뒤 작아지며 사라짐.
+    private IEnumerator SmallBreak(DestructibleUnit u, float hold, float shake)
     {
-        Transform t = u.Root;
-        Vector3 scale = t.localScale;
-        for (float e = 0f; e < 0.1f; e += Time.deltaTime)
-        {
-            t.localScale = scale * (1f + 0.12f * e / 0.1f);
-            yield return null;
-        }
-        t.localScale = scale;
-        Debris(u, Mathf.Clamp(Mathf.RoundToInt(u.Bounds.size.magnitude), 3, 8));
+        yield return WaitSet(u);
+        ClearDecals(u);
+        FracturedModelSO set = u.FractureSet;
         DestructionNet.SetBroken(u, true);
-        Dust(u.Center, Mathf.Clamp(u.Bounds.extents.magnitude, 0.6f, 2.5f), 10);
+        GameAudio.PlayAt(SoundFor(set, u.Grade), u.Center);
+        float wide = Mathf.Max(u.Bounds.size.x, u.Bounds.size.z);
+        Dust(u.Center - Vector3.up * u.Bounds.extents.y * 0.4f, Mathf.Clamp(wide * 0.5f, 0.6f, 5f), u.Grade == DestructibleGrade.Tent ? 26 : 10);
+        if (shake > 0f) Shake(u.Center, shake, 35f, 0.4f);
+        if (set != null && !IsFar(u)) FracturePlayer.Play(set, u.ModelRoot, PushDirection(u), hold, true);
     }
 
-    private IEnumerator TentBreak(DestructibleUnit u)
+    // 무너지기 한 번 전(§82): 조각 모델에서 맞은 자리에 가까운 작은 조각 몇 개가 떨어져 나간다(원본은 그대로 — 겉면에서 떨어지는 것처럼 보인다).
+    private IEnumerator ChipPieces(DestructibleUnit u)
     {
-        ClearDecals(u);
-        Transform t = u.Root;
-        Vector3 pos = t.position;
-        Quaternion rot = t.rotation;
-        Vector3 axis = Vector3.Cross(Vector3.up, Random.onUnitSphere).normalized;
-        float sink = u.Bounds.size.y * 0.55f;
-        GameAudio.PlayAt(SoundId.WitchShatter, u.Center);
-        for (float e = 0f; e < 0.6f; e += Time.deltaTime)
+        FracturedModelSO set = ResolveSet(u, out _);
+        if (set == null || set.Model == null || IsFar(u)) yield break;
+        var wrap = new GameObject(u.Root.name + "_Chips");
+        wrap.transform.SetPositionAndRotation(u.ModelRoot.position, u.ModelRoot.rotation);
+        wrap.transform.localScale = u.ModelRoot.lossyScale;
+        GameObject inst = Instantiate(set.Model, wrap.transform, false);
+        Vector3 at = u.Bounds.ClosestPoint(StompPoint(u));
+        var all = new List<Renderer>(inst.GetComponentsInChildren<Renderer>());
+        all.Sort((a, b) => (a.bounds.center - at).sqrMagnitude.CompareTo((b.bounds.center - at).sqrMagnitude));
+        var near = all.GetRange(0, Mathf.Min(all.Count, ChipCount * 4));
+        near.Sort((a, b) => a.bounds.size.sqrMagnitude.CompareTo(b.bounds.size.sqrMagnitude)); // 가까운 것 중 작은 것
+        var chips = new List<Fragment>();
+        for (int i = 0; i < near.Count && chips.Count < ChipCount; i++)
         {
-            float k = e / 0.6f;
-            t.SetPositionAndRotation(pos - Vector3.up * sink * k * k, Quaternion.AngleAxis(14f * k, axis) * rot);
+            Bounds b = near[i].bounds;
+            Vector3 out2 = new Vector3(b.center.x - u.Center.x, 0f, b.center.z - u.Center.z);
+            out2 = out2.sqrMagnitude > 0.01f ? out2.normalized : Random.insideUnitSphere;
+            near[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            chips.Add(new Fragment { T = near[i].transform, V = out2 * Random.Range(1f, 2.5f) + Vector3.up * Random.Range(0.5f, 1.5f), W = Random.insideUnitSphere * 60f, Half = Mathf.Max(0.1f, Mathf.Min(b.extents.x, b.extents.y, b.extents.z)) });
+        }
+        foreach (Renderer r in all)
+            if (!chips.Exists(f => f.T == r.transform)) Destroy(r.gameObject);
+        float groundY = u.Bounds.min.y;
+        for (float e = 0f; e < 1.8f; e += Time.deltaTime)
+        {
+            float dt = Time.deltaTime, k = e < 1.4f ? 1f : 1f - (e - 1.4f) / 0.4f;
+            foreach (Fragment f in chips)
+            {
+                if (f.T == null) continue;
+                if (!f.Resting)
+                {
+                    f.V.y -= Gravity * dt;
+                    f.T.position += f.V * dt;
+                    f.T.Rotate(f.W * dt, Space.World);
+                    if (f.T.position.y < groundY + f.Half) { Vector3 p = f.T.position; p.y = groundY + f.Half; f.T.position = p; f.Resting = true; }
+                }
+                if (k < 1f) f.T.localScale *= Mathf.Max(0f, 1f - dt / 0.4f);
+            }
             yield return null;
         }
-        Debris(u, 8);
-        DestructionNet.SetBroken(u, true);
-        t.SetPositionAndRotation(pos, rot); // 숨긴 뒤 제자리(남기는 부분이 있으면 그대로)
-        Dust(u.Center - Vector3.up * u.Bounds.extents.y * 0.5f, Mathf.Clamp(Mathf.Max(u.Bounds.size.x, u.Bounds.size.z) * 0.5f, 2f, 5f), 26);
-        Shake(u.Center, 0.25f, 35f, 0.4f);
+        Destroy(wrap);
     }
 
     // ---------------- 건물 붕괴 ----------------
@@ -310,13 +367,19 @@ public class DestructionPresenter : MonoBehaviour
         collapsing++;
         try
         {
-            float waitUntil = Time.time + ModelWaitSeconds;
-            while (ResolveModel(u, out bool loading) == null && loading && Time.time < waitUntil) yield return null;
+            yield return WaitSet(u);
             ClearDecals(u);
-            Camera cam = Camera.main;
-            bool far = cam == null || Vector3.Distance(cam.transform.position, u.Center) > FarDistance + u.Bounds.extents.magnitude;
+            bool far = IsFar(u);
+            FracturedModelSO set = u.FractureSet;
             GameObject inst = null;
-            if (!far && u.FracturePrefab != null)
+            FracturePlayer player = null;
+            if (!far && set != null && set.ClipCount > 0)
+            {
+                player = FracturePlayer.Play(set, u.ModelRoot, PushDirection(u), -1f, false); // 구운 애니메이션(§82)
+                inst = player != null ? player.gameObject : null;
+                if (inst != null) inst.name = u.Root.name + "_Collapse";
+            }
+            else if (!far && u.FracturePrefab != null)
             {
                 inst = Instantiate(u.FracturePrefab, u.ModelRoot, false); // 조각 모델은 원본 노드 기준 좌표로 만들었다(크기·회전 그대로)
                 inst.transform.SetParent(null, true);
@@ -324,16 +387,12 @@ public class DestructionPresenter : MonoBehaviour
             }
             DestructionNet.SetBroken(u, true);
             RubbleGround(u);
-            GameAudio.PlayAt(SoundId.WitchShatter, u.Center);
+            GameAudio.PlayAt(SoundFor(set, u.Grade), u.Center);
             Shake(u.Center, 0.6f, 60f, 0.8f);
             float footprint = Mathf.Max(u.Bounds.size.x, u.Bounds.size.z);
             float groundY = u.Bounds.min.y;
             Dust(new Vector3(u.Center.x, groundY + 1f, u.Center.z), Mathf.Clamp(footprint * 0.45f, 3f, 14f), 60);
-            if (inst == null)
-            {
-                if (!far) Debris(u, 14); // 조각 모델이 없는 것(계단): 그 재질 조각만 튄다
-                yield break;
-            }
+            if (inst == null) yield break; // 멀거나 조각 모델이 없으면 먼지만(큐브 없음)
 
             var frags = new List<Fragment>();
             float height = Mathf.Max(1f, u.Bounds.size.y);
@@ -354,7 +413,9 @@ public class DestructionPresenter : MonoBehaviour
                 });
             }
             float start = Time.time;
-            while (Time.time - start < SettleSeconds)
+            if (player != null) // 구운 애니메이션이 끝날 때까지(자체 낙하 없음)
+                while (player != null && !player.Finished && Time.time - start < player.Length + 1f) yield return null;
+            while (player == null && Time.time - start < SettleSeconds)
             {
                 float now = Time.time - start, dt = Time.deltaTime;
                 foreach (Fragment f in frags)
@@ -460,63 +521,6 @@ public class DestructionPresenter : MonoBehaviour
     }
 
     // ---------------- 조각·먼지·흔들림 ----------------
-
-    private void Debris(DestructibleUnit u, int count)
-    {
-        Material mat = null;
-        foreach (Renderer r in u.Renderers) if (r != null && r.sharedMaterial != null) { mat = r.sharedMaterial; break; }
-        if (mat == null) return;
-        Vector3 size = u.Bounds.size;
-        Vector3 origin = StompPoint(u) - Vector3.up * 3f;
-        for (int i = 0; i < count && pieces.Count < MaxPieces; i++)
-        {
-            Piece p = pool.Count > 0 ? pool.Pop() : NewPiece();
-            Vector3 s = Vector3.Max(size / Mathf.Pow(count, 1f / 3f) * Random.Range(0.35f, 0.7f), Vector3.one * 0.12f);
-            s = Vector3.Min(s, Vector3.one * 1.6f);
-            p.Scale = s;
-            p.T.localScale = s;
-            p.T.SetPositionAndRotation(u.Center + Vector3.Scale(Random.insideUnitSphere * 0.4f, size), Random.rotation);
-            p.R.sharedMaterial = mat;
-            p.T.gameObject.SetActive(true);
-            Vector3 away = u.Center - origin; away.y = 0f;
-            away = away.sqrMagnitude > 0.01f ? away.normalized : Random.insideUnitSphere;
-            p.Body.linearVelocity = (away + Random.insideUnitSphere * 0.6f) * Random.Range(3f, 8f) + Vector3.up * Random.Range(3f, 7f);
-            p.Body.angularVelocity = Random.insideUnitSphere * 8f;
-            p.Born = Time.time;
-            pieces.Add(p);
-        }
-    }
-
-    private Piece NewPiece()
-    {
-        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        go.name = "DestructionPiece";
-        go.layer = 2; // Ignore Raycast: 바닥에는 떨어지고 검사에는 걸리지 않는다
-        go.transform.SetParent(transform, false);
-        var body = go.AddComponent<Rigidbody>();
-        body.mass = 0.3f;
-        body.interpolation = RigidbodyInterpolation.Interpolate;
-        var r = go.GetComponent<Renderer>();
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        return new Piece { T = go.transform, Body = body, R = r };
-    }
-
-    private void UpdatePieces()
-    {
-        for (int i = pieces.Count - 1; i >= 0; i--)
-        {
-            Piece p = pieces[i];
-            float age = Time.time - p.Born;
-            if (age < PieceLife)
-            {
-                if (age > PieceLife - 0.5f) p.T.localScale = p.Scale * ((PieceLife - age) / 0.5f);
-                continue;
-            }
-            p.T.gameObject.SetActive(false);
-            pool.Push(p);
-            pieces.RemoveAt(i);
-        }
-    }
 
     private static void Dust(Vector3 at, float radius, int count)
     {

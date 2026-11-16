@@ -445,11 +445,9 @@ public static class CandyForestAssets
         if (repair == null) repair = Child(root, "Repair_Point");
         repair.localPosition = new Vector3(px, RepairHeight, pz + ped.radius + 0.5f);
         repair.localRotation = Quaternion.identity;
-        // 꽂는 자리: 바닥에서 올라온 작은 받침(위가 손 높이) — 원판만 두면 공중에 떠 보였다(10-21)
-        float socketTop = repair.localPosition.y - 0.2f;
-        Transform socket = Primitive(root, "Socket_Bld", PrimitiveType.Cylinder, new Vector3(repair.localPosition.x, socketTop / 2f, repair.localPosition.z),
-            new Vector3(0.9f, socketTop / 2f, 0.9f), LoadMaterial(SocketMaterial));
-        socket.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // 꽂는 자리 원기둥(Socket_Bld)은 없앴다(Request1009Plan.md §83, 사용자 요청) — 재료는 받침대에 꽂힌다. 예전 것이 남아 있으면 지운다.
+        foreach (Transform old in root.GetComponentsInChildren<Transform>(true).Where(t => t.name == "Socket_Bld").ToArray())
+            UnityEngine.Object.DestroyImmediate(old.gameObject);
         // 가동 빛기둥: 받침대에서 지붕을 뚫고 위로(밖에서도 보이게)
         // 받침대 한가운데에서 바닥부터 올라간다 — 받침대 속을 지나 꼭대기에서 솟고 지붕을 뚫는다
         // (공중에서 시작하면 떠 보이고(10-20), 꽂는 자리에 두면 받침대 옆에 붙어 보였다(10-21))

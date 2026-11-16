@@ -71,6 +71,13 @@ public static class CandyForestMapBuilder
         int lights = BuildLights(scene, map);
 
         string escape = EscapeMapSetup.Apply(scene, MapName);
+        Transform roomT = map.Find("MonsterRoom");
+        var roomGuard = roomT != null ? roomT.GetComponent<MonsterRoomGuard>() : null;
+        if (roomGuard != null)   // 둥근 방(§83)이라 RoomWall_ 면이 없다 — 안쪽 정사각형 반 폭을 직접 준다(진저브레드·초콜릿 공장과 같음)
+        {
+            roomGuard.EditorBind(GuardInnerHalf, roomT.GetComponentsInChildren<MonsterRoomDoor>(true).Select(d => d.transform).OrderBy(t => t.name).ToArray());
+            EditorUtility.SetDirty(roomGuard);
+        }
         var manager = Object.FindFirstObjectByType<EscapeManager>();
         if (manager != null)
         {
@@ -338,60 +345,47 @@ public static class CandyForestMapBuilder
         return 0f;
     }
 
-    // 술래방(§32): 문을 동서남북 벽 가운데로 — 예전 대각선 문은 재료 건물 쪽을 바로 봐서 술래가 문에서 꽂는 곳을 지켜볼 수 있었다.
-    // 대각선 모서리 조각은 지우고 네모 방(벽 안쪽 면 ±RoomHalf−0.3)으로, 벽마다 가운데를 문 폭만큼 비워 두 조각으로 나눈다.
-    // 문(MonsterDoor_0~3 = 북·동·남·서)은 괴물만 지나감(S11). 바닥은 용암 타일, 빨간 상자는 문 앞을 막지 않게 바깥 모서리 대각선에, 제단은 안쪽 모서리에.
-    private const float RoomWallOuter = CandyForestLayout.RoomHalf + 0.3f;
-    private const float BoxCornerGap = 4f; // 방 모서리와 빨간 상자 사이 — 괴물(몸 지름 3.6 m)이 모서리를 돌아갈 수 있게
+    // 술래방 = 무너진 과자 오두막(§83, Blender gin/cfroom.py — 둥근 방 벽 안쪽 11.9 m·바깥 12.55 m, 문 12·3·6·9시 폭 4 m).
+    // 모델(벽·창·쓰러진 지붕·사탕 지팡이 문기둥) + 바닥(따로 — 거대 괴물이 부숴도 남음) + 겹친 상자 고리 충돌(높이 9 m) + 막대 사탕 창살 문
+    // (MonsterDoor_0~3 = 북·동·남·서, 괴물만 지나감). 쿠키 내보내기 안쪽 반 폭 8 m(둥근 방 — 진저브레드·초콜릿 공장과 같음).
+    public const float RoomInner = 11.9f, RoomOuter = 12.55f, RoomDoorWidth = 4f, RoomWallHeight = 9f, GuardInnerHalf = 8f;
+    private static readonly float[] RoomAxisDeg = { 90f, 0f, 270f, 180f };   // N, E, S, W
 
     private static void BuildMonsterRoom(Transform map)
     {
         Transform room = map.Find("MonsterRoom");
-        Material wall = PlainMaterial("CF_RoomWall", new Color(0.32f, 0.08f, 0.1f));
-        foreach (Transform corner in room.Cast<Transform>().Where(t => t.name.StartsWith("RoomCorner_")).ToList()) Object.DestroyImmediate(corner.gameObject);
-        Transform[] doors = room.GetComponentsInChildren<MonsterRoomDoor>(true).Select(d => d.transform).OrderBy(t => t.name).ToArray();
-        string[] sides = { "N", "E", "S", "W" };
+        Transform spawn = room.Find("Spawn_Monster");
+        Vector3 spawnPos = spawn != null ? spawn.position : room.position;
+        foreach (Transform c in room.Cast<Transform>().Where(t => t != spawn).ToList()) Object.DestroyImmediate(c.gameObject);
+        room.localRotation = Quaternion.identity;
+        room.localScale = Vector3.one;
+        if (spawn == null) { spawn = new GameObject("Spawn_Monster").transform; spawn.SetParent(room, false); }
+        spawn.position = spawnPos;
+        spawn.rotation = Quaternion.identity;
+        foreach (string n in new[] { "CF_MonsterRoom", "CF_MonsterRoomFloor" })
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{CandyForestAssets.PrefabDir}/{n}.prefab");
+            if (asset == null) { Debug.LogWarning("[CandyForestMap] prefab missing " + n); continue; }
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(asset, room);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.name = n == "CF_MonsterRoom" ? "Model" : "Floor";
+            GameObjectUtility.SetStaticEditorFlags(go, StaticEditorFlags.BatchingStatic | StaticEditorFlags.OccludeeStatic | StaticEditorFlags.OccluderStatic);
+        }
+        RoundMapKit.RoomRing(room, RoomInner, RoomOuter, RoomWallHeight, RoomDoorWidth, RoomAxisDeg);
+        var doorModel = AssetDatabase.LoadAssetAtPath<GameObject>($"{CandyForestAssets.PrefabDir}/CF_MonsterRoomDoor.prefab");
+        Material glow = RoundMapKit.BeaconMaterial("Assets/09. Environment/CandyForest/Materials", "CF_RoomDoorGlow", new Color(1f, 0.35f, 0.75f) * 1.2f, 1f, 1.5f, 1f);
+        var doors = new Transform[4];
         for (int i = 0; i < 4; i++)
         {
-            Transform source = room.Find("RoomWall_" + sides[i]);
-            if (source == null) continue;
-            Vector2 dir = CandyForestLayout.RoadDir[i];
-            Vector3 normal = new Vector3(dir.x, 0f, dir.y), along = new Vector3(dir.y, 0f, -dir.x);
-            float length = source.GetComponent<MeshFilter>().sharedMesh.bounds.size.x;
-            float doorWidth = doors.Length > i ? doors[i].GetComponent<MeshFilter>().sharedMesh.bounds.size.x : 4f;
-            float piece = RoomWallOuter - doorWidth / 2f;          // 문 옆에서 바깥 모서리(벽 두께 바깥 면)까지
-            float centerY = source.position.y;
-            foreach (int s in new[] { -1, 1 })
-            {
-                Transform part = Object.Instantiate(source.gameObject, room).transform;
-                part.name = $"RoomWall_{sides[i]}_{(s < 0 ? "A" : "B")}";
-                part.SetPositionAndRotation(normal * CandyForestLayout.RoomHalf + along * (s * (doorWidth / 2f + piece / 2f)) + Vector3.up * centerY, source.rotation);
-                Vector3 scale = part.localScale;
-                scale.x *= piece / length;
-                part.localScale = scale;
-            }
-            if (doors.Length > i)
-            {
-                doors[i].SetPositionAndRotation(normal * CandyForestLayout.RoomHalf + Vector3.up * doors[i].position.y, source.rotation);
-                doors[i].name = "MonsterDoor_" + i;
-            }
-            Object.DestroyImmediate(source.gameObject);
+            Vector3 dir = RoundMapKit.Polar(1f, RoomAxisDeg[i]);
+            doors[i] = RoundMapKit.RoomDoor(room, i, dir, RoomInner, RoomOuter, RoomWallHeight, RoomDoorWidth, doorModel);
+            doors[i].gameObject.AddComponent<MonsterRoomDoor>();
+            RoundMapKit.BeaconPart(room, "DoorGlow_" + i, Resources.GetBuiltinResource<Mesh>("Quad.fbx"), glow, dir * RoomOuter + Vector3.up * 0.15f, Quaternion.Euler(90f, 0f, 0f), new Vector3(7f, 7f, 1f));
         }
-        foreach (Renderer r in room.GetComponentsInChildren<Renderer>(true))
-        {
-            if (r.name.StartsWith("RoomWall_")) r.sharedMaterial = wall;
-            if (r.name == "RoomFloorMark") r.enabled = false;
-        }
-        Transform deco = Group(room, "CF_RoomDeco");
-        for (int q = 0; q < 4; q++)
-        {
-            Vector2 dir = CandyForestLayout.QuadrantDir[q];
-            Vector3 corner = new Vector3(Mathf.Sign(dir.x), 0f, Mathf.Sign(dir.y)) * RoomWallOuter;
-            Vector3 p = corner + new Vector3(dir.x, 0f, dir.y) * (BoxCornerGap + 3.8f); // 상자 반 대각선 약 3.8 m
-            Spawn("CF_MonsterBox", deco, p, Mathf.Atan2(dir.x, dir.y) * Mathf.Rad2Deg + 45f, false);
-        }
-        var altar = new Vector2(-1f, 1f).normalized * 9f;
-        Spawn("CF_MonsterAltar", deco, new Vector3(altar.x, 0f, altar.y), CandyForestLayout.YawToCenter(altar), true);
+        var guard = room.GetComponent<MonsterRoomGuard>() ?? room.gameObject.AddComponent<MonsterRoomGuard>();
+        guard.EditorBind(GuardInnerHalf, doors);
+        EditorUtility.SetDirty(guard);
     }
 
     // ---------------------------------------------------------------- placements
@@ -538,23 +532,7 @@ public static class CandyForestMapBuilder
         float half = CandyForestLayout.RoadHalf, room = CandyForestLayout.RoomHalf;
         var buildings = layout.placements.Where(p => p.asset.StartsWith("CF_Bld_")).Select(p => new Vector2(p.position.x, p.position.z)).ToList();
         var rng = new System.Random(7);
-        // 술래방: 붉은 용암 바닥판 + 용암 타일(타일의 붉은 면이 바닥판보다 위에 오게 올림 — 초록 바닥이 비치지 않게)
-        var lavaFloor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        Object.DestroyImmediate(lavaFloor.GetComponent<Collider>());
-        lavaFloor.name = "RoomLavaFloor";
-        lavaFloor.transform.SetParent(tiles, false);
-        lavaFloor.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-        lavaFloor.transform.localScale = new Vector3(room * 2f + 0.6f, 0.02f, room * 2f + 0.6f);
-        Material lava = PlainMaterial("CF_RoomLava", new Color(0.45f, 0.05f, 0.03f));
-        lava.EnableKeyword("_EMISSION");
-        lava.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-        lava.SetColor("_EmissionColor", new Color(0.55f, 0.08f, 0.02f));
-        lavaFloor.GetComponent<Renderer>().sharedMaterial = lava;
-        GameObjectUtility.SetStaticEditorFlags(lavaFloor, StaticEditorFlags.BatchingStatic);
-        // 타일 5.9 × 10 m(원본 비율, §28.16) 4 × 2장 — 네모 방(§32) 벽 안에 들어가게(남은 가장자리는 붉은 바닥판)
-        for (int ix = 0; ix < 4; ix++)
-            for (int iz = 0; iz < 2; iz++)
-            { Spawn("CF_Tile_Lava", tiles, new Vector3(-8.7f + ix * 5.8f, 0.13f, -5f + iz * 10f), rng.Next(2) * 180f, true); n++; }
+        // 술래방 바닥은 새 술래방 모델(CF_MonsterRoomFloor, §83)이 맡는다 — 예전 붉은 용암 판·용암 타일은 없앴다.
         // 큰길 포장(10 m가 길 너비, 길이 5.48 m 타일을 5.2 m씩 — 원본 비율, §28.16)
         for (int d = 0; d < 4; d++)
         {

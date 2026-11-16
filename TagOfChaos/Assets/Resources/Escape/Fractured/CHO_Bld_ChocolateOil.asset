@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: CHO_Bld_ChocolateOil
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 099c59bccbdbc734a9cbb05f5e21f923, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 8359f18d3e105224abc90b2d780c1320, type: 3}
+  - {fileID: -1609281748187839663, guid: 8359f18d3e105224abc90b2d780c1320, type: 3}
+  - {fileID: 723096430288179899, guid: 8359f18d3e105224abc90b2d780c1320, type: 3}
+  - {fileID: 1963079803359675471, guid: 8359f18d3e105224abc90b2d780c1320, type: 3}
+  pushes:
+  - {x: -0.9997038, y: -0.024336895, z: 0}
+  - {x: 0.99732274, y: -0.07312586, z: 0}
+  - {x: -0.040786993, y: 0.99916786, z: 0.0000003357532}
+  - {x: 0.00136465, y: -0.99999905, z: -0.0000003867587}
+  style: 6

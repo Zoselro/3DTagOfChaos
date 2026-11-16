@@ -38,6 +38,9 @@ public class DestructionRulesSO : ScriptableObject
     [Tooltip("Blender로 미리 조각낸 건물의 원본 이름(<원본 이름>_Fractured). 모델은 Resources/Escape/Fractured/<이름>에서 필요할 때만 읽는다(§73.11).")]
     [SerializeField] private string[] fracturedNames = new string[0];
 
+    [Tooltip("Blender로 미리 조각낸 소품·텐트·계단 종류 이름과 술래방(MonsterRoom_<씬>) — §82. 맵의 물체는 KindName이 같으면 이 모델로 무너진다.")]
+    [SerializeField] private string[] propFracturedNames = new string[0];
+
     [Tooltip("금 간 데칼 재질 3단계(작은 금 → 퍼진 금 → 깨진 구멍). Standard Fade + 노멀 — 에셋이라 빌드에 셰이더 변형이 들어간다.")]
     [SerializeField] private Material[] crackMaterials = new Material[3];
 
@@ -52,6 +55,7 @@ public class DestructionRulesSO : ScriptableObject
     public string[] KeepParts => keepParts;
     public float LumpFootprint => lumpFootprint;
     public string[] FracturedNames => fracturedNames;
+    public string[] PropFracturedNames => propFracturedNames ?? new string[0];
     public Material CrackMaterial(int stage) => crackMaterials != null && crackMaterials.Length > 0 ? crackMaterials[Mathf.Clamp(stage - 1, 0, crackMaterials.Length - 1)] : null;
 
     private static DestructionRulesSO cached;
@@ -69,6 +73,7 @@ public class DestructionRulesSO : ScriptableObject
 
 #if UNITY_EDITOR
     public void EditorSetFracturedNames(string[] names) => fracturedNames = names;
+    public void EditorSetPropFracturedNames(string[] names) => propFracturedNames = names;
     public void EditorSetCrackMaterials(Material[] mats) => crackMaterials = mats;
 #endif
 }

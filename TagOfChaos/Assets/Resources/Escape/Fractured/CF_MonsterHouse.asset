@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: CF_MonsterHouse
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: d26b4f8e07533e541b1888681699e794, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: b3e4c9c516ff09c40bd24c8ab19b0b7d, type: 3}
+  - {fileID: -1609281748187839663, guid: b3e4c9c516ff09c40bd24c8ab19b0b7d, type: 3}
+  - {fileID: 723096430288179899, guid: b3e4c9c516ff09c40bd24c8ab19b0b7d, type: 3}
+  - {fileID: 1963079803359675471, guid: b3e4c9c516ff09c40bd24c8ab19b0b7d, type: 3}
+  pushes:
+  - {x: -0.99175394, y: 0.12815686, z: 0}
+  - {x: 0.99132836, y: -0.13140778, z: 0}
+  - {x: -0.15812108, y: 0.9874197, z: 0.0000003970351}
+  - {x: -0.198422, y: -0.98011667, z: -0.00000039728684}
+  style: 6

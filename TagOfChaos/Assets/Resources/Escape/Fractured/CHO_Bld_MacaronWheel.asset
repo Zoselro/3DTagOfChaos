@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: CHO_Bld_MacaronWheel
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: e8c72e8880f6da948bd4bfb9fbe96066, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: a23abc917bec4c44c8c63a4bcf2b2c3e, type: 3}
+  - {fileID: -1609281748187839663, guid: a23abc917bec4c44c8c63a4bcf2b2c3e, type: 3}
+  - {fileID: 723096430288179899, guid: a23abc917bec4c44c8c63a4bcf2b2c3e, type: 3}
+  - {fileID: 1963079803359675471, guid: a23abc917bec4c44c8c63a4bcf2b2c3e, type: 3}
+  pushes:
+  - {x: -0.99615103, y: 0.08765324, z: 0}
+  - {x: 0.9976725, y: 0.06818793, z: 0}
+  - {x: -0.07180186, y: 0.9974189, z: 0.0000003042237}
+  - {x: -0.018754572, y: -0.99982417, z: -0.0000003777932}
+  style: 6

@@ -109,12 +109,11 @@ public class PlayerInventory : MonoBehaviour
             manager.Request(EscapeOp.Drop, Selected, 0, owner.transform.position + owner.transform.forward * 0.8f);
 
         if (PlayerInput.UseToolPressed && EscapeManager.ActionsAllowed && !IsPointerOverUi() && HeldItem != null && HeldItem.IsTool)
-            toolUser.Use(Selected, HeldItem);
-
-        // 헬리콥터 모자: 들고 E — 근처에 E로 쓰는 사물이 없을 때(Request1009Plan.md §25.5 H)
-        if (PlayerInput.InteractPressed && EscapeManager.ActionsAllowed && !CharacterInteractor.HasFocus
-            && HeldItem != null && HeldItem.IsTool && HeldItem.Tool.Kind == ToolKind.HeliHat)
-            manager.Request(EscapeOp.HatFly, Selected);
+        {
+            // 헬리콥터 모자도 아이템 사용 키로 쓴다(Request1009Plan.md §82 H1 — 예전에는 E). 판정은 방장(EscapeAuthority HatFly)
+            if (HeldItem.Tool.Kind == ToolKind.HeliHat) manager.Request(EscapeOp.HatFly, Selected);
+            else toolUser.Use(Selected, HeldItem);
+        }
     }
 
     public bool TrySelect(int slot)

@@ -10691,3 +10691,272 @@ public static bool IsPropSized(Bounds b) =>
 - 밟혀 죽음: 사탕 숲에서 쿠키를 술래방 안에 두고(가드 잠시 끔) 시험 → 무너지는 순간 `DeathCause = Giant`, 부서짐 ✅(술래도 같은 코드)
 - 사진: `sfx_preview/<맵>_room_grid.png`(앞·무너짐·솟음·뒤 4장: cf·gv·cc·ch·hb)
 - 남은 점: 빌드 두 대 이상 멀티에서 모든 화면이 같은 때 무너지는지(시각은 마녀 등장 시각 + 공통 시계로 정해지므로 같아야 함)
+
+## 82. 큐브 조각 없애기 — 진짜 구조물이 무너지는 파괴 연출(모든 물체)·헬리콥터 모자 아이템 사용 키(2026-11-16 계획)
+
+- 요청
+  1. 거대 괴물 등장(술래방)·건물이 부서질 때·마녀가 맵을 부술 때 나오는 **큐브 조각**을 없앤다. 그 물체를 미리 조각낸 진짜 모델이 무너지게 한다(무너지는 애니메이션은 매번 같아도 됨). 금은 데칼로 보여 준다. **모든 물체**에 적용하고, Blender를 써도 된다. 참고: 사용자 명세서 `3DTagOfChaos_Destruction_System_Plan.md`, 예시 사진 4장(나무 상자가 판자로 쪼개짐·드럼통 껍데기 파편·상자 조각이 튐·건물 벽이 덩어리로 떨어지고 먼지).
+  2. 헬리콥터 모자 쓰기를 E(상호작용)에서 **아이템 사용 키**로 옮긴다.
+- 상태: **📝 계획 — 승인 대기**
+
+### 82.1 지금 코드(확인함)
+
+**큐브가 나오는 곳 — 네 군데**
+
+`Escape/Giant/DestructionPresenter.cs` — 조각 풀 = 기본 도형 큐브
+```csharp
+private Piece NewPiece()
+{
+    GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);   // ← 큐브
+    go.name = "DestructionPiece";
+    ...
+}
+private void Debris(DestructibleUnit u, int count) { ... p.R.sharedMaterial = mat; ... 무작위 속도 ... }
+```
+| 부르는 곳 | 대상 | 큐브 수 |
+|---|---|---|
+| `PropBreak` | 소품(맵마다 360~610개) | 3~8 |
+| `TentBreak` | 텐트·창고 | 8 |
+| `Collapse`에서 조각 모델이 없을 때 | 계단(Helix)·**술래방(§81 MonsterRoomBreak)** — 첨부 사진의 큐브 | 14 |
+
+`Escape/WitchShatter.cs` — 마녀가 내리칠 때 Ground 안의 모든 물체(씬 3단계 묶음)를 숨기고 큐브를 튕긴다(최대 400개). 쿠키·괴물 몸도 `ShatterBody`로 몸 색 큐브.
+```csharp
+private Piece NewPiece()
+{
+    GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);   // ← 큐브
+    go.name = "WitchDebris";
+    ...
+}
+```
+
+**이미 있는 것(그대로 살림)**
+- 건물 조각 모델 38종(§66 GD2): Unity가 건물을 `Temp/fracture/<이름>.obj`로 내보내면 → Blender 스크립트(`frac_one.py`)가 30~60조각 + 안쪽 단면 재질로 나눔 → `Assets/09. Environment/Fractured/<이름>_Fractured.fbx` → `DestructionRulesSetup`이 `Resources/Escape/Fractured/<이름>.asset`(`FracturedModelSO`) 생성 → 맞을 때만 비동기로 읽음(§73.11).
+- 건물 붕괴 `Collapse`: 원본을 숨기고 조각 모델을 켜서 아래부터 떨어뜨림(물리 엔진 없는 가벼운 낙하). 4초 뒤 작은 조각은 투명하게 사라지고 큰 잔해 8개만 남음. 멀면(60 m) 먼지만.
+  - 단, 떨어지는 방향·회전이 `Random`이라 **매번·화면마다 다르다**.
+- 금 데칼: 맞은 단계마다 3단계 금 재질 판(`AddDecal`, `crackMaterials` 3장) + 흔들림 + 먼지.
+- 네트워크: 방장 판정 → 방 속성 `DestructionNet`(맞은 횟수) → 모든 화면이 연출, 늦게 들어오면 연출 없이 숨김. 명세서 §6(방장 권한·상태 저장·늦은 입장·방장 교체·판마다 초기화)과 이미 같다 — 바꿀 필요 없음.
+
+**조각 모델이 없는 물체(에디터에서 맵 5개 전수 조사)**
+
+| 종류 | 수 | 예 |
+|---|---|---|
+| 소품 | **87종**(맵에 약 2,100개) | CF_Bench·CF_Lamp·CF_CottonTree·CHO_Crate·CHO_Forklift·MO_Popcorn·MO_Fountain·GIN_Cupcake·GIN_UG_Barrels·GIN_UG_MineCart … |
+| 텐트·창고 | 3종 | CF_Tent(18 m)·MO_Tent·CHO_Shed |
+| 계단 | 1종 | 진저브레드 Helix(나선 내리막) |
+| 술래방 | 5개 | 맵마다 하나(§81) |
+| 마녀가 부수는 그 밖의 물체 | 재야 함 | 탈출구·놀이기구 장식 등 부서지는 목록 밖 묶음 — W0에서 맵마다 센다 |
+| 건물 | 38종 | 조각 모델 있음 ✅ |
+
+### 82.2 만드는 방법(설계)
+
+**원칙**
+1. 물체마다 Blender에서 **미리 조각낸 모델 + 미리 구운 무너지는 애니메이션**(강체 물리로 계산해 키프레임으로 굽기)을 만든다. 게임은 그 애니메이션을 틀기만 한다 → 매번·모든 화면에서 같은 모습. 실시간 물리를 쓰지 않아 가볍다.
+2. 조각은 **재질에 맞게** 나눈다(예시 사진 기준).
+
+| 재질 묶음 | 나누는 방식 | 예 |
+|---|---|---|
+| 나무·판자(상자·벤치·울타리·간판·카트) | 판자 단위로 나눔(원래 판 경계 + 길쭉한 쪼개짐), 조각마다 두께 | 사진 1·3 |
+| 얇은 껍데기(드럼통·통·랜턴 갓·컵케이크 포장) | 얇은 껍데기 파편(구부러진 판) + 뚜껑·바닥은 덩어리 | 사진 2 |
+| 덩어리(돌·사탕·케이크·초콜릿·쿠키·바위) | Voronoi 덩어리 + 작은 부스러기(대 20 %·중 50 %·소 30 %) | 명세서 §2.2 |
+| 건물·텐트·술래방 | 벽·지붕·기둥 단위로 크게 + Voronoi 덩어리 + 작은 잔해. 맞은 쪽부터 무너짐 | 사진 4 |
+| 가는 물체(가로등·기둥·사탕 지팡이) | 2~4토막으로 꺾여 쓰러짐 | |
+
+3. 조각 수: 소품 8~16, 큰 소품 16~24, 텐트 20~30, 건물(이미 30~60), 술래방 30~40. 소품 조각 모델은 원본 삼각형 수 이하.
+4. 단면(안쪽 면)은 재질 묶음별 안쪽 재질(나무 결·사탕 속·초콜릿 속·돌). 지금 건물의 `M_Fracture_Inner_*`와 같은 방식.
+5. 금: **데칼**(지금 3단계 재질 판). 명세서 2단계 "큰 균열 + 소량 파편"은 조각 모델에서 작은 조각 2~3개만 미리 떨어뜨려 보여 준다(큐브 아님).
+
+**애니메이션 방향 문제와 해결**
+- 조각은 원본과 딱 겹쳐야 하므로 실행 중에 조각 묶음을 돌릴 수 없다. 대신 Blender에서 **네 방향(앞·뒤·왼쪽·오른쪽에서 맞음) 애니메이션**을 굽고, 맞은 쪽(거대 괴물 몸·마녀 내리친 곳)에 가장 가까운 것을 고른다. 소품은 바깥으로 터지는 1개(방향 무관)로 충분하다.
+- 땅 높이가 다른 곳(진저브레드 비탈)은 마지막에 조각을 땅에 맞춰 내린다(지금 `RubbleGround`처럼 아래 바닥을 한 번 레이캐스트).
+
+**Blender 일괄 처리(새 스크립트 `fracture_batch.py`, 지금 `frac_one.py` 확장)**
+```python
+# 한 물체: OBJ 불러오기 → 재질 묶음별 나누기 → 강체 굽기 → FBX(조각 메시 + 애니메이션 4개)
+KIND_RULES = {"wood": plank_split, "shell": shell_split, "chunk": voronoi_split, "building": structural_split, "pole": pole_split}
+
+def bake(pieces, push_dir, frames=75):          # 30 fps × 2.5초
+    scene.rigidbody_world.point_cache.frame_end = frames
+    ground = add_ground_plane()                  # 원본 바닥 높이
+    for p in pieces:
+        bpy.context.view_layer.objects.active = p
+        bpy.ops.rigidbody.object_add(); p.rigid_body.mass = volume(p) * DENSITY[kind]
+        p.rigid_body.collision_shape = 'CONVEX_HULL'
+    apply_impulse(pieces, push_dir)              # 첫 프레임 속도(맞은 쪽 반대로), 위쪽 조각은 늦게 풀림
+    bpy.ops.rigidbody.bake_to_keyframes(frame_start=1, frame_end=frames, step=2)
+    action_name = f"Collapse_{dir_name(push_dir)}"   # FBX 안 애니메이션 이름
+```
+- 같은 시드를 쓰므로 다시 돌려도 같은 결과(재현 가능).
+- 내보내기: `Assets/09. Environment/Fractured/<이름>_Fractured.fbx` 한 파일에 조각 메시들 + 애니메이션(Collapse_PX/NX/PZ/NZ 또는 Burst). 파일이 많으므로 하루치 묶음(재질 묶음별)으로 나눠 돌리고 사진으로 확인한다.
+
+**Unity 쪽**
+
+1) 내보내기 도구 확장 — 지금은 건물만 OBJ로 내보낸다. 소품·텐트·계단·술래방·마녀 대상까지(종류마다 하나: 이름 끝 ` (3)`·`_02` 떼고 같은 프리팹이면 한 번).
+
+2) `FracturedModelSO`에 애니메이션 클립 넣기
+```csharp
+public class FracturedModelSO : ScriptableObject
+{
+    public const string ResourceFolder = "Escape/Fractured/";
+    [SerializeField] private GameObject model;
+    [SerializeField] private AnimationClip[] collapse = new AnimationClip[0]; // 0 = 바깥으로 터짐(소품) 또는 +X,-X,+Z,-Z(건물)
+    [SerializeField] private FractureStyle style;                             // Wood·Shell·Chunk·Building·Pole
+    public AnimationClip ClipFor(Vector3 localPush) => ...; // 맞은 방향에 가장 가까운 것
+}
+```
+
+3) 조각 재생(새 `Escape/Giant/FracturePlayer.cs`) — Animator 컨트롤러 없이 Playables로 클립 하나를 튼다. 끝나면 작은 조각은 지금처럼 투명하게 사라지고(FragmentFader) 큰 잔해만 남긴다. 같은 종류 소품은 조각 인스턴스를 풀로 다시 쓴다.
+```csharp
+public sealed class FracturePlayer : MonoBehaviour
+{
+    private PlayableGraph graph;
+    public void Play(AnimationClip clip, System.Action done)
+    {
+        var animator = gameObject.GetComponent<Animator>() ?? gameObject.AddComponent<Animator>();
+        graph = PlayableGraph.Create("Fracture");
+        var output = AnimationPlayableOutput.Create(graph, "out", animator);
+        output.SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+        graph.Play();
+        StartCoroutine(Finish(clip.length, done));
+    }
+    private void OnDestroy() { if (graph.IsValid()) graph.Destroy(); }
+}
+```
+
+4) `DestructionPresenter` — 큐브 코드(`NewPiece`·`Debris`·`pieces` 풀) **삭제**, 모두 조각 모델로
+```csharp
+private void OnLevel(DestructibleUnit u, int from, int to, bool animate)
+{
+    ...
+    if (!u.Broken) { AddDecal(u, to); if (to == u.HitsToBreak - 1) ChipPieces(u); Wobble(...); Dust(...); return; }
+    StartCoroutine(PlayFracture(u, PushDirection(u)));   // 소품·텐트·건물·계단·술래방 모두 같은 길
+}
+
+private IEnumerator PlayFracture(DestructibleUnit u, Vector3 push)
+{
+    FracturedModelSO set = ResolveSet(u, out bool loading);           // 비동기(§73.11) — 소품도 같은 방식
+    while (set == null && loading && ...) yield return null;
+    DestructionNet.SetBroken(u, true);                                 // 원본 숨김(판정 상태는 그대로 방 속성)
+    if (set == null || IsFar(u)) { Dust(...); yield break; }           // 멀거나 모델이 없으면 먼지만 — 큐브 없음
+    GameObject inst = FracturePool.Get(set, u.ModelRoot);              // 원본 자리·크기 그대로
+    inst.GetComponent<FracturePlayer>().Play(set.ClipFor(u.ModelRoot.InverseTransformDirection(push)), () => Settle(inst, set));
+    GameAudio.PlayAt(SoundFor(set.Style), u.Center); Shake(...); Dust(...);
+}
+```
+- `PushDirection`: 거대 괴물이 때렸으면 거대 괴물 → 물체 방향, 마녀면 내리친 곳 → 물체, 술래방은 아래(가운데에서 솟음).
+- 소리: 재질 묶음별(나무 부서짐·금속·돌 무너짐) — 지금 `WitchShatter` 소리 하나를 묶음별로 나눌지는 Q3.
+
+5) `DestructibleCatalog` — 지금 `FractureName`은 건물에만 붙는다. 소품·텐트·계단도 종류 이름으로 붙인다.
+```csharp
+u.FractureName = FractureNames.Has(BaseName(child.name)) ? BaseName(child.name) : null; // "CF_Bench (3)" → "CF_Bench"
+```
+
+6) `MonsterRoomBreak.BuildUnit` — `FractureName = "MonsterRoom_" + 씬 이름`.
+
+7) `WitchShatter` — 큐브 풀 삭제. 대상마다
+   - 부서지는 목록에 있는 물체(또는 그 묶음 안에 있음) → 같은 조각 모델·애니메이션(마녀 내리친 곳에서 바깥 방향).
+   - 목록 밖(탈출구 등) → W0에서 센 종류에 조각 모델을 만들어 같은 방식. 끝까지 모델이 없으면 가라앉으며 먼지(큐브 없음).
+   - 한 번에 수백 개가 부서지므로 카메라에서 가까운 **40개만 조각**, 나머지는 먼지 + 가라앉기(판 끝 장면이라 판정과 무관).
+   - 쿠키·괴물 몸(`ShatterBody`) → 큐브 대신 부스러기 파티클(쿠키 부스러기 색, §45 크럼 색) — Q2.
+
+8) 규칙 수(명세서 §1과 다른 점)
+   - 명세서: 건물 **3번**에 무너짐, 일반 물체는 닿으면 바로. 지금: 건물 4번(`DestructibleGrade.Building = 4`), 텐트 2번, 소품 닿으면 바로, 계단 10번. → Q1.
+   - 데칼 단계: 3번이면 1번째 = 작은 금, 2번째 = 큰 금 + 작은 조각 2~3개, 3번째 = 붕괴(명세서 §4 표 그대로).
+
+**성능·용량**
+- 조각 모델은 맞을 때만 그 종류만 비동기로 읽는다(지금 건물 방식). 소품 87종 × 약 0.1~0.4 MB 예상.
+- 실행 중 물리 없음(애니메이션만). 조각에는 충돌체를 넣지 않는다 — 잔해가 길을 막지 않음(지금과 같음, 명세서 §10 "잔해는 시각 효과만").
+- 동시 붕괴 상한(지금 3채)·조각 인스턴스 풀·멀면 먼지만은 그대로 둔다.
+
+### 82.3 ② 헬리콥터 모자 — 지금 코드와 고침
+
+`Escape/PlayerInventory.cs`
+```csharp
+if (PlayerInput.UseToolPressed && EscapeManager.ActionsAllowed && !IsPointerOverUi() && HeldItem != null && HeldItem.IsTool)
+    toolUser.Use(Selected, HeldItem);                       // 아이템 사용 키(기본 마우스 왼쪽)
+
+// 헬리콥터 모자: 들고 E — 근처에 E로 쓰는 사물이 없을 때(Request1009Plan.md §25.5 H)
+if (PlayerInput.InteractPressed && EscapeManager.ActionsAllowed && !CharacterInteractor.HasFocus
+    && HeldItem != null && HeldItem.IsTool && HeldItem.Tool.Kind == ToolKind.HeliHat)
+    manager.Request(EscapeOp.HatFly, Selected);             // ← E
+```
+`ToolSO.UsedByClick`이 HeliHat을 빼서 `ToolUser.Use`가 무시한다.
+
+고침
+```csharp
+if (PlayerInput.UseToolPressed && EscapeManager.ActionsAllowed && !IsPointerOverUi() && HeldItem != null && HeldItem.IsTool)
+{
+    if (HeldItem.Tool.Kind == ToolKind.HeliHat) manager.Request(EscapeOp.HatFly, Selected); // §82: 아이템 사용 키로 통합
+    else toolUser.Use(Selected, HeldItem);
+}
+// (E로 쓰던 블록 삭제)
+```
+- `ToolSO.cs` 주석 "들고 E" → "들고 아이템 사용 키". 방장 쪽(`EscapeAuthority` HatFly)은 그대로.
+- 아이템 설명·키 안내 UI에 E가 적힌 곳이 있으면 함께 바꾼다(H1에서 확인).
+- 시험: 모자 들고 마우스 왼쪽 → 떠오름, E로는 안 뜸, E 상호작용(문·상자)은 그대로.
+
+### 82.4 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| H1 | 헬리콥터 모자 아이템 사용 키 + 안내 문구 + EditMode·Play Mode | |
+| W0 | 마녀가 부수는 목록 밖 물체 종류를 맵마다 세기, 소품 87종 재질 묶음 분류표(사진과 함께 확인 받기) | |
+| B0 | Blender 시범 4종: 나무 상자(CHO_Crate)·드럼통(GIN_UG_Barrels)·사탕 소품(GIN_Cupcake)·텐트(MO_Tent) — 조각 + 애니메이션 사진·영상으로 **확인 받은 뒤** 일괄 진행 | |
+| B1 | 소품 87종 일괄(재질 묶음별) | |
+| B2 | 텐트 3·계단 1·술래방 5 + W0 대상 | |
+| B3 | 건물 38종: 지금 조각 그대로 4방향 애니메이션만 굽기 | |
+| U1 | 내보내기 도구 확장·`FracturedModelSO` 클립·`DestructionRulesSetup` 모든 종류 | |
+| U2 | `FracturePlayer`·`FracturePool`·`DestructionPresenter` 큐브 삭제·`DestructibleCatalog` 종류 이름 | |
+| U3 | `MonsterRoomBreak`·`WitchShatter` 조각 모델로 | |
+| U4 | 규칙 수(Q1)·데칼 2단계 작은 조각·재질별 소리(Q3) | |
+| T | EditMode(모든 종류에 모델·클립 있음, 큐브 생성 0)·Play Mode 맵 5개(거대 괴물 걷기·밟기·술래방·마녀) 사진·프레임 시간 | |
+| DOC | 결과 | |
+
+### 82.5 확인 질문
+
+- **Q1** 건물을 명세서대로 **3번**에 무너지게 바꿀까요(지금 4번)? 텐트(지금 2번)·계단(지금 10번)은 그대로 둘까요?
+- **Q2** 마녀가 부술 때 쿠키·괴물 몸이 터지는 것(지금 몸 색 큐브)도 큐브 대신 **부스러기 파티클**로 바꿀까요?
+- **Q3** 부서지는 소리를 재질별(나무·금속·돌/사탕)로 새로 만들까요, 지금 소리 하나로 둘까요?
+- **Q4** 시범 4종(B0)을 먼저 보여 드리고 확인 받은 뒤 나머지 약 130종을 일괄로 만드는 순서로 갈까요? (모델이 많아 일괄 처리에 시간이 꽤 걸린다)
+
+### 82.6 결정(2026-11-16)
+
+- Q1 건물은 지금처럼 **4번**. Q2 몸 터짐 → **부스러기 파티클**. Q3 재질별 소리 **새로 만들어 들려 주기**. Q4 **시범 4종 먼저** 확인 → 일괄.
+
+### 82.7 진행(2026-11-16)
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| H1 | 헬리콥터 모자: `PlayerInventory` E 경로 삭제, 아이템 사용 키(기본 마우스 왼쪽)로 `HatFly`. 시험용 `PlayerInput.EditorUseToolPress`(그 프레임 동안 유지 — 춤 취소와 인벤토리가 같은 프레임에 읽어도 됨). Play Mode: E → 그대로(높이 0), 사용 키 → 떠오름(26.7 m)·모자 사용됨 | ✅ |
+| Q2 | `WitchShatter.ShatterBody`: 큐브 → 부스러기 파티클(불규칙 조각 4종 2×2 그림·몸 크기에 맞춘 크기·색 변화·땅에 튕겨 구름·끝에 사라짐, 충돌 품질 High — Medium은 땅을 뚫었다). Play Mode 사진 `sfx_preview/crumb_grid.png` | ✅ |
+| Q3 | 소리 6종 합성(`sfx_preview/break82/`): 나무·금속 껍데기·사탕/돌·텐트·건물 붕괴(3.6 초)·몸 부스러짐 → 사용자 청취 대기 | ✅(청취 대기) |
+| W0 | 소품 87종·텐트 3·계단 1 재질 묶음 제안표 `sfx_preview/frac_classes.md`(나무 18·껍데기 14·덩어리 34·가는 물체 16·천 9) | ✅(확인 대기) |
+| B0 | 시범 4종 Blender(`frac82.py`): 나누기 → 1~3프레임 날려 보내기(애니메이션) → 4프레임부터 강체 → 키프레임으로 굽기 → FBX(조각 + 애니메이션) | ✅(확인 대기) |
+
+**시범 결과**
+
+| 물체 | 방식 | 조각 | 2초 뒤 가장 먼 조각 | FBX |
+|---|---|---|---|---|
+| CHO_Crate(나무 상자) | 판자 부품을 가까운 것끼리 10묶음 + 0.6 m 넘는 판은 비스듬히 한 번 부러짐(나무 단면) | 20 | 3.1 m | 412 KB |
+| GIN_UG_Barrels(드럼통 2개) | 통마다 둘레 5칸 × 위아래 2칸, 테두리 띠는 통에 붙음, 두께 2.5 cm | 20 | 3.7 m | 617 KB |
+| GIN_Cupcake | Voronoi 덩어리 + 반죽색 단면 | 12 | 2.1 m | 367 KB |
+| MO_Tent | 천·기둥 큰 판 28장, 두께 4 cm, 3초 동안 주저앉음 | 28 | 8.6 m(텐트 10 m) | 2.1 MB |
+
+- 고친 문제: 판자 부품이 762개라 처음엔 220조각 → 묶음(k-평균). 텐트는 큰 판이 같은 회전 속도로 돌아 끝이 초속 36 m로 이웃을 쳐서 터짐 → 회전을 크기에 맞춰 줄이고, 얇은 천 판끼리는 부딪히지 않게(땅하고만) 함. 이웃 조각과 겹쳐 시작하지 않게 조각을 아주 조금 줄여 틈을 둠.
+- 미리보기: `sfx_preview/pilot4_grid.png`(처음·0.2초·0.5초·끝), 영상 `sfx_preview/frac_<이름>.mp4`
+- 아직 Unity에 넣지 않음(시범 FBX는 `Temp/frac82/`). 승인 뒤 B1(87종 일괄)·U1~U4.
+
+### 82.8 결과(2026-11-16)
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| B1 | 소품·텐트·계단·술래방 96종 일괄(`frac82.py` + `batch82.py`): 나무 18·껍데기 14·덩어리 34·가는 물체 16·천 9·술래방 5, 조각 1,776개·FBX 66 MB. 고친 것: 기계·통(껍데기)은 몸통마다 나눠 200~1,000조각 → Voronoi N개(13~20), 벤치·울타리·텐트는 크기의 3~6배 날아감 → 세기 줄임(CALM 0.5), 술래방 2곳(사탕 숲·테스트 베이커리)은 뿌리가 누워 있어 옆으로 쓰러짐 → 위쪽을 Z로 돌려 굽고 뿌리에 되돌림, 배경 집(면 12개 상자)은 조각 0 → 잘게 나눔. 사진 `sfx_preview/frac82_sheet_1.jpg`·`_2.jpg`(처음·끝) | ✅ |
+| B3 | 건물 38종 4방향 애니메이션(`bld82.py`): 지금 조각 그대로, 맞은 쪽 반대로 밀고 아래부터 풀림(위는 0.5초까지 늦게) → 애니메이션만 든 `<이름>_Collapse.fbx`(조각 이름과 같은 빈 물체, 96프레임 × 4를 이어 붙임 — Unity가 `Collapse_0~3`으로 자름). 고친 것: 땅 강체 상자가 물체 원점 가운데라 밑동 조각과 겹쳐 수백 m 튕김 → 상자 원점을 땅 가운데로, 조각 층을 `i % 19`로 나눠 겹친 둘이 튕김 → 경계 상자가 닿는 조각끼리 다른 층(그래프 색칠, `frac82.py`도 같게). 가장 먼 조각 = 건물 높이 이하(38/38) | ✅ |
+| U1 | `FracturedModelSO`에 클립·방향(`pushes` — 클립 끝 자세에서 조각들이 평균으로 움직인 수평 방향, 모델 뿌리 기준)·재질 묶음(`FractureStyle`)·`ClipFor`. `DestructionRulesSetup`: 건물 38(`FracturedNames`) + 소품 96(`PropFracturedNames`, `Props82/`·`_styles.txt`) 모두 담기·방향 재기. FBX 가져오기: Generic·애니메이션·재질 이름으로 다시 잇기 | ✅ |
+| U2 | 새 `FracturePlayer`(감싸개 = 원본 노드 위치·회전·크기, `AnimationClip.SampleAnimation`, 소품은 끝나고 2.5초(텐트 4초) 뒤 작아지며 사라지고 풀로 다시 씀). `DestructionPresenter`: 큐브 코드(`Debris`·`NewPiece`·조각 풀) 삭제, 소품·텐트 `SmallBreak`, 건물·계단 `Collapse`가 구운 애니메이션(거대 괴물이 밟은 쪽 → 물체 방향에 가장 가까운 클립) 뒤 작은 조각 투명하게 사라짐·큰 잔해 8개 남김, 무너지기 한 번 전 맞은 자리 작은 조각 3개 떨어짐(`ChipPieces`). `DestructibleCatalog`: 소품·텐트·계단은 종류 이름(`KindName`)으로 조각 모델 | ✅ |
+| U3 | `MonsterRoomBreak`: `FractureName = MonsterRoom_<씬>`(판 시작 때 미리 읽음). `WitchShatter`: 큐브 풀·`Burst` 삭제 — 대상 묶음을 부서지는 목록 물체 단위로 나누고, 마녀가 보이면 카메라 가까운 40개 조각 모델을 미리 읽어 두었다가 그 40개는 구운 애니메이션(내리친 곳 → 바깥), 나머지는 먼지만. 몸 부스러기에 소리 | ✅ |
+| U4 | 소리 6종 연결(`SoundId` 750~755, `Assets/10. Audio/SFX/Escape/`, 목록 다시 만듦): 나무·껍데기·사탕/돌/가는 물체·텐트·건물/계단/술래방 붕괴·몸 부스러짐. 건물 4번 그대로(Q1) | ✅ |
+| W0 | 마녀가 부수는 목록 밖 물체: 사탕 숲 1,038개 대상 중 조각 40·먼지 998(목록 밖은 종류 이름이 같은 모델이 있을 때만 조각) | ✅ |
+| T | EditMode `Request1119Tests` 7/7(종류마다 모델·클립, 건물 4방향이 서로 다름, `ClipFor`, `KindName`, 맵 5개 모든 부서지는 물체·술래방에 모델, 첫 프레임이 원본과 겹침, 큐브 코드 없음, 재질별 소리). 전체 486개 중 483 통과 — 실패: `TwistedTests` 로비 배경(§79 로비 스킨으로 바뀐 것을 시험이 몰랐음 → 시험 고침, 통과), `Request1114Tests` 마녀 10분(시험 스크립트가 남긴 정적 값 — 다시 돌려 통과), `Request1107Tests` 거대 괴물 등장 30 %(에셋 `SpawnChance`가 1.0 — §76 때부터, 이번 작업과 무관). Play Mode(사탕 숲): 소품 4종·텐트·건물 부서짐 사진 `sfx_preview/frac82_play_cf2.jpg`(큐브 0), 술래방 `frac82_room_cf.jpg`(벽이 바깥으로 무너짐, 바로 선 채), 마녀 `frac82_witch_cf.jpg`(조각 40·먼지 998·큐브 0), 오류·경고 0 | ✅ |
+
+- 실행 중 물리 없음 — 모든 화면이 같은 모습. 조각에는 충돌체 없음(잔해가 길을 막지 않음).
+- 비탈에서 조각이 땅에 맞춰 내려오지는 않는다(Blender 땅 = 원본 가장 낮은 점). 고정 배치 맵은 맵이 정적 배치라 "가라앉기" 대신 먼지만.

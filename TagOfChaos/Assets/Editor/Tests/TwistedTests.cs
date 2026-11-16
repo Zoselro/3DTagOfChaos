@@ -38,7 +38,7 @@ public class TwistedTests
 
         EditorSceneManager.OpenScene(TwistedAtmosphere.LobbyScene, OpenSceneMode.Single);
         var bg = Object.FindObjectsByType<UnityEngine.UI.Image>(FindObjectsInactive.Include, FindObjectsSortMode.None).First(i => i.name == "BackGround");
-        Assert.AreEqual(TwistedAtmosphere.LobbyBackground, AssetDatabase.GetAssetPath(bg.sprite));
+        Assert.AreEqual("Assets/08. Resources/LobbyUI/BG_Lobby.png", AssetDatabase.GetAssetPath(bg.sprite), "로비 배경 = 로비 스킨(§79 LobbySkinInstaller)");
     }
 
     [Test]

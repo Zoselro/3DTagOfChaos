@@ -88,7 +88,7 @@ public class Request1019Tests
             Assert.NotNull(b);
             Transform rp = b.GetComponentsInChildren<Transform>(true).First(t => t.name.StartsWith("Repair_Point"));
             Assert.Less(rp.position.y, 2.5f, "repair point height");
-            Assert.NotNull(b.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name.StartsWith("Socket_")));
+            Assert.IsNull(b.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name.StartsWith("Socket_")), "socket cylinder removed (§83)");
             Assert.NotNull(b.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name.StartsWith("ESC_Glow")));
         }
         foreach (string shell in new[] { "CF_MonsterHouse", "CF_Tent" })

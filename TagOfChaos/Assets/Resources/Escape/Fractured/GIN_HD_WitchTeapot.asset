@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_HD_WitchTeapot
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 30984b5701a78d7479096e887a9e89a0, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 8f8ce00342be061418d1821680d6da69, type: 3}
+  - {fileID: -1609281748187839663, guid: 8f8ce00342be061418d1821680d6da69, type: 3}
+  - {fileID: 723096430288179899, guid: 8f8ce00342be061418d1821680d6da69, type: 3}
+  - {fileID: 1963079803359675471, guid: 8f8ce00342be061418d1821680d6da69, type: 3}
+  pushes:
+  - {x: -0.9999997, y: -0.00083276816, z: 0}
+  - {x: 0.9999947, y: 0.0032479926, z: 0}
+  - {x: -0.021836666, y: 0.9997616, z: 0.00000023986334}
+  - {x: -0.02366463, y: -0.99972, z: -0.00000025696843}
+  style: 6

@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: CUR_Bld_SafetyBelt
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: e37102c0bfd6b1143ae248e5e8d13e25, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: ff79b5a83540c29439293b0b596ee4dd, type: 3}
+  - {fileID: -1609281748187839663, guid: ff79b5a83540c29439293b0b596ee4dd, type: 3}
+  - {fileID: 723096430288179899, guid: ff79b5a83540c29439293b0b596ee4dd, type: 3}
+  - {fileID: 1963079803359675471, guid: ff79b5a83540c29439293b0b596ee4dd, type: 3}
+  pushes:
+  - {x: -0.98004323, y: -0.19878452, z: 0}
+  - {x: 0.9999988, y: 0.0015285831, z: 0}
+  - {x: 0.041989803, y: 0.99911803, z: 0.000000377747}
+  - {x: -0.0012831581, y: -0.99999917, z: -0.00000041117949}
+  style: 6

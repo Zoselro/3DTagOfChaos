@@ -47,7 +47,7 @@ public class Request1021Tests
 
             var guard = map.Find("MonsterRoom").GetComponent<MonsterRoomGuard>();
             Assert.NotNull(guard, "MonsterRoomGuard on MonsterRoom");
-            Assert.AreEqual(11.7f, guard.InnerHalf, 0.05f);
+            Assert.AreEqual(CandyForestMapBuilder.GuardInnerHalf, guard.InnerHalf, 0.05f); // 둥근 방(§83)
             Assert.IsTrue(guard.IsInside(new Vector3(0f, 0.5f, 0f)));
             Assert.IsFalse(guard.IsInside(new Vector3(0f, 0.5f, 14f)));
 
@@ -108,7 +108,7 @@ public class Request1021Tests
             for (int i = 0; i < 4; i++)
             {
                 Vector2 dir = CandyForestLayout.RoadDir[i];
-                Vector3 want = new Vector3(dir.x, 0f, dir.y) * CandyForestLayout.RoomHalf;
+                Vector3 want = new Vector3(dir.x, 0f, dir.y) * ((CandyForestMapBuilder.RoomInner + CandyForestMapBuilder.RoomOuter) / 2f); // 둥근 방 벽 가운데(§83)
                 Assert.Less(new Vector2(doors[i].transform.position.x - want.x, doors[i].transform.position.z - want.z).magnitude, 0.05f, doors[i].name + " at 12/3/6/9 o'clock");
             }
             Physics.SyncTransforms();
@@ -118,11 +118,11 @@ public class Request1021Tests
                 var hits = Physics.RaycastAll(new Vector3(0f, 1.5f, 0f), new Vector3(diag.x, 0f, diag.y), 30f)
                     .Where(h => h.collider.gameObject.scene == scene).OrderBy(h => h.distance).ToList();
                 Assert.IsNotEmpty(hits, $"diagonal {diag} is walled");
-                Assert.IsTrue(hits[0].collider.name.StartsWith("RoomWall_"), hits[0].collider.name);
+                Assert.IsTrue(hits[0].collider.name.StartsWith("RoomRing_") || hits[0].collider.transform.IsChildOf(room), hits[0].collider.name); // 둥근 방 벽 고리(§83)
                 Assert.Less(hits[0].distance, 18f, "wall at the corner");
             }
             var guard = room.GetComponent<MonsterRoomGuard>();
-            Assert.IsTrue(guard.IsInside(new Vector3(11f, 0.5f, 11f)), "square room: corner is inside");
+            Assert.IsTrue(guard.IsInside(new Vector3(7f, 0.5f, 7f)), "round room: inside the guard square (§83)");
             Assert.IsFalse(guard.IsInside(new Vector3(0f, 0.5f, 12.5f)), "in the north doorway outside");
         }
         finally { if (opened) EditorSceneManager.CloseScene(scene, true); }

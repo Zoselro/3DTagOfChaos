@@ -18,8 +18,9 @@ public sealed class DestructibleUnit
     public DestructibleGrade Grade;
     public Transform Root;
     public Transform ModelRoot;          // 조각 모델을 맞출 자리(조각 모델을 만든 원본 노드)
-    public string FractureName;          // 건물만: 조각 모델 이름(없으면 코드 연출) — 모델은 FracturedModels가 필요할 때 읽는다(§73.11)
-    public GameObject FracturePrefab;    // 읽은 조각 모델(읽기 전 null)
+    public string FractureName;          // 조각 모델 이름(건물: 계층 안 노드 이름, 소품·텐트·계단: 종류 이름 §82) — FracturedModels가 필요할 때 읽는다(§73.11)
+    public FracturedModelSO FractureSet; // 읽은 조각 모델 + 구운 애니메이션(읽기 전 null)
+    public GameObject FracturePrefab => FractureSet != null ? FractureSet.Model : null;
     public Bounds Bounds;                // 세계 경계(남기는 부분 제외)
     public Bounds Zone;                  // 안에 있으면 "여기 숨었다"로 보는 구역 = Bounds(+ 계단은 이어진 시계탑 몸체)
     public Bounds Link;                  // 계단과 이어진 부서지지 않는 몸체의 경계
@@ -38,10 +39,16 @@ public sealed class DestructibleUnit
 public sealed class DestructibleCatalog
 {
     private static readonly Regex CopySuffix = new Regex(@"( \(\d+\))$");
+    private static readonly Regex CopySuffixes = new Regex(@"( \(\d+\))+$");
+    private static readonly Regex NumberSuffix = new Regex(@"_\d+$");
+
+    // 종류 이름(§82): "CF_Bench (3)" → "CF_Bench", "GIN_Lollipop_02" → "GIN_Lollipop". 소품 조각 모델은 종류마다 하나다.
+    public static string KindName(string name) => NumberSuffix.Replace(CopySuffixes.Replace(name, ""), "");
 
     private readonly List<DestructibleUnit> units = new List<DestructibleUnit>();
     private readonly Dictionary<Collider, DestructibleUnit> byCollider = new Dictionary<Collider, DestructibleUnit>();
     private List<Bounds> links = new List<Bounds>();
+    private HashSet<string> kinds = new HashSet<string>(); // 소품·텐트·계단 조각 모델 종류 이름(§82)
 
     public IReadOnlyList<DestructibleUnit> Units => units;
     public int Count => units.Count;
@@ -57,6 +64,9 @@ public sealed class DestructibleCatalog
         var models = new HashSet<string>();
         foreach (string f in rules.FracturedNames)
             if (!string.IsNullOrEmpty(f)) models.Add(f);
+        catalog.kinds = new HashSet<string>();
+        foreach (string f in rules.PropFracturedNames)
+            if (!string.IsNullOrEmpty(f)) catalog.kinds.Add(f);
         catalog.Scan(map, rules, models, false, 0);
         return catalog;
     }
@@ -101,6 +111,7 @@ public sealed class DestructibleCatalog
             : model != null || buildingGroup ? DestructibleGrade.Building
             : StartsWithAny(root.name, rules.TentPrefixes) ? DestructibleGrade.Tent
             : DestructibleGrade.Prop;
+        if (model == null && kinds.Contains(KindName(root.name))) model = KindName(root.name); // 소품·텐트·계단(§82) — 원본 노드 = 뿌리
 
         var unit = new DestructibleUnit
         {

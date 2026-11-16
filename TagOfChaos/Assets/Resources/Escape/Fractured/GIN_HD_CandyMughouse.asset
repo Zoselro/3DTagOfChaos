@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_HD_CandyMughouse
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 930b3c3da5994da4d8b0940809b5a577, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: e4cbc7947b4708d4ab2a6c4767db7073, type: 3}
+  - {fileID: -1609281748187839663, guid: e4cbc7947b4708d4ab2a6c4767db7073, type: 3}
+  - {fileID: 723096430288179899, guid: e4cbc7947b4708d4ab2a6c4767db7073, type: 3}
+  - {fileID: 1963079803359675471, guid: e4cbc7947b4708d4ab2a6c4767db7073, type: 3}
+  pushes:
+  - {x: -0.99932116, y: 0.0368404, z: 0}
+  - {x: 0.9992585, y: -0.038501877, z: 0}
+  - {x: -0.025755843, y: 0.99966824, z: 0.00000024100967}
+  - {x: 0.07467246, y: -0.9972081, z: -0.00000025421045}
+  style: 6

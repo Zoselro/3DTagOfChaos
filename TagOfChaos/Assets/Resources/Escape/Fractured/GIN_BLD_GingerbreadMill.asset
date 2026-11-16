@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_BLD_GingerbreadMill
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 208f51e401a208a40b113f7212b30cdd, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 1a4bc3d4d8c250b44b6f6d0e56ccae64, type: 3}
+  - {fileID: -1609281748187839663, guid: 1a4bc3d4d8c250b44b6f6d0e56ccae64, type: 3}
+  - {fileID: 723096430288179899, guid: 1a4bc3d4d8c250b44b6f6d0e56ccae64, type: 3}
+  - {fileID: 1963079803359675471, guid: 1a4bc3d4d8c250b44b6f6d0e56ccae64, type: 3}
+  pushes:
+  - {x: -0.99594074, y: -0.09001126, z: 0}
+  - {x: 0.99963444, y: -0.027038494, z: 0}
+  - {x: 0.017018521, y: 0.9998552, z: 0.0000004728381}
+  - {x: 0.019326482, y: -0.9998132, z: -0.00000041484742}
+  style: 6

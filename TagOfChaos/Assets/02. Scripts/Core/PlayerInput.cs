@@ -120,7 +120,14 @@ public static class PlayerInput
     // 인벤토리(EscapePlan.md §1.9): G키로 떨어뜨리기, 숫자키 1~4로 칸 고르기, 마우스로 도구 쓰기.
     public static bool DancePressed => !IsGameplaySuppressed && Down(KeyAction.Dance); // 춤(§44.9)
     public static bool DropPressed => !IsGameplaySuppressed && Down(KeyAction.Drop);
-    public static bool UseToolPressed => !IsGameplaySuppressed && Down(KeyAction.UseTool);
+    public static bool UseToolPressed => !IsGameplaySuppressed && (Down(KeyAction.UseTool) || EditorTakeUseToolPress());
+    public static bool EditorUseToolPress; // 에디터 시험용(한 번 누름) — §82 H1 헬리콥터 모자
+    private static int editorUseToolFrame = -1;
+    private static bool EditorTakeUseToolPress() // 그 프레임 동안 계속 true — 같은 프레임에 여러 곳이 읽어도(춤 취소·인벤토리) 모두 본다
+    {
+        if (EditorUseToolPress) { EditorUseToolPress = false; editorUseToolFrame = Time.frameCount; }
+        return editorUseToolFrame == Time.frameCount;
+    }
 
     // 눌린 칸 번호(1~4 → 0~3), 없으면 -1.
     public static int SlotKeyPressed

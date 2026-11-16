@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_UG_GloomgumFortress
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 0a0adef6198052246981e89bf0ef4d5d, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: d28b1338e21448a44bd4242c04984719, type: 3}
+  - {fileID: -1609281748187839663, guid: d28b1338e21448a44bd4242c04984719, type: 3}
+  - {fileID: 723096430288179899, guid: d28b1338e21448a44bd4242c04984719, type: 3}
+  - {fileID: 1963079803359675471, guid: d28b1338e21448a44bd4242c04984719, type: 3}
+  pushes:
+  - {x: -0.9981464, y: -0.060857624, z: 0}
+  - {x: 0.9921815, y: 0.124803476, z: 0}
+  - {x: 0.1332113, y: 0.9910877, z: 0.00000031886404}
+  - {x: 0.05311582, y: -0.9985884, z: -0.00000033039223}
+  style: 6

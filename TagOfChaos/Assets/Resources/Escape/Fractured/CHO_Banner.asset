@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1d0e0ad76b92094b8cb2904b1254814, type: 3}
+  m_Name: CHO_Banner
+  m_EditorClassIdentifier: 
+  model: {fileID: 919132149155446097, guid: 7a78f23db99127143b01f807a6c47bff, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 7a78f23db99127143b01f807a6c47bff, type: 3}
+  pushes:
+  - {x: 0.87828046, y: -0.4781458, z: -0.0000013472775}
+  style: 4

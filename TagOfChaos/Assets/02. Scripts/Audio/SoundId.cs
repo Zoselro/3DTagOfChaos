@@ -90,6 +90,12 @@ public enum SoundId
     VikingBell = 728,   // 바이킹 출발 종(한 번)
     PortalOpen = 742,
     PortalFlash = 743,
+    BreakWood = 750,        // 부서짐 — 나무·판자(§82 Q3)
+    BreakMetal = 751,       // 부서짐 — 얇은 껍데기·기계
+    BreakCandy = 752,       // 부서짐 — 사탕·과자·돌 덩어리·가는 물체
+    BreakTent = 753,        // 부서짐 — 천·텐트
+    CollapseBuilding = 754, // 건물·계단·술래방 붕괴(3.6 s)
+    CrumbleBody = 755,      // 마녀가 내리칠 때 쿠키·괴물 몸이 부스러짐
 
     // 환경음(반복)
     AmbCandyForest = 800,

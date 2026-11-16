@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: Landmark_Cogworks
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 9973c326c828e2846b7a5e2b92356cea, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: c600ea4fbfe46214693816fe15446b7c, type: 3}
+  - {fileID: -1609281748187839663, guid: c600ea4fbfe46214693816fe15446b7c, type: 3}
+  - {fileID: 723096430288179899, guid: c600ea4fbfe46214693816fe15446b7c, type: 3}
+  - {fileID: 1963079803359675471, guid: c600ea4fbfe46214693816fe15446b7c, type: 3}
+  pushes:
+  - {x: -0.999339, y: 0.036353484, z: 0}
+  - {x: 0.99846476, y: 0.055390436, z: 0}
+  - {x: 0.035992183, y: 0.99935204, z: 0.00000036872606}
+  - {x: -0.016633188, y: -0.9998617, z: -0.0000003720246}
+  style: 6

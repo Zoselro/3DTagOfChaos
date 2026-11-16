@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: Carousel
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: b236ed73e59208a4bb7a664b8f40442f, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: a4f39b5a6310ede499f368616e5f6e06, type: 3}
+  - {fileID: -1609281748187839663, guid: a4f39b5a6310ede499f368616e5f6e06, type: 3}
+  - {fileID: 723096430288179899, guid: a4f39b5a6310ede499f368616e5f6e06, type: 3}
+  - {fileID: 1963079803359675471, guid: a4f39b5a6310ede499f368616e5f6e06, type: 3}
+  pushes:
+  - {x: -0.9998309, y: -0.018389378, z: 0}
+  - {x: 0.9998398, y: 0.01789988, z: 0}
+  - {x: -0.011899754, y: 0.9999292, z: 0.00000033984458}
+  - {x: 0.015400443, y: -0.9998814, z: -0.00000030086196}
+  style: 6

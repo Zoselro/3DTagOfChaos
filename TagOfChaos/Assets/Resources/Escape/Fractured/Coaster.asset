@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: Coaster
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 8798014d7714e1148ada6cc0f18f24da, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 9bb164e0665c2ee4796dd7e1509f76b8, type: 3}
+  - {fileID: -1609281748187839663, guid: 9bb164e0665c2ee4796dd7e1509f76b8, type: 3}
+  - {fileID: 723096430288179899, guid: 9bb164e0665c2ee4796dd7e1509f76b8, type: 3}
+  - {fileID: 1963079803359675471, guid: 9bb164e0665c2ee4796dd7e1509f76b8, type: 3}
+  pushes:
+  - {x: -0.984826, y: 0.17354438, z: 0}
+  - {x: 0.9960158, y: 0.089177005, z: 0}
+  - {x: 0.02023213, y: 0.9997954, z: 0.0000003467206}
+  - {x: 0.10668789, y: -0.99429256, z: -0.0000004416566}
+  style: 6

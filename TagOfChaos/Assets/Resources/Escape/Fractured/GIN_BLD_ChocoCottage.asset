@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_BLD_ChocoCottage
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: e7cfdd75dda7f3b46ab4508b654f70d5, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 02066d2c778a6ec4f8b24aab17ea5523, type: 3}
+  - {fileID: -1609281748187839663, guid: 02066d2c778a6ec4f8b24aab17ea5523, type: 3}
+  - {fileID: 723096430288179899, guid: 02066d2c778a6ec4f8b24aab17ea5523, type: 3}
+  - {fileID: 1963079803359675471, guid: 02066d2c778a6ec4f8b24aab17ea5523, type: 3}
+  pushes:
+  - {x: -0.9986692, y: 0.051573545, z: 0}
+  - {x: 0.9997103, y: -0.024068562, z: 0}
+  - {x: 0.056785572, y: 0.99838644, z: 0.0000002733711}
+  - {x: 0.08178863, y: -0.9966497, z: -0.0000002628249}
+  style: 6

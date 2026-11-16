@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: Landmark_Factory
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 91ddbc005acf27e4989e1834199c81f0, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 8e2148bedfc8e6747a5b1ed6ff00349a, type: 3}
+  - {fileID: -1609281748187839663, guid: 8e2148bedfc8e6747a5b1ed6ff00349a, type: 3}
+  - {fileID: 723096430288179899, guid: 8e2148bedfc8e6747a5b1ed6ff00349a, type: 3}
+  - {fileID: 1963079803359675471, guid: 8e2148bedfc8e6747a5b1ed6ff00349a, type: 3}
+  pushes:
+  - {x: -0.9998843, y: 0.015209175, z: 0}
+  - {x: 0.9985921, y: -0.053045128, z: 0}
+  - {x: -0.030412003, y: 0.9995374, z: 0.00000034552772}
+  - {x: -0.0876343, y: -0.9961527, z: -0.0000003943347}
+  style: 6

@@ -13,3 +13,14 @@ MonoBehaviour:
   m_Name: GIN_UG_CrookedChocoCottage
   m_EditorClassIdentifier: 
   model: {fileID: 919132149155446097, guid: 74f80961804c4ad45884dc642d8fdedf, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: f8d4208ec075a1b42b81ede29ad65d0a, type: 3}
+  - {fileID: -1609281748187839663, guid: f8d4208ec075a1b42b81ede29ad65d0a, type: 3}
+  - {fileID: 723096430288179899, guid: f8d4208ec075a1b42b81ede29ad65d0a, type: 3}
+  - {fileID: 1963079803359675471, guid: f8d4208ec075a1b42b81ede29ad65d0a, type: 3}
+  pushes:
+  - {x: -0.99991465, y: -0.013067065, z: 0}
+  - {x: 0.99238616, y: -0.12316532, z: 0}
+  - {x: 0.027173283, y: 0.99963075, z: 0.00000028678994}
+  - {x: -0.07805325, y: -0.9969492, z: -0.00000039974466}
+  style: 6
