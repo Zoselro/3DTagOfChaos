@@ -10960,3 +10960,19 @@ if (PlayerInput.UseToolPressed && EscapeManager.ActionsAllowed && !IsPointerOver
 
 - 실행 중 물리 없음 — 모든 화면이 같은 모습. 조각에는 충돌체 없음(잔해가 길을 막지 않음).
 - 비탈에서 조각이 땅에 맞춰 내려오지는 않는다(Blender 땅 = 원본 가장 낮은 점). 고정 배치 맵은 맵이 정적 배치라 "가라앉기" 대신 먼지만.
+
+## 83. 사탕 숲 재료방 원기둥·술래방 다시 만들기·쿠키 초콜릿 단추·안전벨트 재료 모델(2026-11-16)
+
+요청: ① 사탕 숲 재료방마다 있던 원기둥 없애기 ② 사탕 숲 술래방을 다시 모델링(예전 테스트 씬 술래방이라 어울리지 않음) ③ 기본 쿠키 앞 단추를 초콜릿 단추로 ④ 놀이공원 안전벨트 재료를 다른 모델로 — ③④는 미리보기 먼저.
+
+결정(질문 답): 술래방 = **둥근 방 25 m**(다른 맵과 같은 크기·문 12·3·6·9시) · 콘셉트 **무너진 과자 오두막**.
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| S1 | 원기둥 = `Socket_Bld`(재료 꽂는 자리 원기둥, `CandyForestAssets` 기본 원기둥). `CF_Bld_Q1~Q4` 프리팹에서 지움, 빌더도 더는 만들지 않고 남은 것을 지운다. `QuadrantBuilding`의 꽂는 자리 색은 없으면 건너뛴다(null 확인) | ✅ |
+| R1 | Blender `gin/cfroom.py`(진저브레드 도구·재질 재사용): 쿠키·진저브레드 블록 벽(높이 3.6~6.4 m 들쭉날쭉, 위 블록 빠짐·무너진 구간 4곳)·부서진 크림 테두리·깨진 창 8·벽에 기대 쓰러진 초콜릿 서까래/쿠키 지붕판·잔해 더미·사탕 지팡이 문기둥 + 부러진 초콜릿 상인방·등불 4, 바닥(초콜릿 + 쿠키 테두리 + 보라 빛 금 + 부스러기)은 따로 `CF_MonsterRoomFloor`(무너질 때 남음, 위 끝 0.57 m), 문짝 `CF_MonsterRoomDoor`(흰 막대사탕 창살·초콜릿 가로대·금 간 쿠키 판). 가운데 반지름 8.5 m 비움. 49k + 5k 삼각형, 사진 `sfx_preview/cf_room_v1.jpg` | ✅ |
+| R2 | Unity: FBX 3개(`09. Environment/CandyForest/Models`, 재질 = 진저브레드 `M_GIN_*` 이름으로 다시 잇기 + 새 `M_GIN_glow_crack`), 프리팹 3개. 씬 `MonsterRoom`: 예전 네모 벽·문·장식 지우고 뿌리 회전(90°) 바로잡음, 모델·바닥 + `RoundMapKit.RoomRing`(9 m 상자 고리) + 문 4 + 분홍 문빛, 가드 안쪽 반 폭 8 m. 예전 붉은 용암 바닥판·용암 타일 9개 지움. `CandyForestMapBuilder.BuildMonsterRoom`·`BuildTiles`도 같은 결과를 만들게 고침(`EscapeMapSetup` 뒤 가드 다시 묶음) | ✅ |
+| R3 | NavMesh 다시 굽기(미끼 AI 97 %·거대 괴물 100 % 걸을 수 있음), 술래방 조각 모델 `MonsterRoom_CandyForest` 다시(26조각, 뿌리 바로 섬 → 위쪽 보정 필요 없음) | ✅ |
+| R4 | 시험: `Request1019Tests`(원기둥 없음)·`Request1021Tests`(문 = 둥근 벽 가운데 12.2 m, 가드 8 m, 대각선은 벽 고리)·`Request1118/1119` 26/26. Play Mode: 거대 괴물이 솟으며 새 방이 무너짐(바닥은 남음) `sfx_preview/cf_room_break83.jpg`, 방 사진 `cf_room_unity.jpg`. 전체 486 중 482 → 시험 고친 뒤 실패는 `SpawnChance` 1.0 하나(이번과 무관) | ✅ |
+| B1 | 쿠키 단추: 모델(`Cookie_Idle.fbx` 스킨 메시 하나, 64 px 크림 단색 텍스처)의 가슴 앞 볼록한 단추 두 개(앞면보다 7 cm 나옴) 꼭짓점 954개를 골라 텍스처의 빈 칸(UV 0.02~0.23, 0.38~0.49)에 칠한 초콜릿색으로 — 미리보기 `sfx_preview/cookie_choc_buttons.jpg`(왼쪽 지금·가운데·오른쪽 바꾼 뒤) → **적용**(사용자 승인): 새 `Editor/Cookie/CookieChocolateButtons.cs`(가져오기 후처리 — `Cookie_Idle.fbx` 단추 꼭짓점 4,959개 UV를 초콜릿 칸으로, FBX·뼈·아바타는 그대로) + `Cookie_BaseSkin_A_Color.png` 초콜릿 칸. Unity 사진 `sfx_preview/cookie_choc_unity.jpg` | ✅ |
+| B2 | 안전벨트 재료 `ITEM_Seatbelt` 새 모델(`sb/seatbelt.py`): 납작한 보라 띠(금 박음질 두 줄·가운데 짙은 결)가 한 바퀴 감기고 검은 버클(빨간 누름 단추)·은색 걸쇠(혀)·길이 조절 고리. 크기 0.59 × 0.31 × 0.25 m(예전과 같음), 재질 = 공용 `ME_*` — 미리보기 `sfx_preview/seatbelt_new.jpg`(왼쪽 지금) → **적용**: `ITEM_Seatbelt.fbx` 같은 파일에 덮어씀(아이템·상자·손에 든 모습 모두 그대로 이어짐), 재질 이름으로 다시 잇기, 아이콘 `Icon_Seatbelt.png` 다시 굽기(`ItemIconBaker.Render`). Play Mode(놀이공원): 쿠키가 새 안전벨트를 들고 초콜릿 단추가 보임 `sfx_preview/play83_cookie_belt.jpg`. 전체 시험 486 중 485(실패 = `SpawnChance` 1.0, 이번과 무관) | ✅ |
