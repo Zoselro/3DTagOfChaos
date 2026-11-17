@@ -10976,3 +10976,27 @@ if (PlayerInput.UseToolPressed && EscapeManager.ActionsAllowed && !IsPointerOver
 | R4 | 시험: `Request1019Tests`(원기둥 없음)·`Request1021Tests`(문 = 둥근 벽 가운데 12.2 m, 가드 8 m, 대각선은 벽 고리)·`Request1118/1119` 26/26. Play Mode: 거대 괴물이 솟으며 새 방이 무너짐(바닥은 남음) `sfx_preview/cf_room_break83.jpg`, 방 사진 `cf_room_unity.jpg`. 전체 486 중 482 → 시험 고친 뒤 실패는 `SpawnChance` 1.0 하나(이번과 무관) | ✅ |
 | B1 | 쿠키 단추: 모델(`Cookie_Idle.fbx` 스킨 메시 하나, 64 px 크림 단색 텍스처)의 가슴 앞 볼록한 단추 두 개(앞면보다 7 cm 나옴) 꼭짓점 954개를 골라 텍스처의 빈 칸(UV 0.02~0.23, 0.38~0.49)에 칠한 초콜릿색으로 — 미리보기 `sfx_preview/cookie_choc_buttons.jpg`(왼쪽 지금·가운데·오른쪽 바꾼 뒤) → **적용**(사용자 승인): 새 `Editor/Cookie/CookieChocolateButtons.cs`(가져오기 후처리 — `Cookie_Idle.fbx` 단추 꼭짓점 4,959개 UV를 초콜릿 칸으로, FBX·뼈·아바타는 그대로) + `Cookie_BaseSkin_A_Color.png` 초콜릿 칸. Unity 사진 `sfx_preview/cookie_choc_unity.jpg` | ✅ |
 | B2 | 안전벨트 재료 `ITEM_Seatbelt` 새 모델(`sb/seatbelt.py`): 납작한 보라 띠(금 박음질 두 줄·가운데 짙은 결)가 한 바퀴 감기고 검은 버클(빨간 누름 단추)·은색 걸쇠(혀)·길이 조절 고리. 크기 0.59 × 0.31 × 0.25 m(예전과 같음), 재질 = 공용 `ME_*` — 미리보기 `sfx_preview/seatbelt_new.jpg`(왼쪽 지금) → **적용**: `ITEM_Seatbelt.fbx` 같은 파일에 덮어씀(아이템·상자·손에 든 모습 모두 그대로 이어짐), 재질 이름으로 다시 잇기, 아이콘 `Icon_Seatbelt.png` 다시 굽기(`ItemIconBaker.Render`). Play Mode(놀이공원): 쿠키가 새 안전벨트를 들고 초콜릿 단추가 보임 `sfx_preview/play83_cookie_belt.jpg`. 전체 시험 486 중 485(실패 = `SpawnChance` 1.0, 이번과 무관) | ✅ |
+
+## 84. 얼굴 없는 캐릭터 4종으로 교체(2026-11-17)
+
+요청: 표정을 2D로 덮어 씌울 수 있게 얼굴(눈·입)을 지운 캐릭터 4종(`Charatctor/얼굴 없는 *.zip`, Meshy)을 게임에 반영 — 얼굴만 붙일지 다시 리깅할지 판별 → **다시 리깅**(얼굴만 붙이면 목 이음새·텍스처 2장, 몸 전체가 1~7 cm 다름, 에이드공주는 머리 모양도 다름). 동작이 지금과 같은지 확인한 뒤 적용(사용자 승인). 정체성 장식(마카롱 수염·몽블랑 외눈 안경·마들렌 볼·에이드 잔 위 볼/레몬)은 남아 있다.
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| R0 | 판별: 새 모델 = 뼈 없는 메시 하나(15~22만 면)·같은 T자·같은 키. §45 자동 리깅 스크립트(`bl/rig.py` → `bl/rig_faceless.py`)로 같은 Mixamo 뼈 25개 + 휴머노이드 → 같은 파일 이름으로 바꾸면 프리팹·동작·아이템 손 위치가 그대로 이어짐 | ✅ |
+| R1 | 리깅 고침: ① 몽블랑 — 외눈 안경 줄 같은 떠 있는 작은 조각 때문에 열 가중치가 통째로 실패 → 대리 메시에서 1 % 미만 조각 빼기 ② 마들렌 잉어 — 새 모델 등 뒤 붕어 꼬리(바닥까지)를 발뒤꿈치로 읽어 다리가 찢어짐 → 예전 NoTail처럼 꼬리 지우고 구멍 메움(`cut_tail`) ③ 어깨 옆 머리카락 때문에 어깨가 바깥으로 → 잉어 어깨 0.23 m 고정 ④ 이름 = `Armature`·`<이름>_Body`·`<이름>_Albedo/Normal`(살아 있는 Blender 새 장면에서만 작업, 사용자 장면 그대로). 에이드공주는 사용자가 파일을 바꿔 줌(Pink Lemonade Bot — 잔 머리) → 다시 리깅 | ✅ |
+| R2 | 동작 비교(시험 폴더 `Assets/_RigTest`, Unity에서 지금 동작 클립 7개 걷기·달리기·물풍선·점프·망치·주먹·옆걸음, 앞·옆): 지금 모델과 같은 동작, 골반·머리·발 1~3 cm·팔 관절 1~2 cm(에이드 어깨 +7 cm = 부푼 소매) — 사진 `sfx_preview/rig_fix_*.jpg`, `rig_fix_Lemonade_v2.jpg` | ✅ |
+| R3 | 적용: 예전 FBX·텍스처 백업 `_CleanupBackup/2026-11-17/Characters/`, `Assets/Animation/Characters/<이름>/CHR_<이름>.fbx`·`<이름>_Albedo.png`·`<이름>_Normal.png` 덮어씀(GUID 그대로), 아바타 뼈대 자세를 새 모델로 다시 만듦(예전 뼈 자리가 남으면 아바타가 깨짐 — 시험 중 실제로 발생), `CharacterBuilder.Build()`로 프리팹·가루 색 다시 | ✅ |
+| T | EditMode 전체 485/486(실패 = `SpawnChance` 1.0, 이번과 무관) + 새 `Request1120Tests` 2/2(휴머노이드·이름·뼈 25·면 수, 팔 가중치가 머리로 새지 않음). Play Mode(진저브레드): 캐릭터 4종 망치(몸 겹침 예전 3~4번 → 0~1번)·글러브 가드/원투·한 손 들기·스턴건 손잡이·옆걸음/뒷걸음·몸 돌리기, 1인칭 팔 + 스턴건 `sfx_preview/c84_firstperson.jpg`, Console 오류 0 | ✅ |
+| R4 | 마들렌 잉어 다시(사용자가 새 FBX — 꼬리 없는 "Cupcake Sailor Chick", 13:46): 처음 판은 등 뒤 꼬리를 지우고 메운 자리가 부자연스러웠음(사용자 지적) → 새 모델로 교체. 팔이 지느러미 머리보다 짧아 팔 끝을 머리 옆에서 잡던 문제 → `ARM_ZMAX`(머리 아래에서만 팔 끝 찾기). Blender MCP에서 리깅 → `CHR_Bungeo.fbx`·텍스처 교체·아바타·프리팹. 동작 7개 앞·옆 비교(원래 얼굴 있던 판과 같음) `sfx_preview/rig_Bungeo_v3_motion.jpg`, 시험 60/60, Play Mode 망치(겹침 0)·글러브·한 손·스턴건·옆걸음/뒷걸음·1인칭 팔 `bungeo_v3_play.jpg`, Console 오류 0 | ✅ |
+
+## 85. 테스트 모드에서 캐릭터 고르기(2026-11-17)
+
+요청: "테스트 모드에서 캐릭터를 고를 수 있는 환경이 있어?" → 없었음(오프라인 방은 늘 기본 캐릭터) → 추가.
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| C1 | `OfflineModeBootstrap`에 **Start Character**(0 쿠키·1 마카롱·2 몽블랑·3 에이드공주·4 붕어빵 소년 — `SkinCatalog` 순서) — 오프라인 방에 들어갈 때 적용. 플레이 중 **F9 = 다음, Shift+F9 = 이전**(오프라인 방·쿠키일 때만). 내 `SkinIndex`를 바꾸고, 방에 `CharacterAssignments`가 있으면 내 칸도 바꿔서 `PlayerSkinApplier`가 모델을 다시 씌움. 화면 왼쪽 위에 "Character  번호 이름   F9 next (Shift = prev)" 한 줄 | ✅ |
+| T | `Request1120Tests.OfflineCharacterTest_CyclesThroughCatalog`(앞·뒤로 돌기·0개일 때) 통과, 컴파일 0. Play Mode(진저브레드, 새 방): 시작 2 → 몽블랑 아바타, 3 → 에이드공주, 4 → 붕어빵 소년, 0 → 쿠키 모델 교체 확인, Console 오류·경고 0 | ✅ |
+
+쓰는 법: 씬에 `OfflineModeBootstrap`이 있어야 함(지금 빌드 씬에는 없음 — `MapPlaytestDriver`가 플레이 시험 때 넣거나, 시험할 씬에 빈 오브젝트를 만들어 붙임). 인스펙터 "Character test" → Start Character, 플레이 중 F9.

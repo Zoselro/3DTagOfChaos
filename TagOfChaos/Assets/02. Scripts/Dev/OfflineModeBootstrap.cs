@@ -45,6 +45,14 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
     [Tooltip("Ignore the dash intent (old judgment) to reproduce the rejected dash grabs.")]
     [SerializeField] private bool ignoreDashIntent = false;
 
+    // 캐릭터 시험(Request1009Plan.md §85): 대기실을 거치지 않는 오프라인 방에서도 캐릭터를 고른다. 실제 게임과 같은 경로
+    // (본인 Player Prop SkinIndex → PlayerSkinApplier가 모델을 바꿈)로 바꾸므로 부스러기 색·에이드공주 슬라임 같은 캐릭터별 효과도 그대로다.
+    [Header("Character test (offline room only)")]
+    [Tooltip("Character to start with: 0 = Cookie, 1 = Macaron, 2 = Montblanc, 3 = Lemonade, 4 = Bungeo (SkinCatalog order).")]
+    [SerializeField, Min(0)] private int startCharacter = 0;
+    [Tooltip("Switch to the next character while playing (hold Shift for the previous one).")]
+    [SerializeField] private KeyCode nextCharacterKey = KeyCode.F9;
+
     private const float RefillDelay = 1f;
     private bool witchTimerStarted, itemsGiven, itemsCleared;
     private readonly string[] slotItems = new string[EscapeAuthority.InventorySlots]; // 무한 사용: 칸마다 마지막으로 준 아이템
@@ -69,6 +77,7 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
     public override void OnJoinedRoom()
     {
         if (!PhotonNetwork.OfflineMode) return;
+        SetCharacter(startCharacter);
         var props = new ExitGames.Client.Photon.Hashtable { [NetKeys.TimeAttackDuration] = witchTimeSeconds };
         if (spawnAsSpy && !spawnAsMonster)
         {
@@ -95,11 +104,53 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
         PositionHistory.DebugRemoteLatency = simulateRemoteMonster ? simulatedLatencyMs / 1000f : -1f;
         MonsterDashLedger.DebugIgnore = simulateRemoteMonster && ignoreDashIntent;
         if (itemTest) UpdateItemTest();
+        UpdateCharacterTest();
         if (!startWitchTimerOnHunt || witchTimerStarted || !PhotonNetwork.OfflineMode || !PhotonNetwork.IsMasterClient) return;
         if (GamePhaseState.Current != GamePhase.Hunt || EscapeManager.Instance == null || EscapeManager.Instance.State == null) return;
         witchTimerStarted = true;
         HideOrSeekPlayer cookie = FindFirstObjectByType<HideOrSeekPlayer>();
         EscapeManager.Instance.StartWitchTimer(cookie != null ? cookie.transform.position : Vector3.zero);
+    }
+
+    // ---------------- 캐릭터 시험 ----------------
+
+    private static int CharacterCount()
+    {
+        SkinCatalogSO catalog = GameSettings.Current != null ? GameSettings.Current.CharacterCatalog : null;
+        return catalog != null ? catalog.Count : 0;
+    }
+
+    // 다음(step = +1)·이전(-1) 캐릭터 번호 — 끝에서 처음으로 돈다.
+    public static int NextCharacter(int current, int step, int count)
+    {
+        if (count <= 0) return 0;
+        return ((current + step) % count + count) % count;
+    }
+
+    private static int LocalCharacter() =>
+        PhotonNetwork.LocalPlayer != null ? PlayerSkinApplier.CharacterIndexOf(PhotonNetwork.LocalPlayer) : 0;
+
+    // 내 캐릭터를 바꾼다: SkinIndex(본인 Player Prop). 오프라인 방에 판의 배정(CharacterAssignments)이 있으면 그 안의 내 칸도 같이 바꾼다.
+    private void SetCharacter(int index)
+    {
+        if (!PhotonNetwork.OfflineMode || PhotonNetwork.LocalPlayer == null) return;
+        int count = CharacterCount();
+        if (count > 0) index = Mathf.Clamp(index, 0, count - 1);
+        PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { NetKeys.SkinIndex, index } });
+        if (PhotonNetwork.InRoom && RoomState.TryGetIntArray(NetKeys.CharacterAssignments, out int[] assigned))
+        {
+            int[] copy = (int[])assigned.Clone();
+            for (int i = 0; i + 1 < copy.Length; i += 2)
+                if (copy[i] == PhotonNetwork.LocalPlayer.ActorNumber) copy[i + 1] = index;
+            PhotonNetwork.CurrentRoom.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { NetKeys.CharacterAssignments, copy } });
+        }
+    }
+
+    private void UpdateCharacterTest()
+    {
+        if (!PhotonNetwork.OfflineMode || !PhotonNetwork.InRoom || SpawnAsMonster || !Input.GetKeyDown(nextCharacterKey)) return;
+        bool back = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        SetCharacter(NextCharacter(LocalCharacter(), back ? -1 : 1, CharacterCount()));
     }
 
     // ---------------- 아이템 시험 ----------------
@@ -188,8 +239,15 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
 
     private void OnGUI()
     {
-        if (!itemTest || !showItemHelp || !TryItemContext(out _, out int actor)) return;
         if (helpStyle == null) helpStyle = new GUIStyle(GUI.skin.box) { alignment = TextAnchor.UpperLeft, fontSize = 13, richText = true };
+        if (showItemHelp && PhotonNetwork.OfflineMode && PhotonNetwork.InRoom && !SpawnAsMonster)
+        {
+            SkinCatalogSO catalog = GameSettings.Current != null ? GameSettings.Current.CharacterCatalog : null;
+            int c = LocalCharacter();
+            string label = catalog != null ? catalog.GetLabel(c) : string.Empty;
+            GUI.Box(new Rect(10f, 58f, 520f, 24f), "<b>Character</b>  " + c + " " + label + "   " + nextCharacterKey + " next (Shift = prev)", helpStyle);
+        }
+        if (!itemTest || !showItemHelp || !TryItemContext(out _, out int actor)) return;
         int selected = PlayerInventory.Local != null ? PlayerInventory.Local.Selected : 0;
         ItemSO item = PlayerInventory.Local != null ? PlayerInventory.Local.ItemAt(selected) : null;
         string text = "<b>Item test</b>  slot " + (selected + 1) + ": " + (item != null ? item.ItemId : "(empty)")
