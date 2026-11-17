@@ -38,6 +38,13 @@ public class ItemSO : ScriptableObject
     [Tooltip("한 손 아이템: 켜면 모델의 이 점(모델 기준, 크기 전)을 손이 쥔다 — 기울이거나 주먹 위에 올리지 않는다(총 손잡이 등, §75.14).")]
     [SerializeField] private bool useGripPoint;
     [SerializeField] private Vector3 gripPoint;
+    [Header("두 손 잡기(§88) — 0이면 모델에서 잰다")]
+    [Tooltip("두 손 사이 거리의 절반(m, 몸 좌우). 0 = 모델 가로 길이의 절반.")]
+    [SerializeField, Min(0f)] private float gripHalfWidth;
+    [Tooltip("손이 잡는 높이(아이템 높이 비율, 0 = 아래 끝, 0.5 = 가운데, 1 = 위 끝).")]
+    [SerializeField, Range(0f, 1f)] private float gripHeight = 0.5f;
+    [Tooltip("손목이 아이템 끝에서 안쪽으로 들어가는 정도(m). 음수 = 바깥(손바닥이 끝을 감싼다).")]
+    [SerializeField] private float gripInset = -0.02f;
 
     public string ItemId => itemId;
     public string DisplayName => displayName;
@@ -52,6 +59,9 @@ public class ItemSO : ScriptableObject
     public float HeldScale => heldScale;
     public bool UseGripPoint => useGripPoint;
     public Vector3 GripPoint => gripPoint;
+    public float GripHalfWidth => gripHalfWidth;
+    public float GripHeight => gripHeight;
+    public float GripInset => gripInset;
     public bool LocksSlotSwitch => holdType == HoldType.TwoHanded;
     public bool IsTool => category == ItemCategory.Tool && tool != null;
 
@@ -70,6 +80,13 @@ public class ItemSO : ScriptableObject
     public void EditorSetHeldScale(float scale) => heldScale = Mathf.Max(0.1f, scale);
 
     public void EditorSetGripPoint(bool use, Vector3 point) { useGripPoint = use; gripPoint = point; }
+
+    public void EditorSetTwoHandGrip(float halfWidth, float height, float inset)
+    {
+        gripHalfWidth = Mathf.Max(0f, halfWidth);
+        gripHeight = Mathf.Clamp01(height);
+        gripInset = inset;
+    }
 
     public void EditorSetVisuals(Sprite iconSprite, GameObject model)
     {

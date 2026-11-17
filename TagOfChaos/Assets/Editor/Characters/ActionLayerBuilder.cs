@@ -28,7 +28,12 @@ public static class ActionLayerBuilder
     {
         var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(DanceStateBuilder.ControllerPath);
         var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(MaskPath);
+        // 뿅망치를 들고 있을 때 두 손을 자루 위에 놓는 IK(HeldItemPresenter.OnAnimatorIK, §87) — Action 층이 손 IK를 받게 한다.
+        mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftHandIK, true);
+        mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightHandIK, true);
+        EditorUtility.SetDirty(mask);
         AvatarMask rightArm = EnsureRightArmMask();
+        EnsureCarryItemState(controller); // 두 손 아이템 전용 들기 상태(§88 G5)
         RemoveLayer(controller, PlayerActionPose.HoldLayer);
         RemoveLayer(controller, PlayerActionPose.ActionLayer);
         RemoveLayer(controller, PlayerActionPose.TrappedLayer);
@@ -43,7 +48,7 @@ public static class ActionLayerBuilder
             (PlayerActionPose.GloveGuardState, "Cookie_GloveGuard"),   // 글러브 가드(반복, §75 C1)
             (PlayerActionPose.PunchRState, "Cookie_PunchR"),
             (PlayerActionPose.PunchLState, "Cookie_PunchL"),
-        });
+        }, ikPass: true);
         AddLayer(controller, PlayerActionPose.TrappedLayer, null, new[] { (PlayerActionPose.TrappedState, "Cookie_BalloonTrapped") });
         int moves = BuildAimWalkStates(controller);
         EditorUtility.SetDirty(controller);
@@ -98,7 +103,7 @@ public static class ActionLayerBuilder
         return mask;
     }
 
-    private static void AddLayer(AnimatorController controller, string name, AvatarMask mask, (string state, string clip)[] states)
+    private static void AddLayer(AnimatorController controller, string name, AvatarMask mask, (string state, string clip)[] states, bool ikPass = false)
     {
         var sm = new AnimatorStateMachine { name = name, hideFlags = HideFlags.HideInHierarchy };
         AssetDatabase.AddObjectToAsset(sm, controller);
@@ -110,8 +115,33 @@ public static class ActionLayerBuilder
         }
         controller.AddLayer(new AnimatorControllerLayer
         {
-            name = name, stateMachine = sm, avatarMask = mask, blendingMode = AnimatorLayerBlendingMode.Override, defaultWeight = 0f,
+            name = name, stateMachine = sm, avatarMask = mask, blendingMode = AnimatorLayerBlendingMode.Override, defaultWeight = 0f, iKPass = ikPass,
         });
+    }
+
+    // Carry 층(쿠키 몸을 드는 "Carrying" 상태만 있던 층 — 빌더 없이 만든 층)에 두 손 아이템 전용 상태 "CarryItem"을 더하고
+    // IK Pass를 켠다(HeldItemPresenter.TwoHandedIK가 아이템 가로 끝에 손을 놓는다, §88). 이미 있으면 클립만 다시 연결.
+    public const string CarryLayer = "Carry";
+    public const string CarryItemState = "CarryItem";
+
+    public static void EnsureCarryItemState(AnimatorController controller)
+    {
+        AnimatorControllerLayer[] layers = controller.layers;
+        for (int i = 0; i < layers.Length; i++)
+        {
+            if (layers[i].name != CarryLayer) continue;
+            layers[i].iKPass = true;
+            AnimatorStateMachine sm = layers[i].stateMachine;
+            AnimatorState state = null;
+            foreach (ChildAnimatorState c in sm.states) if (c.state.name == CarryItemState) state = c.state;
+            if (state == null) state = sm.AddState(CarryItemState, new Vector3(300f, 120f, 0f));
+            state.motion = DanceStateBuilder.LoadClip(Dir + "Cookie_CarryItem.fbx");
+            state.writeDefaultValues = true;
+            controller.layers = layers;
+            EditorUtility.SetDirty(controller);
+            return;
+        }
+        Debug.LogWarning("[ActionLayerBuilder] Carry layer not found — CarryItem state not added.");
     }
 
     private static void RemoveLayer(AnimatorController controller, string name)

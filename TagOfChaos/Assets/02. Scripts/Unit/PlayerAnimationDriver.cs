@@ -131,6 +131,25 @@ public class PlayerAnimationDriver
         if (next == carryReasons && carryLayerIndex != -1) return;
         carryReasons = next;
         SetCarryLayerWeight(carryReasons != CarryReason.None ? 1f : 0f);
+        PlayCarryState();
+    }
+
+    // Carry 층 상태 고르기(§88 G5): 쿠키를 들면 "Carrying"(쿠키 몸을 팔 위에), 두 손 아이템만 들면 "CarryItem"(팔을 앞으로, 손바닥 안쪽).
+    // 둘 다면 쿠키 쪽. 상태가 없는 컨트롤러(예전 에셋)면 그대로 둔다.
+    public const string CarryCookieState = "Carrying";
+    public const string CarryItemState = "CarryItem";
+    private const float CarryCrossFade = 0.12f;
+
+    public static string CarryStateFor(CarryReason reasons) =>
+        (reasons & CarryReason.Cookie) != 0 || reasons == CarryReason.None ? CarryCookieState : CarryItemState;
+
+    private void PlayCarryState()
+    {
+        if (animator == null || carryLayerIndex < 0 || carryReasons == CarryReason.None) return;
+        int hash = Animator.StringToHash(CarryStateFor(carryReasons));
+        if (!animator.HasState(carryLayerIndex, hash)) return;
+        if (animator.GetCurrentAnimatorStateInfo(carryLayerIndex).shortNameHash == hash) return;
+        animator.CrossFade(hash, CarryCrossFade, carryLayerIndex);
     }
 
     public bool IsCarryPoseOn => carryReasons != CarryReason.None;

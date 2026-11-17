@@ -7,11 +7,13 @@ public static class HammerClearance
 {
     public const float ShaftRadius = 0.06f;
 
-    // 머리 타원체(가운데 center, 반지름 radii — 모두 같은 공간)와 반지름 r 구가 겹치면 true.
+    // 머리(가운데 center, 반지름 radii — 모두 같은 공간)와 반지름 r 구가 겹치면 true. 머리 모양 = 둥근 상자(|x|⁴+|y|⁴+|z|⁴ < 1):
+    // 타원체(제곱 합)는 마카롱처럼 각진 머리의 모서리를 놓쳐, 내려찍고 돌아올 때 망치 머리가 모서리를 8 cm 파고들었다(§87).
     public static bool Overlaps(Vector3 point, float r, Vector3 center, Vector3 radii)
     {
         Vector3 d = point - center;
         float x = d.x / (radii.x + r), y = d.y / (radii.y + r), z = d.z / (radii.z + r);
+        x *= x; y *= y; z *= z;
         return x * x + y * y + z * z < 1f;
     }
 

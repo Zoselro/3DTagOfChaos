@@ -11000,3 +11000,303 @@ if (PlayerInput.UseToolPressed && EscapeManager.ActionsAllowed && !IsPointerOver
 | T | `Request1120Tests.OfflineCharacterTest_CyclesThroughCatalog`(앞·뒤로 돌기·0개일 때) 통과, 컴파일 0. Play Mode(진저브레드, 새 방): 시작 2 → 몽블랑 아바타, 3 → 에이드공주, 4 → 붕어빵 소년, 0 → 쿠키 모델 교체 확인, Console 오류·경고 0 | ✅ |
 
 쓰는 법: 씬에 `OfflineModeBootstrap`이 있어야 함(지금 빌드 씬에는 없음 — `MapPlaytestDriver`가 플레이 시험 때 넣거나, 시험할 씬에 빈 오브젝트를 만들어 붙임). 인스펙터 "Character test" → Start Character, 플레이 중 F9.
+
+## 87. 뿅망치 쥐는 곳·들기 자세·내려찍기 몸 뚫림(2026-11-17)
+
+요청: 망치를 잡은 모습이 이상함 — 두 손이 자루 끝을 쥐어야 함(사진 네모 부분), 참고 사진처럼 몸 앞에서 대각선으로 들기, 내려찍을 때 몸을 뚫음(마카롱).
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| H1 | 쥐는 곳: 오른손이 자루 아래 40 %(머리 바로 아래)를 쥐어 손 밖으로 자루가 0.4 m 튀어나왔음 → 두 손이 자루 끝을 쥠(왼손 손목에서 6 cm 위가 자루 끝, 오른손은 지금 손 간격만큼 위 — `HeldItemPresenter.ApplyHammerGrip`, 매 프레임 손 간격을 따라감) | ✅ |
+| H2 | 들기 자세: 클립(`Cookie_HammerHold`)은 두 손을 가슴 앞에 수평으로 두어 망치가 옆으로 길게 뻗었음. 어깨에 걸치기는 머리가 큰 4종(머리 폭 1.2 m 안팎 + 망치 머리 반지름 0.48 m)에서 어느 방향이든 머리와 겹쳐 불가 → 참고 사진처럼 Action 층 IK로 두 손을 몸 앞 대각선 자루 위에(아래 손 배 앞, 망치 머리 오른쪽 위·얼굴 옆). 내려찍기(Swing) 동안은 IK를 끄고 클립 손을 따라감(0.12초 이어 붙임). `PlayerAnimator` Action 층 IK Pass·`CarryUpperBody` 마스크 손 IK 켬(`ActionLayerBuilder`도 같게) | ✅ |
+| H3 | 몸 뚫림: 머리 피하기 판정이 머리를 타원체로 봐서 마카롱처럼 각진 머리의 모서리를 놓침(내려찍고 돌아올 때 0.75에서 8 cm 파고듦) → 둥근 상자(네제곱 합) 판정(`HammerClearance.Overlaps`) | ✅ |
+| T | `Request1120Tests` +2(Action 층 손 IK, 머리 모서리 판정), Request1109·1115·1118·1120 24/24. Play Mode(진저브레드) 5종: 들기·내려찍기 0~1(0.025 간격) 망치 머리가 몸에 파고든 곳 0(예전 마카롱 8 cm), 자루는 몽블랑 0.125에서 스침 3 cm 이하. 사진 `sfx_preview/hammer_hold_ik.png` | ✅ |
+
+## 88. 두 손 아이템 — 가로 길이에 맞춰 잡기(2026-11-17 계획)
+
+요청: 두 손으로 드는 물건은 가로 길이가 저마다 다르니, 그 길이에 맞춰 잡는 손 위치가 달라져야 함. 들어 올리는 높이는 지금 상태 그대로(사용자 확인). 애니메이션도 고치고 메서드·클래스도 고칠 것.
+
+### 88.1 지금 코드(읽은 파일 기준)
+
+| 파일 | 지금 하는 일 | 문제 |
+|---|---|---|
+| `Escape/HeldItemPresenter.cs` `Refresh()` | `cookie.SetCarry(CarryReason.TwoHandedItem, def.LocksSlotSwitch && !isHammer)` → Carry 층 켬, 모델을 `socket`에 붙임 | 아이템 크기를 손 자세에 전혀 쓰지 않음 |
+| 같은 파일 `LateUpdate()` | `anchor = CarryPose.HandsCenter(transform, animator)` → `socket = anchor + body * holdOffset`, 회전 `body * holdRotation` | 아이템은 두 손 가운데에 붙기만 함 — 손이 아이템 끝에 있는지 모름 |
+| 같은 파일 `TwoHandedIK()`·`RaiseHand()`(§87 뒤 추가, Unity 반영됨) | Carry 층 IK: 손 높이 = 어깨 − 팔 길이 × 0.12, 앞 = 팔 길이 × 0.9, **좌우 = 어깨 폭 × 0.9(`TwoHandWidth`)** | 좌우가 캐릭터 어깨 폭에만 맞음 → 좁은 배터리(0.35 m)는 손이 허공, 넓은 공구상자(0.73 m)는 손이 상자 속 |
+| `Unit/PlayerAnimationDriver.cs` `SetCarry()` | 이유(Cookie·TwoHandedItem) 하나라도 있으면 Carry 층 가중치 1 | 쿠키를 들 때와 물건을 들 때 같은 클립(`Cookie_Carrying`) — 쿠키 몸을 팔 위에 눕히는 자세라 물건 옆면을 잡는 손 모양이 아님 |
+| `Unit/CarryPose.cs` `HandsCenter()` | 두 손 뼈 가운데 | 그대로 씀(아이템 기준점) |
+| `Escape/Data/ItemSO.cs` | `holdType`·`holdOffset`·`holdEuler`·`heldScale`·`gripPoint`(한 손 전용) | 두 손 잡는 폭을 아이템별로 정하는 값 없음 |
+| `Escape/EscapeVisuals.cs` `CreateItemModel()` | 프리팹을 `socket` 아래에 그대로 생성 | 모델 루트 크기가 100인 것(마카롱 바퀴)이 있어 **메시 경계만 보면 0.01 m로 잘못 잼** |
+| `Unit/HideOrSeekPlayer.cs:443` | 모든 플레이어(내 화면·남의 화면)에 `HeldItemPresenter` 추가 | 계산이 아이템 정의·뼈만으로 정해지므로 네트워크 변경 불필요 |
+
+두 손 아이템 17종 가로 길이(손에 든 방향, Unity에서 잼 — 렌더러 경계, 루트 크기 포함):
+
+| 아이템 | 가로 | 높이 | 깊이 | 비고 |
+|---|---|---|---|---|
+| Battery | 0.35 | 0.64 | 0.36 | 가장 좁음 |
+| CandyCell ×4 | 0.50 | 0.80 | 0.50 | 깊음 |
+| ChocolateOil | 0.48 | 0.56 | 0.48 | |
+| CookieWheel | 0.60 | 0.60 | 0.26 | 사용자 사진 |
+| Gear | 0.67 | 0.63 | 0.19 | |
+| MacaronWheel | 0.52 | 0.52 | 0.37 | 모델 루트 크기 100 — 메시 경계로는 0.01 |
+| RedButton | 0.58 | 0.38 | 0.58 | |
+| Rune ×4 | 0.60 | 0.60 | 0.16 | |
+| Seatbelt | 0.59 | 0.25 | 0.31 | |
+| Toolbox | 0.73 | 0.57 | 0.36 | 가장 넓음, 가운데가 x −0.06 치우침 |
+
+캐릭터: 쿠키 팔 길이 약 0.5 m·어깨 x ±0.23, 머리 큰 4종 팔 길이 약 0.30 m·어깨 x ±0.20(§87 측정). → 머리 큰 캐릭터는 넓은 물건(0.6 m 이상)의 양 끝을 몸 앞 0.27 m에서 잡으면 팔이 모자람(손 ±0.32 m, 어깨에서 거리 0.33 m > 팔 0.30 m). 계획에 "팔이 모자랄 때" 규칙을 넣는다(88.3 G3).
+
+### 88.2 방향
+
+1. **애니메이션**: 물건 전용 들기 클립 `Cookie_CarryItem`(두 팔을 앞으로 들고 팔꿈치를 살짝 벌림, 손바닥이 안쪽을 보고 손가락을 오므린 쥐기) — 쿠키 몸을 드는 `Cookie_Carrying`과 나눈다. 클립은 기본 자세만 맡고, 폭은 IK가 맞춘다.
+2. **계산을 한 클래스로**: 손 위치 계산을 `HeldItemPresenter`에서 떼어 순수 함수 클래스 `TwoHandGrip`(새 파일)으로 — EditMode 시험이 쉬워진다.
+3. **아이템 폭 재기**: 렌더러 경계(루트 크기 포함)로 아이템 가로·깊이·가운데를 잰다(`ItemGripMeasure`). 필요한 아이템만 `ItemSO`의 덮어쓰기 값으로 고친다.
+4. **손바닥 방향**: 손 IK 회전을 손바닥이 아이템 옆면을 보게 돌린다(손가락 뼈로 손바닥 방향을 재서 — 캐릭터마다 뼈 축이 달라도 같은 결과).
+5. **높이 규칙은 그대로**: 어깨 − 팔 길이 × 0.12, 앞 팔 길이 × 0.9(§87 뒤 Unity 반영값).
+
+### 88.3 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| G0 | 지금 상태 정리: Unity에는 높이 IK(어깨 폭 × 0.9)까지 반영. 로컬에만 있는 "폭 맞춤" 초안은 버리고 이 계획대로 다시 짠다 | 계획 |
+| G1 | `ItemGripMeasure` — 아이템 폭·깊이·가운데 재기(렌더러 경계, 소켓 기준) | 계획 |
+| G2 | `ItemSO` 두 손 잡기 값 3개(자동 0 = 잰 값) + 에셋 빌더 setter | 계획 |
+| G3 | `TwoHandGrip.Solve()` — 손 위치·아이템 가운데(팔 길이·몸 앞면·아이템 깊이 고려) | 계획 |
+| G4 | 손바닥 방향 IK(`PalmInward`) | 계획 |
+| G5 | Blender 클립 `Cookie_CarryItem` + Carry 층 상태 `CarryItem` + `PlayerAnimationDriver` 상태 고르기 | 계획 |
+| G6 | `HeldItemPresenter` 연결(IK·소켓 위치) | 계획 |
+| G7 | 1인칭(§77)·남의 화면·쿠키 들기와 겹칠 때 확인 | 계획 |
+| T | EditMode 시험 + Play Mode 17종 × 5캐릭터 사진·수치 | 계획 |
+| DOC | 계획 문서·README | 계획 |
+
+#### G1 아이템 폭 재기 — `Assets/02. Scripts/Escape/ItemGripMeasure.cs`(새 파일)
+
+메시 경계(`sharedMesh.bounds`)만 쓰면 마카롱 바퀴처럼 모델 루트 크기가 100인 것을 0.01 m로 잰다 → 꼭짓점 8개를 렌더러의 `localToWorldMatrix` → 소켓 기준 → `holdRotation`으로 옮긴다(크기·회전 모두 포함). `SkinnedMeshRenderer`도 `sharedMesh`로 같은 방법.
+
+```csharp
+// 두 손 아이템의 몸 기준 크기(Request1009Plan.md §88 G1). 소켓 회전 = 몸 회전 × holdRotation 이므로
+// 소켓 기준 좌표에 holdRotation을 곱하면 몸 기준(오른쪽 x·위 y·앞 z) 크기가 된다. 모델 루트 크기(마카롱 바퀴 100배)도 들어간다.
+public readonly struct ItemGripSize
+{
+    public readonly float HalfWidth, HalfDepth; public readonly Vector3 Center; // Center: 소켓 기준 아이템 가운데(몸 방향)
+    public ItemGripSize(float halfWidth, float halfDepth, Vector3 center) { HalfWidth = halfWidth; HalfDepth = halfDepth; Center = center; }
+}
+
+public static class ItemGripMeasure
+{
+    public static ItemGripSize Measure(GameObject model, Transform socket, Quaternion holdRotation)
+    {
+        Vector3 min = Vector3.one * float.MaxValue, max = Vector3.one * float.MinValue;
+        Matrix4x4 toSocket = socket.worldToLocalMatrix;
+        foreach (Renderer r in model.GetComponentsInChildren<Renderer>())
+        {
+            Mesh mesh = r is SkinnedMeshRenderer s ? s.sharedMesh : r.TryGetComponent(out MeshFilter f) ? f.sharedMesh : null;
+            if (mesh == null) continue;
+            Bounds b = mesh.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 c = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                Vector3 p = holdRotation * toSocket.MultiplyPoint3x4(r.transform.localToWorldMatrix.MultiplyPoint3x4(c));
+                min = Vector3.Min(min, p); max = Vector3.Max(max, p);
+            }
+        }
+        if (min.x > max.x) return new ItemGripSize(0.2f, 0.15f, Vector3.zero); // 렌더러 없음 — 기본
+        return new ItemGripSize((max.x - min.x) * 0.5f, (max.z - min.z) * 0.5f, (min + max) * 0.5f);
+    }
+}
+```
+
+#### G2 아이템별 덮어쓰기 — `Escape/Data/ItemSO.cs`
+
+자동으로 잰 값이 맞지 않는 모양(손잡이가 따로 있는 것, 둥근 것의 잡는 높이 등)만 고친다. 0이면 자동.
+
+```csharp
+[Header("두 손 잡기(§88) — 0이면 모델에서 잰다")]
+[Tooltip("두 손 사이 거리의 절반(m, 몸 좌우). 0 = 모델 가로 길이의 절반.")]
+[SerializeField, Min(0f)] private float gripHalfWidth;
+[Tooltip("손이 잡는 높이(아이템 높이 비율, 0 = 아래 끝, 0.5 = 가운데, 1 = 위 끝).")]
+[SerializeField, Range(0f, 1f)] private float gripHeight = 0.5f;
+[Tooltip("손이 아이템 끝에서 안쪽으로 들어가는 정도(m). 음수 = 바깥(손바닥이 감쌈).")]
+[SerializeField] private float gripInset = -0.02f;
+
+public float GripHalfWidth => gripHalfWidth;
+public float GripHeight => gripHeight;
+public float GripInset => gripInset;
+#if UNITY_EDITOR
+public void EditorSetTwoHandGrip(float halfWidth, float height, float inset) { gripHalfWidth = Mathf.Max(0f, halfWidth); gripHeight = Mathf.Clamp01(height); gripInset = inset; }
+#endif
+```
+
+- `gripHeight`는 G1에서 높이(y)도 재서 `Center.y`를 대신 `min.y + (max.y − min.y) × gripHeight`로 쓴다(가운데 0.5가 지금과 같음).
+- 처음에는 모든 에셋이 기본값(자동) — Play Mode 사진에서 어색한 것만 `EscapeAssetsBuilder`에서 `EditorSetTwoHandGrip`으로 고친다.
+
+#### G3 손 위치 계산 — `Assets/02. Scripts/Escape/TwoHandGrip.cs`(새 파일, 순수 함수)
+
+입력은 모두 몸 기준(오른쪽 x·위 y·앞 z). 아이템 가운데를 몸 가운데(x 0)에 두고 두 손을 그 가로 끝에 놓는다. 규칙:
+
+1. 높이·앞: 지금 규칙 그대로 — `y = 어깨 y − 팔 × 0.12`, `z = 어깨 z + 팔 × 0.9`.
+2. 몸에 안 박히게: 아이템 뒷면(`z − 깊이/2`)이 몸 앞면(`bodyFrontZ`) + 2 cm보다 앞.
+3. 팔이 모자라면(어깨→손 거리 > 팔 × 0.95): 손을 앞으로 덜 뻗는다(같은 좌우·높이에서 닿는 z). 그래도 2번 때문에 아이템이 앞에 있어야 하면, **손은 아이템 옆면의 뒤쪽**을 잡는다(옆면은 깊이 전체가 잡을 수 있는 곳 — 손 z를 `[뒷면 + 5 cm, 앞면 − 5 cm]` 안에서 닿는 곳으로).
+4. 그래도 안 닿으면(머리 큰 캐릭터 + 공구상자처럼 아주 넓은 것): 손은 닿는 만큼만(IK가 팔을 다 편 자리), 아이템은 두 손 가운데에 둔다 — 결과 `Reachable = false`로 알려 Play Mode 측정에서 찾는다.
+
+```csharp
+// 두 손 아이템을 가로 끝에서 잡는 손 자리(Request1009Plan.md §88 G3). 모든 값은 몸 기준(오른쪽 x·위 y·앞 z).
+public static class TwoHandGrip
+{
+    public const float Drop = 0.12f;     // 어깨에서 팔 길이 × 0.12 아래(§87 뒤 사용자 확인 높이)
+    public const float Reach = 0.9f;     // 어깨에서 팔 길이 × 0.9 앞
+    public const float MaxStretch = 0.95f;
+    public const float BodyGap = 0.02f;  // 아이템 뒷면과 몸 앞면 사이
+    public const float SideMargin = 0.05f;
+    public const float MinHalfWidth = 0.1f;
+
+    public struct Input
+    {
+        public Vector3 ShoulderR, ShoulderL; public float ArmR, ArmL;
+        public float BodyFrontZ;            // 손 높이에서 몸통 앞면(G6에서 잼)
+        public float HalfWidth, HalfDepth, Inset;
+    }
+
+    public struct Result { public Vector3 HandR, HandL, ItemCenter; public bool Reachable; }
+
+    public static Result Solve(in Input g)
+    {
+        float half = Mathf.Max(g.HalfWidth, MinHalfWidth) - g.Inset;          // 손목이 놓일 좌우(가운데에서)
+        float y = Mathf.Min(g.ShoulderR.y - g.ArmR * Drop, g.ShoulderL.y - g.ArmL * Drop);
+        float wantZ = Mathf.Min(g.ShoulderR.z + g.ArmR * Reach, g.ShoulderL.z + g.ArmL * Reach);
+        float itemZ = Mathf.Max(wantZ, g.BodyFrontZ + BodyGap + g.HalfDepth); // 규칙 2
+        float zR = HandZ(g.ShoulderR, g.ArmR, half, y, itemZ, g.HalfDepth, out bool okR);
+        float zL = HandZ(g.ShoulderL, g.ArmL, -half, y, itemZ, g.HalfDepth, out bool okL);
+        return new Result
+        {
+            HandR = new Vector3(half, y, zR), HandL = new Vector3(-half, y, zL),
+            ItemCenter = new Vector3(0f, y, itemZ), Reachable = okR && okL,
+        };
+    }
+
+    // 옆면(아이템 z ± 깊이) 안에서 어깨에 가장 가까운 z — 팔이 닿으면 아이템 가운데 높이, 아니면 닿는 끝(규칙 3·4).
+    private static float HandZ(Vector3 shoulder, float arm, float x, float y, float itemZ, float halfDepth, out bool reachable)
+    {
+        float lo = itemZ - halfDepth + SideMargin, hi = itemZ + halfDepth - SideMargin;
+        float z = Mathf.Clamp(itemZ, lo, Mathf.Max(lo, hi));
+        float r = arm * MaxStretch, dx = x - shoulder.x, dy = y - shoulder.y;
+        float flat = r * r - dx * dx - dy * dy;
+        float reachZ = flat > 0f ? shoulder.z + Mathf.Sqrt(flat) : shoulder.z;
+        reachable = flat > 0f && reachZ >= lo;
+        return reachable ? Mathf.Min(z, reachZ) : Mathf.Min(lo, reachZ);
+    }
+}
+```
+
+#### G4 손바닥이 안쪽 — 손 IK 회전
+
+캐릭터마다 손뼈 축이 다르므로 고정 각도 대신 **손가락 뼈로 손바닥 방향을 재서** 원하는 방향(오른손 = 몸 왼쪽, 왼손 = 몸 오른쪽)으로 돌린다. 지난 프레임 뼈를 쓰지만 IK 목표가 같아서 한두 프레임 안에 자리 잡는다.
+
+```csharp
+// 손바닥 법선(손바닥이 보는 쪽) = (검지 뿌리 − 손목) × (새끼 뿌리 − 손목), 오른손/왼손 부호 맞춤.
+private static Vector3 PalmNormal(Transform hand, Transform index, Transform little, bool right)
+{
+    Vector3 n = Vector3.Cross(index.position - hand.position, little.position - hand.position).normalized;
+    return right ? n : -n;
+}
+
+// OnAnimatorIK(Carry 층) 안에서:
+Quaternion now = animator.GetIKRotation(goal);
+Vector3 palm = PalmNormal(hand, index, little, right);
+Vector3 want = transform.rotation * (right ? Vector3.left : Vector3.right);
+animator.SetIKRotation(goal, Quaternion.FromToRotation(palm, want) * now);
+animator.SetIKRotationWeight(goal, twoHandIK * PalmWeight); // PalmWeight 0.7 — 손목이 꺾여 보이면 낮춘다
+```
+
+- 손가락 뼈(`LeftIndexProximal`·`LeftLittleProximal` 등)가 없는 아바타는 회전 가중치 0(위치만).
+- 부호(`right ? n : -n`)는 Play Mode에서 쿠키로 한 번 확인해 고정한다.
+
+#### G5 애니메이션 — 물건 전용 들기 클립
+
+- **Blender**(클라우드 세션 bpy 5.1 또는 Blender MCP): 쿠키 뼈대(`Assets/Animation/Cookie/` 클립과 같은 Mixamo 25뼈)로 `Cookie_CarryItem.fbx` 1프레임 반복 클립 — 두 팔 앞으로(어깨 높이 조금 아래), 팔꿈치 바깥으로 15°, 손바닥 안쪽, 손가락 오므림(쥐기). §75 BL1 클립과 같은 내보내기 설정.
+- **Animator**: Carry 층에 상태 `CarryItem` 추가(`ActionLayerBuilder`에 Carry 층 상태 추가 함수 — 지금 Carry 층은 빌더가 없으므로 같은 파일에 `EnsureCarryItemState()`를 둔다). Carry 층 IK Pass는 이미 켰음(§87 뒤).
+- **`PlayerAnimationDriver`**: 이유에 따라 Carry 층 상태를 고른다 — 쿠키를 들면 `Carry`(쿠키 몸을 팔 위에), 물건만 들면 `CarryItem`. 둘 다면 쿠키 쪽(지금처럼 쿠키 몸이 우선).
+
+```csharp
+private const string CarryStateName = "Carry", CarryItemStateName = "CarryItem";
+
+public void SetCarry(CarryReason reason, bool on)
+{
+    CarryReason next = on ? carryReasons | reason : carryReasons & ~reason;
+    if (next == carryReasons && carryLayerIndex != -1) return;
+    carryReasons = next;
+    SetCarryLayerWeight(carryReasons != CarryReason.None ? 1f : 0f);
+    if (carryReasons != CarryReason.None && carryLayerIndex >= 0)
+    {
+        string state = (carryReasons & CarryReason.Cookie) != 0 ? CarryStateName : CarryItemStateName;
+        int hash = Animator.StringToHash(state);
+        if (animator.HasState(carryLayerIndex, hash)) animator.CrossFade(hash, 0.12f, carryLayerIndex);
+    }
+}
+```
+
+- `AnimatorSnapshot`(§81, 스킨 바꿀 때 상태 보존)이 Carry 층 상태도 담는지 확인 — 담지 않으면 스킨을 바꾸면 `Carry`로 돌아가므로 같이 고친다.
+
+#### G6 `HeldItemPresenter` 연결
+
+- `Refresh()`: 두 손 아이템이면 `gripSize = ItemGripMeasure.Measure(model, socket, holdRotation)`(덮어쓰기 값 적용), `bodyFrontZ`는 새 몸이 붙은 뒤 한 번 잰다(머리 재기 `HammerClearance.MeasureHead`와 같은 방식 — 몸 메시에서 |x| < 0.12, 손 높이 ±0.1 m 꼭짓점의 최대 z).
+- `TwoHandedIK()`(지금 `RaiseHand` 두 번) → `TwoHandGrip.Solve()` 한 번 + `SetIKPosition` 두 손 + G4 회전.
+- `LateUpdate()` 두 손 아이템: 지금 `anchor = HandsCenter + body * holdOffset` → **`anchor = transform.TransformPoint(result.ItemCenter) + body * holdOffset − body * gripSize.Center`**(아이템 가운데가 계산한 자리에. 손이 덜 닿아도 아이템은 몸에 안 박힘). 공구상자 가운데 치우침(x −0.06)도 `gripSize.Center`로 상쇄.
+- `TwoHandWidth`·`RaiseHand`·`TwoHandTarget`(§87 뒤 임시 코드)는 지운다.
+
+```csharp
+private void TwoHandedIK()
+{
+    bool on = model != null && !isHammer && !isGlove && holdType == HoldType.TwoHanded && rightUpperArm != null && leftUpperArm != null;
+    twoHandIK = Mathf.MoveTowards(twoHandIK, on ? 1f : 0f, (Application.isPlaying ? Time.deltaTime : 1f) / HammerIKBlendSeconds);
+    animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, twoHandIK);
+    animator.SetIKPositionWeight(AvatarIKGoal.RightHand, twoHandIK);
+    if (twoHandIK <= 0f || !on) return;
+    var input = new TwoHandGrip.Input
+    {
+        ShoulderR = transform.InverseTransformPoint(rightUpperArm.position), ArmR = ArmLength(rightUpperArm, rightForearm, rightHand),
+        ShoulderL = transform.InverseTransformPoint(leftUpperArm.position), ArmL = ArmLength(leftUpperArm, leftForearm, leftHand),
+        BodyFrontZ = bodyFrontZ, HalfWidth = gripSize.HalfWidth, HalfDepth = gripSize.HalfDepth, Inset = def.GripInset,
+    };
+    grip = TwoHandGrip.Solve(input);
+    animator.SetIKPosition(AvatarIKGoal.RightHand, transform.TransformPoint(grip.HandR));
+    animator.SetIKPosition(AvatarIKGoal.LeftHand, transform.TransformPoint(grip.HandL));
+    PalmInward(AvatarIKGoal.RightHand, true);
+    PalmInward(AvatarIKGoal.LeftHand, false);
+}
+```
+
+#### G7 함께 확인할 곳
+
+- **1인칭(§77 FP)**: 1인칭은 몸에서 팔만 떼어 그리므로 같은 IK 결과가 보여야 함 — 두 손 아이템이 화면 아래 가운데에서 양 끝을 잡는지 사진 확인. 팔이 화면 밖으로 나가면 1인칭에서만 `Reach`를 줄이는 값을 둔다.
+- **남의 화면**: `HideOrSeekPlayer.cs:443`에서 모든 플레이어에 붙고, 입력은 아이템 정의·뼈뿐이라 같은 결과 — 네트워크 변경 없음. 두 클라이언트 멀티에서 한 번 확인.
+- **쿠키를 든 채 + 두 손 아이템**: 지금은 동시에 못 하는지(`HandsLocked`·잡기 조건) 코드로 확인. 가능하면 G5 규칙대로 쿠키 들기 우선, 아이템 IK 끔.
+- **뿅망치·글러브**: `TwoHandedIK`의 `!isHammer && !isGlove` 그대로(§87 망치 IK와 겹치지 않음).
+- **캐릭터 바꿈(F9)**: `RefreshBones()`에서 `bodyFrontZ`를 다시 재게 플래그(머리 재기 `headMeasured = false`와 같은 자리).
+
+#### T 시험
+
+EditMode(`Request1121Tests`, 새 파일):
+
+```csharp
+[Test] public void Grip_HandsAtItemEdges()          // 배터리 0.35 / 공구상자 0.73 — 손 x = ±(가로/2 − inset), 아이템 가운데 x 0
+[Test] public void Grip_ItemNeverInsideBody()        // 깊은 사탕 전지(깊이 0.5) — 아이템 뒷면 ≥ 몸 앞면 + 2 cm
+[Test] public void Grip_ShortArmsHoldSideBack()      // 팔 0.30·어깨 ±0.20 + 0.6 m 바퀴 — 손이 옆면 뒤쪽, Reachable 판정
+[Test] public void Measure_UsesModelRootScale()      // 마카롱 바퀴(루트 크기 100) 가로 0.52 ± 0.03(메시 경계 0.01이 아님)
+[Test] public void Controller_HasCarryItemState()    // Carry 층 IK Pass + CarryItem 상태 + 클립 연결
+```
+
+Play Mode(진저브레드, 테스트 모드 F9로 캐릭터·`DevGive`로 아이템):
+- 두 손 아이템 17종 × 캐릭터 5종 앞·옆 사진 시트(`sfx_preview/twohand_grip_*.png`).
+- 수치: 손목 뼈에서 아이템 옆면까지 거리(목표 0~4 cm), 아이템과 몸 메시 겹침 0, `Reachable=false`인 조합 목록(있으면 그 아이템만 `gripHalfWidth`로 좁혀 잡게 덮어쓰기).
+- 걷기·달리기·점프 중에도 손이 아이템에 붙어 있는지(움직이는 동안 3프레임 간격 사진).
+- Console 오류·경고 0, EditMode 전체.
+
+### 88.4 위험·결정할 것
+
+| 항목 | 내용 | 기본 결정 |
+|---|---|---|
+| 머리 큰 캐릭터 + 넓은 물건 | 팔 0.30 m로 0.6~0.73 m 물건 양 끝을 몸 앞에서 잡기 어려움 | 옆면 뒤쪽 잡기(G3 규칙 3). 그래도 안 되면 그 아이템만 잡는 폭을 좁힘(아이템 양 끝보다 안쪽을 잡는 모습) |
+| 손목 꺾임 | 손바닥 회전 IK가 손목을 크게 비틀 수 있음 | 회전 가중치 0.7에서 시작, 사진 보고 조정 |
+| 클립 vs IK | 새 클립 없이 IK만으로도 폭은 맞출 수 있음 | 팔꿈치·손가락 모양 때문에 클립을 만든다(사용자 요청 "애니메이션도 고치면서") |
+| 들어 올리는 높이 | 지금 상태가 맞음(사용자 확인) | `Drop 0.12`·`Reach 0.9` 그대로, 시험에서 바뀌지 않았는지 확인 |

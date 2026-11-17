@@ -39,7 +39,13 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         rightForearm = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.RightLowerArm) : null;
         leftForearm = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.LeftLowerArm) : null;
         headBone = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Head) : null;
+        actionLayerIndex = animator.GetLayerIndex(PlayerActionPose.ActionLayer);
+        carryLayerIndex = animator.GetLayerIndex(CarryLayerName);
+        rightUpperArm = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.RightUpperArm) : null;
+        leftUpperArm = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.LeftUpperArm) : null;
         headMeasured = false; // 새 몸의 머리 크기는 다음 망치 자세에서 잰다(모델이 붙은 뒤)
+        bodyFrontMeasured = false; // 새 몸의 앞면·손바닥 축은 다음 두 손 들기에서 잰다(§88)
+        palmR.Known = palmL.Known = false;
     }
 
     public void Init(EscapeManager escape, PhotonView ownerView)
@@ -113,13 +119,13 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         if (isHammer)
         {
             // 소켓 = 오른손(위쪽 손), 위 = 자루(왼손 → 오른손 → 망치 머리), 앞 = 머리가 내려치는 면. 망치 머리(모델 X축 원통)를 소켓 앞(Z)으로 돌리고
-            // 오른손이 자루 아래에서 HammerGripFromBottom 지점을 쥐게 내린다. 머리 가운데는 훑기 판정에 쓴다(§75 A4).
+            // 두 손이 자루 끝을 쥐게 내린다(ApplyHammerGrip, 손 간격을 매 프레임 따라감). 머리 가운데는 훑기 판정에 쓴다(§75 A4).
             model.transform.localRotation = Quaternion.Euler(0f, 90f, 0f) * model.transform.localRotation;
             Bounds mb = MeshBounds(model);
             float scale = model.transform.localScale.y;
-            float grip = (mb.min.y + mb.size.y * HammerGripFromBottom) * scale;
-            model.transform.localPosition = -Vector3.up * grip;
-            hammerHeadLocal = Vector3.up * ((mb.min.y + mb.size.y * HammerHeadFromBottom) * scale - grip);
+            hammerBottomModel = mb.min.y * scale;
+            hammerHeadModel = (mb.min.y + mb.size.y * HammerHeadFromBottom) * scale;
+            ApplyHammerGrip(DefaultHammerHandGap);
             hammerHeadRadius = Mathf.Max(mb.extents.x, mb.extents.z) * scale;
         }
         bool oneHanded = holdType == HoldType.OneHanded;
@@ -128,6 +134,14 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         holdOffset = def.HoldOffset;
         if (gripPoint) model.transform.localPosition -= model.transform.localRotation * Vector3.Scale(def.GripPoint, model.transform.localScale);
         else if (oneHanded) model.transform.localPosition += OneHandedGripOffset(model); // 쥔 곳이 소켓(손)에 오게 — 기울기는 쥔 곳을 축으로
+        if (holdType == HoldType.TwoHanded && !isHammer)
+        {
+            // 두 손 아이템: 가로 길이에 맞춰 잡는다(§88 G1·G2). 모델 회전·크기가 정해진 뒤 잰다.
+            gripSize = ItemGripMeasure.WithOverride(ItemGripMeasure.Measure(model, socket, holdRotation, def.GripHeight), def.GripHalfWidth);
+            gripInset = def.GripInset;
+            gripSolved = false;
+            bodyFrontMeasured = false; // 몸 앞면은 아이템 높이·폭 범위에서 잰다 — 아이템마다 다시
+        }
         LateUpdate();
     }
 
@@ -256,7 +270,7 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
             // 자루 = 왼손 → 오른손 선(클립에서 두 손이 늘 자루 위에 있다) — 손뼈를 바로 따라가 덜렁거리지 않는다(§75 A1).
             // 앞(머리가 내려치는 면) = 몸 오른쪽 × 자루. 두 손이 거의 겹치는 순간에는 직전 방향을 쓴다.
             Vector3 shaft = rightHand.position - leftHand.position;
-            if (shaft.sqrMagnitude > MinHandGap * MinHandGap) hammerShaft = shaft.normalized;
+            if (shaft.sqrMagnitude > MinHandGap * MinHandGap) { hammerShaft = shaft.normalized; ApplyHammerGrip(shaft.magnitude); }
             Vector3 face = Vector3.Cross(body * Vector3.right, hammerShaft);
             if (face.sqrMagnitude < 1e-4f) face = Vector3.Cross(body * Vector3.forward, hammerShaft);
             Quaternion hammer = Quaternion.LookRotation(face.normalized, hammerShaft) * holdRotation;
@@ -266,6 +280,14 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         Vector3 anchor = holdType == HoldType.TwoHanded || rightHand == null
             ? CarryPose.HandsCenter(transform, animator)
             : rightHand.position;
+        if (holdType == HoldType.TwoHanded && gripSolved && twoHandIK > 0f)
+        {
+            // 두 손 아이템(§88 G6): 잡는 높이의 아이템 가운데를 계산한 자리(몸 가운데 앞)에 — 손이 덜 닿아도 아이템은 몸에 안 박힌다.
+            Vector3 solved = transform.TransformPoint(grip.ItemCenter) - body * gripSize.Center;
+            socket.SetPositionAndRotation(Vector3.Lerp(anchor, solved, twoHandIK) + body * holdOffset, body * holdRotation);
+            FirstPersonThrowItem();
+            return;
+        }
         socket.SetPositionAndRotation(anchor + body * holdOffset, body * holdRotation);
         FirstPersonThrowItem();
     }
@@ -277,7 +299,220 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     }
 
     private const float HeldBalloonSize = 0.38f;
-    private const float HammerGripFromBottom = 0.40f; // 오른손이 쥐는 곳: 자루 아래에서 40 %(머리 바로 아래)
+    // ---------------- 뿅망치 들기 자세(§87) ----------------
+    // 들고만 있을 때 두 손을 몸 앞 대각선 자루 위에 놓는다(Action 층 IK Pass): 아래 손(왼손)은 배 앞, 위 손(오른손)은 자루를 따라 그 위,
+    // 망치 머리는 오른쪽 위 앞. 클립(Cookie_HammerHold)은 두 손을 가슴 앞에 수평으로 두어 망치가 옆으로 길게 뻗었다.
+    // 내려찍기(Swing)에서는 IK를 끄고 클립 손을 따라간다. 둘 사이는 HammerIKBlendSeconds 동안 이어 붙인다.
+    private void OnAnimatorIK(int layerIndex)
+    {
+        if (animator == null || !animator.isHuman) return;
+        if (layerIndex == carryLayerIndex) { TwoHandedIK(); return; }
+        if (layerIndex != actionLayerIndex) return;
+        bool hold = isHammer && model != null && pose != null && pose.IsHoldingHammer
+            && !animator.GetCurrentAnimatorStateInfo(actionLayerIndex).IsName(PlayerActionPose.SwingState);
+        float dt = Application.isPlaying ? Time.deltaTime : 1f;
+        hammerIK = Mathf.MoveTowards(hammerIK, hold ? 1f : 0f, dt / HammerIKBlendSeconds);
+        animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, hammerIK);
+        animator.SetIKPositionWeight(AvatarIKGoal.RightHand, hammerIK);
+        if (hammerIK <= 0f) return;
+        Quaternion body = transform.rotation;
+        Vector3 lower = animator.GetIKPosition(AvatarIKGoal.LeftHand) + body * HoldLowerHandShift;
+        Vector3 upper = lower + body * HoldShaft * DefaultHammerHandGap;
+        animator.SetIKPosition(AvatarIKGoal.LeftHand, lower);
+        animator.SetIKPosition(AvatarIKGoal.RightHand, upper);
+    }
+
+    // ---------------- 두 손 아이템 들기(§88) ----------------
+    // Carry 층 클립은 쿠키 몸에 맞춘 자세라, 팔이 짧은 머리 큰 캐릭터는 손이 배·허리로 처지고 아이템이 몸에 붙었다.
+    // 두 손 아이템을 드는 동안: 높이·앞은 어깨에서 팔 길이 비율(TwoHandGrip), 좌우는 아이템 가로 길이의 양 끝(ItemGripMeasure),
+    // 팔이 모자라면 옆면 뒤쪽을 잡는다. 손바닥은 아이템 옆면을 본다(PalmInward).
+    private void TwoHandedIK()
+    {
+        bool on = model != null && !isHammer && !isGlove && holdType == HoldType.TwoHanded
+            && rightUpperArm != null && leftUpperArm != null && rightForearm != null && leftForearm != null && rightHand != null && leftHand != null;
+        float dt = Application.isPlaying ? Time.deltaTime : 1f;
+        twoHandIK = Mathf.MoveTowards(twoHandIK, on ? 1f : 0f, dt / HammerIKBlendSeconds);
+        animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, twoHandIK);
+        animator.SetIKPositionWeight(AvatarIKGoal.RightHand, twoHandIK);
+        if (twoHandIK <= 0f || !on)
+        {
+            animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0f);
+            animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0f);
+            LearnPalmOffset(ref palmR, AvatarIKGoal.RightHand, rightHand);
+            LearnPalmOffset(ref palmL, AvatarIKGoal.LeftHand, leftHand);
+            return;
+        }
+        float armR = ArmLength(rightUpperArm, rightForearm, rightHand), armL = ArmLength(leftUpperArm, leftForearm, leftHand);
+        Vector3 shoulderR = transform.InverseTransformPoint(rightUpperArm.position), shoulderL = transform.InverseTransformPoint(leftUpperArm.position);
+        if (!bodyFrontMeasured)
+        {
+            bodyFrontMeasured = true;
+            float handY = Mathf.Min(shoulderR.y - armR * TwoHandGrip.Drop, shoulderL.y - armL * TwoHandGrip.Drop);
+            bodyFrontZ = MeasureBodyFront(handY, Mathf.Max(shoulderR.z, shoulderL.z));
+        }
+        grip = TwoHandGrip.Solve(new TwoHandGrip.Input
+        {
+            ShoulderR = shoulderR, ShoulderL = shoulderL, ArmR = armR, ArmL = armL,
+            BodyFrontZ = bodyFrontZ, HalfWidth = gripSize.HalfWidth, HalfDepth = gripSize.HalfDepth, Inset = gripInset,
+        });
+        gripSolved = true;
+        animator.SetIKPosition(AvatarIKGoal.RightHand, transform.TransformPoint(grip.HandR));
+        animator.SetIKPosition(AvatarIKGoal.LeftHand, transform.TransformPoint(grip.HandL));
+        PalmInward(ref palmR, AvatarIKGoal.RightHand, rightHand, true);
+        PalmInward(ref palmL, AvatarIKGoal.LeftHand, leftHand, false);
+    }
+
+    private static float ArmLength(Transform upper, Transform lower, Transform hand) =>
+        Vector3.Distance(upper.position, lower.position) + Vector3.Distance(lower.position, hand.position);
+
+    // 아이템이 차지할 높이(잡는 높이 − Below ~ + Above)·폭(±아이템 가로 절반, 최소 BodyHalfWidth) 안의 몸 꼭짓점 중 가장 앞 z(몸 기준).
+    // 팔(어깨·위팔·아래팔·손)이 주로 움직이는 꼭짓점은 뺀다 — 손은 아이템 옆에 있어야 하므로(처음 판은 손까지 재서 쿠키 앞면이 0.48 m로 나왔다).
+    // 아이템 뒷면이 이보다 앞이어야 한다(머리 큰 캐릭터는 아이템 위쪽이 턱·수염 높이에 닿으므로 머리 앞면도 들어간다). 못 재면 어깨 앞 0.1 m.
+    private float MeasureBodyFront(float handY, float shoulderZ)
+    {
+        float lowY = handY - gripSize.Below, highY = handY + gripSize.Above, halfX = Mathf.Max(gripSize.HalfWidth, BodyHalfWidth);
+        var arms = new System.Collections.Generic.HashSet<Transform>();
+        foreach (HumanBodyBones b in ArmBones) { Transform t = animator.GetBoneTransform(b); if (t != null) arms.Add(t); }
+        float front = float.MinValue;
+        var baked = new Mesh();
+        var verts = new System.Collections.Generic.List<Vector3>();
+        foreach (Renderer r in CharacterModelSwap.BodyRenderers(transform))
+        {
+            if (!(r is SkinnedMeshRenderer smr) || smr.sharedMesh == null) continue;
+            smr.BakeMesh(baked, false); // 뼈 공간 크기 그대로 — 회전·위치만 더한다(HammerClearance.MeasureHead와 같음)
+            Matrix4x4 toWorld = Matrix4x4.TRS(smr.transform.position, smr.transform.rotation, Vector3.one);
+            baked.GetVertices(verts);
+            BoneWeight[] weights = smr.sharedMesh.boneWeights;
+            Transform[] bones = smr.bones;
+            for (int i = 0; i < verts.Count; i++)
+            {
+                if (i < weights.Length && weights[i].boneIndex0 < bones.Length && arms.Contains(bones[weights[i].boneIndex0])) continue;
+                Vector3 p = transform.InverseTransformPoint(toWorld.MultiplyPoint3x4(verts[i]));
+                if (Mathf.Abs(p.x) < halfX && p.y > lowY && p.y < highY) front = Mathf.Max(front, p.z);
+            }
+        }
+        if (Application.isPlaying) Destroy(baked); else DestroyImmediate(baked);
+        return front > float.MinValue ? front : shoulderZ + 0.1f;
+    }
+
+    private static readonly HumanBodyBones[] ArmBones =
+    {
+        HumanBodyBones.LeftShoulder, HumanBodyBones.LeftUpperArm, HumanBodyBones.LeftLowerArm, HumanBodyBones.LeftHand,
+        HumanBodyBones.RightShoulder, HumanBodyBones.RightUpperArm, HumanBodyBones.RightLowerArm, HumanBodyBones.RightHand,
+    };
+
+    // 손바닥이 아이템 옆면을 보게(§88 G4). 뼈대에 손가락 뼈가 없어(25뼈) 손바닥 축은 바인드 자세(T자, 손바닥 아래)에서 잰다.
+    // IK 목표 회전과 손뼈 회전 사이의 아바타 고유 차이(offset)는 IK를 쓰지 않는 동안 배운다.
+    private struct PalmFrame { public bool Known, HasOffset; public Vector3 Palm, Finger; public Quaternion Offset; }
+
+    private void LearnPalmOffset(ref PalmFrame f, AvatarIKGoal goal, Transform hand)
+    {
+        if (hand == null) return;
+        f.Offset = Quaternion.Inverse(animator.GetIKRotation(goal)) * hand.rotation;
+        f.HasOffset = true;
+    }
+
+    private void PalmInward(ref PalmFrame f, AvatarIKGoal goal, Transform hand, bool right)
+    {
+        if (!f.Known) f = MeasurePalm(hand, right, f);
+        if (!f.Known || !f.HasOffset) { animator.SetIKRotationWeight(goal, 0f); return; }
+        Quaternion body = transform.rotation;
+        Vector3 inward = body * (right ? Vector3.left : Vector3.right);
+        Vector3 forward = body * Vector3.forward;
+        Quaternion boneLocalBasis = Quaternion.LookRotation(f.Finger, f.Palm);
+        Quaternion boneWanted = Quaternion.LookRotation(forward, inward) * Quaternion.Inverse(boneLocalBasis);
+        animator.SetIKRotation(goal, boneWanted * Quaternion.Inverse(f.Offset));
+        animator.SetIKRotationWeight(goal, twoHandIK * PalmWeight);
+    }
+
+    // 손뼈 기준 손바닥 축·손가락 축: 바인드 자세에서 손바닥 = 아래, 손가락 = 바깥(오른손 +x, 왼손 −x).
+    private PalmFrame MeasurePalm(Transform hand, bool right, PalmFrame f)
+    {
+        foreach (Renderer r in CharacterModelSwap.BodyRenderers(transform))
+        {
+            if (!(r is SkinnedMeshRenderer smr) || smr.sharedMesh == null) continue;
+            int i = System.Array.IndexOf(smr.bones, hand);
+            if (i < 0 || i >= smr.sharedMesh.bindposes.Length) continue;
+            Quaternion bind = smr.sharedMesh.bindposes[i].inverse.rotation; // 메시 공간에서 바인드 때 손뼈 회전
+            Vector3 down = smr.transform.InverseTransformDirection(-transform.up).normalized;
+            Vector3 outward = smr.transform.InverseTransformDirection(transform.right * (right ? 1f : -1f)).normalized;
+            Vector3 palm = Quaternion.Inverse(bind) * down, finger = Quaternion.Inverse(bind) * outward;
+            palm = Vector3.ProjectOnPlane(palm, finger).normalized;
+            if (palm.sqrMagnitude < 0.5f) continue;
+            f.Palm = palm; f.Finger = finger; f.Known = true;
+            return f;
+        }
+        return f;
+    }
+
+    private const string CarryLayerName = "Carry";
+    private const float PalmWeight = 0.7f;
+    private const float BodyHalfWidth = 0.12f;
+    // private const float BodyBand = 0.12f; // §88 첫 판(손 높이 ±0.12) — 아이템 높이 범위(gripSize.Below·Above)로 바뀜
+    private ItemGripSize gripSize = ItemGripSize.Default;
+    private float gripInset = -0.02f;
+    private TwoHandGrip.Result grip;
+    private bool gripSolved;
+    private bool bodyFrontMeasured;
+    private float bodyFrontZ;
+    private PalmFrame palmR, palmL;
+
+    // §87 뒤 임시 코드(어깨 폭 기준 손 올리기) — §88 TwoHandGrip으로 바뀌어 쓰지 않는다.
+    // // ---------------- 두 손 아이템 들기(§88) ----------------
+    // // Carry 층 클립(Cookie_Carrying)은 쿠키 몸에 맞춘 자세라, 팔이 짧은 머리 큰 캐릭터는 손이 가슴보다 아래(배·허리)로 처져 아이템이 몸에 붙었다.
+    // // 두 손 아이템을 드는 동안 손을 어깨에서 팔 길이 비율로 앞·조금 아래에 둔다 — 캐릭터마다 팔 길이·어깨 폭에 맞는다.
+    // private void TwoHandedIK()
+    // {
+    //     bool on = model != null && !isHammer && !isGlove && holdType == HoldType.TwoHanded && rightUpperArm != null && leftUpperArm != null;
+    //     float dt = Application.isPlaying ? Time.deltaTime : 1f;
+    //     twoHandIK = Mathf.MoveTowards(twoHandIK, on ? 1f : 0f, dt / HammerIKBlendSeconds);
+    //     animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, twoHandIK);
+    //     animator.SetIKPositionWeight(AvatarIKGoal.RightHand, twoHandIK);
+    //     if (twoHandIK <= 0f || !on) return;
+    //     RaiseHand(AvatarIKGoal.RightHand, rightUpperArm, rightForearm, rightHand);
+    //     RaiseHand(AvatarIKGoal.LeftHand, leftUpperArm, leftForearm, leftHand);
+    // }
+    //
+    // private void RaiseHand(AvatarIKGoal goal, Transform upper, Transform lower, Transform hand)
+    // {
+    //     if (upper == null || lower == null || hand == null) return;
+    //     float arm = Vector3.Distance(upper.position, lower.position) + Vector3.Distance(lower.position, hand.position);
+    //     Vector3 shoulder = transform.InverseTransformPoint(upper.position);
+    //     animator.SetIKPosition(goal, transform.TransformPoint(TwoHandTarget(shoulder, arm)));
+    // }
+    //
+    // // 어깨(몸 기준) → 손 목표: 좌우는 어깨 폭 × TwoHandWidth, 높이는 어깨에서 팔 길이 × TwoHandDrop 아래, 앞은 팔 길이 × TwoHandReach.
+    // public static Vector3 TwoHandTarget(Vector3 shoulderLocal, float arm) =>
+    //     new Vector3(shoulderLocal.x * TwoHandWidth, shoulderLocal.y - arm * TwoHandDrop, shoulderLocal.z + arm * TwoHandReach);
+    //
+    // (CarryLayerName은 위 §88 코드로 옮김)
+    // public const float TwoHandDrop = 0.12f;  // 어깨에서 팔 길이 × 0.12 아래 — 팔을 거의 어깨 높이로 든다
+    // public const float TwoHandReach = 0.9f;  // 어깨에서 팔 길이 × 0.9 앞 — 아이템이 몸에서 떨어져 앞에 뜬다
+    // public const float TwoHandWidth = 0.9f;  // 어깨 폭 × 0.9(아이템 양옆을 잡는다)
+
+    private float twoHandIK;
+    private int carryLayerIndex = -1;
+    private Transform rightUpperArm, leftUpperArm;
+
+    private const float HammerIKBlendSeconds = 0.12f;
+    private static readonly Vector3 HoldShaft = new Vector3(0.8f, 0.6f, 0.3f).normalized; // 몸 기준: 오른쪽·위·조금 앞 대각선(머리가 얼굴 옆에 온다)
+    private static readonly Vector3 HoldLowerHandShift = new Vector3(-0.04f, -0.12f, 0.06f); // 클립 왼손 자리에서 배 쪽으로 내림
+    private float hammerIK;
+    private int actionLayerIndex = -1;
+
+    // 두 손이 자루 끝을 쥔다: 왼손(아래 손)이 자루 끝에서 HammerEndMargin 위, 오른손은 그 위로 지금 손 간격만큼(§87).
+    // 예전에는 오른손이 자루 아래 40 %(머리 바로 아래)를 쥐어 손 밖으로 자루 끝이 0.4 m 튀어나왔다.
+    private void ApplyHammerGrip(float handGap)
+    {
+        if (model == null) return;
+        float y = -(handGap + HammerEndMargin) - hammerBottomModel; // 소켓(오른손) 기준 모델 위치: 자루 끝 = 오른손 - (손 간격 + 여유)
+        model.transform.localPosition = Vector3.up * y;
+        hammerHeadLocal = Vector3.up * (hammerHeadModel + y);
+    }
+
+    private const float HammerEndMargin = 0.06f;      // 왼손 손목 뼈에서 자루 끝까지(주먹 안에 끝이 들어갈 만큼)
+    private const float DefaultHammerHandGap = 0.28f; // 손뼈를 못 읽을 때 쓰는 두 손 간격(쿠키 HammerHold 잰 값)
+    private float hammerBottomModel, hammerHeadModel;
     private const float HammerHeadFromBottom = 0.78f; // 머리 가운데: 아래에서 78 %(ITEM_Hammer 머리 y 0.07~0.33)
     private const float MinHandGap = 0.05f;
     private bool isHammer, isGlove;

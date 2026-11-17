@@ -70,4 +70,32 @@ public class Request1120Tests
         Assert.AreEqual(count - 1, OfflineModeBootstrap.NextCharacter(0, -1, count), "Shift wraps back to the last");
         Assert.AreEqual(0, OfflineModeBootstrap.NextCharacter(3, 1, 0), "no catalog");
     }
+
+    // §87 뿅망치 들기: Action 층이 손 IK를 받아야 두 손이 대각선 자루 위에 놓인다(HeldItemPresenter.OnAnimatorIK).
+    [Test]
+    public void HammerHold_ActionLayerTakesHandIK()
+    {
+        var c = AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>("Assets/Animation/PlayerAnimator.controller");
+        Assert.IsNotNull(c);
+        bool found = false;
+        foreach (var l in c.layers)
+        {
+            if (l.name != PlayerActionPose.ActionLayer) continue;
+            found = true;
+            Assert.IsTrue(l.iKPass, "Action layer IK pass");
+            Assert.IsTrue(l.avatarMask.GetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftHandIK), "left hand IK in mask");
+            Assert.IsTrue(l.avatarMask.GetHumanoidBodyPartActive(AvatarMaskBodyPart.RightHandIK), "right hand IK in mask");
+        }
+        Assert.IsTrue(found, "Action layer");
+    }
+
+    // §87 머리 판정 = 둥근 상자: 타원체가 놓치던 모서리(마카롱 같은 각진 머리)도 겹침으로 본다. 확실히 바깥은 그대로 바깥.
+    [Test]
+    public void HammerClearance_HeadCornersCount()
+    {
+        Vector3 c = Vector3.zero, r = new Vector3(0.5f, 0.5f, 0.5f);
+        Vector3 corner = new Vector3(0.36f, 0.36f, 0.36f); // 타원체(제곱 합 1.56)에서는 바깥, 둥근 상자(네제곱 합 0.81)에서는 안
+        Assert.IsTrue(HammerClearance.Overlaps(corner, 0f, c, r));
+        Assert.IsFalse(HammerClearance.Overlaps(new Vector3(0.6f, 0f, 0f), 0f, c, r));
+    }
 }
