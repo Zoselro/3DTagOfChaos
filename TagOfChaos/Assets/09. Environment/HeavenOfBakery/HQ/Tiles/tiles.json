@@ -1,0 +1,371 @@
+{
+ "Almond": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Apple": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Banner": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Bark": {
+  "tile": 1.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "BarkDark": {
+  "tile": 1.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Berry": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Blossom": {
+  "tile": 1.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Burlap": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "BurlapLight": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "CakeSponge": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Canvas": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Cherry": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Choco": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "ChocoDark": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "ChocoFlow": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "CloudPink": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Cream": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "DarkWood": {
+  "tile": 1.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Foliage": {
+  "tile": 2.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Frosting": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Glaze": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Glow": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": [
+   1.0,
+   0.7799999713897705,
+   0.4000000059604645
+  ]
+ },
+ "Gold": {
+  "tile": 1.0,
+  "metal": 1.0,
+  "emission": null
+ },
+ "Grape": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Grass": {
+  "tile": 2.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Icing": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Iron": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Leaf": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "LeafLight": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Moss": {
+  "tile": 2.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Mushroom": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "OrangeCut": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "OrangeFlesh": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "OrangePeel": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Pane": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": [
+   1.0,
+   0.8500000238418579,
+   0.550000011920929
+  ]
+ },
+ "PinkStone": {
+  "tile": 2.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "PinkWall": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Pith": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Plank": {
+  "tile": 1.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "PlankDark": {
+  "tile": 1.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Portal": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": [
+   0.699999988079071,
+   0.30000001192092896,
+   1.0
+  ]
+ },
+ "Pumpkin": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "PurpleGlow": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": [
+   0.6200000047683716,
+   0.30000001192092896,
+   0.949999988079071
+  ]
+ },
+ "RedTile": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Rock": {
+  "tile": 3.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "RockDark": {
+  "tile": 3.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Sack": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Sand": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Seed": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Soil": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Sprinkle1": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Sprinkle2": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Sprinkle3": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Sprinkle4": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Stem": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "StoneGrey": {
+  "tile": 3.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "StoneTile": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Stripe": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Wafer": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Water": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": [
+   0.44999998807907104,
+   0.75,
+   1.0
+  ]
+ },
+ "Window": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": [
+   1.0,
+   0.8500000238418579,
+   0.550000011920929
+  ]
+ },
+ "Wood": {
+  "tile": 1.5,
+  "metal": 0.0,
+  "emission": null
+ },
+ "WrapperPink": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "LeafDark": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Purple": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "White": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "BerryDeep": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Orange": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ },
+ "Pine": {
+  "tile": 1.0,
+  "metal": 0.0,
+  "emission": null
+ }
+}

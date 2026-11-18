@@ -134,6 +134,7 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         holdOffset = def.HoldOffset;
         if (gripPoint) model.transform.localPosition -= model.transform.localRotation * Vector3.Scale(def.GripPoint, model.transform.localScale);
         else if (oneHanded) model.transform.localPosition += OneHandedGripOffset(model); // 쥔 곳이 소켓(손)에 오게 — 기울기는 쥔 곳을 축으로
+        if (socket.localScale != Vector3.one) socket.localScale = Vector3.one; // 앞 아이템의 Fit 배율(§88.9)을 지운다
         if (holdType == HoldType.TwoHanded && !isHammer)
         {
             // 두 손 아이템: 가로 길이에 맞춰 잡는다(§88 G1·G2). 모델 회전·크기가 정해진 뒤 잰다.
@@ -283,9 +284,11 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         if (holdType == HoldType.TwoHanded && gripSolved && twoHandIK > 0f)
         {
             // 두 손 아이템(§88 G6): 잡는 높이의 아이템 가운데를 계산한 자리(몸 가운데 앞)에 — 손이 덜 닿아도 아이템은 몸에 안 박힌다.
-            Vector3 solved = transform.TransformPoint(grip.ItemCenter) - body * gripSize.Center;
+            // 팔 짧은 캐릭터는 Fit이 아이템을 줄인다(§88.9) — 소켓 크기로 줄이고, 소켓→아이템 가운데 거리도 같이 줄인다.
+            float scale = Mathf.Lerp(1f, grip.Scale, twoHandIK);
+            Vector3 solved = transform.TransformPoint(grip.ItemCenter) - body * gripSize.Center * scale;
             socket.SetPositionAndRotation(Vector3.Lerp(anchor, solved, twoHandIK) + body * holdOffset, body * holdRotation);
-            FirstPersonThrowItem();
+            socket.localScale = Vector3.one * scale;
             return;
         }
         socket.SetPositionAndRotation(anchor + body * holdOffset, body * holdRotation);
@@ -344,17 +347,22 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         }
         float armR = ArmLength(rightUpperArm, rightForearm, rightHand), armL = ArmLength(leftUpperArm, leftForearm, leftHand);
         Vector3 shoulderR = transform.InverseTransformPoint(rightUpperArm.position), shoulderL = transform.InverseTransformPoint(leftUpperArm.position);
-        if (!bodyFrontMeasured)
-        {
-            bodyFrontMeasured = true;
-            float handY = Mathf.Min(shoulderR.y - armR * TwoHandGrip.Drop, shoulderL.y - armL * TwoHandGrip.Drop);
-            bodyFrontZ = MeasureBodyFront(handY, Mathf.Max(shoulderR.z, shoulderL.z));
-        }
-        grip = TwoHandGrip.Solve(new TwoHandGrip.Input
+        var input = new TwoHandGrip.Input
         {
             ShoulderR = shoulderR, ShoulderL = shoulderL, ArmR = armR, ArmL = armL,
-            BodyFrontZ = bodyFrontZ, HalfWidth = gripSize.HalfWidth, HalfDepth = gripSize.HalfDepth, Inset = gripInset,
-        });
+            HalfWidth = gripSize.HalfWidth, HalfDepth = gripSize.HalfDepth, Inset = gripInset,
+        };
+        if (!bodyFrontMeasured)
+        {
+            // 몸 앞면을 높이별로 한 번 재고(§88.9), 그 높이에서 닿는 잡는 높이·배율을 정한다(아이템·캐릭터가 바뀔 때만).
+            bodyFrontMeasured = true;
+            MeasureFrontProfile();
+            frontFallbackZ = Mathf.Max(shoulderR.z, shoulderL.z) + 0.1f;
+            fit = TwoHandGrip.Fit(input, gripSize.Below, gripSize.Above, FrontInBand);
+        }
+        float y = Mathf.Min(shoulderR.y - armR * TwoHandGrip.Drop, shoulderL.y - armL * TwoHandGrip.Drop) - fit.ExtraDrop;
+        bodyFrontZ = FrontInBand(y - gripSize.Below * fit.Scale, y + gripSize.Above * fit.Scale);
+        grip = TwoHandGrip.SolveWith(input, fit, bodyFrontZ);
         gripSolved = true;
         animator.SetIKPosition(AvatarIKGoal.RightHand, transform.TransformPoint(grip.HandR));
         animator.SetIKPosition(AvatarIKGoal.LeftHand, transform.TransformPoint(grip.HandL));
@@ -365,15 +373,14 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     private static float ArmLength(Transform upper, Transform lower, Transform hand) =>
         Vector3.Distance(upper.position, lower.position) + Vector3.Distance(lower.position, hand.position);
 
-    // 아이템이 차지할 높이(잡는 높이 − Below ~ + Above)·폭(±아이템 가로 절반, 최소 BodyHalfWidth) 안의 몸 꼭짓점 중 가장 앞 z(몸 기준).
-    // 팔(어깨·위팔·아래팔·손)이 주로 움직이는 꼭짓점은 뺀다 — 손은 아이템 옆에 있어야 하므로(처음 판은 손까지 재서 쿠키 앞면이 0.48 m로 나왔다).
-    // 아이템 뒷면이 이보다 앞이어야 한다(머리 큰 캐릭터는 아이템 위쪽이 턱·수염 높이에 닿으므로 머리 앞면도 들어간다). 못 재면 어깨 앞 0.1 m.
-    private float MeasureBodyFront(float handY, float shoulderZ)
+    // 몸 앞면 높이별 표(§88.9): 아이템 폭(최소 BodyHalfWidth) 안의 몸 꼭짓점을 ProfileStep 높이 칸마다 가장 앞 z로 모은다.
+    // 팔(어깨·위팔·아래팔·손)이 주로 움직이는 꼭짓점은 뺀다 — 손은 아이템 옆에 있어야 하므로. 큰 머리(마카롱·붕어)는 높은 칸만 앞으로 튀어나온다.
+    private void MeasureFrontProfile()
     {
-        float lowY = handY - gripSize.Below, highY = handY + gripSize.Above, halfX = Mathf.Max(gripSize.HalfWidth, BodyHalfWidth);
+        float halfX = Mathf.Max(gripSize.HalfWidth, BodyHalfWidth);
+        for (int i = 0; i < frontProfile.Length; i++) frontProfile[i] = float.MinValue;
         var arms = new System.Collections.Generic.HashSet<Transform>();
         foreach (HumanBodyBones b in ArmBones) { Transform t = animator.GetBoneTransform(b); if (t != null) arms.Add(t); }
-        float front = float.MinValue;
         var baked = new Mesh();
         var verts = new System.Collections.Generic.List<Vector3>();
         foreach (Renderer r in CharacterModelSwap.BodyRenderers(transform))
@@ -388,12 +395,52 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
             {
                 if (i < weights.Length && weights[i].boneIndex0 < bones.Length && arms.Contains(bones[weights[i].boneIndex0])) continue;
                 Vector3 p = transform.InverseTransformPoint(toWorld.MultiplyPoint3x4(verts[i]));
-                if (Mathf.Abs(p.x) < halfX && p.y > lowY && p.y < highY) front = Mathf.Max(front, p.z);
+                int k = Mathf.FloorToInt(p.y / ProfileStep);
+                if (Mathf.Abs(p.x) < halfX && k >= 0 && k < frontProfile.Length) frontProfile[k] = Mathf.Max(frontProfile[k], p.z);
             }
         }
         if (Application.isPlaying) Destroy(baked); else DestroyImmediate(baked);
-        return front > float.MinValue ? front : shoulderZ + 0.1f;
     }
+
+    // 높이 범위(lowY~highY) 몸 앞면 z. 그 범위에 몸이 없으면 어깨 앞 0.1 m.
+    private float FrontInBand(float lowY, float highY)
+    {
+        float front = float.MinValue;
+        int a = Mathf.Max(0, Mathf.FloorToInt(lowY / ProfileStep)), b = Mathf.Min(frontProfile.Length - 1, Mathf.FloorToInt(highY / ProfileStep));
+        for (int k = a; k <= b; k++) front = Mathf.Max(front, frontProfile[k]);
+        return front > float.MinValue ? front : frontFallbackZ;
+    }
+
+    // §88 첫 판: 기본 잡는 높이 한 곳에서만 몸 앞면을 쟀다 — 높이를 낮춰 보는 Fit(§88.9)을 위해 MeasureFrontProfile·FrontInBand로 바뀜.
+    // // 아이템이 차지할 높이(잡는 높이 − Below ~ + Above)·폭(±아이템 가로 절반, 최소 BodyHalfWidth) 안의 몸 꼭짓점 중 가장 앞 z(몸 기준).
+    // // 팔(어깨·위팔·아래팔·손)이 주로 움직이는 꼭짓점은 뺀다 — 손은 아이템 옆에 있어야 하므로(처음 판은 손까지 재서 쿠키 앞면이 0.48 m로 나왔다).
+    // // 아이템 뒷면이 이보다 앞이어야 한다(머리 큰 캐릭터는 아이템 위쪽이 턱·수염 높이에 닿으므로 머리 앞면도 들어간다). 못 재면 어깨 앞 0.1 m.
+    // private float MeasureBodyFront(float handY, float shoulderZ)
+    // {
+    //     float lowY = handY - gripSize.Below, highY = handY + gripSize.Above, halfX = Mathf.Max(gripSize.HalfWidth, BodyHalfWidth);
+    //     var arms = new System.Collections.Generic.HashSet<Transform>();
+    //     foreach (HumanBodyBones b in ArmBones) { Transform t = animator.GetBoneTransform(b); if (t != null) arms.Add(t); }
+    //     float front = float.MinValue;
+    //     var baked = new Mesh();
+    //     var verts = new System.Collections.Generic.List<Vector3>();
+    //     foreach (Renderer r in CharacterModelSwap.BodyRenderers(transform))
+    //     {
+    //         if (!(r is SkinnedMeshRenderer smr) || smr.sharedMesh == null) continue;
+    //         smr.BakeMesh(baked, false); // 뼈 공간 크기 그대로 — 회전·위치만 더한다(HammerClearance.MeasureHead와 같음)
+    //         Matrix4x4 toWorld = Matrix4x4.TRS(smr.transform.position, smr.transform.rotation, Vector3.one);
+    //         baked.GetVertices(verts);
+    //         BoneWeight[] weights = smr.sharedMesh.boneWeights;
+    //         Transform[] bones = smr.bones;
+    //         for (int i = 0; i < verts.Count; i++)
+    //         {
+    //             if (i < weights.Length && weights[i].boneIndex0 < bones.Length && arms.Contains(bones[weights[i].boneIndex0])) continue;
+    //             Vector3 p = transform.InverseTransformPoint(toWorld.MultiplyPoint3x4(verts[i]));
+    //             if (Mathf.Abs(p.x) < halfX && p.y > lowY && p.y < highY) front = Mathf.Max(front, p.z);
+    //         }
+    //     }
+    //     if (Application.isPlaying) Destroy(baked); else DestroyImmediate(baked);
+    //     return front > float.MinValue ? front : shoulderZ + 0.1f;
+    // }
 
     private static readonly HumanBodyBones[] ArmBones =
     {
@@ -455,6 +502,10 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     private bool gripSolved;
     private bool bodyFrontMeasured;
     private float bodyFrontZ;
+    private const float ProfileStep = 0.025f;
+    private readonly float[] frontProfile = new float[120]; // 0 ~ 3 m
+    private float frontFallbackZ;
+    private TwoHandGrip.FitParams fit = TwoHandGrip.FitParams.Normal;
     private PalmFrame palmR, palmL;
 
     // §87 뒤 임시 코드(어깨 폭 기준 손 올리기) — §88 TwoHandGrip으로 바뀌어 쓰지 않는다.

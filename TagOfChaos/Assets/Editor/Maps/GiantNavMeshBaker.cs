@@ -109,34 +109,10 @@ public static class GiantNavMeshBaker
         return $"[GiantNavMesh] {scene.name}: sources={sources.Count} (props passed {props}) asset={kb} KB{check} in {(float)EditorApplication.timeSinceStartup - started:F0}s";
     }
 
-    public static NavMeshBuildSettings Settings()
-    {
-        NavMeshBuildSettings s = NavMesh.GetSettingsByID(GiantNavMesh.AgentTypeId);
-        s.agentRadius = GiantNavMesh.AgentRadius;
-        s.agentHeight = GiantNavMesh.AgentHeight;
-        s.agentClimb = GiantNavMesh.AgentClimb;
-        s.agentSlope = GiantNavMesh.AgentSlope;
-        s.minRegionArea = 30f;
-        return s;
-    }
+    public static NavMeshBuildSettings Settings() => MapNavMeshRules.GiantSettings();   // 판 시작 때 다시 굽기와 같은 값(§89)
 
     // 문 잎·트리거·캐릭터 몸, 작은 소품은 거대 괴물을 막지 않는다.
-    public static bool IsPassable(NavMeshBuildSource s)
-    {
-        var c = s.component as Collider;
-        if (c == null) return false;
-        if (c.isTrigger || c.GetComponentInParent<InteractableDoor>() != null || c.GetComponentInParent<IGameCharacter>() != null) return true;
-        Transform room = MonsterRoomOf(c.transform);
-        if (room != null && !MonsterRoomBreak.Keep(c, c.bounds, room.position.y)) return true; // §81 R: 거대 괴물이 술래방을 부수며 나온다 — 벽·지붕은 길을 막지 않음(바닥·엘리베이터는 남김)
-        Vector3 size = c.bounds.size;
-        return size.x < GiantNavMesh.PropFootprint && size.z < GiantNavMesh.PropFootprint && size.y < GiantNavMesh.PropHeight;
-    }
-
-    private static Transform MonsterRoomOf(Transform t)
-    {
-        for (; t != null; t = t.parent) if (t.name == "MonsterRoom") return t;
-        return null;
-    }
+    public static bool IsPassable(NavMeshBuildSource s) => MapNavMeshRules.GiantPassable(s);   // 규칙은 MapNavMeshRules로 옮김(§89)
 
     private static bool InScene(NavMeshBuildSource s, Scene scene) => s.component == null || s.component.gameObject.scene == scene;
 

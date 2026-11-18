@@ -114,6 +114,44 @@ public class Request1121Tests
         finally { Object.DestroyImmediate(socket.gameObject); }
     }
 
+    // §88.9 Fit(낮춰 들고, 모자라면 작게): 머리가 앞으로 튀어나온 캐릭터(높이 0.8 m 위 앞면 0.39, 몸통 0.17).
+    private static float MacaronFront(float lowY, float highY) => highY > 0.8f ? 0.39f : 0.17f;
+
+    [Test]
+    public void Fit_CookieKeepsNormalGrip()
+    {
+        TwoHandGrip.FitParams p = TwoHandGrip.Fit(Cookie(0.175f, 0.18f), 0.32f, 0.32f, (lo, hi) => 0.12f);
+        Assert.AreEqual(0f, p.ExtraDrop, 1e-4f, "no lowering");
+        Assert.AreEqual(1f, p.Scale, 1e-4f, "no shrinking");
+        Assert.AreEqual(TwoHandGrip.SideMargin, p.Margin, 1e-4f);
+    }
+
+    [Test]
+    public void Fit_BigHeadShortArms_LowersThenShrinks()
+    {
+        TwoHandGrip.Input g = Chibi(0.175f, 0.18f, 0f);
+        Assert.IsFalse(TwoHandGrip.SolveWith(g, TwoHandGrip.FitParams.Normal, MacaronFront(0.33f, 0.97f)).Reachable, "default grip cannot reach");
+        TwoHandGrip.FitParams p = TwoHandGrip.Fit(g, 0.32f, 0.32f, MacaronFront);
+        Assert.Greater(p.ExtraDrop, 0f, "held lower, under the head");
+        Assert.LessOrEqual(p.Scale, 1f);
+        Assert.GreaterOrEqual(p.Scale, TwoHandGrip.MinScale);
+        float y = 0.73f - 0.39f * TwoHandGrip.Drop - p.ExtraDrop;
+        float front = MacaronFront(y - 0.32f * p.Scale, y + 0.32f * p.Scale);
+        TwoHandGrip.Result r = TwoHandGrip.SolveWith(g, p, front);
+        Assert.IsTrue(r.Reachable, "hands reach the item sides");
+        Assert.GreaterOrEqual(r.ItemCenter.z - 0.18f * p.Scale, front + TwoHandGrip.BodyGap - 1e-4f, "item stays clear of the body");
+        Assert.AreEqual(0.175f * p.Scale + 0.02f, r.HandR.x, 1e-4f, "hands on the scaled item edges");
+    }
+
+    // 높이를 낮추는 것만으로 닿으면 줄이지 않는다(작게 하는 것은 마지막 수단).
+    [Test]
+    public void Fit_PrefersLoweringOverShrinking()
+    {
+        TwoHandGrip.FitParams p = TwoHandGrip.Fit(Chibi(0.175f, 0.12f, 0f), 0.2f, 0.2f, MacaronFront);
+        Assert.AreEqual(1f, p.Scale, 1e-4f);
+        Assert.Greater(p.ExtraDrop, 0f);
+    }
+
     // Carry 층: IK Pass + 물건 전용 상태 CarryItem(Cookie_CarryItem 클립), 쿠키 들기 상태는 그대로. 상태 고르기 규칙.
     [Test]
     public void Controller_HasCarryItemState()

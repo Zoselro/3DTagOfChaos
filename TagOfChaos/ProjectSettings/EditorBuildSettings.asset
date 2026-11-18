@@ -11,8 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/GameLobbyScene.unity
     guid: 65e6d029e4f25ed47bcc06f1ce0fb6d1
-  - enabled: 1
-    path: Assets/Scenes/Maps/Test/Test_HauntedBakery.unity
+  - enabled: 0
+    path: Assets/Scenes/Maps/Test/Test_HeavenOfBakery.unity
     guid: 7e9f2590d5e2d4649a972588c337d2f3
   - enabled: 1
     path: Assets/Scenes/Maps/CandyForest.unity
@@ -26,6 +26,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Maps/GingerbreadVillage.unity
     guid: 3089a5a2a5df99841939555bd741fe45
+  - enabled: 1
+    path: Assets/Scenes/Maps/HeavenOfBakery.unity
+    guid: 4c44d18843cdd2548bcd41c14f36c0ee
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -35,6 +35,15 @@ public class DecoyNavMesh : MonoBehaviour
         Ready = false;
     }
 
+    // 판 시작 때 다시 구운 길로 바꾼다(Request1009Plan.md §89 L4 — RuntimeNavMeshBaker).
+    public void Replace(NavMeshData fresh)
+    {
+        if (instance.valid) instance.Remove();
+        data = fresh;
+        instance = fresh != null ? NavMesh.AddNavMeshData(fresh) : default;
+        Ready = instance.valid;
+    }
+
 #if UNITY_EDITOR
     public void EditorSetData(NavMeshData navMesh) => data = navMesh;
 #endif

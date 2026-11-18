@@ -29,7 +29,7 @@ public static class MusicRules
             case "GingerbreadVillage": return MusicScene.Gingerbread;
             case "ChocolateFactory": return MusicScene.Factory;
             case "CursedCandyCarnival": return MusicScene.Carnival;
-            case "HauntedBakery": return MusicScene.Bakery;
+            case "HeavenOfBakery": return MusicScene.Bakery;
             default: return MusicScene.Other; // 시험 씬 등 — 배경음 없음
         }
     }

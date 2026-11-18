@@ -177,7 +177,7 @@ public class AudioTests
     [TestCase("Test_GingerbreadVillage", MusicScene.Gingerbread)]
     [TestCase("ChocolateFactory", MusicScene.Factory)]
     [TestCase("CursedCandyCarnival", MusicScene.Carnival)]
-    [TestCase("Test_HauntedBakery", MusicScene.Bakery)]
+    [TestCase("Test_HeavenOfBakery", MusicScene.Bakery)]
     [TestCase("PlayerTestScene", MusicScene.Other)]
     public void Music_SceneFromName(string scene, MusicScene expected)
     {

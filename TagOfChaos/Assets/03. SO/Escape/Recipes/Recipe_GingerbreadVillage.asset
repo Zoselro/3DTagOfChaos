@@ -43,4 +43,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 037bc7a655c39634cadfa12fd8306702, type: 2}
   - {fileID: 11400000, guid: fc37645ab6d07ce41bccee9cc969bd19, type: 2}
   - {fileID: 11400000, guid: 7194b48700060344ba28355261352e02, type: 2}
+  fixedBuildingOrder: 0
   repairKitCount: 0

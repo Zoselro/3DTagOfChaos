@@ -25,3 +25,6 @@ MonoBehaviour:
   heldScale: 1.2
   useGripPoint: 1
   gripPoint: {x: 0, y: -0.088, z: -0.089}
+  gripHalfWidth: 0
+  gripHeight: 0.5
+  gripInset: -0.02

@@ -25,6 +25,8 @@ public static class NetKeys
 
     // 이번 판 맵 씬 이름(string) — 시작 때 방장이 고르고, 대기실에 남은 괴물도 이 씬으로 간다(GameScenePlan.md §3.2)
     public const string GameMapScene = "GameMapScene";
+    // 이번 판 맵 배치(int[] {서브 맵 순서 0~5, 과일 밭 재료 건물 자리 0~3}) — 시작 버튼 때 방장이 뽑는다(Request1009Plan.md §89, MapLayout)
+    public const string MapLayout = "MapLayout";
 
     // 방 설정 — 방을 만들 때 방장이 정한다. 판이 바뀌어도 유지된다. 게임 제한시간(RoomTimeLimit)은 없앴다(Request1009Plan.md §25.5 D).
     public const string RoomSpyCount = "RoomSpyCount";             // int — 스파이 수(0~1)
@@ -98,6 +100,7 @@ public static class NetKeys
         new Scope(GameResult, Target.Room, Lifetime.Round),
         new Scope(DoorStates, Target.Room, Lifetime.Round),
         new Scope(GameMapScene, Target.Room, Lifetime.Round),
+        new Scope(MapLayout, Target.Room, Lifetime.Round),
         new Scope(RoomSpyCount, Target.Room, Lifetime.Session),
         new Scope(TimeAttackDuration, Target.Room, Lifetime.Session),
         new Scope(RegionMove, Target.Room, Lifetime.Round),

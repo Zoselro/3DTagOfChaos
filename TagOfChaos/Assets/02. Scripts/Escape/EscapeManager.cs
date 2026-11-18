@@ -615,6 +615,7 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
     // 술래방 안인지(수평 + 방 높이). 호박마차·AI는 술래방에 들어가지 않는다.
     // 높이도 본다(Request1009Plan.md §57): 두 층 맵(진저브레드 지하 −36 m)에서 술래방 바로 밑 지하가 방 안으로 판정됐다.
     public Transform MonsterRoom => monsterRoom; // §81 R — 거대 괴물이 부수며 나오는 술래방
+    public float MonsterRoomHalfSize => monsterRoomHalfSize; // §89 판 시작 때 AI 길 다시 굽기(술래방 못 걷는 상자)
 
     public bool InMonsterRoom(Vector3 p)
     {

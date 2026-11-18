@@ -29,7 +29,7 @@ MonoBehaviour:
   - GingerbreadVillage
   - ChocolateFactory
   - CursedCandyCarnival
-  - Test_HauntedBakery
+  - HeavenOfBakery
   minTimeAttackMinutes: 1
   maxTimeAttackMinutes: 10
   defaultTimeAttackMinutes: 1

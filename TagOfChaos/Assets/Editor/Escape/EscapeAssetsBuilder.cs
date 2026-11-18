@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -48,6 +49,10 @@ public static class EscapeAssetsBuilder
         ItemSO macaronWheel = Mat("MacaronWheel", "Macaron Wheel", new Color(1f, 0.6f, 0.75f));
         ItemSO cookieWheel = Mat("CookieWheel", "Cookie Wheel", new Color(0.8f, 0.55f, 0.3f));
         ItemSO oil = Mat("ChocolateOil", "Chocolate Oil", new Color(0.3f, 0.15f, 0.08f));
+        // Heaven Of Bakery 주제 재료(Request1009Plan.md §89 D4): 아몬드 자루·밀가루 포대·딸기잼 병(+ 초콜릿 원유). 모델·아이콘은 ITEM_<id>.fbx·Icon_<id>.png
+        ItemSO almond = WithVisuals(Mat("AlmondSack", "Almond Sack", new Color(0.62f, 0.4f, 0.22f)));
+        ItemSO flour = WithVisuals(Mat("FlourSack", "Flour Sack", new Color(0.96f, 0.95f, 0.92f)));
+        ItemSO jam = WithVisuals(Mat("StrawberryJam", "Strawberry Jam", new Color(0.8f, 0.08f, 0.15f)));
         ItemSO[] runes =
         {
             Mat("Rune_Red", "Rune", new Color(1f, 0.15f, 0.2f)),
@@ -85,9 +90,9 @@ public static class EscapeAssetsBuilder
             Recipe("CursedCandyCarnival", EscapeExitKind.RollerCoaster, RecipeMode.Slots,
                 new[] { G(redButton, 1, 1), G(seatbelt, 1, 1), G(battery, 3, 0), G(toolbox, 3, 0, "Repair") }, null, null,
                 new[] { R(seatbelt), R(battery) }, toolbox, fillsCapacity: true),
-            Recipe("HauntedBakery", EscapeExitKind.BakeryMachine, RecipeMode.Slots,
-                new[] { G(redButton, 1, 1), G(gear, 1, 1), G(battery, 3, 0), G(toolbox, 3, 0, "Repair") }, null, null,
-                new[] { R(gear), R(battery) }, toolbox, fillsCapacity: true),
+            Recipe("HeavenOfBakery", EscapeExitKind.BakeryMachine, RecipeMode.Slots,
+                new[] { G(almond, 2, 1), G(oil, 2, 0), G(flour, 2, 0), G(jam, 2, 0) }, null, null,
+                new[] { R(almond, oil, flour, jam), R(almond, oil, flour, jam) }, toolbox, fillsCapacity: true),   // 로켓 칸도 주제 재료 4종 중에서(§89 D4)
             Recipe("ChocolateFactory", EscapeExitKind.ChocolateTrain, RecipeMode.Slots,
                 new[] { G(macaronWheel, 2, 1), G(cookieWheel, 2, 0), G(oil, 2, 0), G(gear, 2, 0) }, null, null,
                 new[] { R(oil), R(gear) }, toolbox, fillsCapacity: true),
@@ -99,7 +104,7 @@ public static class EscapeAssetsBuilder
 
         // 건물 4곳 재료(§25.5 E — 지금 맵 재료 그대로, 판마다 어느 건물에 넣을지 섞는다)
         SetBuildingMaterials(recipes, "CursedCandyCarnival", redButton, seatbelt, battery, toolbox);
-        SetBuildingMaterials(recipes, "HauntedBakery", redButton, gear, battery, toolbox);
+        SetBuildingMaterials(recipes, "HeavenOfBakery", almond, oil, flour, jam);
         SetBuildingMaterials(recipes, "ChocolateFactory", macaronWheel, cookieWheel, oil, gear);
         SetBuildingMaterials(recipes, "GingerbreadVillage", runes);
         SetBuildingMaterials(recipes, "CandyForest", cells);
@@ -107,6 +112,13 @@ public static class EscapeAssetsBuilder
         var catalog = LoadOrCreate<EscapeCatalogSO>(ResourcesRoot + "/EscapeCatalog.asset");
         catalog.EditorSetup(items.ToArray(), recipes.ToArray(), hammer);
         catalog.EditorSetupReform(repairKit, dismantle, new[] { stunGun, hammer, balloon } /* 감옥 풍선은 물풍선에 합쳤다(§45.8 Q1) */, new[] { skates, pumpkin, recorder }, new[] { 5, 3, 5 }, heliHat, noiseBomb);
+        // §68·§68.9에서 따로 더한 아이템(섬광탄·권투 글러브·콜라 대포 = 쿠키 상자, 수색 폭탄 = 술래 스킬)도 남긴다.
+        // 예전에는 이 빌더를 다시 돌리면 목록에서 빠졌다(§89 HB4에서 찾음).
+        ItemSO flash = Existing("Item_Flashbang"), glove = Existing("Item_BoxingGlove"), cannon = Existing("Item_ColaCannon"), search = Existing("Item_SearchBomb");
+        if (flash != null && glove != null && cannon != null && search != null)
+            catalog.EditorSetRequest1108(items.Concat(new[] { flash, glove, cannon, search }.Where(x => !items.Contains(x))).ToArray(),
+                new[] { skates, pumpkin, recorder, flash, glove, cannon }, new[] { 5, 3, 5, 3, 4, 3 }, search);
+        else Debug.LogWarning("[EscapeAssets] §68 items missing — cookie chest list keeps only skates·pumpkin·recorder");
         BuildXRayMaterial();
         EditorUtility.SetDirty(catalog);
         LoadOrCreate<EscapeTextsSO>(ResourcesRoot + "/EscapeTexts.asset");
@@ -154,11 +166,25 @@ public static class EscapeAssetsBuilder
         return item;
     }
 
+    // 모델·아이콘이 아직 비어 있으면 이름 규칙(ITEM_<id>.fbx·Icon_<id>.png)으로 채운다(§89 새 재료).
+    private static ItemSO Existing(string file) => AssetDatabase.LoadAssetAtPath<ItemSO>($"{SoRoot}/Items/{file}.asset");
+
+    private static ItemSO WithVisuals(ItemSO item)
+    {
+        if (item.ModelPrefab != null && item.Icon != null) return item;
+        var model = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/09. Environment/Escape/Models/ITEM_{item.ItemId}.fbx");
+        var icon = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/08. Resources/ItemIcons/Icon_{item.ItemId}.png");
+        if (model != null || icon != null) item.EditorSetVisuals(icon != null ? icon : item.Icon, model != null ? model : item.ModelPrefab);
+        return item;
+    }
+
     private static void SetBuildingMaterials(List<EscapeRecipeSO> recipes, string map, params ItemSO[] materials)
     {
         foreach (EscapeRecipeSO r in recipes)
         {
             if (r.MapName != map) continue;
+            // 맵 빌더가 순서를 고정한 레시피(표지판이 재료를 알려 주는 맵)는 같은 재료 묶음이면 그 순서를 지킨다
+            if (r.FixedBuildingOrder && r.BuildingMaterials.Length == materials.Length && !materials.Except(r.BuildingMaterials).Any()) continue;
             r.EditorSetBuildingMaterials(materials);
             EditorUtility.SetDirty(r);
         }

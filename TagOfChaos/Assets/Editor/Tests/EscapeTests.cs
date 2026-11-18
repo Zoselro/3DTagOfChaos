@@ -396,11 +396,11 @@ public class EscapeTests
         }
     }
 
-    // 판에 쓰는 맵 씬: Test_ 씬이 남아 있으면 그것(HauntedBakery), 아니면 실제 모델 맵(§74 P19 — 나머지 Test_ 씬 4개는 백업 폴더로 옮겼다).
+    // 판에 쓰는 맵 씬: Test_ 씬이 남아 있으면 그것(HeavenOfBakery), 아니면 실제 모델 맵(§74 P19 — 나머지 Test_ 씬 4개는 백업 폴더로 옮겼다).
     private static string PlayableMapPath(string map)
     {
         string test = TestMapBuilder.ScenePath(map);
-        return System.IO.File.Exists(test) ? test : $"Assets/Scenes/Maps/{map}.unity";
+        return !MapScenes.IsRealMap(map) && System.IO.File.Exists(test) ? test : $"Assets/Scenes/Maps/{map}.unity";   // §89: 실제 맵이 생기면 그 씬
     }
 
     // §25.5 O: 판에 쓰는 맵마다 건물 4·탈출구 4·술래문·상자 40·로켓 자리·무지개 자리·마녀가 연결돼 있다
@@ -408,7 +408,7 @@ public class EscapeTests
     [TestCase("GingerbreadVillage")]
     [TestCase("ChocolateFactory")]
     [TestCase("CursedCandyCarnival")]
-    [TestCase("HauntedBakery")]
+    [TestCase("HeavenOfBakery")]
     public void TestMap_EscapeSetupComplete(string map)
     {
         EditorSceneManager.OpenScene(PlayableMapPath(map), OpenSceneMode.Single);
@@ -442,7 +442,7 @@ public class EscapeTests
 
     // 쿠키 스폰에서 네 건물 수리 자리와 네 탈출구까지 걸어갈 수 있다.
     [TestCase("CandyForest")]
-    [TestCase("HauntedBakery")]
+    [TestCase("HeavenOfBakery")]
     public void TestMap_BuildingsAndExitsReachable(string map)
     {
         EditorSceneManager.OpenScene(PlayableMapPath(map), OpenSceneMode.Single);
@@ -450,22 +450,25 @@ public class EscapeTests
         for (int q = 1; q <= 4; q++)
         {
             Transform b = GameObject.Find($"Building_Q{q}").transform;
-            Assert.IsTrue(ReachableNear(spawn, FindPrefix(b, "Repair_Point").position, 1.5f), b.name);
+            Assert.IsTrue(ReachableNear(spawn, FindPrefix(b, "Repair_Point").position, 1.5f, GridHalf(map)), b.name);
         }
         foreach (string e in new[] { "N", "E", "S", "W" })
-            Assert.IsTrue(ReachableNear(spawn, EscapeCue.FindDeep(GameObject.Find("Exit_" + e).transform, "ExitTrigger_" + e).position, 2f), "exit " + e);
+            Assert.IsTrue(ReachableNear(spawn, EscapeCue.FindDeep(GameObject.Find("Exit_" + e).transform, "ExitTrigger_" + e).position, 2f, GridHalf(map)), "exit " + e);
     }
 
     private static Transform FindPrefix(Transform root, string prefix) =>
         root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name.StartsWith(prefix));
 
-    private static bool ReachableNear(Vector3 from, Vector3 target, float radius)
+    // 고원이 섬 밖까지 나가는 맵(§89 Heaven Of Bakery, r 130)은 통행 격자를 맵 반경만큼 넓힌다.
+    private static float GridHalf(string map) => map == HeavenOfBakeryMapBuilder.MapName ? HeavenOfBakeryMapBuilder.MapRadius : MapScenes.DefaultGridHalf;
+
+    private static bool ReachableNear(Vector3 from, Vector3 target, float radius, float half)
     {
-        if (MapPassabilityCheck.FindPath(from, target, cookie: true) != null) return true;
+        if (MapPassabilityCheck.FindPath(from, target, true, half) != null) return true;
         for (int i = 0; i < 8; i++)
         {
             Vector3 p = target + Quaternion.Euler(0f, i * 45f, 0f) * Vector3.forward * radius;
-            if (MapPassabilityCheck.FindPath(from, p, cookie: true) != null) return true;
+            if (MapPassabilityCheck.FindPath(from, p, true, half) != null) return true;
         }
         return false;
     }

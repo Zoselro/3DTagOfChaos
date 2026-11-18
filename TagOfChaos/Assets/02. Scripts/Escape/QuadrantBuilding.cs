@@ -45,7 +45,15 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
     private const int MaxRetries = 3;
 
     public int Index => index;
-    public Vector3 RepairPoint => repairPoint != null ? repairPoint.position : transform.position;
+    // Bind 전(에디터 검사·NavMesh 확인)에도 실제 수리 자리를 쓴다 — 분수처럼 가운데가 막힌 건물은 수리 자리가 앞에 있다(§89.12)
+    public Vector3 RepairPoint
+    {
+        get
+        {
+            if (repairPoint == null) repairPoint = FindPrefix("Repair_Point");
+            return repairPoint != null ? repairPoint.position : transform.position;
+        }
+    }
     public Vector3 InteractionPoint => RepairPoint;
     public float InteractionRange => interactionRange;
 
@@ -301,3 +309,4 @@ public class QuadrantBuilding : MonoBehaviour, IHoldInteractable, IHoldStartList
         return material != null ? $"{material.DisplayName} {percent}%" : null;
     }
 }
+

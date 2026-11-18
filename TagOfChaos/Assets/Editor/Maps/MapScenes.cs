@@ -4,7 +4,7 @@ using System;
 // Request1009Plan.md §47 CL5에서 없앴다. 지금 판의 맵은 실제 모델 맵(SceneNames.RealMapScenes)과 나머지 Test_<Map>이다.
 public static class MapScenes
 {
-    public static readonly string[] MapNames = { "CandyForest", "GingerbreadVillage", "ChocolateFactory", "CursedCandyCarnival", "HauntedBakery" };
+    public static readonly string[] MapNames = { "CandyForest", "GingerbreadVillage", "ChocolateFactory", "CursedCandyCarnival", "HeavenOfBakery" };
 
     // 통행 격자의 기본 반경(m) — 옛 축소 맵 기준(한 변 140 m). 실제 모델 맵 빌더는 맵마다 Options.Half를 따로 준다.
     public const float DefaultGridHalf = 70f;

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 575d048a53780e746ade97300dfe473a, type: 3}
+  m_Name: Item_StrawberryJam
+  m_EditorClassIdentifier: 
+  itemId: StrawberryJam
+  displayName: "\uB538\uAE30\uC7BC"
+  icon: {fileID: 21300000, guid: e36ad5f1bff21864c99d2cf3afc39f0c, type: 3}
+  modelPrefab: {fileID: 919132149155446097, guid: 8712946ced2199f439b195365cc34fad, type: 3}
+  tint: {r: 0.8, g: 0.08, b: 0.15, a: 1}
+  holdType: 1
+  category: 0
+  tool: {fileID: 0}
+  holdOffset: {x: 0, y: 0, z: 0}
+  holdEuler: {x: 0, y: 0, z: 0}
+  heldScale: 1
+  useGripPoint: 0
+  gripPoint: {x: 0, y: 0, z: 0}
+  gripHalfWidth: 0
+  gripHeight: 0.5
+  gripInset: -0.02

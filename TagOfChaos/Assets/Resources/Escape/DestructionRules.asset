@@ -183,7 +183,7 @@ MonoBehaviour:
   - MonsterRoom_ChocolateFactory
   - MonsterRoom_CursedCandyCarnival
   - MonsterRoom_GingerbreadVillage
-  - MonsterRoom_Test_HauntedBakery
+  - MonsterRoom_Test_HeavenOfBakery
   crackMaterials:
   - {fileID: 2100000, guid: 070ca8d070ddbdc4288f524cbf2daaef, type: 2}
   - {fileID: 2100000, guid: 6180d4d937c9c0e4a9e22793a91d49a9, type: 2}

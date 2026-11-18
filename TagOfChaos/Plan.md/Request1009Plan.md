@@ -11058,16 +11058,16 @@ if (PlayerInput.UseToolPressed && EscapeManager.ActionsAllowed && !IsPointerOver
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| G0 | 지금 상태 정리: Unity에는 높이 IK(어깨 폭 × 0.9)까지 반영. 로컬에만 있는 "폭 맞춤" 초안은 버리고 이 계획대로 다시 짠다 | 계획 |
-| G1 | `ItemGripMeasure` — 아이템 폭·깊이·가운데 재기(렌더러 경계, 소켓 기준) | 계획 |
-| G2 | `ItemSO` 두 손 잡기 값 3개(자동 0 = 잰 값) + 에셋 빌더 setter | 계획 |
-| G3 | `TwoHandGrip.Solve()` — 손 위치·아이템 가운데(팔 길이·몸 앞면·아이템 깊이 고려) | 계획 |
-| G4 | 손바닥 방향 IK(`PalmInward`) | 계획 |
-| G5 | Blender 클립 `Cookie_CarryItem` + Carry 층 상태 `CarryItem` + `PlayerAnimationDriver` 상태 고르기 | 계획 |
-| G6 | `HeldItemPresenter` 연결(IK·소켓 위치) | 계획 |
-| G7 | 1인칭(§77)·남의 화면·쿠키 들기와 겹칠 때 확인 | 계획 |
-| T | EditMode 시험 + Play Mode 17종 × 5캐릭터 사진·수치 | 계획 |
-| DOC | 계획 문서·README | 계획 |
+| G0 | 지금 상태 정리: Unity에는 높이 IK(어깨 폭 × 0.9)까지 반영. 로컬에만 있는 "폭 맞춤" 초안은 버리고 이 계획대로 다시 짠다 | 완료 |
+| G1 | `ItemGripMeasure` — 아이템 폭·깊이·가운데 재기(렌더러 경계, 소켓 기준) | 완료 |
+| G2 | `ItemSO` 두 손 잡기 값 3개(자동 0 = 잰 값) + 에셋 빌더 setter | 완료 |
+| G3 | `TwoHandGrip.Solve()` — 손 위치·아이템 가운데(팔 길이·몸 앞면·아이템 깊이 고려) | 완료 (+ Fit §88.9) |
+| G4 | 손바닥 방향 IK(`PalmInward`) | 완료 |
+| G5 | Blender 클립 `Cookie_CarryItem` + Carry 층 상태 `CarryItem` + `PlayerAnimationDriver` 상태 고르기 | 완료 |
+| G6 | `HeldItemPresenter` 연결(IK·소켓 위치) | 완료 |
+| G7 | 1인칭(§77)·남의 화면·쿠키 들기와 겹칠 때 확인 | 완료 (1인칭은 해당 없음 — §88.9) |
+| T | EditMode 시험 + Play Mode 17종 × 5캐릭터 사진·수치 | 완료 (16종 × 5캐릭터 80/80) |
+| DOC | 계획 문서·README | 완료 |
 
 #### G1 아이템 폭 재기 — `Assets/02. Scripts/Escape/ItemGripMeasure.cs`(새 파일)
 
@@ -11300,3 +11300,487 @@ Play Mode(진저브레드, 테스트 모드 F9로 캐릭터·`DevGive`로 아이
 | 손목 꺾임 | 손바닥 회전 IK가 손목을 크게 비틀 수 있음 | 회전 가중치 0.7에서 시작, 사진 보고 조정 |
 | 클립 vs IK | 새 클립 없이 IK만으로도 폭은 맞출 수 있음 | 팔꿈치·손가락 모양 때문에 클립을 만든다(사용자 요청 "애니메이션도 고치면서") |
 | 들어 올리는 높이 | 지금 상태가 맞음(사용자 확인) | `Drop 0.12`·`Reach 0.9` 그대로, 시험에서 바뀌지 않았는지 확인 |
+
+### 88.9 결과(2026-11-17) — 완료
+
+**Play Mode 1차(코드 그대로)**: 쿠키·몽블랑·레모네이드 16종 모두 정상. **마카롱 15/16·붕어 14/16 손이 아이템에 안 닿음**.
+- 원인(높이별 몸 앞면 측정): 큰 머리가 앞으로 튀어나옴(마카롱 0.80 m 위 앞면 0.36~0.39, 몸통 0.17 / 붕어 0.90 m 위 0.21~0.34, 몸통 0.11~0.16). 아이템 위 끝이 머리 높이에 걸려 아이템이 머리 앞까지 밀림 + 팔이 짧음(마카롱 0.41 m, 붕어 0.36 m, 어깨 z −0.10/−0.14).
+- 사용자 결정: **"낮춰 들고, 모자라면 작게"**.
+
+**고친 것**
+| 파일 | 내용 |
+|---|---|
+| `TwoHandGrip.cs` | `FitParams`(더 낮춘 길이·배율·옆면 여유·팔 펴기)·`Fit()`·`SolveWith()` 추가. `Solve()`는 `SolveWith(Normal)`로. 찾는 순서: 같은 높이에서 옆면 뒤 끝(여유 0.05 → 0.02 m)·팔 끝까지(0.95 → 1.0) → 2 cm씩 낮추기(어깨 − 팔 × 0.75까지, 높이마다 몸 앞면 다시) → 마지막에 5 %씩 줄이기(최소 0.5배) |
+| `HeldItemPresenter.cs` | 몸 앞면을 높이 2.5 cm 칸 표(`MeasureFrontProfile`·`FrontInBand`)로 잼 — 옛 `MeasureBodyFront`는 주석. Fit은 아이템·캐릭터가 바뀔 때만(매 프레임 흔들림 없음). 줄일 때는 소켓 크기와 소켓→아이템 가운데 거리를 같이 줄임, 새 아이템을 들면 소켓 크기 1로 되돌림 |
+| `Request1121Tests.cs` | `Fit_CookieKeepsNormalGrip`·`Fit_BigHeadShortArms_LowersThenShrinks`·`Fit_PrefersLoweringOverShrinking` |
+
+**Play Mode 최종(16종 × 5캐릭터 = 80)**: 80/80 손이 아이템 옆면 위(양 끝에서 2~3 cm = 손바닥 두께), 아이템·몸 겹침 0.
+| 캐릭터 | 잡는 높이(m) | 아이템 배율 |
+|---|---|---|
+| 쿠키 | 1.19 | 1.0 (그대로) |
+| 몽블랑 | 0.62~0.76 | 1.0 |
+| 레모네이드 | 0.85 | 0.64~1.0 (깊은 캔디셀이 가장 작음) |
+| 마카롱 | 0.51~0.65 (허리) | 0.60~1.0 |
+| 붕어 | 0.71 | 약 0.5 |
+- 걷기·달리기 중에도 같음(마카롱·붕어 공구상자, 쿠키 배터리). F9 캐릭터 바꾸기 뒤 다시 잼(`RefreshBones`에서 `bodyFrontMeasured = false`).
+- 1인칭(§77): 스턴건·물풍선·섬광탄 우클릭 조준에서만 켜짐(`ToolUser` → `CookieAimCamera.Want`) — 두 손 아이템은 1인칭이 없음.
+- 남은 것: Fit은 잴 때의 몸 자세(Carry 클립 섞이는 중)에 따라 배율이 0.05 정도 달라질 수 있음(마카롱 캔디셀 0.60/0.70).
+- EditMode 전체 502 중 501 통과. `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`(설정 30 % 값)은 §88 전부터 실패 — 손대지 않음.
+
+## 89. Heaven Of Bakery 맵 완성(2026-11-17 계획)
+
+요청(사용자 그림 2장: 밀 이삭 확대, 맵 구상도):
+1. 밀이 너무 단순하다 → 사진처럼(통통한 낟알이 엇갈려 붙은 이삭·긴 까락) 다시 만들어 **먼저 보여주기**.
+2. 폭포가 너무 단순하다 → 사진처럼 **파티클**로.
+3. 없는 건물을 뺀 나머지를 배치한다. 동그라미 친 곳(초콜릿 고원 아래, 다리 밑)이 **북쪽 탈출구** — 탈출구는 **4개**(북·동·남·서).
+4. **4번째 재료 건물은 과일 밭의 무작위 자리**, **서브 맵 3개(아몬드·초콜릿·밀가루)의 자리도 판마다 무작위**.
+5. 재료 건물·일반 건물 모델은 아직 배치하지 않았다. 메인 맵(과일 밭)에는 **재료 건물 1 + 일반 건물 3**이 들어간다.
+6. 이름 Haunted Bakery → **Heaven Of Bakery**(§HOB 계획 그대로).
+
+### 89.1 지금 코드(읽은 파일 기준)
+
+| 파일 | 지금 하는 일 | 이번 작업과의 관계 |
+|---|---|---|
+| `Escape/EscapeState.cs:30-31` | `BuildingCount = 4`, `ExitCount = 4` | 재료 건물 4·탈출구 4 그대로 맞음 — 코드 수 변경 없음 |
+| `Escape/EscapeAuthority.cs:75-96` `Initialize()` | 방장이 재료 4종을 섞어(`Shuffle(materials)`) 건물 0~3에 하나씩, 활성 = 쿠키 수 + 1 | 건물 **자리**는 섞지 않는다 — 씬의 `Building_Q1~4` 그대로. 자리 무작위는 새로 만든다 |
+| `Escape/EscapeAuthority.cs:660-661` | 탈출구 `Shuffle(exits)` 뒤 2곳 열기 | 4곳이면 그대로 동작 |
+| `Escape/EscapeManager.cs:16-29, 188-213` | 상자 자리·건물·탈출구·로켓·무지개·술래방을 **씬에 직렬화된 참조**로 들고, `Awake`에서 `Bind` | 위치는 그때그때 `transform`에서 읽음(`RepairPoint`, `TriggerPoint`, `ExitPosition`) → **Awake 전에 옮기면 그대로 따라온다** |
+| `Editor/Escape/EscapeMapSetup.cs:66-135` `Apply()` | 씬에서 이름으로 찾음: `Building_Q1~4`, `Exit_N/E/S/W`, `CHEST_Slot_nn`(→ `EscapeSetup` 아래 상자로 바꾸고 표시 삭제), `RocketSpawn_nn`, `RainbowSpawn_nn`, `MonsterRoom`·`MonsterDoor_n`, `WITCH_Anchor` | 이름 규칙을 지키면 새 맵도 같은 도구로 연결됨. 단 **상자는 `EscapeSetup` 아래로 옮겨지므로** 서브 맵과 같이 움직이게 다시 붙여야 함(89.5 L3) |
+| `Editor/Maps/GingerbreadVillageMapBuilder.cs:100-166` `Build()` | Test_ 씬을 복사 → `Map` 아래 정리 → 배경·술래방·건물·길·출구·타일·빛 → `EscapeMapSetup.Apply` → 술래방 `MonsterRoomGuard.EditorBind` → 저장·빌드 목록 | 새 `HeavenOfBakeryMapBuilder`가 같은 흐름·`RoundMapKit`(Polar·FaceCenter·Placement·RoomDoor·Markers·MoveSpawn·MoveWitchAnchor·AddToBuildSettings)을 그대로 쓴다 |
+| `Escape/DecoyAI/DecoyNavMesh.cs` + `Editor/Maps/DecoyNavMeshBaker.cs:71-127` | AI 길(NavMesh)을 **에디터에서 한 번 구워** 에셋으로 저장 → 씬이 켜질 때 `NavMesh.AddNavMeshData` | 서브 맵·건물 자리가 판마다 바뀌면 **구워 둔 길이 틀림** → 이 맵만 판 시작 때 다시 굽기(89.5 L4). `GiantNavMesh`도 같음 |
+| `Lobby/GameStartAuthority.cs:86-96` | 시작 때 방장이 방 속성 한 번에 씀(`PrepareEndTime`·`GameMapScene`·`SpyActorNumbers`·`CharacterAssignments`) 뒤 `LoadLevel` | 같은 묶음에 **배치 값**(`MapLayout`)을 넣으면 씬보다 먼저 모두에게 도착(주석: 같은 클라이언트의 Props는 보낸 순서대로) |
+| `Core/NetKeys.cs` | 방 속성 키 | `MapLayout` 키 추가 |
+| `Core/SceneNames.cs:22` | `RealMapScenes = { CandyForest, CursedCandyCarnival, ChocolateFactory, GingerbreadVillage }` | `HeavenOfBakery` 추가 |
+| `Editor/Maps/MapScenes.cs:7` | `MapNames`에 `"HauntedBakery"` | 이름 변경 |
+| `Audio/MusicRules.cs:32` | `case "HauntedBakery": return MusicScene.Bakery;` | 이름 변경(곡은 Bakery 그대로) |
+| `Editor/Escape/EscapeAssetsBuilder.cs:88,102` | `Recipe("HauntedBakery", EscapeExitKind.BakeryMachine, …)`, `SetBuildingMaterials(… redButton, gear, battery, toolbox)` | 레시피 이름 변경, 재료 4종은 그대로(결정 D4) |
+| `Editor/Maps/DecoyNavMeshBaker.cs:27` | 굽는 씬 목록에 `Test/Test_HauntedBakery.unity` | 새 씬 경로로 |
+| `Environment/SpinPart.cs` | 도는 부품(테스트 씬 `SpinGear`) | 풍차 날개(`HOB_Bld_FlourMill_Blades`)에 그대로 씀 |
+| 셰이더 | **Built-in 렌더 파이프라인**(URP 아님), Linear. 프로젝트 셰이더: `Beacon`·`WaterBubble`·`XRaySilhouette`, 파티클은 `Particles/Standard Unlit` | §HOB 첫 계획의 "URP Shader Graph"는 틀림 → Built-in 표면 셰이더로 쓴다 |
+| 에셋(이름 변경 대상) | `Recipe_HauntedBakery.asset`, `SPY_Rocket_HauntedBakery.fbx`(`EscapeMapSetup`이 `SPY_Rocket_{map}`로 찾음), `HauntedBakery_FarGround.asset`, `Maps/HauntedBakery/*`(PostFX·Lighting·Doors), `DecoyNavMesh/·GiantNavMesh/Test_HauntedBakery.asset`, `MonsterRoom_Test_HauntedBakery`(조각 모델·`Resources/Escape/Fractured`) | 89.7 |
+
+테스트 씬 `Test_HauntedBakery`(5.8만 줄): 사분면 건물 `Building_Q1~4`(`Repair_Point`·`Socket_Q`·`ESC_Glow`), `Exit_N/E/S/W`(`ExitPad_`·`ExitTrigger_`·`ExitPillar_`·`ExitLintel_`), `CHEST_Slot` 40, `RocketSpawn` 6, `RainbowSpawn` 8, `MonsterRoom`(`RoomWall_`·`MonsterDoor` 4), `Spawn_Cookie_Q` 4, `DecoyNavMesh`·`GiantNavMesh`, `FarGround`·`FarBackdrop`, `PostFX`·`MapLighting`·`VoidKillZone`·`WITCH_Anchor`. → 새 맵은 이 씬을 복사해 틀(EscapeSetup·빛·킬존·카메라)만 쓰고 `Map` 아래는 새로 짓는다(진저브레드와 같은 방법).
+
+### 89.2 맵 배치(구상도 → 좌표)
+
+좌표: Unity 월드, +Z = 북, 각도 0° = 동(+X), 반시계. 과일 밭 바닥 높이 0.
+
+```
+                      [N 슬롯] 초콜릿 자리  (0, 92) 윗면 15 m, r 32
+   [NW 슬롯] (-66, 64) 윗면 12 m ── 다리(높이 12 m, z≈58) ── [NE 슬롯] (66, 64) 윗면 12 m
+          ↑ 나선 경사로 W(12 m)        │ 계단 3 m(다리 → N)        ↑ 나선 경사로 E(12 m)
+          (-62, 18)                  Exit_N (0, 54) 다리 밑·절벽 앞            (62, 18)
+   Exit_W (-93, 0)            술래방(정자 r 5.5) + 둥근 광장 r 16 (0, 0)          Exit_E (93, 0)
+            Lot_1 200°   Lot_2 250°        Exit_S (0, -93)        Lot_3 290°   Lot_4 340°   (r 55)
+   폭포: 섬 바깥 절벽 205°·235°·305°·335°(+ 밀가루 서브 맵 안 작은 폭포 1)
+```
+
+| 구역 | 놓을 것(있는 모델) | 수 |
+|---|---|---|
+| 섬 바탕 | **새 모델** `HOB_Island_Main`(r 100 잔디 판 + 아래 바위 기둥 고리, 깊이 30 m — 고원 빌더 `plateau()`로 만듦) | 1 |
+| 서브 맵 슬롯 | `HOB_Plateau_Flour`(12 m) ×2(NW·NE) — 고원 높이는 **슬롯에 고정**, 위에 올라가는 내용만 바뀐다(결정 D1). N은 `HOB_Plateau_Choco`(15 m) | 3 |
+| 경사로 | `HOB_SpiralRamp_12m` ×2(W→NW, E→NE), 아래 입구 건물 `HOB_House_Cake`(W)·`HOB_House_Strawberry`(E), 꼭대기 `HOB_House_TierCake` 지붕 정자(구상도 컵케이크 탑) | 2 |
+| 다리·계단 | `HOB_Bridge_10m` ×8(NW 가장자리 → (0,58) → NE 가장자리, 호를 따라), `HOB_Stairs_3m` ×1(다리 가운데 → N 윗면) | 9 |
+| 술래방 | `HOB_TaggerGazebo`(r 5.5, 문 ±X·±Z) + `HOB_RoundPlaza` 2배(r 16) | 1 |
+| 탈출구 | `HOB_ExitPortal` ×4 → `Exit_N/E/S/W` 아래에 `ExitPad_`·`ExitTrigger_`(EscapeGate 이름 규칙) | 4 |
+| 길 | 둥근 길 r 22~26 + 방사 길 5(S·W·E·북 다리 밑·경사로 둘) — `HOB_Tile_*`(시각용, 진저브레드 `BuildTiles`와 같은 방식) | 약 600판 |
+| 과일 밭 꾸미기 | 과일 조형물 6종, `HOB_Cupcake_*`, `HOB_MarketStall`, `HOB_FruitCart`, 나무·덤불·꽃·울타리 — `RoundMapKit.Placement`로 겹침 없이 흩기(씨앗 고정) | 약 120 |
+| 섬 가장자리 | `HOB_CrownFence_2m`(r 96, 탈출구·경사로 자리 비움), `HOB_BannerLamp`/`HOB_LampPost_Tall` 15°마다, `HOB_CandyArch` 탈출구 앞 | 약 280 |
+| 하늘 | `HOB_Cloud_L/S` r 120~170, 높이 −25~+10(섬 아래에 구름 바다), `FarBackdrop` | 약 40 |
+| **자리만**(모델 없음) | 과일 밭 `Lot_1~4`(16×16 m 평평한 자리, 둘레 타일) — 재료 건물 1(`Building_Q4`) + 일반 건물 3(`General_1~3`)이 판마다 이 넷에 나뉘어 들어감 | 4 |
+
+서브 맵 내용 묶음(슬롯 로컬: 원점 = 고원 윗면 가운데, 로컬 −Z = 맵 가운데 쪽 입구):
+
+| 묶음 | 재료 건물 자리 | 나머지(있는 모델) |
+|---|---|---|
+| `SubMap_Almond` | `Building_Q1`(모델 대기 — 결정 D2) | `HOB_AlmondTree` ×8, `HOB_Crate`·`HOB_Sack`·`HOB_Barrel` 무리 3, `HOB_Urn`, `HOB_Bench` ×2, 등불 6, 상자 자리 `CHEST_Slot` 8, 로켓 자리 1, 무지개 자리 2 |
+| `SubMap_Chocolate` | `Building_Q2`(구상도의 초콜릿 분수 — 결정 D6) | `HOB_ChocoFountain`, `HOB_ChocoPillar` ×6, `HOB_ChocolateBar`·`HOB_Truffles`·`HOB_StrawberryChocoCake`, `HOB_CandyCanes`, 상자 8, 로켓 1, 무지개 2 |
+| `SubMap_Flour` | `Building_Q3` | `HOB_WheatField`(89.3 새 밀) 2구역 12×8 m, `HOB_Sack` 무리, `HOB_Signpost`, `HOB_WoodFootbridge` + 작은 폭포(89.4), 상자 8, 로켓 1, 무지개 2 |
+| 과일 밭 | `Building_Q4`(Lot 중 하나) | 상자 16, 로켓 3, 무지개 2, `Spawn_Cookie_Q1~4`(남쪽 반) |
+
+### 89.3 밀 다시 만들기(Blender — 먼저 보여주기)
+
+사진의 특징: 이삭 하나에 낟알 20~28개가 **두 줄로 엇갈려**(층마다 90° 돌아) 붙어 옆에서 4줄로 보임, 낟알은 통통한 물방울 모양 + 가운데 홈, 낟알 끝마다 이삭 길이 1.5~2배의 까락, 이삭이 15~35° 숙임, 줄기 마디 2개·잎 1~2장, 금색(아래 진하고 끝 밝음).
+
+| 단계 | 내용 |
+|---|---|
+| W1 | `hob/objs_wheat.py`: `wheat_ear()`(축 곡선 + 낟알 엇갈림 + 까락), `wheat_stalk()`(마디 줄기 + 잎 리본), `wheat_clump(n=7)` |
+| W2 | LOD 3단: LOD0 이삭 낟알 하나하나(포기 7줄기 ≈ 8k 삼각형, 12 m 안), LOD1 낟알을 4줄 혹으로 합친 이삭(≈ 900), LOD2 십자 카드 2장(LOD0을 Blender에서 렌더한 알파 그림, 8 삼각형) |
+| W3 | 흔들림 정점 색 그대로: R = 흔들림 세기(뿌리 0 → 끝 1, 제곱), G = 포기 위상. 세 LOD 모두 같은 값 → LOD가 바뀌어도 튀지 않음 |
+| W4 | 사진 비교 렌더(가까이·밭 전체) + 흔들림 GIF → **사용자 확인 뒤** Unity로 |
+
+```python
+# hob/objs_wheat.py — 이삭 하나(엇갈린 두 줄 낟알 + 까락)
+def wheat_ear(base, axis, n=12, length=0.16, droop=0.45, rng=None):
+    """axis: 줄기 끝 방향. 층마다 낟알 2개(좌우), 층이 바뀔 때 90° 돌아 옆에서 4줄로 보인다."""
+    side0, up0 = frame_vecs(axis)
+    for i in range(n):
+        t = i / (n - 1)
+        d = (axis + up0 * (-droop * t * t)).normalized()            # 끝으로 갈수록 숙임
+        p = base + axis * (length * t) + up0 * (-droop * length * t ** 3 / 3)
+        s, u = frame_vecs(d)
+        rot = (i % 2) * (math.pi / 2)
+        for k in (0, 1):
+            a = rot + k * math.pi
+            out = s * math.cos(a) + u * math.sin(a)
+            r = 0.0085 * (1.0 - 0.35 * t)                            # 끝 낟알이 조금 작다
+            kernel(p + out * r * 1.1, d * 0.6 + out * 0.8, r, 'WheatGold')   # 물방울 낟알(lathe 6×5, 홈 한 줄)
+            awn(p + out * r * 1.6 + d * r, d * 0.85 + out * 0.15, length * rng.uniform(1.4, 1.9))  # 까락: 가는 원뿔 3면
+```
+
+### 89.4 폭포(파티클)
+
+구상도: 섬 바깥 절벽에서 떨어져 구름 속으로 사라지는 파란 물줄기 4개 + 밀가루 쪽 작은 폭포. 지금 `HOB_WaterfallCliff`는 휜 판 한 장이라 밋밋함.
+
+| 층 | 만드는 것 | 값(시작점) |
+|---|---|---|
+| F1 물줄기 판 | 절벽을 따라 내려가는 리본 메시(폭 3.4 m, 길이 ~35 m) + 새 셰이더 `TagOfChaos/WaterfallScroll`(노이즈 2장이 다른 속도로 아래로 흐름, 가장자리·아래 끝 투명) | 흐름 1.2 / 2.1 m/s |
+| F2 줄기 파티클 | 끝 가장자리(상자 폭 3.4 m)에서 나와 중력으로 떨어지는 **늘인 빌보드**(`Stretch`) | 수명 2.2~2.8 s, 크기 0.6~1.2, 초당 110, 최대 260, 중력 1 |
+| F3 가장자리 거품 | 떨어지기 시작하는 곳의 흰 작은 입자 | 수명 0.6 s, 초당 40 |
+| F4 물보라 | 아래쪽에서 옆으로 튀는 작은 방울(중력 0.6) | 수명 1 s, 초당 30 |
+| F5 안개 | 구름에 닿는 곳의 큰 부드러운 덩어리(천천히 위로) | 크기 4~8 m, 수명 4 s, 알파 0.25, 초당 10 |
+| F6 소리 | 폭포 고리 소리(3D, 30 m) — 기존 소리 체계(`GameAudio`)에 새 ID | 결정 D7 |
+
+텍스처 3장은 코드로 만든다(`HOB_FX_Streak` 64×256 세로 줄, `HOB_FX_Mist` 256 부드러운 덩어리, `HOB_FX_Droplet` 32 점). 셰이더는 프로젝트에 있는 `Particles/Standard Unlit`(Fade·Additive).
+
+```csharp
+// Assets/Editor/Maps/HobWaterfallBuilder.cs — 폭포 프리팹을 코드로 만든다(값을 바꿔 다시 굽기 쉽게)
+private static ParticleSystem Layer(Transform parent, string name, Material mat, float life, float rate, int max, float gravity,
+    Vector2 size, ParticleSystemRenderMode mode, Vector3 boxScale)
+{
+    var go = new GameObject(name);
+    go.transform.SetParent(parent, false);
+    var ps = go.AddComponent<ParticleSystem>();
+    var main = ps.main;
+    main.loop = true; main.prewarm = true;
+    main.startLifetime = new ParticleSystem.MinMaxCurve(life * 0.85f, life * 1.15f);
+    main.startSize = new ParticleSystem.MinMaxCurve(size.x, size.y);
+    main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1.5f);
+    main.gravityModifier = gravity;
+    main.maxParticles = max;
+    main.simulationSpace = ParticleSystemSimulationSpace.World;   // 판이 움직이지 않으므로 월드
+    var em = ps.emission; em.rateOverTime = rate;
+    var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Box; sh.scale = boxScale;
+    var vel = ps.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.Local;
+    vel.x = new ParticleSystem.MinMaxCurve(0f); vel.y = new ParticleSystem.MinMaxCurve(0f);   // 세 축 모두 같은 방식이어야 한다
+    vel.z = new ParticleSystem.MinMaxCurve(0.6f, 1.0f);                                      // 절벽에서 바깥으로
+    var col = ps.colorOverLifetime; col.enabled = true; col.color = FadeInOut(new Color(0.8f, 0.93f, 1f));
+    var r = go.GetComponent<ParticleSystemRenderer>();
+    r.renderMode = mode; r.sharedMaterial = mat;
+    if (mode == ParticleSystemRenderMode.Stretch) { r.lengthScale = 4f; r.velocityScale = 0.12f; }
+    return ps;
+}
+```
+
+확인: Unity Play Mode에서 폭포 하나를 앞·옆에서 찍은 GIF를 보여 드린 뒤 4개로 늘린다.
+
+### 89.5 판마다 무작위 배치
+
+**L1 배치 값(방 속성)** — 방장이 시작 버튼 때 한 번 뽑는다. 씬보다 먼저 모두에게 도착하고 늦게 들어온 사람도 같은 값을 읽는다.
+
+```csharp
+// Core/NetKeys.cs
+public const string MapLayout = "MapLayout"; // int[] {서브 맵 순서 0~5, 과일 밭 재료 건물 자리 0~3} — 시작 버튼 때 방장(§89)
+
+// Lobby/GameStartAuthority.cs (같은 Hashtable에 한 줄)
+{ NetKeys.MapLayout, MapLayout.Roll(new System.Random()) },
+```
+
+```csharp
+// Escape/MapLayout.cs(새 파일) — 순수 계산(시험하기 쉽게)
+public static class MapLayout
+{
+    // 슬롯(NW, N, NE)마다 들어갈 묶음(0 아몬드, 1 초콜릿, 2 밀가루) — 3! = 6가지
+    public static readonly int[][] Permutations =
+        { new[] { 0, 1, 2 }, new[] { 0, 2, 1 }, new[] { 1, 0, 2 }, new[] { 1, 2, 0 }, new[] { 2, 0, 1 }, new[] { 2, 1, 0 } };
+    public const int LotCount = 4;
+
+    public struct Layout { public int SubMapOrder, MaterialLot; }
+
+    public static int[] Roll(System.Random rng) => new[] { rng.Next(Permutations.Length), rng.Next(LotCount) };
+
+    public static Layout Decode(int[] v) => v != null && v.Length >= 2
+        ? new Layout { SubMapOrder = Mathf.Clamp(v[0], 0, Permutations.Length - 1), MaterialLot = Mathf.Clamp(v[1], 0, LotCount - 1) }
+        : default;
+
+    // 방 밖(에디터 테스트 모드)이나 값이 없으면 이 기계에서 뽑는다.
+    public static Layout FromRoom() =>
+        RoomState.TryGetIntArray(NetKeys.MapLayout, out int[] v) ? Decode(v) : Decode(Roll(new System.Random()));
+}
+```
+
+**L2 씬에서 옮기기** — `EscapeManager`·`DecoyNavMesh`·`MonsterRoomGuard`보다 먼저(Awake 순서) 묶음과 건물을 옮긴다. 참조는 그대로이고 위치만 바뀌므로 `RepairPoint`·`TriggerPoint`·상자 위치가 그대로 따라온다.
+
+```csharp
+// Environment/MapLayoutRandomizer.cs(새 파일)
+[DefaultExecutionOrder(-500)]
+public class MapLayoutRandomizer : MonoBehaviour
+{
+    [SerializeField] private Transform[] subSlots = new Transform[3];      // SubSlot_NW, SubSlot_N, SubSlot_NE(고원 윗면 가운데, 앞 = 맵 가운데)
+    [SerializeField] private Transform[] subContents = new Transform[3];   // SubMap_Almond, SubMap_Chocolate, SubMap_Flour
+    [SerializeField] private Transform[] fieldLots = new Transform[MapLayout.LotCount];
+    [SerializeField] private Transform fieldMaterialBuilding;              // Building_Q4
+    [SerializeField] private Transform[] generalBuildings = new Transform[3];
+
+    public static MapLayout.Layout Current { get; private set; }
+    public static bool Applied { get; private set; }
+
+    private void Awake()
+    {
+        Current = MapLayout.FromRoom();
+        Apply(Current);
+    }
+
+    public void Apply(MapLayout.Layout l)
+    {
+        int[] order = MapLayout.Permutations[l.SubMapOrder];
+        for (int slot = 0; slot < subSlots.Length; slot++)
+        {
+            Transform c = subContents[order[slot]];
+            if (c != null && subSlots[slot] != null) c.SetPositionAndRotation(subSlots[slot].position, subSlots[slot].rotation);
+        }
+        int g = 0;
+        for (int lot = 0; lot < fieldLots.Length; lot++)
+        {
+            Transform t = lot == l.MaterialLot ? fieldMaterialBuilding : g < generalBuildings.Length ? generalBuildings[g++] : null;
+            if (t != null && fieldLots[lot] != null) t.SetPositionAndRotation(fieldLots[lot].position, fieldLots[lot].rotation);
+        }
+        Physics.SyncTransforms();   // 같은 프레임의 레이(SnapToGround·DropPointNear)가 새 자리를 보게
+        Applied = true;
+    }
+}
+```
+
+**L3 따라 움직일 것 묶기**(빌더에서): `EscapeMapSetup.Apply`가 상자를 `EscapeSetup` 아래로 옮기므로, Apply 뒤에 서브 맵 안에 있던 상자·`RocketSpawn_`·`RainbowSpawn_`·숨을 곳(`DecoyHideSpot`)을 그 묶음 아래로 다시 붙인다(월드 위치 유지). 과일 밭 것은 그대로.
+
+```csharp
+// HeavenOfBakeryMapBuilder — Apply 뒤
+foreach (MaterialChest chest in escapeRoot.GetComponentsInChildren<MaterialChest>(true))
+{
+    Transform owner = SubMapAt(chest.transform.position);          // 고원 r 안 + 높이 > 5 m 이면 그 묶음
+    if (owner != null) chest.transform.SetParent(owner, true);
+}
+```
+
+**L4 AI 길 다시 굽기** — 이 맵만 판 시작 때 구운 길을 쓰지 않고 그 자리에서 굽는다(비동기, 로딩 화면 동안). 길 계산은 방장의 `DecoyBrain`만 하지만 방장이 바뀔 수 있으므로 모두 굽는다. 에디터 굽기의 빼기 규칙·설정(`DecoyNavMeshBaker.IsExcluded`·`Settings()`)은 런타임 공용 클래스로 옮겨 같은 값을 쓴다.
+
+```csharp
+// DecoyAI/DecoyNavMesh.cs — 추가
+[SerializeField] private bool bakeAtRuntime;     // 배치가 판마다 바뀌는 맵(Heaven Of Bakery)
+[SerializeField] private Bounds bakeBounds;
+
+private IEnumerator Start()
+{
+    if (!bakeAtRuntime) yield break;
+    while (!MapLayoutRandomizer.Applied) yield return null;
+    var sources = new List<NavMeshBuildSource>();
+    NavMeshBuilder.CollectSources(bakeBounds, Physics.DefaultRaycastLayers, NavMeshCollectGeometry.PhysicsColliders, 0,
+        new List<NavMeshBuildMarkup>(), sources);
+    DecoyNavMeshRules.Prune(sources, EscapeManager.Instance);    // 문 잎·트리거·캐릭터 빼기 + 술래방 못 걷는 상자(에디터와 같은 코드)
+    var fresh = new NavMeshData(DecoyNavMeshRules.Settings().agentTypeID);
+    AsyncOperation op = NavMeshBuilder.UpdateNavMeshDataAsync(fresh, DecoyNavMeshRules.Settings(), sources, bakeBounds);
+    while (!op.isDone) yield return null;
+    if (instance.valid) instance.Remove();
+    instance = NavMesh.AddNavMeshData(fresh);
+    Ready = instance.valid;                                       // DecoyBrain은 Ready 전에는 걷지 않는다
+}
+```
+
+- `GiantNavMesh`(거대 괴물 길)도 같은 방법.
+- 굽는 시간을 판 시작 로그(`LoadTiming`, §73 L7)에 남긴다. 목표: 2 s 이하. 넘으면 서브 맵 묶음마다 길을 나눠 굽고 `NavMeshLink`로 잇는 방법으로 바꾼다(위험 89.8).
+- 숨을 곳 안쪽 자리(`MarkHideSpots`)는 숨을 곳 로컬 좌표로 저장되는지 확인하고, 아니면 로컬로 바꾼다.
+
+**L5 건물 번호**: `Building_Q1~3` = 서브 맵 묶음 안(아몬드·초콜릿·밀가루), `Building_Q4` = 과일 밭 Lot. 재료는 `EscapeAuthority.Initialize`가 지금처럼 섞으므로 어느 건물이 무슨 재료를 받는지도 판마다 다르다(코드 변경 없음).
+
+### 89.6 Unity 맵 빌더 — `Assets/Editor/Maps/HeavenOfBakeryMapBuilder.cs`(새 파일)
+
+```csharp
+public static class HeavenOfBakeryMapBuilder
+{
+    public const string MapName = "HeavenOfBakery";
+    public const string ScenePath = "Assets/Scenes/Maps/" + MapName + ".unity";
+    private const string PropPrefabs = "Assets/04. Prefabs/Environment/HeavenOfBakery";
+    public const float FieldRadius = 100f, FenceRadius = 96f, PlazaRadius = 16f, GazeboRadius = 5.5f;
+    public static readonly (string name, Vector3 pos, float top)[] SubSlots =
+        { ("SubSlot_NW", new Vector3(-66f, 0f, 64f), 12f), ("SubSlot_N", new Vector3(0f, 0f, 92f), 15f), ("SubSlot_NE", new Vector3(66f, 0f, 64f), 12f) };
+    public static readonly float[] LotDeg = { 200f, 250f, 290f, 340f };
+    public const float LotRadius = 55f;
+    public static readonly (string name, Vector3 pos)[] Exits =
+        { ("Exit_N", new Vector3(0f, 0f, 54f)), ("Exit_E", new Vector3(93f, 0f, 0f)), ("Exit_S", new Vector3(0f, 0f, -93f)), ("Exit_W", new Vector3(-93f, 0f, 0f)) };
+    public static readonly float[] WaterfallDeg = { 205f, 235f, 305f, 335f };
+
+    [MenuItem("Tools/TagOfChaos/Maps/Build Heaven Of Bakery Map Scene")]
+    public static void BuildMenu() { /* Play Mode면 멈춤 — 진저브레드와 같음 */ Debug.Log(Build()); }
+
+    public static string Build()
+    {
+        // 1) Test_HauntedBakery(이름 바꾼 뒤 Test_HeavenOfBakery)를 ScenePath로 복사 → Map 아래 비우기(Background·FarBackdrop 빼고)
+        // 2) BuildIsland → BuildPlaza + BuildTaggerGazebo(MonsterRoom, MonsterDoor_0~3, Spawn_Monster)
+        // 3) BuildSlots(고원 3) → BuildSubMaps(SubMap_Almond/Chocolate/Flour — 슬롯 NW/N/NE 기본 자리에 만들어 둔다)
+        // 4) BuildRamps(W·E) → BuildBridge + Stairs → BuildExits(HOB_ExitPortal + ExitPad_/ExitTrigger_) → BuildLots(Lot_1~4)
+        // 5) BuildPaths → BuildFieldDeco(RoundMapKit.Placement, 씨앗 1117) → BuildRim(울타리·등불·아치) → BuildWaterfalls → BuildClouds
+        // 6) 표시: CHEST_Slot_nn 40(과일 밭 16 + 묶음마다 8), RocketSpawn_nn 6, RainbowSpawn_nn 8, Spawn_Cookie_Q1~4
+        // 7) EscapeMapSetup.Apply(scene, MapName) → L3 다시 붙이기 → MonsterRoomGuard.EditorBind(GuardInnerHalf 3.8, 문 4)
+        // 8) MapLayoutRandomizer 연결(슬롯·묶음·Lot·Building_Q4·General_1~3) → DecoyNavMesh/GiantNavMesh bakeAtRuntime = true
+        // 9) manager.EditorSetMapRadius(FieldRadius + 30f)(고원이 섬 밖으로 나감) → 저장 → RoundMapKit.AddToBuildSettings
+        return "";
+    }
+}
+```
+
+- 모델 가져오기: `HOB_*` FBX 83개 → `Assets/09. Environment/HeavenOfBakery/Models`, 프리팹 `Assets/04. Prefabs/Environment/HeavenOfBakery`. 충돌체: 바닥·고원·경사로·계단·다리는 Mesh Collider, 소품은 단순 상자/원기둥, 밀·구름·파티클은 없음.
+- 재질: `HOB_<이름>` 재질은 FBX에서 나온 색 그대로(텍스처 없음). 물·초콜릿 흐름은 `WaterfallScroll`, 밀은 `WheatSway`(아래).
+
+```hlsl
+// Assets/09. Environment/Shaders/WheatSway.shader — Built-in 표면 셰이더(정점 흔들림, GPU 인스턴싱)
+Shader "TagOfChaos/WheatSway"
+{
+    Properties
+    {
+        _MainTex ("Albedo", 2D) = "white" {}
+        _Color ("Tint", Color) = (1,1,1,1)
+        _Cutoff ("Alpha cutoff (LOD2 cards)", Range(0,1)) = 0.4
+        _WindDir ("Wind dir (xz)", Vector) = (1,0,0.35,0)
+        _Sway ("Sway (m)", Float) = 0.06
+        _Gust ("Gust (m)", Float) = 0.10
+        _Speed ("Speed", Float) = 1
+    }
+    SubShader
+    {
+        Tags { "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
+        Cull Off
+        CGPROGRAM
+        #pragma surface surf Lambert vertex:vert addshadow alphatest:_Cutoff
+        #pragma multi_compile_instancing
+        sampler2D _MainTex; fixed4 _Color; float4 _WindDir; float _Sway, _Gust, _Speed;
+        struct Input { float2 uv_MainTex; };
+        void vert (inout appdata_full v)
+        {
+            float w = v.color.r;                          // 0 뿌리 ~ 1 이삭 끝(Blender 정점 색)
+            float ph = v.color.g * 6.2832;                // 포기 위상
+            float3 wp = mul(unity_ObjectToWorld, v.vertex).xyz;
+            float t = _Time.y * _Speed;
+            float gust = 0.5 + 0.5 * sin(t * 1.57 + wp.x * 0.6);                  // 밭을 건너가는 큰 바람
+            float sway = sin(t * 3.14 + wp.x * 1.3 + wp.z * 0.9 + ph);
+            float2 d = normalize(_WindDir.xz);
+            float amp = w * (_Sway + _Gust * gust);
+            float2 off = d * amp * (0.6 + 0.4 * sway) + float2(-d.y, d.x) * amp * 0.25 * sin(t * 6.28 + ph);
+            wp.xz += off;
+            wp.y -= 0.35 * w * dot(off, off);             // 휘면 살짝 내려간다
+            v.vertex.xyz = mul(unity_WorldToObject, float4(wp, 1)).xyz;
+        }
+        void surf (Input IN, inout SurfaceOutput o)
+        {
+            fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
+            o.Albedo = c.rgb; o.Alpha = c.a;
+        }
+        ENDCG
+    }
+}
+```
+
+### 89.7 이름 바꾸기 Haunted Bakery → Heaven Of Bakery
+
+| 바꿀 곳 | 내용 |
+|---|---|
+| `Core/SceneNames.cs:22` | `RealMapScenes`에 `"HeavenOfBakery"` 추가(실제 모델 맵) |
+| `Editor/Maps/MapScenes.cs:7` | `"HauntedBakery"` → `"HeavenOfBakery"` |
+| `Audio/MusicRules.cs:32` | `case "HeavenOfBakery":` |
+| `Editor/Escape/EscapeAssetsBuilder.cs:88,102` | `Recipe("HeavenOfBakery", …)`, `SetBuildingMaterials(recipes, "HeavenOfBakery", …)` |
+| `Editor/Maps/DecoyNavMeshBaker.cs:27` | `"Assets/Scenes/Maps/HeavenOfBakery.unity"` |
+| `Editor/Maps/TestMapBuilder.cs:2` | 주석 |
+| 시험 | `AudioTests.cs:180`(`[TestCase("HeavenOfBakery", MusicScene.Bakery)]`), `EscapeTests.cs:399,411,445` |
+| 에셋 | `Recipe_HauntedBakery` → `Recipe_HeavenOfBakery`(`mapName`), `SPY_Rocket_HauntedBakery.fbx` → `SPY_Rocket_HeavenOfBakery.fbx`, `HauntedBakery_FarGround`, `Maps/HauntedBakery/` 폴더·PostFX·Lighting, `DecoyNavMesh/·GiantNavMesh/` 에셋, 조각 모델 `MonsterRoom_Test_HauntedBakery`(→ 새 술래방 조각 `MonsterRoom_HOB`, §81 R 거대 괴물이 술래방 가운데에서 솟음 규칙에 맞춤) |
+| 설정 | `GameSettings.asset` 판 맵 목록, Build Settings(옛 Test_ 씬 빼고 새 씬) |
+| 표시 | 로비 맵 이름 문구(있으면) |
+
+모두 `AssetDatabase.MoveAsset`/`RenameAsset`으로 바꿔 GUID를 지킨다(참조 끊김 없음). 옛 `Test_HauntedBakery.unity`는 `_CleanupBackup/`으로 옮긴다.
+
+### 89.8 위험·결정할 것
+
+| 번호 | 항목 | 기본 결정(바꾸려면 알려 주세요) |
+|---|---|---|
+| D1 | 서브 맵 고원 높이 | 슬롯에 고정(NW·NE 12 m, N 15 m). 바뀌는 것은 위의 내용 묶음뿐 — 경사로·다리·계단이 늘 맞는다 |
+| D2 | 재료 건물·일반 건물 모델 | 지금은 **자리만**(`Building_Q1~4`의 `Repair_Point`·`Socket_`·`ESC_Glow`와 바닥, `General_1~3` 빈 자리). 모델이 오면 그 아래에 끼운다. 시험용으로 만든 `HOB_Bld_*`(아몬드 공장·풍차·케이크 가게·초콜릿 집)를 임시로 넣을지 |
+| D3 | 과일 밭 자리 수 | Lot 4곳 = 재료 1 + 일반 3(자리 넷을 판마다 나눔). 재료 건물 후보를 더 늘리려면 Lot을 늘리고 남는 자리는 꾸미기로 채움 |
+| D4 | 재료 4종 | 지금 레시피 그대로(빨간 버튼·톱니·배터리·공구상자). 맵 주제 재료(예: 초콜릿 오일)로 바꿀지 |
+| D5 | 경사로 아래 입구 건물 | 처음 요청대로 건물을 지나 경사로로(케이크·딸기 집). 구상도에는 건물 없이 경사로만 보임 |
+| D6 | 초콜릿 서브 맵 재료 건물 | 구상도 이름표가 "초콜릿 분수"라 분수를 재료 건물 자리로(수리 자리 = 분수 앞) |
+| D7 | 폭포 소리 | 새 고리 소리 1개 만들기 |
+| R1 | 런타임 굽기 시간 | 2 s 넘으면 묶음별 굽기 + `NavMeshLink`(com.unity.ai.navigation 2.0.14 설치됨) |
+| R2 | 무작위 배치와 거대 괴물 | `GiantSpawnRules`·조각 모델(§73.11 이름으로 맞는 건물만 로드)은 건물 이름 기준이라 자리 무관 — 시험에서 확인 |
+| R3 | 밀 성능 | 밀가루 서브 맵 밀밭 ≈ 400포기. LOD0 12 m 안·GPU 인스턴싱·그림자 끔(LOD1 이상) |
+
+### 89.9 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| HB1 | 밀 다시 만들기(W1~W3) + 렌더·GIF → 사용자 확인 | 완료 — 사용자 확인(“밀 좋아”). LOD0 14.6k·LOD1 4.1k, `WheatSway` 셰이더(정점 색 흔들림·GPU 인스턴싱) |
+| HB2 | 폭포 파티클 프리팹(F1~F5) + 텍스처 3장 + `WaterfallScroll` 셰이더 → GIF 확인 | 완료 — 사용자 확인(“폭포 좋아”). `HOB_Waterfall`(35 m)·`HOB_Waterfall_Small`(8 m) + 부드러운 물소리 |
+| HB3 | 없는 바탕 모델 `HOB_Island_Main`(Blender) | 완료 — 섬 206 × 56 m + 재료 3종(아몬드 자루·밀가루 포대·딸기잼) 모델·아이콘 |
+| HB4 | 이름 바꾸기(89.7) + 컴파일·시험 | 완료 — GUID 유지 이동, 재료 `ItemSO` 3(한글 이름·아이콘), 레시피 4재료·로켓 칸 2 |
+| HB5 | FBX 가져오기·프리팹·충돌체·`WheatSway` | 완료 — `HobPrefabBuilder` 83개(Mesh 27·Box 46·없음 10, 빈 뿌리 아래 모델 — FBX 뿌리 X −90° 보존) + `HOB_Wheat` LOD 프리팹 |
+| HB6 | `HeavenOfBakeryMapBuilder`(89.6) — 기본 배치 씬 | 완료 — `Assets/Scenes/Maps/HeavenOfBakery.unity`, 89.11 |
+| HB7 | `MapLayout`·`NetKeys.MapLayout`·`GameStartAuthority`·`MapLayoutRandomizer`·L3 다시 붙이기 | 완료 — 서브 맵 상자 24개를 묶음 아래로 |
+| HB8 | 런타임 NavMesh 굽기(Decoy·Giant) + 굽기 규칙 공용화 | 완료 — Play Mode 굽기 0.99~1.18 초 |
+| T | EditMode: `MapLayout` 6×4 = 24가지 모두 겹침 없음·Decode 범위, 씬: 건물 4·탈출구 4·상자 40(묶음마다 8)·술래방 문 4·`Building_Q4`가 Lot 위 / Play Mode: 24가지 배치마다 수리 자리·탈출구·상자·AI 길(고원 위 AI 걷기), 술래방 술래만 통과, 폭포·밀 프레임 시간 | 거의 완료 — 89.11(술래만 문 통과·프레임 시간은 여러 명 시험 때) |
+| DOC | 계획 문서·README | 완료 |
+
+진행 순서: HB1·HB2(보여 드리고 확인) → HB3~HB8 → T → DOC. 재료 건물·일반 건물 모델이 오면 D2 자리에 끼우고 다시 굽기만 하면 된다.
+
+### 89.10 결정(사용자, 2026-11-17)
+
+| 번호 | 결정 |
+|---|---|
+| D1 | 기본안 — 고원 높이는 슬롯에 고정(NW·NE 12 m, N 15 m) |
+| D2 | 기본안 — 재료 건물·일반 건물은 자리만(모델은 나중에) |
+| D3 | 기본안 — 과일 밭 Lot 4곳(재료 1 + 일반 3) |
+| D4 | **맵 주제 재료로 바꿈**: 아몬드 자루(새), 초콜릿 오일(있음), 밀가루 포대(새), 딸기잼 병(새) — 두 손 아이템 3종 새 모델·아이콘·`ItemSO`. **스파이 로켓 칸 재료도 같은 4종에서**(레시피 rocketSlots) |
+| D5 | **경사로 아래 입구 건물 없음** — 경사로만(케이크·딸기 집은 꾸미기로만 쓰거나 빼기) |
+| D6 | 맞음 — 초콜릿 분수가 초콜릿 서브 맵의 재료 건물(수리 자리 = 분수 앞) |
+| D7 | 새 폭포 소리: **부드러운 물소리**(잔잔한 쏴아 + 작은 물방울, 3D 30 m 고리) |
+
+HB1 밀 v2(Blender) 끝 — 사용자 확인 대기: 이삭 1개 1.6k 삼각형, 포기 LOD0 9줄기 14.6k(12 m 안), LOD1 4.1k, 흔들림 정점 색 R·G 그대로, 겹친 면 0. 파일 `transfer/HOB/wheat_v2/`(Blender 저장소).
+
+### 89.11 결과(2026-11-18)
+
+- **씬** `Assets/Scenes/Maps/HeavenOfBakery.unity`(메뉴 `Tools/TagOfChaos/Maps/Heaven Of Bakery/Build Map Scene`, 여러 번 돌려도 같은 결과). 빌드 설정에 넣고 `Test_HeavenOfBakery`는 끔, `GameSettings.gameMapScenes`·`SceneNames.RealMapScenes`·`DecoyNavMeshBaker` 경로를 실제 씬으로.
+- 놓은 것: 섬·광장(1.67배)·술래방 정자(보이지 않는 둥근 벽 r 5.8~6.6 + 문 4 + 낮은 왕관 울타리, 지킴이 안쪽 3.8, AI 못 걷는 상자 6.6), 고원 슬롯 3(NW·NE = `HOB_Plateau_Almond` 12 m — 계획의 `Plateau_Flour`는 실제 9 m라 바꿈, N = `Plateau_Choco` 15 m) + 윗면 둘레 울타리(경사로·다리·계단 자리만 비움), 나선 경사로 2, 다리 4토막 × 2 + 가운데 발판(7 × 7 m) + 계단(위에 보이지 않는 경사판 26° — 계단 턱 0.4 m가 길 검사·AI에 끊기지 않게), 탈출구 4(N = (0, 46) 다리 밑 절벽 앞, E·S·W r 93), 과일 밭 자리 4, 길 타일 437, 꾸미기 110 + 서브 맵 284(밀 포기 포함), 둘레 191, 폭포 4, 구름 54, 표시 58.
+- 건물: 재료 건물 모델이 아직 없어 **Building_Q1·Q3·Q4는 테스트 맵의 임시 정자**(수리 자리·소켓·빛)를 옮겨 씀, **Q2 = 초콜릿 분수**(수리 자리는 분수 앞). `General_1~3`은 빈 자리 + 표지판.
+- 낮 하늘 분위기(절차 하늘·하늘색 안개 140~460 m·3색 주변광·해), 떨어짐 판정 y −80, 맵 반경 130.
+- 시험: EditMode `EscapeTests`·`Request1123Tests`·`AudioTests` **104/104**(통행 검사 격자를 이 맵만 130 m로 — 고원이 70 m 밖). 24가지 배치(순서 6 × 자리 4) 모두 수리 자리·상자·로켓·무지개 자리 아래 바닥 있음, `Building_Q4`가 뽑힌 자리 위.
+- Play Mode(오프라인 방 2회): 배치 2/2·5/2 적용, 런타임 AI 길 굽기 1.18·0.99 초, 남쪽 밭 → N 고원 길 완성, Console 오류·경고 0(임시 정자 원본 `TestMap_HeavenOfBakery.fbx` Read/Write 켬 — 빌드에서 런타임 굽기가 읽게).
+- 함께 고침: `EscapeAssetsBuilder`를 다시 돌리면 §68 아이템(섬광탄·권투 글러브·콜라 대포·수색 폭탄)이 카탈로그에서 빠지던 문제 — 다시 넣고 빌더가 남기게 고침(쿠키 상자 6종·가중치 5·3·5·3·4·3).
+- 남은 것: 재료 건물 4·일반 건물 3 모델(오면 Building_Qn 아래 임시 정자만 바꾸면 됨), 술래만 문 통과·폭포/밀 프레임 시간은 여러 명 시험 때.
+
+### 89.12 오브젝트 품질 개선(2026-11-18, 건물 제외 전부)
+
+요청: "3D 오브젝트가 너무 퀄리티가 다 별로야 … 밀에서 퀄리티를 올렸던 것처럼 훨씬 더 고퀄리티로"(구상도 3장 — 분홍 돌·금 테두리·빛나는 등불·이끼 낀 바위 절벽·벚꽃 나무·윤기 나는 과일·컵케이크·초콜릿 분수). 순서(사용자 승인): ① 금 재질 → ② 지형·구조물 → ③ 나무·덤불·과일·과자 → ④ 남은 소품·타일.
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| Q0 | 방식: Blender 절차 재질 → **이음새 없는 512² 타일**(알베도 + A = 매끄러움, 노멀) + 모델마다 **정점 색 = 직접 쏜 광선 접촉 그림자(AO)**. Unity 새 셰이더 `TagOfChaos/HOB_TriPBR`(월드 축 3방향 투영·노멀 섞기·정점 AO·위를 보는 면 이끼 층·큰 무늬 변화·발광) — UV 굽기는 작은 조각이 검게 나와 버림 | 완료 |
+| Q1 | 금: 금속 0.85·색 (1.15, 1, 0.8), 반사 프로브 굽기(`Probe_Probe_Map.exr`) — 검게 보이던 금 고침 | 완료 |
+| Q2 | 지형·구조물: 섬·고원 3(바위 기둥 절벽·윗면 고리)·나선 경사로 2·다리·계단·둥근 광장·난간(난간 기둥·금 테두리)·등불 기둥·길 포장·담쟁이 | 완료 |
+| Q3 | 자연·과자: 둥근 나무·전나무·아몬드 나무·벚꽃 나무·덤불·꽃밭·산울타리·바위 덤불·버섯 바위·포도·체리·호박·딸기·사과·오렌지(단면)·컵케이크 3종·초콜릿 케이크·초콜릿 바·트러플·사탕 지팡이·초콜릿 기둥·초콜릿 분수(10 × 10 m)·케이크 집 3종 | 완료 |
+| Q4 | 소품·타일: 나무 상자·통·벤치·자루·항아리·표지판·보물 상자·작은 다리·사탕 아치·사탕 지팡이 등·과일 수레·구름, 바닥 타일(체크·마름모·원·빨강·꽃 잔디) | 완료 |
+| U1 | Unity: `HobHQBuilder`(메뉴 `Import HQ Pack (Blender repo)` — 사용자 Blender 저장소 사본 `F:\Blender`에서 `git fetch` + `git archive`로 `transfer/HOB/HQ`만 꺼냄, 작업 폴더는 그대로) → 타일 67장·공용 재질 `M_HQ_<재질>` 69·FBX 78 재질 다시 잇기 → `HobPrefabBuilder.BuildAll`(HQ 모델 우선, 프리팹 경로·GUID 그대로 → 씬 바로 바뀜). 프리팹 86 중 HQ 78·빈 재질 0 | 완료 |
+| U2 | 화면: 카메라 배경 단색 → 하늘(검은 하늘 고침, `SetLook`), 후처리 온도 8 → 3·색조 3 → 0·채도 14 → 10(지평선 노란 띠 줄임)·AO(MSVO 0.75)·비네트 0.2·블룸 1.1, 잔디 색 (0.7, 0.8, 0.62)·큰 무늬 0.6(밝고 형광빛이던 잔디밭) | 완료 |
+| T | EditMode 505개 중 502 통과(아래), Play Mode(오프라인 방): 배치 0/1 적용·런타임 AI 길 굽기 1.13초·남쪽 → N 고원 길 완성·Console 오류 0(경고는 Unity 내부 `JobTempAlloc` 2줄뿐) | 완료 |
+| DOC | 이 절·README | 완료 |
+
+함께 고친 것:
+- `EscapeAssetsBuilder`를 다시 돌리면 순서를 고정한 레시피(초콜릿 공장 `Gear, MacaronWheel, ChocolateOil, CookieWheel`·놀이공원 `Seatbelt, Battery, Toolbox, RedButton`)의 재료 순서가 섞이던 문제 — 두 레시피 되돌림, 빌더는 `FixedBuildingOrder` 레시피가 같은 재료 묶음이면 순서를 지킨다.
+- `QuadrantBuilding.RepairPoint`: `Bind` 전(에디터 검사·NavMesh 확인)에는 건물 한가운데를 돌려줬다 → 그때도 `Repair_Point` 자식을 찾는다. 새 초콜릿 분수는 가운데 탑이 막혀 수리 자리(분수 앞)와 달랐음. HOB 미끼 AI NavMesh 다시 굽기(점 5개 모두 NavMesh 위·93 %)·거대 괴물 NavMesh 다시 굽기.
+
+남은 실패 3(이번 작업 전부터 있던 것):
+- `Request1107Tests` 거대 괴물 등장 30 % — 에셋 `SpawnChance` 1.0(§76 때부터, §82 T에 적힘).
+- `Request1119Tests` HOB 부서지는 물체 0 — `DestructionRulesSO`에 `HOB_` 소품 규칙·조각 모델이 없다(§89 때 빠짐). 거대 괴물·마녀가 HOB에서 부술 것이 없음 → 결정 필요(아래 Q1).
+- `WitchFinaleTests` HOB 마녀가 걸어오는 먼 땅 160 m < 450 m — 떠 있는 섬이라 `FarBackdrop`이 구름뿐 → 결정 필요(Q2).
+
+| 번호 | 질문 |
+|---|---|
+| Q1 | HOB 소품 조각 모델: §82 방법(`frac82.py` + `batch82.py`)으로 HQ 소품 종류마다 조각 + 무너지는 애니메이션을 만들고 규칙에 `HOB_` 넣기(일이 큼) |
+| Q2 | 마녀 등장 땅: 섬 아래 구름 바다 높이(약 −25 m)에 구름 바닥 고리(반경 900 m)를 깔고 마녀가 구름 위를 걸어오게 할지, 다른 방식(하늘에서 내려옴 등) |
+
+성능 참고: 무거운 모델 벚꽃 나무 15.6만·나선 경사로 약 9.1만·섬 10.4만 삼각형 — 여러 명 시험 때 프레임 시간을 보고 LOD를 정한다.

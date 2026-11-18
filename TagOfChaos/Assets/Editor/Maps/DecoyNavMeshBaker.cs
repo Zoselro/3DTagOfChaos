@@ -24,7 +24,7 @@ public static class DecoyNavMeshBaker
         "Assets/Scenes/Maps/CursedCandyCarnival.unity",
         "Assets/Scenes/Maps/ChocolateFactory.unity",
         "Assets/Scenes/Maps/GingerbreadVillage.unity",
-        "Assets/Scenes/Maps/Test/Test_HauntedBakery.unity",
+        "Assets/Scenes/Maps/HeavenOfBakery.unity",   // §89: 판 시작 때 RuntimeNavMeshBaker가 배치에 맞게 다시 굽는다
     };
     public static readonly string[] HidePrefixes = { "CHO_Shed", "MO_Tent", "CF_Tent", "GIN_HD_" };   // GIN_HD_ = 진저브레드 숨는 건물(§54)
     public const float PointReach = 2.5f;      // 확인 점에서 NavMesh까지 허용 거리
@@ -125,25 +125,10 @@ public static class DecoyNavMeshBaker
                $"pointsOffMesh={missing}{checks} coverage={coverage:P0}{hides} in {(float)EditorApplication.timeSinceStartup - started:F0}s";
     }
 
-    public static NavMeshBuildSettings Settings()
-    {
-        NavMeshBuildSettings s = NavMesh.GetSettingsByID(0);
-        s.agentRadius = DecoyNavMesh.AgentRadius;
-        s.agentHeight = DecoyNavMesh.AgentHeight;
-        s.agentClimb = DecoyNavMesh.AgentClimb;
-        s.agentSlope = DecoyNavMesh.AgentSlope;
-        s.minRegionArea = 4f;
-        return s;
-    }
+    public static NavMeshBuildSettings Settings() => MapNavMeshRules.DecoySettings();   // 판 시작 때 다시 굽기와 같은 값(§89)
 
     // 문 잎(열린 것처럼)·트리거·캐릭터 몸은 길을 막지 않는다.
-    private static bool IsExcluded(NavMeshBuildSource s)
-    {
-        var c = s.component as Collider;
-        if (c == null) return false;
-        if (c.isTrigger) return true;
-        return c.GetComponentInParent<InteractableDoor>() != null || c.GetComponentInParent<IGameCharacter>() != null;
-    }
+    private static bool IsExcluded(NavMeshBuildSource s) => MapNavMeshRules.DecoyExcluded(s);
 
     public static MapArea AreaOf(EscapeManager manager, Scene scene)
     {

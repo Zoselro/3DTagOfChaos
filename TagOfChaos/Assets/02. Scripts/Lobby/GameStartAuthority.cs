@@ -91,6 +91,7 @@ public static class GameStartAuthority
             // (§73.10의 첫 프레임 멈춤은 조각 모델 동기 로드가 원인이었고 §73 L5에서 고쳤다.)
             { NetKeys.PrepareEndTime, PhotonNetwork.Time + settings.SceneLoadGrace + RoomLifecycleWatcher.MaxArrivalWait + settings.PrepareSeconds },
             { NetKeys.GameMapScene, map },
+            { NetKeys.MapLayout, global::MapLayout.Roll(new System.Random()) },   // 판마다 바뀌는 맵 배치(§89 — 배치가 없는 맵은 쓰지 않는다)
             { NetKeys.SpyActorNumbers, spies },
             { NetKeys.CharacterAssignments, AssignCharacters() },
         });

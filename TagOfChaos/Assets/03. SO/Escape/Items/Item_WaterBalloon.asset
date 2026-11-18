@@ -23,3 +23,8 @@ MonoBehaviour:
   holdOffset: {x: 0, y: 0, z: 0}
   holdEuler: {x: 0, y: 0, z: 0}
   heldScale: 1.2
+  useGripPoint: 0
+  gripPoint: {x: 0, y: 0, z: 0}
+  gripHalfWidth: 0
+  gripHeight: 0.5
+  gripInset: -0.02
