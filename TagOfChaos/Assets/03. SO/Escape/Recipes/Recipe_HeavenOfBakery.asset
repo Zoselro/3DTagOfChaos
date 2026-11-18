@@ -55,5 +55,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 71523912ab7f1564fa5759d430a310b6, type: 2}
   - {fileID: 11400000, guid: a7bd88974bfa16348bf5095229727e71, type: 2}
   - {fileID: 11400000, guid: 0d0d2af450daa604d89561470b68ed5c, type: 2}
-  fixedBuildingOrder: 0
+  fixedBuildingOrder: 1
   repairKitCount: 0

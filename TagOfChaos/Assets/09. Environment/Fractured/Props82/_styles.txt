@@ -155,3 +155,5 @@ HOB_FlourSack	chunk
 HOB_FlourScoop	squash
 HOB_FonduePot	shell
 HOB_FondueSkewer	pole
+HOB_Fence_2m	wood
+HOB_LampPost_Tall	pole

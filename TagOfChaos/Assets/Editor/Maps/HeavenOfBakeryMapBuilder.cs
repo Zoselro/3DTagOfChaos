@@ -79,6 +79,9 @@ public static class HeavenOfBakeryMapBuilder
     private static readonly Transform[] lotRoots = new Transform[4];
     private static readonly Transform[] generals = new Transform[3];
     private static readonly Transform[] placeholders = new Transform[4];
+    // §89.20 테스트 맵 정자는 부품이 Z-위(−Z = 위)로 놓여 뿌리에 X 90°가 있어야 선다. 자리에 놓을 때 Y 회전만 주면 옆으로 누워
+    // 절반이 땅(고원 윗면) 속에 묻혔고, 튀어나온 벽·기둥 충돌체에 술래가 끼었다 → 원래 "위" 축을 위로 돌리는 보정을 기억해 곱한다.
+    private static readonly Quaternion[] placeholderTilt = new Quaternion[4];
     public static string LastReport { get; private set; } = "";
 
     [MenuItem("Tools/TagOfChaos/Maps/Heaven Of Bakery/Build Map Scene")]
@@ -105,6 +108,7 @@ public static class HeavenOfBakeryMapBuilder
         for (int q = 0; q < 4; q++)
         {
             placeholders[q] = map.Find($"Building_Q{q + 1}");
+            placeholderTilt[q] = placeholders[q] != null ? UprightTilt(placeholders[q]) : Quaternion.identity;
             if (placeholders[q] != null) placeholders[q].SetParent(null, true);
         }
         foreach (Transform child in map.Cast<Transform>().ToList())
@@ -136,6 +140,7 @@ public static class HeavenOfBakeryMapBuilder
         Physics.SyncTransforms();
         int markers = BuildFieldMarkers(map, rng) + BuildSubMapMarkers(rng);
         subDeco += FillWheat(contentRoots[2], new System.Random(1719));
+        subDeco += BuildPlazaDecor(map);   // §89.19 큰 섬 중앙 광장 둘레(Map/Environment)
         SetLook(scene);
         SetAmbience(scene);
         MoveKillZone(scene);
@@ -465,7 +470,7 @@ public static class HeavenOfBakeryMapBuilder
         if (q4 != null)
         {
             q4.SetParent(buildings, true);
-            q4.SetPositionAndRotation(lotRoots[0].position, lotRoots[0].rotation);
+            q4.SetPositionAndRotation(lotRoots[0].position, lotRoots[0].rotation * TiltOf(q4));   // §89.20 서 있게
         }
         for (int g = 0; g < 3; g++)
         {
@@ -500,15 +505,16 @@ public static class HeavenOfBakeryMapBuilder
     private static readonly Rect BuildingRect = Rect.MinMaxRect(-8.5f, 0.5f, 8.5f, 17.5f);   // 재료 건물 자리(로컬 x, z)
     private static readonly List<(Vector3 c, float r)>[] localUsed = { new List<(Vector3, float)>(), new List<(Vector3, float)>(), new List<(Vector3, float)>() };
 
-    private static int Scatter(Transform content, int s, System.Random rng, (string prefab, int count, float r)[] list)
+    private static int Scatter(Transform content, int s, System.Random rng, (string prefab, int count, float r)[] list, Transform target = null)
     {
+        if (target == null) target = Group(content, "Deco");   // §89.19 서브 맵은 Environment/<테마>_Decor로 넘긴다
         int n = 0;
         foreach ((string prefab, int count, float r) in list)
             for (int k = 0; k < count; k++)
             {
                 Vector3 l = LocalSpot(rng, r, localUsed[s], BuildingRect);
                 if (float.IsNaN(l.x)) continue;
-                if (PutLocal(prefab, Group(content, "Deco"), l, (float)(rng.NextDouble() * 360.0)) != null) n++;
+                if (PutLocal(prefab, target, l, (float)(rng.NextDouble() * 360.0)) != null) n++;
             }
         return n;
     }
@@ -532,8 +538,8 @@ public static class HeavenOfBakeryMapBuilder
         //     ("HOB_Barrel", 2, 0.6f), ("HOB_Bench", 2, 1.0f), ("HOB_PinkFlowerBush", 3, 1.1f), ("HOB_Bush_Round", 2, 0.8f) });
         SubGround(almond, "Almond", "Cream", 0f);
         n += BuildTileFloor(almond, "Almond");
-        n += Scatter(almond, 0, rng, new[] { ("HOB_AlmondTree", 14, 1.9f) });
-        foreach (Transform tree in Group(almond, "Deco")) NoGrassTop(tree.gameObject, "Soil");
+        // n += Scatter(almond, 0, rng, new[] { ("HOB_AlmondTree", 14, 1.9f) });   // §89.19 무작위 14그루 → 과수원 격자 16그루(BuildAlmondDecor)
+        n += BuildAlmondDecor(almond, rng);
 
         // 초콜릿: 재료 건물 = 초콜릿 분수(D6, 수리 자리는 분수 앞) + 초콜릿 기둥 고리·과자
         Transform choco = contentRoots[1];
@@ -542,7 +548,7 @@ public static class HeavenOfBakeryMapBuilder
         {
             foreach (Transform c in q2.Cast<Transform>().ToList())
                 if (!(c.name.StartsWith("Repair_Point") || c.name.StartsWith("Socket_") || c.name.StartsWith("ESC_Glow"))) Object.DestroyImmediate(c.gameObject);
-            PlaceBuilding(q2, choco, new Vector3(0f, 0f, 9f));
+            PlaceBuilding(q2, choco, new Vector3(0f, 0f, 9f), false);   // 정자 부품을 지우고 분수를 Y-위로 붙이므로 기울이지 않는다
             GameObject fountain = Put("HOB_ChocoFountain", q2, q2.position, q2.rotation);
             if (fountain != null) fountain.name = "Model";
             foreach (Transform c in q2.Cast<Transform>())
@@ -562,12 +568,12 @@ public static class HeavenOfBakeryMapBuilder
         // n += Scatter(choco, 1, rng, new[] { ("HOB_ChocoBlock", 3, 1.0f), ("HOB_Truffle", 3, 0.6f), ("HOB_HeartBonbon", 3, 0.5f), ("HOB_ChocoCube", 4, 0.5f), ("HOB_Truffles", 2, 1.2f),
         //     ("HOB_StrawberryChocoCake", 2, 1.2f), ("HOB_CandyCanes", 2, 1.0f), ("HOB_PinkFlowerBush", 3, 1.1f), ("HOB_Cupcake_Cream", 1, 0.9f) });
         SubGround(choco, "Choco", "ChocoFondue", 0.03f);
+        n += BuildChocoDecor(choco, rng);   // §89.19 분수 둘레 고리·가로등·진입 타일·퐁듀 군집 다음에 웅덩이·나머지 소품
         n += ChocoPuddles(choco, 1, rng);
-        n += Scatter(choco, 1, rng, new[]
-        {
-            ("HOB_FonduePot", 5, 1.5f), ("HOB_FondueSkewer", 9, 0.7f), ("HOB_ChocoBlock", 4, 1.0f), ("HOB_Truffle", 4, 0.6f), ("HOB_HeartBonbon", 4, 0.5f),
-            ("HOB_ChocoCube", 5, 0.5f), ("HOB_Truffles", 2, 1.2f),
-        });
+        // n += Scatter(choco, 1, rng, new[] { ("HOB_FonduePot", 5, 1.5f), ("HOB_FondueSkewer", 9, 0.7f), ("HOB_ChocoBlock", 4, 1.0f), ("HOB_Truffle", 4, 0.6f), ("HOB_HeartBonbon", 4, 0.5f),
+        //     ("HOB_ChocoCube", 5, 0.5f), ("HOB_Truffles", 2, 1.2f) });   // §89.19 퐁듀 2묶음은 BuildChocoDecor, 나머지만 흩뿌림
+        n += Scatter(choco, 1, rng, new[] { ("HOB_FonduePot", 3, 1.5f), ("HOB_FondueSkewer", 3, 0.7f), ("HOB_ChocoBlock", 4, 1.0f), ("HOB_Truffle", 4, 0.6f), ("HOB_ChocoCube", 5, 0.5f) },
+                     Env(choco, "ChocolateFountain_Decor"));
 
         // 밀가루: 임시 재료 건물 + 밀밭 2 · 작은 절벽 폭포 · 자루 무리 · 표지판
         Transform flour = contentRoots[2];
@@ -586,6 +592,7 @@ public static class HeavenOfBakeryMapBuilder
             if (fall != null) fall.name = "IslandWaterfall";
             localUsed[2].Add((new Vector3(0f, 0f, 24f), 5f));
         }
+        n += BuildFlourDecor(flour, rng);   // §89.19 건물 앞 밀가루 타일 마당·자루 군집·흙길 울타리/깃발/가로등(밀밭은 FillWheat가 이들 둘레를 비우고 깖)
         // n += BuildThemeGround(flour, 2, "Flour", "HOB_WheatBanner");
         // n += Scatter(flour, 2, rng, new[] { ("HOB_WheatBundle", 5, 0.6f), ("HOB_FlourSack", 4, 0.7f), ("HOB_FlourScoop", 2, 0.8f), ("HOB_Bench", 2, 1.0f),
         //                                     ("HOB_PinkFlowerBush", 2, 1.1f), ("HOB_FlowerBed", 2, 1.1f), ("HOB_WoodFootbridge", 1, 3.2f) });   // 예전: 자루 6·표지판·다리·벤치·꽃밭
@@ -634,6 +641,194 @@ public static class HeavenOfBakeryMapBuilder
     //     }
     //     return n;
     // }
+
+    // ---------------------------------------------------------------- §89.19 Environment decor (approved plan)
+    // 서브 맵은 판마다 자리를 바꾸므로 테마 장식은 각 서브 맵의 Environment 아래(<테마>_Decor · Shared_Decor · Lighting_Decor · GroundTiles),
+    // 큰 섬 공통 장식은 Map/Environment 아래. 타일(GroundTiles)은 부서지지 않고, 나머지는 부서지기 규칙의 묶음(containers)이라 거대 괴물이 부순다.
+    // 건물 자리(BuildingRect) + 2 m와 입구 쪽 ±55°·12 m 밖(경사로·다리가 닿는 곳)은 비운다 — 자리는 모두 localUsed로 겹침을 막는다.
+
+    private const string ChoPropDir = "Assets/04. Prefabs/ChocolateFactory/Props";
+    private static readonly Rect BuildingKeepOut = Rect.MinMaxRect(-10.5f, -1.5f, 10.5f, 19.5f);
+
+    private static Transform Env(Transform content, string group) => Group(Group(content, "Environment"), group);
+
+    // 다른 맵(초콜릿 공장) 소품 프리팹(배관·공장 기계)
+    private static GameObject PutCho(string prefab, Transform parent, Vector3 local, float yaw)
+    {
+        var asset = AssetDatabase.LoadAssetAtPath<GameObject>($"{ChoPropDir}/{prefab}.prefab");
+        if (asset == null) { Debug.LogWarning($"[HeavenOfBakeryMap] prefab {prefab} missing"); return null; }
+        return RoundMapKit.Spawn(asset, parent, parent.TransformPoint(local), parent.rotation * Quaternion.Euler(0f, yaw, 0f), true);
+    }
+
+    // 정한 자리에 놓되 이미 쓴 자리와 겹치면 건너뛴다(반지름 r로 자리 등록). keepOut=false면 건물 자리 검사를 하지 않는다(분수 둘레 고리).
+    private static GameObject PlaceFixed(string prefab, Transform group, Transform content, int s, Vector3 local, float yaw, float r, bool keepOut = true, bool cho = false)
+    {
+        if (keepOut && local.x + r > BuildingKeepOut.xMin && local.x - r < BuildingKeepOut.xMax && local.z + r > BuildingKeepOut.yMin && local.z - r < BuildingKeepOut.yMax) return null;
+        if (new Vector2(local.x, local.z).magnitude + r > SubGroundR - 1f) return null;
+        if (localUsed[s].Any(u => new Vector2(u.c.x - local.x, u.c.z - local.z).magnitude < u.r + r)) return null;
+        GameObject go = cho ? PutCho(prefab, group, local, yaw) : PutLocal(prefab, group, local, yaw);
+        if (go != null) localUsed[s].Add((local, r));
+        return go;
+    }
+
+    // 군집: 사각 영역 안에서 겹치지 않게 무작위로(최대 80번 시도), 회전은 boxy면 0/90° ± 10°, 아니면 무작위.
+    private static int Cluster(Transform group, Transform content, int s, System.Random rng, Rect area, (string prefab, int count, float r, bool boxy, bool cho)[] list)
+    {
+        int n = 0;
+        foreach (var it in list)
+            for (int k = 0; k < it.count; k++)
+                for (int t = 0; t < 80; t++)
+                {
+                    var l = new Vector3(Mathf.Lerp(area.xMin, area.xMax, (float)rng.NextDouble()), 0f, Mathf.Lerp(area.yMin, area.yMax, (float)rng.NextDouble()));
+                    float yaw = it.boxy ? rng.Next(4) * 90f + (float)(rng.NextDouble() - 0.5) * 20f : (float)(rng.NextDouble() * 360.0);
+                    if (PlaceFixed(it.prefab, group, content, s, l, yaw, it.r, true, it.cho) != null) { n++; break; }
+                }
+        return n;
+    }
+
+    private static Vector3 Jit(System.Random rng, float x, float z, float j) =>
+        new Vector3(x + (float)(rng.NextDouble() - 0.5) * 2f * j, 0f, z + (float)(rng.NextDouble() - 0.5) * 2f * j);
+
+    // 아몬드 공장: 과수원 16그루(격자 + 흔들기, 밑동 잔디 → 흙) · 서쪽 견과 창고 군집 · 동쪽 배관/공장 기계 · 입구 아몬드 조형물 · 과수원 앞 금 울타리 · 입구 길 금 가로등
+    private static int BuildAlmondDecor(Transform almond, System.Random rng)
+    {
+        const int s = 0;
+        Transform theme = Env(almond, "AlmondFactory_Decor"), shared = Env(almond, "Shared_Decor"), light = Env(almond, "Lighting_Decor");
+        int n = 0;
+        // 울타리·가로등·조형물·군집을 먼저(정한 자리), 나무는 그 둘레를 피해서
+        foreach (int side in new[] { -1, 1 })
+        {
+            float x = side * 14.6f;
+            foreach (float zc in new[] { -4.95f, 8.0f })
+            {
+                foreach (float dz in new[] { -1.25f, 1.25f })
+                    if (PlaceFixed("HOB_GoldFence", shared, almond, s, new Vector3(x, 0f, zc + dz), 90f, 0.2f) != null) n++;
+                foreach (float dz in new[] { -2.6f, 2.6f })
+                    if (PlaceFixed("HOB_GoldPost", shared, almond, s, new Vector3(x, 0f, zc + dz), 0f, 0.2f) != null) n++;
+            }
+            foreach (float z in new[] { -5f, -10.5f })
+                if (PlaceFixed("HOB_GoldLamp", light, almond, s, new Vector3(side * 3f, 0f, z), 0f, 0.35f) != null) n++;
+        }
+        if (PlaceFixed("HOB_AlmondBig", theme, almond, s, new Vector3(-4.6f, 0f, -4.2f), 28f, 0.75f) != null) n++;
+        if (PlaceFixed("HOB_AlmondHalf", theme, almond, s, new Vector3(4.6f, 0f, -4.4f), -36f, 0.65f) != null) n++;
+        if (PlaceFixed("HOB_AlmondHalf", theme, almond, s, new Vector3(5.7f, 0f, -2.7f), 61f, 0.65f) != null) n++;
+        n += Cluster(theme, almond, s, rng, Rect.MinMaxRect(-13.9f, 3f, -11.2f, 13f), new[]
+        {
+            ("HOB_AlmondCrate", 3, 0.8f, true, false), ("HOB_AlmondSackDeco", 3, 0.75f, false, false),
+        });
+        n += Cluster(shared, almond, s, rng, Rect.MinMaxRect(-13.9f, 3f, -11.2f, 13f), new[] { ("HOB_Barrel", 2, 0.5f, false, false) });
+        if (PlaceFixed("CHO_Pipe", shared, almond, s, new Vector3(12.6f, 0f, 4.8f), -90f, 0.9f, true, true) != null) n++;
+        if (PlaceFixed("CHO_Pipe", shared, almond, s, new Vector3(12.8f, 0f, 7.6f), -76f, 0.9f, true, true) != null) n++;
+        if (PlaceFixed("CHO_FactoryMachine", shared, almond, s, new Vector3(12.9f, 0f, 11.6f), -90f, 1.5f, true, true) != null) n++;
+        // 과수원: x ±17.6(z −7…15, 5.5 m) · ±22.5(z −3.5…7.5) · 건물 뒤 (±5, 22.5) — 흔들기 ±0.5 m, 회전 무작위
+        var spots = new List<Vector3>();
+        foreach (int side in new[] { -1, 1 })
+        {
+            foreach (float z in new[] { -7f, -1.5f, 4f, 9.5f, 15f }) spots.Add(new Vector3(side * 17.6f, 0f, z));
+            foreach (float z in new[] { -3.5f, 2f, 7.5f }) spots.Add(new Vector3(side * 22.5f, 0f, z));
+        }
+        foreach (Vector3 p in spots)
+        {
+            Vector3 l = Jit(rng, p.x, p.z, 0.5f);
+            GameObject tree = PlaceFixed("HOB_AlmondTree", theme, almond, s, l, (float)(rng.NextDouble() * 360.0), 1.6f);
+            if (tree != null) { NoGrassTop(tree, "Soil"); n++; }
+        }
+        return n;
+    }
+
+    // 초콜릿 분수: 분수(0, 9) 둘레 반지름 11 m 장식 고리(앞 수리 자리 ±30° 비움, 분수를 바라봄) · 대각선 금 가로등 4 · 분수 앞 초콜릿 타일 마당 · 뒤쪽 퐁듀 묶음 2
+    private static int BuildChocoDecor(Transform choco, System.Random rng)
+    {
+        const int s = 1;
+        Transform theme = Env(choco, "ChocolateFountain_Decor"), light = Env(choco, "Lighting_Decor"), tiles = Env(choco, "GroundTiles");
+        var c = new Vector3(0f, 0f, 9f);
+        int n = 0;
+        localUsed[s].Add((c, 9.2f));   // 분수 + 기둥 고리(7.5 m)
+        var ring = new (float a, string prefab, float r)[]
+        {
+            (-125f, "HOB_Truffles", 1.1f), (-90f, "HOB_ChocolateBar", 1.0f), (-55f, "HOB_HeartBonbon", 0.45f), (-20f, "HOB_ChocolateBar", 1.0f),
+            (20f, "HOB_ChocolateBar", 1.0f), (55f, "HOB_HeartBonbon", 0.45f), (90f, "HOB_ChocolateBar", 1.0f), (125f, "HOB_Truffles", 1.1f),
+        };
+        foreach (var it in ring)
+        {
+            Vector3 l = c + new Vector3(Mathf.Sin(it.a * Mathf.Deg2Rad), 0f, Mathf.Cos(it.a * Mathf.Deg2Rad)) * 11f;
+            if (PlaceFixed(it.prefab, theme, choco, s, l, it.a + 180f + (float)(rng.NextDouble() - 0.5) * 16f, it.r, false) != null) n++;
+        }
+        foreach (float a in new[] { -135f, -45f, 45f, 135f })
+            if (PlaceFixed("HOB_GoldLamp", light, choco, s, c + new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * 12.5f, 0f, 0.35f, false) != null) n++;
+        foreach (float x in new[] { -3f, 0f, 3f })
+            foreach (float z in new[] { -4.5f, -1.5f })
+                if (PutLocal($"HOB_Tile_Choco{(x == 0f && z == -1.5f ? "" : "Plain")}", tiles, new Vector3(x, 0.05f, z), 0f, false) != null) n++;
+        localUsed[s].Add((new Vector3(0f, 0f, -3f), 4.2f));
+        // 퐁듀 묶음: 냄비 1 + 꼬치 3(냄비 안쪽·옆으로 2.2 m)
+        foreach (int side in new[] { -1, 1 })
+        {
+            var pc = new Vector3(side * 14f, 0f, 16f);
+            if (PlaceFixed("HOB_FonduePot", theme, choco, s, pc, (float)(rng.NextDouble() * 360.0), 1.3f, false) != null) n++;
+            Vector3 inward = (-pc).normalized;
+            foreach (float da in new[] { -70f, 0f, 70f })
+            {
+                Vector3 d = Quaternion.Euler(0f, da, 0f) * inward;
+                if (PlaceFixed("HOB_FondueSkewer", theme, choco, s, pc + d * 2.7f, (float)(rng.NextDouble() * 360.0), 0.55f, false) != null) n++;
+            }
+        }
+        return n;
+    }
+
+    // 밀가루 공장: 건물 앞 밀가루 타일 마당 · 서쪽 밀가루 창고 군집 · 흙길 울타리(입구 12 m 안) · 밀 깃발 · 낮은 가로등
+    private static int BuildFlourDecor(Transform flour, System.Random rng)
+    {
+        const int s = 2;
+        Transform theme = Env(flour, "FlourFactory_Decor"), shared = Env(flour, "Shared_Decor"), light = Env(flour, "Lighting_Decor"), tiles = Env(flour, "GroundTiles");
+        int n = 0;
+        foreach (float x in new[] { -3f, 0f, 3f })
+            foreach (float z in new[] { -4.5f, -1.5f })
+                if (PutLocal($"HOB_Tile_Flour{(x == 0f && z == -1.5f ? "" : "Plain")}", tiles, new Vector3(x, 0.03f, z), 0f, false) != null) n++;
+        localUsed[s].Add((new Vector3(0f, 0f, -3f), 4.2f));
+        foreach (int side in new[] { -1, 1 })
+        {
+            foreach (float z in new[] { -8.2f, -10.4f })
+                if (PlaceFixed("HOB_Fence_2m", shared, flour, s, new Vector3(side * 2.6f, 0f, z), 90f, 0.2f) != null) n++;
+            if (PlaceFixed("HOB_WheatBanner", theme, flour, s, new Vector3(side * 3.4f, 0f, -11.2f), side > 0 ? -90f : 90f, 0.5f) != null) n++;
+            if (PlaceFixed("HOB_WheatBanner", theme, flour, s, new Vector3(side * 6.4f, 0f, -2.9f), side > 0 ? -90f : 90f, 0.5f) != null) n++;
+            if (PlaceFixed("HOB_LampPost_Short", light, flour, s, new Vector3(side * 3.4f, 0f, -6.6f), 0f, 0.3f) != null) n++;
+            if (PlaceFixed("HOB_LampPost_Short", light, flour, s, new Vector3(side * 8.2f, 0f, -3.6f), 0f, 0.3f) != null) n++;
+        }
+        n += Cluster(theme, flour, s, rng, Rect.MinMaxRect(-14.5f, 2f, -11f, 12f), new[]
+        {
+            ("HOB_FlourSack", 4, 0.65f, false, false), ("HOB_FlourScoop", 1, 0.8f, false, false), ("HOB_WheatBundle", 3, 0.5f, false, false),
+        });
+        n += Cluster(shared, flour, s, rng, Rect.MinMaxRect(-14.5f, 2f, -11f, 12f), new[] { ("HOB_Barrel", 2, 0.5f, false, false), ("HOB_Crate", 2, 0.75f, true, false) });
+        return n;
+    }
+
+    // 큰 섬 중앙 광장 둘레(Map/Environment): 돌길 사이 8방향(22.5° + 45° k), 광장 바깥 돌 고리(반지름 16 m) 밖 잔디 18 m에 벤치 4 · 꽃밭 4, 벤치 옆 높은 가로등 4.
+    // 돌길 타일·기존 장식과 1.6 m 안이면 건너뛴다.
+    private static int BuildPlazaDecor(Transform map)
+    {
+        Transform shared = Env(map, "Shared_Decor"), light = Env(map, "Lighting_Decor");
+        Transform paths = map.Find("Paths");
+        var blocked = new List<Vector3>();
+        if (paths != null) foreach (Transform t in paths.GetComponentsInChildren<Transform>()) if (t != paths) blocked.Add(Flat(t.position));
+        Transform field = map.Find("FieldDeco");
+        if (field != null) foreach (Transform t in field) blocked.Add(Flat(t.position));
+        bool Free(Vector3 p, float r) => blocked.All(b => (b - p).magnitude >= r + 1.6f);
+        int n = 0;
+        for (int k = 0; k < 8; k++)
+        {
+            float a = 22.5f + k * 45f;
+            Vector3 p = Polar(18f, a);   // 13 m는 광장 둘레 돌 고리 위였다(걷는 길)
+            bool bench = k % 2 == 0;
+            Quaternion face = Quaternion.LookRotation(-Polar(1f, a));
+            if (Free(p, bench ? 1.0f : 1.1f) && Put(bench ? "HOB_Bench" : "HOB_FlowerBed", shared, p, face) != null) { blocked.Add(p); n++; }
+            if (bench)
+            {
+                Vector3 lp = Polar(19.4f, a + 6f);
+                if (Free(lp, 0.6f) && Put("HOB_LampPost_Tall", light, lp, Quaternion.identity) != null) { blocked.Add(lp); n++; }
+            }
+        }
+        return n;
+    }
 
     // ---------------------------------------------------------------- §89.17 sub-map floors (no green grass)
 
@@ -700,7 +895,7 @@ public static class HeavenOfBakeryMapBuilder
     // 아몬드: 건물 자리 밖을 3 m 아몬드 타일로 모두 덮는다(네 모서리가 바닥 원판 안인 칸만, 4칸마다 무늬 타일). 부서지지 않는 "Tiles" 묶음.
     private static int BuildTileFloor(Transform content, string theme)
     {
-        Transform tiles = Group(content, "Tiles");
+        Transform tiles = Env(content, "GroundTiles");   // §89.19 예전 "Tiles"
         const float T = 3f;
         int n = 0;
         for (int i = -10; i <= 10; i++)
@@ -718,7 +913,7 @@ public static class HeavenOfBakeryMapBuilder
     // 초콜릿: 녹은 초콜릿 웅덩이(밟고 지나감, 부서지지 않는 "Tiles" 묶음, 충돌체 없음) — 소품을 비워 두는 앞쪽(경사로·다리가 닿는 곳)에도 깐다
     private static int ChocoPuddles(Transform content, int s, System.Random rng)
     {
-        Transform floor = Group(content, "Tiles");
+        Transform floor = Env(content, "GroundTiles");   // §89.19 예전 "Tiles"
         var placed = new List<(Vector3 c, float r)>();
         int n = 0;
         for (int t = 0; t < 600 && n < 14; t++)
@@ -728,6 +923,7 @@ public static class HeavenOfBakeryMapBuilder
             var l = new Vector3(Mathf.Sin(a * Mathf.Deg2Rad) * d, 0f, Mathf.Cos(a * Mathf.Deg2Rad) * d);
             if (l.x + rad > BuildingRect.xMin && l.x - rad < BuildingRect.xMax && l.z + rad > BuildingRect.yMin && l.z - rad < BuildingRect.yMax) continue;
             if (placed.Any(p => (p.c - l).magnitude < p.r + rad + 1.5f)) continue;
+            if (l.x + rad > -5f && l.x - rad < 5f && l.z + rad > -6.5f && l.z - rad < 0.5f) continue;   // §89.19 분수 앞 초콜릿 타일 마당
             placed.Add((l, rad));
             if (PutLocal(n % 2 == 0 ? "HOB_ChocoPuddle" : "HOB_ChocoPuddleB", floor, l + Vector3.up * 0.02f, (float)(rng.NextDouble() * 360.0), false) != null) n++;
         }
@@ -738,13 +934,18 @@ public static class HeavenOfBakeryMapBuilder
     private static int FillWheat(Transform content, System.Random rng)
     {
         if (content == null) return 0;
-        Transform field = Group(content, "WheatFields");
+        Transform field = Group(Env(content, "FlourFactory_Decor"), "WheatFields");   // §89.19 예전 content/WheatFields
         var keep = new List<Vector3>();
         foreach (string g in new[] { "Markers", "Chests", "Deco" })
         {
             Transform t = content.Find(g);
             if (t != null) foreach (Transform c in t) keep.Add(content.InverseTransformPoint(c.position));
         }
+        Transform env = content.Find("Environment");                                    // §89.19 장식 군집·울타리·깃발·가로등 둘레도 비운다
+        if (env != null)
+            foreach (Transform g in env)
+                if (g.name != "GroundTiles")
+                    foreach (Transform c in g) if (c.name != "WheatFields") keep.Add(content.InverseTransformPoint(c.position));
         const float S = 2f;
         int n = 0;
         for (int i = -14; i <= 14; i++)
@@ -754,6 +955,7 @@ public static class HeavenOfBakeryMapBuilder
                 if (new Vector2(x, z).magnitude + 1.1f > SubGroundR) continue;
                 if (x + 1.5f > BuildingRect.xMin && x - 1.5f < BuildingRect.xMax && z + 1.5f > BuildingRect.yMin && z - 1.5f < BuildingRect.yMax) continue;
                 if (Mathf.Abs(x) < 2.2f && z < BuildingRect.yMin + 1f) continue;                  // 입구 → 건물 앞 흙길
+                if (Mathf.Abs(x) < 5.5f && z > -7.5f && z < 1f) continue;                        // §89.19 건물 앞 밀가루 타일 마당
                 if (keep.Any(k => new Vector2(k.x - x, k.z - z).magnitude < 2.1f)) continue;     // 상자·로켓·무지개 자리 둘레 빈터
                 float yaw = rng.Next(4) * 90f;
                 if (PutLocal("HOB_WheatPatch", field, new Vector3(x + (float)(rng.NextDouble() - 0.5) * 0.3f, 0f, z + (float)(rng.NextDouble() - 0.5) * 0.3f), yaw, false,
@@ -762,12 +964,26 @@ public static class HeavenOfBakeryMapBuilder
         return n;
     }
 
-    private static void PlaceBuilding(Transform building, Transform content, Vector3 local)
+    private static void PlaceBuilding(Transform building, Transform content, Vector3 local, bool keepTilt = true)
     {
         if (building == null) return;
         // §89.14 서브 맵 안 "Buildings" 묶음 — 부서지기 규칙이 건물 등급(4번)으로 본다
         building.SetParent(Group(content, "Buildings"), true);
-        building.SetPositionAndRotation(content.TransformPoint(local), content.rotation);
+        building.SetPositionAndRotation(content.TransformPoint(local), content.rotation * (keepTilt ? TiltOf(building) : Quaternion.identity));
+    }
+
+    // 뿌리의 어느 축이 세계 위를 보고 있는지(테스트 맵 원래 자세) → 그 축을 위로 돌리는 회전(Y 회전과 곱해 쓴다)
+    private static Quaternion UprightTilt(Transform t)
+    {
+        Vector3[] axes = { Vector3.up, Vector3.down, Vector3.forward, Vector3.back, Vector3.right, Vector3.left };
+        Vector3 best = axes.OrderByDescending(a => Vector3.Dot(t.rotation * a, Vector3.up)).First();
+        return Quaternion.FromToRotation(best, Vector3.up);
+    }
+
+    private static Quaternion TiltOf(Transform building)
+    {
+        int q = System.Array.IndexOf(placeholders, building);
+        return q >= 0 ? placeholderTilt[q] : Quaternion.identity;
     }
 
     // §89.17 쓰지 않음(밀가루 섬 전체 밀밭 FillWheat로 바꿈)
@@ -1264,6 +1480,15 @@ public static class HeavenOfBakeryMapBuilder
             if (t == null) continue;
             foreach (Transform c in t.GetComponentsInChildren<Transform>(true))
                 GameObjectUtility.SetStaticEditorFlags(c.gameObject, flags);
+        }
+        // §89.20 판마다 옮겨지는 묶음(서브 맵·과일 밭 건물)은 정적이면 안 된다 — 테스트 맵 정자 부품이 정적 일괄 그리기에 묶여
+        // 충돌체만 새 자리로 가고 모습은 처음 자리에 남았다(맵이 안 바뀌는 것처럼 보이고, 보이지 않는 벽이 생김).
+        foreach (string g in new[] { "SubMaps", "FieldBuildings" })
+        {
+            Transform t = map.Find(g);
+            if (t == null) continue;
+            foreach (Transform c in t.GetComponentsInChildren<Transform>(true))
+                GameObjectUtility.SetStaticEditorFlags(c.gameObject, 0);
         }
     }
 }

@@ -31,6 +31,12 @@ MonoBehaviour:
   - SubMap_Chocolate
   - SubMap_Flour
   - Rim
+  - Environment
+  - AlmondFactory_Decor
+  - ChocolateFountain_Decor
+  - FlourFactory_Decor
+  - Shared_Decor
+  - Lighting_Decor
   containerPrefix: Quadrant_
   keepUnits:
   - GIN_ClockTower
@@ -43,6 +49,7 @@ MonoBehaviour:
   - SmallWaterfall
   - Tiles
   - Floor
+  - GroundTiles
   tentPrefixes:
   - MO_Tent
   - CF_Tent
@@ -199,6 +206,7 @@ MonoBehaviour:
   - HOB_CrownFence_2m
   - HOB_Cupcake_Cream
   - HOB_Cupcake_Pink
+  - HOB_Fence_2m
   - HOB_FlourSack
   - HOB_FlourScoop
   - HOB_FlowerBed
@@ -220,6 +228,7 @@ MonoBehaviour:
   - HOB_House_Strawberry
   - HOB_House_TierCake
   - HOB_LampPost_Short
+  - HOB_LampPost_Tall
   - HOB_MarketStall
   - HOB_PinkFlowerBush
   - HOB_RockBush

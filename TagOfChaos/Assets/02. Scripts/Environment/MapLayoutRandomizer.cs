@@ -17,8 +17,27 @@ public class MapLayoutRandomizer : MonoBehaviour
     private void Awake()
     {
         Applied = false;
+        RememberTilts();
         Current = MapLayout.FromRoom();
         Apply(Current);
+    }
+
+    // §89.20 과일 밭 건물이 씬에 놓인 자세에서 자리(lot) 회전을 뺀 나머지(테스트 맵 정자의 X 90° 등) — 옮길 때 다시 곱해 눕지 않게 한다.
+    private readonly System.Collections.Generic.Dictionary<Transform, Quaternion> tilts = new System.Collections.Generic.Dictionary<Transform, Quaternion>();
+
+    private void RememberTilts()
+    {
+        tilts.Clear();
+        var movers = new System.Collections.Generic.List<Transform> { fieldMaterialBuilding };
+        if (generalBuildings != null) movers.AddRange(generalBuildings);
+        foreach (Transform t in movers)
+        {
+            if (t == null || fieldLots == null) continue;
+            Transform near = null; float best = float.MaxValue;
+            foreach (Transform lot in fieldLots)
+                if (lot != null && (lot.position - t.position).sqrMagnitude < best) { best = (lot.position - t.position).sqrMagnitude; near = lot; }
+            tilts[t] = near != null ? Quaternion.Inverse(near.rotation) * t.rotation : Quaternion.identity;
+        }
     }
 
     private void OnDestroy() => Applied = false;
@@ -35,7 +54,7 @@ public class MapLayoutRandomizer : MonoBehaviour
         for (int lot = 0; lot < fieldLots.Length; lot++)
         {
             Transform t = lot == l.MaterialLot ? fieldMaterialBuilding : g < generalBuildings.Length ? generalBuildings[g++] : null;
-            if (t != null && fieldLots[lot] != null) t.SetPositionAndRotation(fieldLots[lot].position, fieldLots[lot].rotation);
+            if (t != null && fieldLots[lot] != null) t.SetPositionAndRotation(fieldLots[lot].position, fieldLots[lot].rotation * (tilts.TryGetValue(t, out Quaternion tilt) ? tilt : Quaternion.identity));
         }
         Physics.SyncTransforms();   // 같은 프레임의 레이(SnapToGround·DropPointNear)가 새 자리를 보게
         Applied = true;

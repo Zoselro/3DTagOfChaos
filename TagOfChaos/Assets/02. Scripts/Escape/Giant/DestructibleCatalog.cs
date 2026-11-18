@@ -82,7 +82,7 @@ public sealed class DestructibleCatalog
     {
         foreach (Transform child in group)
         {
-            if (depth < 3 && IsContainer(child.name, rules))
+            if (depth < 4 && IsContainer(child.name, rules)) // §89.19 서브 맵 안 Environment/<테마>_Decor까지(예전 3단계)
             {
                 Scan(child, rules, models, buildingGroup || Contains(rules.BuildingContainers, child.name), depth + 1);
                 continue;
