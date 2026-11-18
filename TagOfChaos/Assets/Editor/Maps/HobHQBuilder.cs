@@ -39,7 +39,69 @@ public static class HobHQBuilder
     private static string Git(string dir, string args)
     {
         var psi = new System.Diagnostics.ProcessStartInfo("git", args) { WorkingDirectory = dir, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
-        using (var p = System.Diagnostics.Process.Start(psi)) { string o = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd(); p.WaitForExit(600000); return o.Trim(); }
+        // 표준 출력과 오류를 동시에 읽는다 — 하나를 끝까지 읽는 동안 다른 쪽 버퍼가 차면 git과 에디터가 서로 기다리며 멈춘다(2026-11-18)
+        using (var p = System.Diagnostics.Process.Start(psi))
+        {
+            var err = p.StandardError.ReadToEndAsync();
+            string o = p.StandardOutput.ReadToEnd();
+            if (!p.WaitForExit(600000)) { try { p.Kill(); } catch { } return "[git timeout] " + args; }
+            return (o + err.Result).Trim();
+        }
+    }
+
+    // §89.14 거대 괴물·마녀가 부수는 HOB 소품 42종 + 술래방 조각 모델(Blender 헤드리스 일괄): 저장소의 transfer/HOB/frac_out을 Props82로.
+    // 가져오기 설정은 §82와 같다(Generic·애니메이션 "Collapse" 하나·재질 이름으로 다시 잇기). 재질 묶음 기록(_styles.txt)에 더하고 규칙을 새로 고친다.
+    [MenuItem("Tools/TagOfChaos/Maps/Heaven Of Bakery/Import Fracture Models (Blender repo)")]
+    public static void FetchFracturesMenu() => Debug.Log(FetchFractures(@"F:\Blender", "claude/update-mcp-url"));
+
+    public static string FetchFractures(string repo, string branch)
+    {
+        string zip = Path.GetFullPath($"Temp/hob_frac_{System.DateTime.Now.Ticks}.zip");
+        string log = Git(repo, $"fetch origin {branch}") + " | " + Git(repo, $"archive --format=zip -o \"{zip}\" origin/{branch} transfer/HOB/frac_out");
+        if (!File.Exists(zip)) return "[HobHQ] fracture archive failed: " + log;
+        string dst = DestructionRulesSetup.PropFolder;
+        Directory.CreateDirectory(dst);
+        var names = new List<string>();
+        string styles = "";
+        using (ZipArchive z = ZipFile.OpenRead(zip))
+            foreach (ZipArchiveEntry e in z.Entries)
+            {
+                if (e.Name.EndsWith("_Fractured.fbx"))
+                {
+                    string path = $"{dst}/{e.Name}";
+                    using (Stream s = e.Open()) using (FileStream f = File.Create(path)) s.CopyTo(f);
+                    names.Add(path);
+                }
+                else if (e.Name == "styles.txt")
+                    using (var r = new StreamReader(e.Open())) styles = r.ReadToEnd();
+            }
+        var lines = File.Exists(DestructionRulesSetup.StylesPath) ? File.ReadAllLines(DestructionRulesSetup.StylesPath).ToList() : new List<string>();
+        foreach (string raw in styles.Split('\n'))
+        {
+            string t = raw.Trim();
+            if (t.Length == 0) continue;
+            string key = t.Split('\t')[0];
+            lines.RemoveAll(x => x.Split('\t')[0] == key);
+            lines.Add(t);
+        }
+        File.WriteAllLines(DestructionRulesSetup.StylesPath, lines);
+        AssetDatabase.Refresh();
+        foreach (string path in names)
+        {
+            var imp = (ModelImporter)AssetImporter.GetAtPath(path);
+            if (imp == null) continue;
+            imp.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+            imp.materialLocation = ModelImporterMaterialLocation.InPrefab;
+            imp.isReadable = false; imp.importCameras = false; imp.importLights = false; imp.importBlendShapes = false;
+            imp.animationType = ModelImporterAnimationType.Generic; imp.importAnimation = true;
+            imp.animationCompression = ModelImporterAnimationCompression.KeyframeReduction;
+            imp.animationPositionError = 0.2f; imp.animationRotationError = 0.2f; imp.animationScaleError = 0.2f;
+            imp.SearchAndRemapMaterials(ModelImporterMaterialName.BasedOnMaterialName, ModelImporterMaterialSearch.Everywhere);
+            ModelImporterClipAnimation[] clips = imp.defaultClipAnimations;
+            if (clips.Length > 0) { ModelImporterClipAnimation c = clips[0]; c.name = "Collapse"; c.loopTime = false; imp.clipAnimations = new[] { c }; }
+            imp.SaveAndReimport();
+        }
+        return $"[HobHQ] fractures {names.Count} | {DestructionRulesSetup.Refresh()}";
     }
 
     [MenuItem("Tools/TagOfChaos/Maps/Heaven Of Bakery/Import HQ Pack (Temp zip)")]

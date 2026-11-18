@@ -27,6 +27,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: HOBHQ_Moss
+    second: {fileID: 2100000, guid: 5e7c154ea110b9d488d1e44d105f38a3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: HOBHQ_Rock
     second: {fileID: 2100000, guid: a813fd9e25ced864488a01fb693c4356, type: 2}
   - first:

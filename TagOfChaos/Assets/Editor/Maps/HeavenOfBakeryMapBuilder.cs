@@ -23,7 +23,8 @@ public static class HeavenOfBakeryMapBuilder
     // ---- 섬
     public const float FieldRadius = 100f, FenceRadius = 96f;
     public const float PlazaScale = 1.67f, PlazaTop = 0.82f;
-    public const float MapRadius = 130f;                    // 고원이 섬 밖으로 나간다(r ≈ 124)
+    public const float MapRadius = 190f;                    // §89.13 떠 있는 섬 3개가 큰 섬 밖 r 150~187
+    // public const float MapRadius = 130f;                 // 예전: 고원이 큰 섬 가장자리에 걸침(r ≈ 124)
     private const float FenceHeight = 6f, FenceThickness = 0.8f;
 
     // ---- 술래방(정자, 문 N·E·S·W)
@@ -35,23 +36,28 @@ public static class HeavenOfBakeryMapBuilder
     // ---- 서브 맵 슬롯(앞 −Z = 맵 가운데). 고원 모델 · 윗면 높이 · 평평한 윗면 반지름 · 바닥 반지름
     public static readonly (string name, Vector3 pos, string plateau, float top, float topR, float footR)[] Slots =
     {
-        ("SubSlot_NW", new Vector3(-66f, 0f, 64f), "HOB_Plateau_Almond", 12f, 30.5f, 33.5f),
-        ("SubSlot_N", new Vector3(0f, 0f, 92f), "HOB_Plateau_Choco", 15f, 32.5f, 35.5f),
-        ("SubSlot_NE", new Vector3(66f, 0f, 64f), "HOB_Plateau_Almond", 12f, 30.5f, 33.5f),
+        // §89.13 하늘에 떠 있는 섬: 큰 섬(r ≈ 103) 밖으로 약 15 m 틈, 윗면 높이 2배(12 → 24, 15 → 30). 모델 원점 = 윗면.
+        ("SubSlot_NW", new Vector3(-88.17f, 0f, 121.35f), "HOB_Plateau_Almond", 24f, 30.5f, 33f),   // r 150, 126°
+        ("SubSlot_N", new Vector3(0f, 0f, 152f), "HOB_Plateau_Choco", 30f, 32.5f, 35f),
+        ("SubSlot_NE", new Vector3(88.17f, 0f, 121.35f), "HOB_Plateau_Almond", 24f, 30.5f, 33f),    // r 150, 54°
+        // 예전(큰 섬에 붙은 고원): NW (−66, 64) 12 m · N (0, 92) 15 m · NE (66, 64) 12 m
     };
     public static readonly string[] SubMapNames = { "SubMap_Almond", "SubMap_Chocolate", "SubMap_Flour" };
 
     // ---- 경사로·다리·계단
-    private static readonly Vector3 RampDirNW = new Vector3(0.087f, 0f, -0.996f).normalized;   // 고원 → 경사로 아래(남쪽)
-    private static readonly Vector3 RampDirNE = new Vector3(-0.087f, 0f, -0.996f).normalized;
-    private const float RampLength = 32f, RampTopInset = 0.5f;
-    public const float BridgeY = 12f, BridgeZ = 48.5f, PadHalf = 3.5f;   // 가운데 발판(7 × 7 m)
-    private const int SpanSegments = 4;
+    // private static readonly Vector3 RampDirNW = new Vector3(0.087f, 0f, -0.996f).normalized;   // 예전 나선 경사로(고원 → 아래)
+    // private static readonly Vector3 RampDirNE = new Vector3(-0.087f, 0f, -0.996f).normalized;
+    // private const float RampLength = 32f, RampTopInset = 0.5f;
+    // §89.13 큰 섬 가장자리 지그재그 경사로(HOB_SwitchRamp_24m, 다리 3줄·간격 5 m) → 꼭대기 끝(r 93, 24 m)에서 하늘 다리로 NW·NE 섬
+    private const float RampTopR = 93f, RampLane = 5f, RampEndY = 32f, RampBackY = 4.2f;   // 모델: 1줄 시작 (+5, 0), 꼭대기 끝 (−5, 32), 뒤로 4.2 m
+    public const float BridgeY = 24f, BridgeZ = 103.5f, PadHalf = 3.5f;   // 가운데 발판(7 × 7 m, 작은 떠 있는 바위 위) — 예전 12 m · z 48.5
+    private const float SpanMax = 10f;                                  // 다리 한 토막 최대 길이(모델 10 m)
+    // private const int SpanSegments = 4;
 
     // ---- 탈출구
     public static readonly (string name, string key, Vector3 pos)[] Exits =
     {
-        ("Exit_N", "N", new Vector3(0f, 0f, 46f)), ("Exit_E", "E", new Vector3(93f, 0f, 0f)),
+        ("Exit_N", "N", new Vector3(0f, 0f, 93f)), ("Exit_E", "E", new Vector3(93f, 0f, 0f)),   // N: 예전 (0, 46) 다리 밑 절벽 앞 → 다른 셋처럼 가장자리
         ("Exit_S", "S", new Vector3(0f, 0f, -93f)), ("Exit_W", "W", new Vector3(-93f, 0f, 0f)),
     };
     private static readonly RoundMapKit.ExitSize Exit = new RoundMapKit.ExitSize { Opening = 4f, PostWidth = 1.5f, Height = 5f, PadDepth = 6f };
@@ -63,6 +69,7 @@ public static class HeavenOfBakeryMapBuilder
     public const float LotRadius = 55f, LotHalf = 8f;
     public static readonly float[] WaterfallDeg = { 205f, 235f, 305f, 335f };
     public static readonly float[] CookieSpawnDeg = { 215f, 245f, 295f, 325f };
+    public const float WitchDeg = 315f;
 
     private static readonly RoundMapKit.Placement placed = new RoundMapKit.Placement();
     private static readonly List<(Vector3 a, Vector3 b, float half)> pathSegs = new List<(Vector3, Vector3, float)>();
@@ -128,6 +135,7 @@ public static class HeavenOfBakeryMapBuilder
         int fieldDeco = BuildFieldDeco(map, rng);
         Physics.SyncTransforms();
         int markers = BuildFieldMarkers(map, rng) + BuildSubMapMarkers(rng);
+        subDeco += FillWheat(contentRoots[2], new System.Random(1719));
         SetLook(scene);
         SetAmbience(scene);
         MoveKillZone(scene);
@@ -155,7 +163,11 @@ public static class HeavenOfBakeryMapBuilder
         ClearBakedNavMesh(scene);
         RoundMapKit.MoveSpawn(scene, SceneSpawnPoints.Cookie, map, "Spawn_Cookie_Q1");
         RoundMapKit.MoveSpawn(scene, SceneSpawnPoints.Monster, map, "Spawn_Monster");
+        // §89.13 마녀는 떠 있는 섬이 없는 남동쪽 하늘(315°)에서 걸어온다 — 북쪽 섬을 뚫고 오지 않게
+        Transform witchAnchor = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "WITCH_Anchor");
+        if (witchAnchor != null) witchAnchor.position = Polar(10f, WitchDeg) + Vector3.up * witchAnchor.position.y;
         RoundMapKit.MoveWitchAnchor(scene, MapRadius, 70f);
+        int floor = BuildCloudFloor(scene, map.Find(WitchPath.FarBackdropName), new System.Random(915));
         MarkStatic(map);
 
         EditorSceneManager.MarkSceneDirty(scene);
@@ -271,16 +283,25 @@ public static class HeavenOfBakeryMapBuilder
         return c + (start - c).normalized * (Slots[slot].topR - 1f);
     }
 
-    private static Vector3 RampDir(int slot) => slot == 0 ? RampDirNW : RampDirNE;
-    private static Vector3 RampTop(int slot) => Flat(Slots[slot].pos) + RampDir(slot) * (Slots[slot].topR - RampTopInset);
-    private static Vector3 RampBase(int slot) => RampTop(slot) + RampDir(slot) * RampLength;
+    // private static Vector3 RampDir(int slot) => slot == 0 ? RampDirNW : RampDirNE;
+    // private static Vector3 RampTop(int slot) => Flat(Slots[slot].pos) + RampDir(slot) * (Slots[slot].topR - RampTopInset);
+    // private static Vector3 RampBase(int slot) => RampTop(slot) + RampDir(slot) * RampLength;
+    // §89.13 경사로: 큰 섬 가운데 → 떠 있는 섬 방향(out). 모델 로컬 +Y(Blender) = out, +X(Blender) = 월드 −right.
+    private static Vector3 RampOut(int slot) => Flat(Slots[slot].pos).normalized;
+    private static Quaternion RampRot(int slot) => Quaternion.LookRotation(-RampOut(slot));
+    private static Vector3 RampRight(int slot) => RampRot(slot) * Vector3.right;
+    private static Vector3 RampLocal(int slot, float x, float y) => RampOrigin(slot) - RampRight(slot) * x + RampOut(slot) * y;
+    public static Vector3 RampTopEnd(int slot) => RampOut(slot) * RampTopR;                                   // 꼭대기 끝(24 m) — 하늘 다리가 시작
+    private static Vector3 RampOrigin(int slot) => RampTopEnd(slot) - RampOut(slot) * RampEndY - RampRight(slot) * RampLane;
+    public static Vector3 RampEntry(int slot) => RampLocal(slot, RampLane, -3f);                              // 1줄 시작 앞(땅)
+    private static Vector3 SkyBridgeEnd(int slot) => Flat(Slots[slot].pos) - RampOut(slot) * (Slots[slot].topR - 1f);
 
     // 고원 가장자리에서 길이 이어지는 곳(울타리를 비운다): (방향, 반 폭 m)
     private static IEnumerable<(Vector3 dir, float half)> SlotGaps(int s)
     {
         Vector3 c = Flat(Slots[s].pos);
         if (s == 1) { yield return (Vector3.back, 3f); yield break; }   // N: 계단
-        yield return (RampDir(s), 3f);
+        yield return (-RampOut(s), 3f);                          // 큰 섬 경사로에서 오는 하늘 다리
         yield return ((BridgeEnd(s) - c).normalized, 2.6f);
     }
 
@@ -291,8 +312,9 @@ public static class HeavenOfBakeryMapBuilder
         {
             var slot = Slots[s];
             Vector3 c = Flat(slot.pos);
-            GameObject plateau = Put(slot.plateau, group, c, Outward(c));
+            GameObject plateau = Put(slot.plateau, group, c + Vector3.up * slot.top, Outward(c));   // §89.13 모델 원점 = 윗면(떠 있는 섬)
             if (plateau != null) plateau.name = $"Plateau_{slot.name.Substring(8)}";
+            if (plateau != null) NoGrassTop(plateau, "Cream");   // §89.17 서브 맵 고원 윗면에 초록 잔디 없음(서브 맵 바닥이 덮지 못하는 가장자리는 크림 돌)
             slotRoots[s] = Empty(group, slot.name, c + Vector3.up * slot.top, Outward(c));
             // 윗면 둘레 울타리(떨어지지 않게): 겉은 왕관 울타리, 충돌은 겹친 상자 고리. 길이 이어지는 곳은 비운다.
             Transform fence = Group(slotRoots[s], "RimFence");
@@ -329,10 +351,12 @@ public static class HeavenOfBakeryMapBuilder
         Transform group = Group(ground, "Ramps");
         for (int s = 0; s <= 2; s += 2)
         {
-            Vector3 b = RampBase(s), u = RampDir(s);
-            GameObject ramp = Put("HOB_SpiralRamp_12m", group, b, Quaternion.LookRotation(u));
+            GameObject ramp = Put("HOB_SwitchRamp_24m", group, RampOrigin(s), RampRot(s));
             if (ramp != null) ramp.name = s == 0 ? "Ramp_W" : "Ramp_E";
-            keepOut.Add((b - u * (RampLength / 2f), Quaternion.LookRotation(u), new Vector2(8.5f, RampLength / 2f + 1f)));
+            float mid = (RampEndY - RampBackY) / 2f;
+            keepOut.Add((RampLocal(s, 0f, mid), RampRot(s), new Vector2(RampLane + 3.5f, (RampEndY + RampBackY) / 2f + 2f)));
+            // 꼭대기 끝 → 떠 있는 섬 가장자리: 하늘 다리
+            Spans(group, RampTopEnd(s) + Vector3.up * BridgeY, SkyBridgeEnd(s) + Vector3.up * BridgeY, s == 0 ? "SkyW" : "SkyE");
         }
     }
 
@@ -348,34 +372,46 @@ public static class HeavenOfBakeryMapBuilder
         GameObject bridgeAsset = P("HOB_Bridge_10m");
         Material deck = bridgeAsset != null ? bridgeAsset.GetComponentInChildren<Renderer>().sharedMaterial : null;
         if (deck != null) pad.GetComponent<Renderer>().sharedMaterial = deck;
-        Put("HOB_ChocoPillar", group, new Vector3(0f, 0f, BridgeZ + PadHalf - 0.8f), Quaternion.identity, true, new Vector3(1.4f, (BridgeY - 1f) / 3.5f, 1.4f));
+        // Put("HOB_ChocoPillar", group, new Vector3(0f, 0f, BridgeZ + PadHalf - 0.8f), ...);   // 예전 발판 받침 기둥 — 떠 있는 발판은 작은 바위 위
+        GameObject islet = Put("HOB_SkyIslet", group, new Vector3(0f, BridgeY - 1.02f, BridgeZ), Quaternion.Euler(0f, 30f, 0f));
+        if (islet != null) islet.name = "PadIslet";
 
         for (int s = 0; s <= 2; s += 2)
-        {
-            Vector3 a = new Vector3(s == 0 ? -PadHalf + 0.3f : PadHalf - 0.3f, BridgeY, BridgeZ);
-            Vector3 b = BridgeEnd(s) + Vector3.up * BridgeY;
-            Vector3 dir = (b - a).normalized;
-            float seg = (b - a).magnitude / SpanSegments;
-            for (int k = 0; k < SpanSegments; k++)
-            {
-                Vector3 mid = a + dir * (seg * (k + 0.5f));
-                GameObject span = Put("HOB_Bridge_10m", group, mid, Quaternion.LookRotation(dir), true, new Vector3(1f, 1f, seg / 10f + 0.03f));
-                if (span != null) span.name = $"Span_{(s == 0 ? "W" : "E")}{k}";
-                if (k == 1 || k == 2)   // 받침 기둥(Exit_N 앞은 비운다)
-                    Put("HOB_ChocoPillar", group, Flat(mid), Quaternion.identity, true, new Vector3(1.3f, (BridgeY - 2.9f) / 3.5f, 1.3f));
-            }
-        }
-        // 발판 → N 고원(3 m 오름): 계단은 로컬 −Z로 오른다 → 북쪽(+Z)을 보게 180°
-        GameObject stairs = Put("HOB_Stairs_3m", group, new Vector3(0f, BridgeY, BridgeZ + PadHalf), Quaternion.Euler(0f, 180f, 0f));
+            Spans(group, new Vector3(s == 0 ? -PadHalf + 0.3f : PadHalf - 0.3f, BridgeY, BridgeZ), BridgeEnd(s) + Vector3.up * BridgeY, s == 0 ? "W" : "E");
+        // 발판 → N 섬(6 m 오름): 계단은 로컬 −Z로 오른다 → 북쪽(+Z)을 보게 180°
+        GameObject stairs = Put("HOB_Stairs_6m", group, new Vector3(0f, BridgeY, BridgeZ + PadHalf), Quaternion.Euler(0f, 180f, 0f));
         if (stairs != null) stairs.name = "Stairs_N";
-        // 계단 위 보이지 않는 경사판(발판 12 m → 고원 15 m): 계단 턱마다 걸리지 않고 AI 길·통행 검사가 이어지게
-        var slope = new GameObject("COL_StairsSlope").transform;
+        // 계단 위 보이지 않는 경사판(발판 24 m → 섬 30 m): 계단 턱마다 걸리지 않고 AI 길·통행 검사가 이어지게
+        // 경사판은 계단 턱 모서리(30턱: 앞 0.38 m·높이 0.2 m)보다 0.15 m 이상 위 — 가까우면 통행 검사 몸이 모서리에 걸려 칸이 비었다.
+        // 위 끝(층계참 위 0.5 m)에서 짧은 판이 섬 윗면 아래로 내려가 묻힌다 — 판 끝이 위로 튀어나와 계단 꼭대기에서 길이 끊기지 않게.
+        float baseZ = BridgeZ + PadHalf;
+        SlopeBox(group, "COL_StairsSlope", new Vector3(0f, BridgeY, baseZ - 1.2f), new Vector3(0f, BridgeY + 6.43f, baseZ + 11.4f));
+        SlopeBox(group, "COL_StairsTop", new Vector3(0f, BridgeY + 6.43f, baseZ + 11.4f), new Vector3(0f, BridgeY + 5.9f, baseZ + 15f));
+    }
+
+    // 보이지 않는 걷는 판: low → high를 윗면으로 하는 4.6 m 폭 상자(두께 0.2 m)
+    private static void SlopeBox(Transform group, string name, Vector3 low, Vector3 high)
+    {
+        var slope = new GameObject(name).transform;
         slope.SetParent(group, false);
-        Vector3 low = new Vector3(0f, BridgeY, BridgeZ + PadHalf - 1f), high = new Vector3(0f, BridgeY + 3.2f, BridgeZ + PadHalf + 5.5f);   // 계단 턱 모서리보다 살짝 위
         Vector3 along = (high - low).normalized;
         Quaternion tilt = Quaternion.LookRotation(along, Vector3.Cross(along, Vector3.right));
         slope.SetPositionAndRotation((low + high) / 2f - tilt * Vector3.up * 0.1f, tilt);
-        slope.gameObject.AddComponent<BoxCollider>().size = new Vector3(4.6f, 0.2f, (high - low).magnitude + 0.4f);
+        slope.gameObject.AddComponent<BoxCollider>().size = new Vector3(4.6f, 0.2f, (high - low).magnitude);
+    }
+
+    // 다리 토막을 a → b로 잇는다(10 m 이하 토막, 기둥 없음 — 아래는 하늘). §89.13
+    private static void Spans(Transform group, Vector3 a, Vector3 b, string tag)
+    {
+        Vector3 dir = (b - a).normalized;
+        int count = Mathf.Max(1, Mathf.CeilToInt((b - a).magnitude / SpanMax));
+        float seg = (b - a).magnitude / count;
+        for (int k = 0; k < count; k++)
+        {
+            Vector3 mid = a + dir * (seg * (k + 0.5f));
+            GameObject span = Put("HOB_Bridge_10m", group, mid, Quaternion.LookRotation(dir), true, new Vector3(1f, 1f, seg / 10f + 0.03f));
+            if (span != null) span.name = $"Span_{tag}{k}";
+        }
     }
 
     // ---------------------------------------------------------------- exits
@@ -490,11 +526,14 @@ public static class HeavenOfBakeryMapBuilder
         // 아몬드: 임시 재료 건물 + 아몬드 나무·자루·통·상자 무리·벤치·등
         Transform almond = contentRoots[0];
         PlaceBuilding(placeholders[0], almond, new Vector3(0f, 0f, 9f));
-        n += Scatter(almond, 0, rng, new[]
-        {
-            ("HOB_AlmondTree", 8, 1.8f), ("HOB_Crate", 3, 0.9f), ("HOB_Sack", 4, 0.9f), ("HOB_Barrel", 3, 0.6f), ("HOB_Urn", 2, 0.6f),
-            ("HOB_Bench", 2, 1.0f), ("HOB_LampPost_Short", 6, 0.4f), ("HOB_Bush_Round", 4, 0.8f),
-        });
+        // §89.17 건물 자리 밖은 아몬드 타일 바닥 + 아몬드 나무만(§89.16 길 타일·울타리·소품 대신)
+        // n += BuildThemeGround(almond, 0, "Almond", null);
+        // n += Scatter(almond, 0, rng, new[] { ("HOB_AlmondTree", 7, 1.8f), ("HOB_AlmondCrate", 3, 0.9f), ("HOB_AlmondSackDeco", 4, 0.9f), ("HOB_AlmondBig", 2, 0.9f), ("HOB_AlmondHalf", 2, 0.8f),
+        //     ("HOB_Barrel", 2, 0.6f), ("HOB_Bench", 2, 1.0f), ("HOB_PinkFlowerBush", 3, 1.1f), ("HOB_Bush_Round", 2, 0.8f) });
+        SubGround(almond, "Almond", "Cream", 0f);
+        n += BuildTileFloor(almond, "Almond");
+        n += Scatter(almond, 0, rng, new[] { ("HOB_AlmondTree", 14, 1.9f) });
+        foreach (Transform tree in Group(almond, "Deco")) NoGrassTop(tree.gameObject, "Soil");
 
         // 초콜릿: 재료 건물 = 초콜릿 분수(D6, 수리 자리는 분수 앞) + 초콜릿 기둥 고리·과자
         Transform choco = contentRoots[1];
@@ -518,53 +557,236 @@ public static class HeavenOfBakeryMapBuilder
                 PutLocal("HOB_ChocoPillar", choco, new Vector3(0f, 0f, 9f) + new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * 7.5f, 0f);
             }
         }
+        // §89.17 건물 자리 밖은 녹은 초콜릿 바닥 + 초코 퐁듀(냄비·큰 꼬치·웅덩이)와 초콜릿 소품만(§89.16 길 타일·케이크·꽃 대신)
+        // n += BuildThemeGround(choco, 1, "Choco", null);
+        // n += Scatter(choco, 1, rng, new[] { ("HOB_ChocoBlock", 3, 1.0f), ("HOB_Truffle", 3, 0.6f), ("HOB_HeartBonbon", 3, 0.5f), ("HOB_ChocoCube", 4, 0.5f), ("HOB_Truffles", 2, 1.2f),
+        //     ("HOB_StrawberryChocoCake", 2, 1.2f), ("HOB_CandyCanes", 2, 1.0f), ("HOB_PinkFlowerBush", 3, 1.1f), ("HOB_Cupcake_Cream", 1, 0.9f) });
+        SubGround(choco, "Choco", "ChocoFondue", 0.03f);
+        n += ChocoPuddles(choco, 1, rng);
         n += Scatter(choco, 1, rng, new[]
         {
-            ("HOB_ChocolateBar", 4, 1.1f), ("HOB_Truffles", 3, 1.2f), ("HOB_StrawberryChocoCake", 3, 1.2f), ("HOB_CandyCanes", 3, 1.0f),
-            ("HOB_CandyCaneLamp", 4, 0.5f), ("HOB_Cupcake_Cream", 2, 0.9f),
+            ("HOB_FonduePot", 5, 1.5f), ("HOB_FondueSkewer", 9, 0.7f), ("HOB_ChocoBlock", 4, 1.0f), ("HOB_Truffle", 4, 0.6f), ("HOB_HeartBonbon", 4, 0.5f),
+            ("HOB_ChocoCube", 5, 0.5f), ("HOB_Truffles", 2, 1.2f),
         });
 
         // 밀가루: 임시 재료 건물 + 밀밭 2 · 작은 절벽 폭포 · 자루 무리 · 표지판
         Transform flour = contentRoots[2];
         PlaceBuilding(placeholders[2], flour, new Vector3(0f, 0f, 9f));
-        n += BuildWheatField(flour, 2, new Vector3(-15f, 0f, 6f), new Vector2(8f, 7f), rng);
-        n += BuildWheatField(flour, 2, new Vector3(15f, 0f, 6f), new Vector2(8f, 7f), rng);
-        GameObject cliff = PutLocal("HOB_WaterfallCliff", Group(flour, "Deco"), new Vector3(0f, 0f, 22f), 180f);
-        localUsed[2].Add((new Vector3(0f, 0f, 22f), 7.5f));
-        if (cliff != null)
+        // §89.17 건물 자리 밖 전부 밀밭(흙 바닥 + 2 m 밀밭 덩어리) — 상자 표시를 놓은 뒤 FillWheat가 깐다(예전: 8 × 7 m 밀밭 둘)
+        // n += BuildWheatField(flour, 2, new Vector3(-15f, 0f, 6f), new Vector2(8f, 7f), rng);
+        // n += BuildWheatField(flour, 2, new Vector3(15f, 0f, 6f), new Vector2(8f, 7f), rng);
+        SubGround(flour, "Flour", "Soil", 0f);
+        // §89.16 작은 절벽 폭포(가까이서 종이처럼 얇았다) 대신 섬 뒤 가장자리에서 구름으로 떨어지는 큰 폭포(HOB_Waterfall) — 안 부서지는 "Waterfalls" 묶음
+        // GameObject cliff = PutLocal("HOB_WaterfallCliff", Group(flour, "Deco"), new Vector3(0f, 0f, 22f), 180f);   // 예전 절벽 + HOB_Waterfall_Small
         {
-            Bounds b = RoundMapKit.LocalBounds(cliff.transform);
-            Vector3 lip = cliff.transform.TransformPoint(new Vector3(0f, b.max.y - 0.3f, b.min.z + 0.6f));
-            GameObject fall = Put("HOB_Waterfall_Small", Group(flour, "Deco"), lip, flour.rotation * Quaternion.Euler(0f, 180f, 0f), false);
-            if (fall != null) fall.name = "SmallWaterfall";
+            Transform falls = Group(flour, "Waterfalls");
+            Vector3 lipLocal = new Vector3(0f, -0.2f, Slots[2].topR + 1.2f);   // 절벽 기둥 앞(-0.6이면 기둥 뒤로 숨었다)
+            Vector3 lip = flour.TransformPoint(lipLocal);
+            GameObject fall = Put("HOB_Waterfall", falls, lip, Outward(lip - flour.position), false);
+            if (fall != null) fall.name = "IslandWaterfall";
+            localUsed[2].Add((new Vector3(0f, 0f, 24f), 5f));
         }
-        n += Scatter(flour, 2, rng, new[] { ("HOB_Sack", 6, 0.9f), ("HOB_Signpost", 1, 1.0f), ("HOB_WoodFootbridge", 1, 3.2f), ("HOB_Bench", 2, 1.0f), ("HOB_FlowerBed", 3, 1.1f) });
+        // n += BuildThemeGround(flour, 2, "Flour", "HOB_WheatBanner");
+        // n += Scatter(flour, 2, rng, new[] { ("HOB_WheatBundle", 5, 0.6f), ("HOB_FlourSack", 4, 0.7f), ("HOB_FlourScoop", 2, 0.8f), ("HOB_Bench", 2, 1.0f),
+        //                                     ("HOB_PinkFlowerBush", 2, 1.1f), ("HOB_FlowerBed", 2, 1.1f), ("HOB_WoodFootbridge", 1, 3.2f) });   // 예전: 자루 6·표지판·다리·벤치·꽃밭
+        return n;
+    }
+
+    // §89.17 쓰지 않음(서브 맵 바닥을 BuildTileFloor·SubGround·FillWheat로 바꿈)
+    // // §89.16 서브 맵 바닥(구상 시트): 입구(−Z 가장자리)에서 건물 앞까지 3 m 테마 타일 길(가운데 줄에 무늬 타일) + 건물 앞 광장,
+    // // 길 양옆 금 울타리 토막(사이사이 비움)과 금 가로등, 밀가루는 깃발. 타일은 부서지지 않는 "Tiles" 묶음(충돌체 없음), 나머지는 Deco(부서짐).
+    // private static int BuildThemeGround(Transform content, int s, string theme, string banner)
+    // {
+    //     Transform tiles = Group(content, "Tiles");
+    //     Transform deco = Group(content, "Deco");
+    //     int n = 0;
+    //     const float T = 3f;
+    //     for (int row = 0; row < 9; row++)                                           // 길: z −24 … 0
+    //     {
+    //         float z = -24f + row * T;
+    //         for (int col = -1; col <= 1; col++)
+    //         {
+    //             bool emblem = col == 0 && (row == 1 || row == 4 || row == 7);
+    //             if (PutLocal($"HOB_Tile_{theme}{(emblem ? "" : "Plain")}", tiles, new Vector3(col * T, 0.01f, z), 0f, false) != null) n++;
+    //         }
+    //     }
+    //     foreach (float x in new[] { -9f, -6f, 6f, 9f })                            // 건물 앞 광장 양옆
+    //         for (int row = 0; row < 2; row++)
+    //             if (PutLocal($"HOB_Tile_{theme}Plain", tiles, new Vector3(x, 0.01f, -3f + row * T), 0f, false) != null) n++;
+    //     for (float z = -22f; z <= 0f; z += 6f) localUsed[s].Add((new Vector3(0f, 0f, z), 5f));
+    //     localUsed[s].Add((new Vector3(-7.5f, 0f, -1.5f), 3.2f)); localUsed[s].Add((new Vector3(7.5f, 0f, -1.5f), 3.2f));
+    //     // 길 양옆: 울타리 토막(2.2 m) 두 개 + 틈 반복, 토막 사이 기둥, 가로등·깃발
+    //     foreach (int side in new[] { -1, 1 })
+    //     {
+    //         float x = side * 5.2f;
+    //         foreach (float zc in new[] { -19.4f, -10.4f })
+    //         {
+    //             for (int k = 0; k < 2; k++)
+    //                 if (PutLocal("HOB_GoldFence", deco, new Vector3(x, 0f, zc + k * 2.4f), 90f) != null) n++;
+    //             if (PutLocal("HOB_GoldPost", deco, new Vector3(x, 0f, zc + 1.2f), 0f) != null) n++;
+    //         }
+    //         foreach (float z in new[] { -22.5f, -13.5f, -4.5f })
+    //             if (PutLocal("HOB_GoldLamp", deco, new Vector3(x, 0f, z), 0f) != null) n++;
+    //         if (banner != null)
+    //             foreach (float z in new[] { -16.5f, -7.5f })
+    //                 if (PutLocal(banner, deco, new Vector3(x + side * 0.4f, 0f, z), side > 0 ? -90f : 90f) != null) n++;
+    //         localUsed[s].Add((new Vector3(x, 0f, -14f), 1.2f));
+    //     }
+    //     return n;
+    // }
+
+    // ---------------------------------------------------------------- §89.17 sub-map floors (no green grass)
+
+    public const float SubGroundR = 27.6f;   // 아몬드 고원 가장자리 덤불·꽃(r 28 m~)과 둘레 울타리(29.8 m) 안쪽 — 세 고원 모두에 맞는다
+
+    // 잔디 재질 슬롯만 바꾼다(씬 사본): 고원 윗면 → 크림 돌, 아몬드 나무 밑동 잔디 둔덕 → 흙
+    private static void NoGrassTop(GameObject go, string material)
+    {
+        Material to = HobHQBuilder.MaterialFor(material);
+        if (to == null) return;
+        foreach (Renderer r in go.GetComponentsInChildren<Renderer>(true))
+            r.sharedMaterials = r.sharedMaterials.Select(m => m != null && m.name == "M_HQ_Grass" ? to : m).ToArray();
+    }
+
+    // 서브 맵 바닥 원판(묶음과 함께 옮겨진다): 충돌체 없음(밑의 고원 메시가 밟힌다), 부서지지 않는 "Floor" 묶음. amp > 0 이면 녹은 초콜릿 물결.
+    private static void SubGround(Transform content, string theme, string material, float amp)
+    {
+        const int Seg = 96, Rings = 24;
+        var verts = new List<Vector3> { new Vector3(0f, 0.015f + amp, 0f) };
+        var tris = new List<int>();
+        for (int ring = 1; ring <= Rings; ring++)
+        {
+            float r = SubGroundR * ring / Rings;
+            for (int k = 0; k < Seg; k++)
+            {
+                float a = k * Mathf.PI * 2f / Seg;
+                float h = ring == Rings ? 0f : amp * (Mathf.Sin(r * 1.7f + a * 3f) * 0.6f + (Mathf.PerlinNoise(Mathf.Cos(a) * r * 0.25f + 50f, Mathf.Sin(a) * r * 0.25f + 50f) - 0.5f) * 1.6f);
+                verts.Add(new Vector3(Mathf.Cos(a) * r, 0.015f + Mathf.Max(0f, amp + h), Mathf.Sin(a) * r));
+            }
+        }
+        for (int k = 0; k < Seg; k++) tris.AddRange(new[] { 0, 1 + (k + 1) % Seg, 1 + k });
+        for (int ring = 0; ring < Rings - 1; ring++)
+            for (int k = 0; k < Seg; k++)
+            {
+                int a = 1 + ring * Seg + k, b = 1 + ring * Seg + (k + 1) % Seg, c = a + Seg, d = b + Seg;
+                tris.AddRange(new[] { a, b, c, b, d, c });
+            }
+        var mesh = new Mesh { name = "HOB_SubGround_" + theme };
+        mesh.SetVertices(verts); mesh.SetTriangles(tris, 0);
+        mesh.SetColors(Enumerable.Repeat(Color.white, verts.Count).ToList());
+        mesh.RecalculateNormals(); mesh.RecalculateBounds();
+        string path = $"{GeneratedFolder}/HOB_SubGround_{theme}.asset";
+        AssetDatabase.DeleteAsset(path);
+        AssetDatabase.CreateAsset(mesh, path);
+        var go = new GameObject("SubGround", typeof(MeshFilter), typeof(MeshRenderer));
+        go.transform.SetParent(Group(content, "Floor"), false);
+        go.GetComponent<MeshFilter>().sharedMesh = mesh;
+        go.GetComponent<MeshRenderer>().sharedMaterial = material == "ChocoFondue" ? FondueMaterial() : HobHQBuilder.MaterialFor(material);
+    }
+
+    // 녹은 초콜릿 바닥: 밝은 초콜릿 무늬를 크게, 반들반들하게(흙처럼 보이지 않게). 너무 반들거리면 하늘이 비쳐 보라색으로 보인다(1.25).
+    private static Material FondueMaterial()
+    {
+        string path = $"{HobHQBuilder.MaterialDir}/M_HQ_ChocoFondue.mat";
+        var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (m == null) { m = new Material(HobHQBuilder.MaterialFor("ChocoFlow")); AssetDatabase.CreateAsset(m, path); }
+        m.CopyPropertiesFromMaterial(HobHQBuilder.MaterialFor("ChocoFlow"));
+        m.SetColor("_Color", new Color(0.8f, 0.66f, 0.55f));
+        m.SetFloat("_Tile", 0.3f); m.SetFloat("_SmoothScale", 1.25f); m.SetFloat("_BumpScale", 0.5f); m.SetFloat("_MacroStrength", 0.35f);
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    // 아몬드: 건물 자리 밖을 3 m 아몬드 타일로 모두 덮는다(네 모서리가 바닥 원판 안인 칸만, 4칸마다 무늬 타일). 부서지지 않는 "Tiles" 묶음.
+    private static int BuildTileFloor(Transform content, string theme)
+    {
+        Transform tiles = Group(content, "Tiles");
+        const float T = 3f;
+        int n = 0;
+        for (int i = -10; i <= 10; i++)
+            for (int j = -10; j <= 10; j++)
+            {
+                float x = i * T, z = j * T;
+                if (new Vector2(Mathf.Abs(x) + T / 2f, Mathf.Abs(z) + T / 2f).magnitude > SubGroundR) continue;
+                if (x + T / 2f > BuildingRect.xMin && x - T / 2f < BuildingRect.xMax && z + T / 2f > BuildingRect.yMin && z - T / 2f < BuildingRect.yMax) continue;
+                bool emblem = ((i % 2) + 2) % 2 == 0 && ((j % 2) + 2) % 2 == 0 && ((i + j) / 2 % 2 + 2) % 2 == 0;
+                if (PutLocal($"HOB_Tile_{theme}{(emblem ? "" : "Plain")}", tiles, new Vector3(x, 0.03f, z), 0f, false) != null) n++;
+            }
+        return n;
+    }
+
+    // 초콜릿: 녹은 초콜릿 웅덩이(밟고 지나감, 부서지지 않는 "Tiles" 묶음, 충돌체 없음) — 소품을 비워 두는 앞쪽(경사로·다리가 닿는 곳)에도 깐다
+    private static int ChocoPuddles(Transform content, int s, System.Random rng)
+    {
+        Transform floor = Group(content, "Tiles");
+        var placed = new List<(Vector3 c, float r)>();
+        int n = 0;
+        for (int t = 0; t < 600 && n < 14; t++)
+        {
+            float rad = n % 2 == 0 ? 2.6f : 1.8f;
+            float a = (float)(rng.NextDouble() * 360.0), d = 3f + (float)rng.NextDouble() * (SubGroundR - 4.5f - rad);
+            var l = new Vector3(Mathf.Sin(a * Mathf.Deg2Rad) * d, 0f, Mathf.Cos(a * Mathf.Deg2Rad) * d);
+            if (l.x + rad > BuildingRect.xMin && l.x - rad < BuildingRect.xMax && l.z + rad > BuildingRect.yMin && l.z - rad < BuildingRect.yMax) continue;
+            if (placed.Any(p => (p.c - l).magnitude < p.r + rad + 1.5f)) continue;
+            placed.Add((l, rad));
+            if (PutLocal(n % 2 == 0 ? "HOB_ChocoPuddle" : "HOB_ChocoPuddleB", floor, l + Vector3.up * 0.02f, (float)(rng.NextDouble() * 360.0), false) != null) n++;
+        }
+        return n;
+    }
+
+    // 밀가루: 건물 자리·건물 앞 흙길·상자 등 표시 둘레를 빼고 섬 전체를 2 m 밀밭 덩어리로 덮는다(충돌체 없음 — 밀 사이로 걸어 다닌다).
+    private static int FillWheat(Transform content, System.Random rng)
+    {
+        if (content == null) return 0;
+        Transform field = Group(content, "WheatFields");
+        var keep = new List<Vector3>();
+        foreach (string g in new[] { "Markers", "Chests", "Deco" })
+        {
+            Transform t = content.Find(g);
+            if (t != null) foreach (Transform c in t) keep.Add(content.InverseTransformPoint(c.position));
+        }
+        const float S = 2f;
+        int n = 0;
+        for (int i = -14; i <= 14; i++)
+            for (int j = -14; j <= 14; j++)
+            {
+                float x = i * S, z = j * S;
+                if (new Vector2(x, z).magnitude + 1.1f > SubGroundR) continue;
+                if (x + 1.5f > BuildingRect.xMin && x - 1.5f < BuildingRect.xMax && z + 1.5f > BuildingRect.yMin && z - 1.5f < BuildingRect.yMax) continue;
+                if (Mathf.Abs(x) < 2.2f && z < BuildingRect.yMin + 1f) continue;                  // 입구 → 건물 앞 흙길
+                if (keep.Any(k => new Vector2(k.x - x, k.z - z).magnitude < 2.1f)) continue;     // 상자·로켓·무지개 자리 둘레 빈터
+                float yaw = rng.Next(4) * 90f;
+                if (PutLocal("HOB_WheatPatch", field, new Vector3(x + (float)(rng.NextDouble() - 0.5) * 0.3f, 0f, z + (float)(rng.NextDouble() - 0.5) * 0.3f), yaw, false,
+                             0.95f + (float)rng.NextDouble() * 0.12f) != null) n++;
+            }
         return n;
     }
 
     private static void PlaceBuilding(Transform building, Transform content, Vector3 local)
     {
         if (building == null) return;
-        building.SetParent(content, true);
+        // §89.14 서브 맵 안 "Buildings" 묶음 — 부서지기 규칙이 건물 등급(4번)으로 본다
+        building.SetParent(Group(content, "Buildings"), true);
         building.SetPositionAndRotation(content.TransformPoint(local), content.rotation);
     }
 
-    // 밀밭: 포기(LOD 프리팹)를 0.75 m 격자 + 흔들기로 깐다.
-    private static int BuildWheatField(Transform content, int s, Vector3 center, Vector2 size, System.Random rng)
-    {
-        Transform field = Group(content, "WheatFields");
-        localUsed[s].Add((center, Mathf.Max(size.x, size.y) * 0.6f));
-        int n = 0;
-        const float step = 0.75f;
-        for (float x = -size.x / 2f; x <= size.x / 2f; x += step)
-            for (float z = -size.y / 2f; z <= size.y / 2f; z += step)
-            {
-                var l = center + new Vector3(x + (float)(rng.NextDouble() - 0.5) * 0.35f, 0f, z + (float)(rng.NextDouble() - 0.5) * 0.35f);
-                GameObject w = PutLocal("HOB_Wheat", field, l, (float)(rng.NextDouble() * 360.0), false, 0.9f + (float)rng.NextDouble() * 0.25f);
-                if (w != null) n++;
-            }
-        return n;
-    }
+    // §89.17 쓰지 않음(밀가루 섬 전체 밀밭 FillWheat로 바꿈)
+    // // 밀밭: 포기(LOD 프리팹)를 0.75 m 격자 + 흔들기로 깐다.
+    // private static int BuildWheatField(Transform content, int s, Vector3 center, Vector2 size, System.Random rng)
+    // {
+    //     Transform field = Group(content, "WheatFields");
+    //     localUsed[s].Add((center, Mathf.Max(size.x, size.y) * 0.6f));
+    //     int n = 0;
+    //     const float step = 0.75f;
+    //     for (float x = -size.x / 2f; x <= size.x / 2f; x += step)
+    //         for (float z = -size.y / 2f; z <= size.y / 2f; z += step)
+    //         {
+    //             var l = center + new Vector3(x + (float)(rng.NextDouble() - 0.5) * 0.35f, 0f, z + (float)(rng.NextDouble() - 0.5) * 0.35f);
+    //             GameObject w = PutLocal("HOB_Wheat", field, l, (float)(rng.NextDouble() * 360.0), false, 0.9f + (float)rng.NextDouble() * 0.25f);
+    //             if (w != null) n++;
+    //         }
+    //     return n;
+    // }
 
     // ---------------------------------------------------------------- paths
 
@@ -607,7 +829,7 @@ public static class HeavenOfBakeryMapBuilder
         n += TileRun(group, "HOB_Tile_Star", Polar(26f, 90f), Exits[0].pos + Vector3.back * 6f, 4f);
         for (int s = 0; s <= 2; s += 2)
         {
-            Vector3 entry = RampBase(s) + RampDir(s) * 3f;
+            Vector3 entry = RampEntry(s);
             Vector3 from = Polar(26f, Mathf.Atan2(entry.z, entry.x) * Mathf.Rad2Deg);
             n += TileRun(group, "HOB_Tile_Circle", from, entry, 4f);
         }
@@ -643,7 +865,7 @@ public static class HeavenOfBakeryMapBuilder
     private static int BuildRim(Transform map)
     {
         Transform rim = Group(map, "Rim");
-        float[] exitDeg = { 0f, 270f, 180f };
+        float[] exitDeg = { 0f, 90f, 270f, 180f };   // §89.13 Exit_N도 가장자리
         float half = Exit.Opening / 2f + Exit.PostWidth;
         int n = 0;
         float r = FenceRadius + 0.4f;
@@ -683,14 +905,129 @@ public static class HeavenOfBakeryMapBuilder
         return n;
     }
 
+    // §89.15 마녀가 걸어오는 구름 바닥: 떠 있는 섬들 밖(r 195)부터 900 m까지 구름 바다(높이 −1.5 m, 마녀 발은 0 m — 발목이 구름에 잠긴다).
+    // 마녀 길(앵커 방향 ±45 m)은 평평하게, 나머지는 살짝 울퉁불퉁 + 큰 뭉게구름. 충돌체 없음. 길 위의 구름은 지운다(WitchBackdropBuilder.OnWitchPath).
+    public const float CloudFloorInner = 195f, CloudFloorOuter = 900f, CloudFloorY = -1.5f;
+
+    private static int BuildCloudFloor(Scene scene, Transform far, System.Random rng)
+    {
+        if (far == null) return 0;
+        Transform anchor = scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<Transform>(true)).FirstOrDefault(t => t.name == "WITCH_Anchor");
+        if (anchor == null || !WitchPath.TryGetGroundRect(scene, out Rect ground)) return 0;
+        Vector3 center = new Vector3(ground.center.x, 0f, ground.center.y);
+        Vector3 outward = WitchPath.OutwardDirection(center, anchor.position);
+        float Height(Vector3 p)
+        {
+            Vector3 d = p - center; d.y = 0f;
+            float along = Vector3.Dot(d, outward), side = (d - outward * Mathf.Max(0f, along)).magnitude;
+            float flat = along > 0f ? Mathf.Clamp01((side - 45f) / 40f) : 1f;              // 길 둘레는 평평
+            float bump = Mathf.PerlinNoise(p.x * 0.011f + 13f, p.z * 0.011f + 7f) - 0.5f;
+            float far01 = Mathf.InverseLerp(CloudFloorInner, CloudFloorOuter, d.magnitude);
+            return CloudFloorY + bump * 3.2f * flat - far01 * 6f * flat;                  // 멀수록 조금 내려가 지평선이 부드럽다
+        }
+        const int Seg = 160, Rings = 28;
+        var verts = new List<Vector3>(); var tris = new List<int>();
+        for (int ring = 0; ring <= Rings; ring++)
+        {
+            float r = Mathf.Lerp(CloudFloorInner, CloudFloorOuter, Mathf.Pow(ring / (float)Rings, 1.6f));
+            for (int k = 0; k < Seg; k++)
+            {
+                float a = k * Mathf.PI * 2f / Seg;
+                Vector3 p = center + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r;
+                verts.Add(new Vector3(p.x, Height(p), p.z));
+            }
+        }
+        for (int ring = 0; ring < Rings; ring++)
+            for (int k = 0; k < Seg; k++)
+            {
+                int a = ring * Seg + k, b = ring * Seg + (k + 1) % Seg, c = a + Seg, d = b + Seg;
+                tris.AddRange(new[] { a, b, c, b, d, c });
+            }
+        var mesh = new Mesh { name = "HOB_CloudFloor", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+        mesh.SetVertices(verts); mesh.SetTriangles(tris, 0);
+        mesh.SetColors(Enumerable.Repeat(Color.white, verts.Count).ToList());   // HQ 셰이더: 정점 색 = 접촉 그림자 → 흰색(그림자 없음)
+        mesh.RecalculateNormals(); mesh.RecalculateBounds();
+        string path = GeneratedFolder + "/HOB_CloudFloor.asset";
+        AssetDatabase.DeleteAsset(path);
+        AssetDatabase.CreateAsset(mesh, path);
+        Transform old = far.Find("FarGround");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        var floorGo = new GameObject("FarGround", typeof(MeshFilter), typeof(MeshRenderer));
+        floorGo.transform.SetParent(far, false);
+        floorGo.GetComponent<MeshFilter>().sharedMesh = mesh;
+        var mr = floorGo.GetComponent<MeshRenderer>();
+        mr.sharedMaterial = HobHQBuilder.MaterialFor("CloudPink");
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // 섬들 아래(r < 안쪽 반지름)는 한 층 낮은 구름 바다(−45 m) — 위에서 보면 구멍 대신 구름이 보이고 섬은 그 위에 떠 있다.
+        // FarGround의 자식으로 둔다(FarBackdrop 바로 아래 물체는 마녀 길 위에 있으면 안 된다 — 원점은 길 위로 잡힌다).
+        var low = new List<Vector3>(); var lowTris = new List<int>();
+        const int LowRings = 10;
+        low.Add(new Vector3(center.x, -45f, center.z));
+        for (int ring = 1; ring <= LowRings; ring++)
+        {
+            float r = (CloudFloorInner + 25f) * ring / LowRings;
+            for (int k = 0; k < Seg; k++)
+            {
+                float a = k * Mathf.PI * 2f / Seg;
+                Vector3 p = center + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r;
+                float edge = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(CloudFloorInner - 40f, CloudFloorInner + 25f, r));   // 바깥 가장자리는 위 구름 바닥 아래로 올라가 이어진다
+                low.Add(new Vector3(p.x, Mathf.Lerp(-45f, CloudFloorY - 6f, edge) + (Mathf.PerlinNoise(p.x * 0.02f + 3f, p.z * 0.02f + 9f) - 0.5f) * 5f, p.z));
+            }
+        }
+        for (int k = 0; k < Seg; k++) lowTris.AddRange(new[] { 0, 1 + (k + 1) % Seg, 1 + k });
+        for (int ring = 1; ring < LowRings; ring++)
+            for (int k = 0; k < Seg; k++)
+            {
+                int a = 1 + (ring - 1) * Seg + k, b = 1 + (ring - 1) * Seg + (k + 1) % Seg, c = a + Seg, d = b + Seg;
+                lowTris.AddRange(new[] { a, b, c, b, d, c });
+            }
+        var lowMesh = new Mesh { name = "HOB_CloudFloorLow" };
+        lowMesh.SetVertices(low); lowMesh.SetTriangles(lowTris, 0);
+        lowMesh.SetColors(Enumerable.Repeat(Color.white, low.Count).ToList());
+        lowMesh.RecalculateNormals(); lowMesh.RecalculateBounds();
+        string lowPath = GeneratedFolder + "/HOB_CloudFloorLow.asset";
+        AssetDatabase.DeleteAsset(lowPath);
+        AssetDatabase.CreateAsset(lowMesh, lowPath);
+        var lowGo = new GameObject("LowerClouds", typeof(MeshFilter), typeof(MeshRenderer));
+        lowGo.transform.SetParent(floorGo.transform, false);
+        lowGo.GetComponent<MeshFilter>().sharedMesh = lowMesh;
+        var lmr = lowGo.GetComponent<MeshRenderer>();
+        lmr.sharedMaterial = mr.sharedMaterial;
+        lmr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        // 마녀 길 위(또는 걸친) 구름 지우기
+        int removed = 0;
+        foreach (Transform t in far.Cast<Transform>().ToList())
+        {
+            if (t.name == "FarGround") continue;
+            float rad = t.GetComponentsInChildren<Renderer>().Select(r => r.bounds.extents.magnitude).DefaultIfEmpty(0f).Max();
+            if (WitchBackdropBuilder.OnWitchPath(t.position, center, outward, WitchBackdropBuilder.PathHalfWidth + rad + 4f)) { Object.DestroyImmediate(t.gameObject); removed++; }
+        }
+        // 바닥 위 뭉게구름(가까운 곳이 촘촘, 길은 비움)
+        int n = 0, tries = 0;
+        while (n < 110 && tries++ < 2000)
+        {
+            float u = (float)rng.NextDouble();
+            float r = Mathf.Lerp(CloudFloorInner + 15f, CloudFloorOuter - 60f, u * u);
+            float a = (float)(rng.NextDouble() * Mathf.PI * 2.0);
+            Vector3 p = center + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r;
+            float sc = Mathf.Lerp(4f, 11f, (float)rng.NextDouble()) * Mathf.Lerp(1f, 1.8f, (r - CloudFloorInner) / (CloudFloorOuter - CloudFloorInner));
+            if (WitchBackdropBuilder.OnWitchPath(p, center, outward, WitchBackdropBuilder.PathHalfWidth + sc * 3f + 6f)) continue;
+            p.y = Height(p) - sc * 0.6f;
+            if (Put("HOB_Cloud_L", far, p, Quaternion.Euler(0f, (float)(rng.NextDouble() * 360.0), 0f), false, new Vector3(sc, sc * 0.75f, sc)) != null) n++;
+        }
+        return n + removed * 0;
+    }
+
     private static int BuildClouds(Transform far, System.Random rng)
     {
-        Transform group = Group(far, "Clouds");
+        // Transform group = Group(far, "Clouds");   // 예전: 묶음 하나(원점 = 마녀 길 위로 잡혀 시험이 막았다)
+        Transform group = far;                          // §89.15 구름은 FarBackdrop 바로 아래(마녀 길 위의 것은 BuildCloudFloor가 지운다)
         int n = 0;
         for (int k = 0; k < 40; k++)
         {
             float a = (float)(rng.NextDouble() * 360.0), r = 115f + (float)rng.NextDouble() * 60f;
             float y = -30f + (float)rng.NextDouble() * 42f;
+            if (Slots.Any(sl => (Polar(r, a) - Flat(sl.pos)).magnitude < sl.footR + 12f)) continue;   // §89.13 떠 있는 섬과 겹치지 않게
             float sc = 1.2f + (float)rng.NextDouble() * 1.8f;
             if (Put(k % 3 == 0 ? "HOB_Cloud_S" : "HOB_Cloud_L", group, Polar(r, a) + Vector3.up * y, Quaternion.Euler(0f, (float)(rng.NextDouble() * 360.0), 0f), false, Vector3.one * sc) != null) n++;
         }
@@ -862,8 +1199,8 @@ public static class HeavenOfBakeryMapBuilder
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.78f, 0.87f, 0.98f);
-        RenderSettings.fogStartDistance = 140f;
-        RenderSettings.fogEndDistance = 460f;
+        RenderSettings.fogStartDistance = 220f;   // §89.13 맵 반경 190 — 예전 140
+        RenderSettings.fogEndDistance = 750f;     // 예전 460
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = new Color(0.72f, 0.8f, 0.95f);
         RenderSettings.ambientEquatorColor = new Color(0.86f, 0.8f, 0.74f);
@@ -892,7 +1229,7 @@ public static class HeavenOfBakeryMapBuilder
         }
         foreach (ReflectionProbe p in lighting.GetComponentsInChildren<ReflectionProbe>(true).ToList())
             if (p.name.StartsWith("Probe_HAU")) Object.DestroyImmediate(p.gameObject);
-            else { p.transform.position = new Vector3(0f, 15f, 0f); p.size = new Vector3(260f, 80f, 260f); }
+            else { p.transform.position = new Vector3(0f, 15f, 30f); p.size = new Vector3(2f * MapRadius + 20f, 100f, 2f * MapRadius + 20f); }
     }
 
     private static void SetAmbience(Scene scene)

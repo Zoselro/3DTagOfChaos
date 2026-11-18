@@ -34,7 +34,7 @@ Material:
     - _Speed: 1
     - _Sway: 0.06
     m_Colors:
-    - _Color: {r: 0.9911565, g: 0.9063317, b: 0.6799757, a: 1}
+    - _Color: {r: 0.97999996, g: 0.8, b: 0.41999996, a: 1}
     - _WindDir: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

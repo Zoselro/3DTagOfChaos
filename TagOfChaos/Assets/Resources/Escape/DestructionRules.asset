@@ -24,16 +24,30 @@ MonoBehaviour:
   - Fence
   - Forest
   - Background
+  - FieldDeco
+  - FieldBuildings
+  - SubMaps
+  - SubMap_Almond
+  - SubMap_Chocolate
+  - SubMap_Flour
+  - Rim
   containerPrefix: Quadrant_
   keepUnits:
   - GIN_ClockTower
   - CoasterEntrance
   - Exit_
   - Elevator
+  - WheatFields
+  - Waterfalls
+  - HOB_WaterfallCliff
+  - SmallWaterfall
+  - Tiles
+  - Floor
   tentPrefixes:
   - MO_Tent
   - CF_Tent
   - CHO_Shed
+  - HOB_House_
   stairsPrefixes:
   - Helix_
   stairsLinkPrefix: GIN_ClockTower
@@ -43,6 +57,7 @@ MonoBehaviour:
   - HideBuildings
   - Landmarks
   - Rides
+  - FieldBuildings
   keepParts:
   - Socket_
   - ESC_Glow
@@ -163,6 +178,66 @@ MonoBehaviour:
   - HAU_TwistedTree_A
   - HAU_TwistedTree_B
   - HAU_TwistedTree_C
+  - HOB_AlmondBig
+  - HOB_AlmondCrate
+  - HOB_AlmondHalf
+  - HOB_AlmondSackDeco
+  - HOB_AlmondTree
+  - HOB_BannerLamp
+  - HOB_Barrel
+  - HOB_Bench
+  - HOB_Bush_Berry
+  - HOB_Bush_Round
+  - HOB_CandyArch
+  - HOB_CandyCaneLamp
+  - HOB_CandyCanes
+  - HOB_ChocoBlock
+  - HOB_ChocoCube
+  - HOB_ChocoPillar
+  - HOB_ChocolateBar
+  - HOB_Crate
+  - HOB_CrownFence_2m
+  - HOB_Cupcake_Cream
+  - HOB_Cupcake_Pink
+  - HOB_FlourSack
+  - HOB_FlourScoop
+  - HOB_FlowerBed
+  - HOB_FlowerBush
+  - HOB_FonduePot
+  - HOB_FondueSkewer
+  - HOB_FruitCart
+  - HOB_Fruit_Apple
+  - HOB_Fruit_Cherries
+  - HOB_Fruit_Grapes
+  - HOB_Fruit_Orange
+  - HOB_Fruit_Pumpkin
+  - HOB_Fruit_Strawberry
+  - HOB_GoldFence
+  - HOB_GoldLamp
+  - HOB_GoldPost
+  - HOB_HeartBonbon
+  - HOB_House_Cake
+  - HOB_House_Strawberry
+  - HOB_House_TierCake
+  - HOB_LampPost_Short
+  - HOB_MarketStall
+  - HOB_PinkFlowerBush
+  - HOB_RockBush
+  - HOB_RockMushroom
+  - HOB_Sack
+  - HOB_Signpost
+  - HOB_StrawberryChocoCake
+  - HOB_StrawberryCupcake
+  - HOB_Tree_Fruit
+  - HOB_Tree_Pine_L
+  - HOB_Tree_Pine_S
+  - HOB_Tree_Round
+  - HOB_Truffle
+  - HOB_Truffles
+  - HOB_Urn
+  - HOB_WheatBanner
+  - HOB_WheatBundle
+  - HOB_WoodFootbridge
   - Helix
   - MO_BalloonCart
   - MO_Bench
@@ -183,6 +258,7 @@ MonoBehaviour:
   - MonsterRoom_ChocolateFactory
   - MonsterRoom_CursedCandyCarnival
   - MonsterRoom_GingerbreadVillage
+  - MonsterRoom_HeavenOfBakery
   - MonsterRoom_Test_HeavenOfBakery
   crackMaterials:
   - {fileID: 2100000, guid: 070ca8d070ddbdc4288f524cbf2daaef, type: 2}
