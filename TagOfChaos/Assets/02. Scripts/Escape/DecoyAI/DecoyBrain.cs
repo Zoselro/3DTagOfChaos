@@ -440,7 +440,7 @@ public class DecoyBrain : MonoBehaviour
         from = LeadPoint(a, from, now); // 새 경로는 RouteLead 뒤 그 자리(옛 경로를 따라간 곳)에서 출발한다(§71 A1)
         if (!NavMesh.SamplePosition(from, out NavMeshHit start, 3f, DecoyNavMesh.Filter)) return false;
         if (!NavMesh.CalculatePath(start.position, to, DecoyNavMesh.Filter, path) || path.status != NavMeshPathStatus.PathComplete) return false;
-        Vector3[] corners = path.corners;
+        Vector3[] corners = FollowSlopes(path.corners); // §89.17 경사로 끝·계단 끝처럼 높이만 꺾이는 곳에도 점을 넣는다(공중·다리 밑 걷기 방지)
         if (corners.Length < 2) return false;
         int n = Mathf.Min(corners.Length, DecoyRoute.MaxPoints);
         bool truncated = corners.Length > DecoyRoute.MaxPoints;
@@ -461,6 +461,45 @@ public class DecoyBrain : MonoBehaviour
         route.HoldUntil = route.TravelSeconds + rest;
         Write(a, route);
         return true;
+    }
+
+    // §89.17 NavMesh 길의 꺾이는 점(corners)은 수평으로 방향이 바뀌는 곳뿐이다. 경사로가 평평한 다리로 곧게 이어지면 그 사이에 점이 없어
+    // 모든 화면이 두 점 사이 높이를 곧게 이어 계산하므로(DecoyRoute.Sample) AI가 다리 밑 공중을 걸었다(Heaven Of Bakery 하늘 섬 경사로·계단).
+    // 구간마다 1.5 m 간격으로 NavMesh 높이를 재어, 곧은 선과 SlopeTolerance보다 어긋나는 가장 큰 곳에 점을 넣고 양쪽을 다시 나눈다.
+    private const float SlopeTolerance = 0.3f;
+
+    private static Vector3[] FollowSlopes(Vector3[] corners)
+    {
+        if (corners == null || corners.Length < 2) return corners;
+        var list = new List<Vector3>(corners.Length + 4) { corners[0] };
+        for (int i = 1; i < corners.Length; i++)
+        {
+            AddHeightBreaks(list, corners[i - 1], corners[i], 0);
+            list.Add(corners[i]);
+        }
+        return list.ToArray();
+    }
+
+    private static void AddHeightBreaks(List<Vector3> list, Vector3 a, Vector3 b, int depth)
+    {
+        float len = new Vector2(b.x - a.x, b.z - a.z).magnitude;
+        if (len < 2f || depth > 5) return;
+        int steps = Mathf.CeilToInt(len / 1.5f);
+        float worst = SlopeTolerance;
+        Vector3 best = default;
+        bool found = false;
+        for (int s = 1; s < steps; s++)
+        {
+            Vector3 p = Vector3.Lerp(a, b, s / (float)steps);
+            if (!NavMesh.SamplePosition(p, out NavMeshHit h, 5f, DecoyNavMesh.Filter)) continue;
+            if (new Vector2(h.position.x - p.x, h.position.z - p.z).sqrMagnitude > 0.25f) continue; // 옆 다른 길로 붙었다
+            float dev = Mathf.Abs(h.position.y - p.y);
+            if (dev > worst) { worst = dev; best = new Vector3(p.x, h.position.y, p.z); found = true; }
+        }
+        if (!found) return;
+        AddHeightBreaks(list, a, best, depth + 1);
+        list.Add(best);
+        AddHeightBreaks(list, best, b, depth + 1);
     }
 
     // 새 경로가 시작할 자리: RouteLead 뒤 지금 따라가는 경로가 닿는 곳(경로가 없으면 지금 자리).
