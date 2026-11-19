@@ -17,7 +17,8 @@ public static class HobBakeryBuildings
     public static readonly string[] Names = { "HOB_BLD_FruitWarehouse", "HOB_BLD_JamFactory", "HOB_BLD_WheatMill", "HOB_BLD_AppleWorkshop", "HOB_BLD_AlmondFactory", "HOB_BLD_OrangeWorkshop", "HOB_BLD_ChocoFactory" };
 
     [System.Serializable] private class Prop { public string p; public float[] pos; public float yaw; public float s; } // s: 크기 배율(0 = 1, 좁은 방에서 줄인 주인공 소품)
-    [System.Serializable] private class Info { public string name; public string key; public float f; public float[] dims; public float[] socket; public Prop[] props; }
+    // [System.Serializable] private class Info { public string name; public string key; public float f; public float[] dims; public float[] socket; public Prop[] props; }
+    [System.Serializable] private class Info { public string name; public string key; public float f; public float bscale = 1f; public float[] dims; public float[] socket; public Prop[] props; }   // §89.24 B안: bscale = 문 7 m 배율(2.59)
 
     [MenuItem("Tools/TagOfChaos/Maps/Heaven Of Bakery/Build Bakery Building Prefabs")]
     public static void BuildMenu() => Debug.Log(BuildAll());
@@ -167,7 +168,9 @@ public static class HobBakeryBuildings
             if (nm.StartsWith("MK_Light_"))
             {
                 var g = new GameObject("Light_" + lights); g.transform.SetParent(groupLights, false); g.transform.position = t.position;
-                var l = g.AddComponent<Light>(); l.type = LightType.Point; l.range = 9f; l.intensity = 1.3f; l.shadows = LightShadows.None; l.color = new Color(1f, 0.84f, 0.64f);
+                // var l = g.AddComponent<Light>(); l.type = LightType.Point; l.range = 9f; l.intensity = 1.3f; l.shadows = LightShadows.None; l.color = new Color(1f, 0.84f, 0.64f);
+                float bs = info.bscale > 0f ? info.bscale : 1f;   // §89.24 B안: 넓고 높은 방까지 닿게
+                var l = g.AddComponent<Light>(); l.type = LightType.Point; l.range = 9f * bs; l.intensity = 1.3f * Mathf.Sqrt(bs); l.shadows = LightShadows.None; l.color = new Color(1f, 0.84f, 0.64f);
                 lights++; Object.DestroyImmediate(t.gameObject); continue;
             }
             if (nm.StartsWith("MK_Wheat_"))

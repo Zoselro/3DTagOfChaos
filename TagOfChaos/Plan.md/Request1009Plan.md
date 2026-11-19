@@ -12148,11 +12148,11 @@ zone.EditorSetBoxes(info.boxes.Select(b => BoxToLocal(b, ex, ey, ez)).Append(Doo
 | C3 | 화면: `SkyCannonView`(씬에 놓인 대포 — 생성·사라짐 없음) — `ColaCannonView`의 해치·회전대·포신·거품·비행·착지 그리기를 공통 함수로 빼서 같이 씀. 다른 사람도 탈 수 있게 안내 문구 "E 대포 타기(→ 밀 공장)". 한 번에 한 명, 쿨다운 2초 | ✅ 2026-11-19 |
 | C4 | AI: `DecoyGait.Fly = 6` 추가 — `DecoyRoute.Sample`이 Fly 경로를 `ColaCannonRules.FlightPoint`(입구 → 착지, 모든 화면이 같은 시각으로 계산)로 그림. `DecoyBrain`: 목표 지점이 다른 섬이고 대포 쪽이 더 가까울 때(또는 도망칠 때 술래 반대쪽 섬으로) → 대포 계단까지 걷기 경로 → 도착 시각에 `SkyCannonBoard`(B = AI 번호) → 들어가기 1.5초 + 비행 경로(Fly) → 착지 뒤 다음 행동 | ✅ 2026-11-19 |
 | C5 | 거대 괴물·술래: 대포는 쿠키·AI만(술래·거대 괴물은 경사로) — 확인 필요(Q1) | ✅ 2026-11-19 |
-| B1 | 건물 B안: §89.22 파이프라인(`bk/cfgk.py`)의 문 높이 기준 2.7 → 7.0 m(`f = 7.0/(zt−zb)`, 2.59배) → s1(UV·굽기 4096을 다시 — 늘린 크기에 맞춰 텍스처 늘이지 않고 새로 굽기) → s2(방은 외관 0.4 m 안·문 통로) → 소품(쿠키 크기 그대로, 넓어진 방에 더 놓음) → s3 → 조각 모델 다시. 1층 재료 건물 1채 + 섬 3채 = 4채만(일반 3채는 보관) | ⬜ |
-| B2 | 건물 내부 높이가 커지므로 다락 높이(`deck_h`)·계단 길이·조명 범위·`IndoorZone` 상자 다시 계산. 술래 카메라(4.5 m)가 방 안에서 벽에 묻히지 않는지 Play Mode로 확인 | ⬜ |
+| B1 | 건물 B안: §89.22 파이프라인(`bk/cfgk.py`)의 문 높이 기준 2.7 → 7.0 m(`f = 7.0/(zt−zb)`, 2.59배) → s1(UV·굽기 4096을 다시 — 늘린 크기에 맞춰 텍스처 늘이지 않고 새로 굽기) → s2(방은 외관 0.4 m 안·문 통로) → 소품(쿠키 크기 그대로, 넓어진 방에 더 놓음) → s3 → 조각 모델 다시. 1층 재료 건물 1채 + 섬 3채 = 4채만(일반 3채는 보관) | ✅ 2026-11-19 — 잼·아몬드·초코·밀 4채 2.59배(`BSCALE`), 문 높이 7.0 m·폭 5.7~6.6 m, 텍스처는 새로 굽기(늘이지 않음), 조각·4방향 무너짐 다시. A안 백업 `cloud/out_A`·`export_A`·`fracout_A` |
+| B2 | 건물 내부 높이가 커지므로 다락 높이(`deck_h`)·계단 길이·조명 범위·`IndoorZone` 상자 다시 계산. 술래 카메라(4.5 m)가 방 안에서 벽에 묻히지 않는지 Play Mode로 확인 | ✅ 2026-11-19 — 다락 바닥 3 m, 조명 `range 9×bs`·`intensity 1.3×√bs`, 맵 빌더 건물 자리(`BuildingRect`)를 모델 크기에서 다시 잼(`LotHalf 27`·`SubGroundR 52`). `IndoorZone`은 소리 전용이라 §89.22 건물엔 원래 없음(바꿀 것 없음). 천장(소켓 위) 10.9~17.9 m > 술래 카메라 4.5 m(오프라인 판은 술래로 시작할 수 없어 Play Mode 카메라 대신 천장 높이를 잼) |
 | N1 | 거대 괴물 길: 하늘 섬 높이(24 m) 굽기 추가(`GiantNavMeshBaker` floors), 경사로 폭 9 m라 몸 반지름 3 m가 지나감. 쿠키 AI 길(`DecoyNavMesh`)은 섬 셋이 경사로로만 이어지고, 섬끼리는 대포(길 밖)로 이어짐 | ✅ 2026-11-19 — 사용자 답에 따라 거대 괴물은 1층만: `MapNavMeshRules.GiantSources`가 `Ramps` 아래 충돌체를 못 걷는 곳으로 둠. 시험 굽기: 쿠키 AI 1층→세 섬 PathComplete(199~247 m), 거대 괴물 세 섬 PathPartial·경사로 위 샘플 없음 |
-| T | EditMode `Request1124Tests`: 대포 6개가 각자 다른 두 섬을 봄·착지 자리가 목표 섬 위·비행 ≤ 7초, `DecoyRoute` Fly 직렬화 왕복, `SkyCannonBoard` 거절(이미 탄 중·멀리·술래). Play Mode: 쿠키가 대포 6개 모두 타고 착지, AI가 대포를 써서 섬을 옮김(방장 교체 중에도), 술래가 4채 모두 들어가 방 안을 돎, 거대 괴물이 경사로로 섬에 올라감, 콘솔 오류 없음 | 🟨 2026-11-19 대포·AI·거대 괴물(1층만) 부분 완료 — 술래가 건물 4채에 들어가는 시험은 건물 B안(B1·B2) 뒤 |
-| DOC | 이 절 완료 표시·README | ⬜ |
+| T | EditMode `Request1124Tests`: 대포 6개가 각자 다른 두 섬을 봄·착지 자리가 목표 섬 위·비행 ≤ 7초, `DecoyRoute` Fly 직렬화 왕복, `SkyCannonBoard` 거절(이미 탄 중·멀리·술래). Play Mode: 쿠키가 대포 6개 모두 타고 착지, AI가 대포를 써서 섬을 옮김(방장 교체 중에도), 술래가 4채 모두 들어가 방 안을 돎, 거대 괴물이 경사로로 섬에 올라감, 콘솔 오류 없음 | ✅ 2026-11-19 — EditMode 전체 512 중 511(실패 1 = `Request1107Tests` 거대 괴물 등장 확률 1.0, 이번과 무관). 술래 몸(반지름 1 m·키 6.47 m와 충돌체 0.31 m·1.1 m)이 4채 문을 모두 통과(물리 캡슐 쓸기). B안 맵에서 Play Mode 대포: 쿠키 6.6초 비행·착지, 쿨다운 중 AI 거절, AI가 대포로 섬 이동. NavMesh: AI 1층→세 섬 PathComplete(244~285 m), 거대 괴물 섬 PathPartial(1층만). 콘솔 오류 없음 |
+| DOC | 이 절 완료 표시·README | ✅ 2026-11-19(이 절·§89.25 결과) |
 
 #### 3. 코드 스니펫(실제 소스 기준 바꿀 자리)
 
@@ -12328,7 +12328,7 @@ f = 7.0 / (zt - zb)                    # §89.24 B안: 술래 키 6.47 m + 여�
 | S1 | 하늘 대포 탈 사람: 쿠키(`IsActiveEscaper && !IsMonster`)·AI만 — `SkyCannonBoard`에서 술래·스파이 술래 모습 거절, 술래 화면에는 E 안내를 띄우지 않음(`SkyCannonView.CanInteract`) | ✅ 2026-11-19 |
 | S2 | 한 대 한 명·쿨다운: 같은 `FixedId`가 비행 중이거나 착지 뒤 2초(`SkyCannonRules.Cooldown = 2f`) 안이면 거절. AI는 쓰기 전에 대포가 비었는지 보고, 차 있으면 기다리거나 경사로로 감 | ✅ 2026-11-19 |
 | T | EditMode `Request1125Tests`: Heaven Of Bakery 레시피로 상자 1000개를 채워도 ColaCannon 0개·다른 쿠키 아이템 비율 유지, 다른 맵 레시피는 ColaCannon이 나옴, `CanSummonCannon` 이 맵에서 거절, 하늘 대포 술래 거절·쿨다운 2초. Play Mode: HOB 오프라인 판 시작 아이템에 콜라 대포 없음, 상자에서 안 나옴, 쿠키·AI가 하늘 대포로 섬을 옮김 | ✅ 2026-11-19 |
-| DOC | 이 절·§89.24 완료 표시·README | ⬜ |
+| DOC | 이 절·§89.24 완료 표시·README | ✅ 2026-11-19 |
 
 (§89.24의 A0~N1 단계는 그대로 하고, C5는 "쿠키·AI만"으로 확정한다.)
 
@@ -12449,3 +12449,445 @@ if (SkyCannonRules.Busy(State, fixedId, now)) return false;
 - 거대 괴물: `MapNavMeshRules.GiantSources`가 `Ramps` 아래를 못 걷는 곳으로 — 1층만.
 - 시험: EditMode `Request1124Tests` 7개 + 관련 묶음(DecoyAi·Escape·Request1123) 72개 통과. 전체 512개 중 실패 1개는 이번 작업과 무관(`Request1107Tests` 거대 괴물 등장 확률이 설정 에셋에서 1.0 — 30% 기대).
 - Play Mode(오프라인 판): 쿠키가 대포 0(SW → N)에 E → 병 안(몸 숨김·잡기 보호) → 6.6초 비행 → 착지 자리, 착지 + 2초 동안 AI 탑승 거절, 그 뒤 비어 있음. AI가 75초 동안 대포 6대를 모두 써서 섬을 옮김(숨김·비행·착지 뒤 걷기). 상자·손에 콜라 대포 없음. 콘솔 오류 없음(시험용 순간이동 NetGuard 경고만).
+
+#### 5. 건물 B안 결과(2026-11-19)
+
+- Blender: `bk/cfgk.py`의 `BSCALE`(7.0/2.7 = 2.593)로 잼·아몬드·초코·밀 공장 4채를 키움 — 외관·방·문 통로는 배율대로, 쿠키 크기 소품은 그대로 두고 넓어진 방에 더 놓음, 다락 바닥 3 m. 텍스처·UV는 새로 구워 늘어나지 않음. 조각 모델·4방향 무너짐도 다시 만듦. 일반 3채는 A안 크기로 보관.
+- Unity: FBX·json·조각 모델 교체, `HobBakeryBuildings`가 `bscale`로 조명 범위·세기를 맞춤. 맵 빌더는 건물마다 모델 크기에서 `BuildingRect`를 다시 재서(소품·조명 제외, 메시 로컬 경계) 장식·상자 자리가 건물과 겹치지 않게 하고, 섬 장식 자리 반경을 `SubGroundR`(52 m)로 넓힘. 다시 만든 맵: 자리 58·상자 40·로켓 6·무지개 8·섬 장식 415, AI·거대 괴물 NavMesh 다시 굽고 저장.
+- 문 통과(술래): 문 높이 7.0 m, 폭 잼 6.3·아몬드 6.6·초코 5.7·밀 6.3 m. 술래 겉모습 크기(반지름 1 m·키 6.47 m)와 실제 충돌체(0.31 m·1.1 m) 모두 4채 문을 막힘 없이 지나감. 소켓 위 천장 잼 17.9·아몬드 13.0·초코 15.6·밀 10.9 m.
+- 사진: `sfx_preview/bk2/mB_sheet.jpg`(맵 전체·잼·초코·남서·남동).
+
+## 90. 플레이 피드백 9건 — 섬 밑면·술래 순간이동/바주카포·사탕 숲 재료·패러글라이더·껌 트랩·과일 장식·상자 규칙·비행 동작(2026-11-19 계획)
+
+요청(사용자 원문 요약):
+1. 아몬드·초콜릿·밀 하늘 섬 밑에 텍스처가 없다 → 각 섬 바닥(초콜릿은 초콜릿 퐁듀 색)에 맞는 텍스처.
+2. 술래 기술: 재료 건물로 순간이동(쓸 때 건물을 고름). 도착하면 재료방 안 문이 "드르륵" 2초 울린 뒤 열리고 술래가 나온다(방 안 생존자에게 들림) → 건물마다 술래 도착 자리.
+3. 술래 기술: 바주카포(쿨타임 10초) — 재료 건물은 못 부수고 다른 건물은 한 방. AI·사람도 잡힘(범위는 의논). 뒤로 불꽃을 뿜으며 날아가고 닿으면 파편과 함께 터짐. 참고: `NewItem/술래의 바주카포 애니메이션 및 바주카포 모델링 예시.png`, `NewItem/술래 바주카포.zip`.
+4. 사탕 숲: 덤불(이끼)에 재료가 떨어지면 너무 찾기 어렵다.
+5. Heaven Of Bakery: 콜라 대포를 뺐으니 패러글라이더로 1층에 내려간다(높이 날 수 있어야 함). 이 맵만, 하늘 섬 세 곳에서 패러글라이더 없이 떨어지면 바로 죽는다. 참고: `NewItem/패러글라이더 예시 및 애니메이션.png`.
+6. 권투 글러브 폐기 → 껌 트랩: 수류탄처럼 던지되 튀지 않고 닿은 자리에 바로 깔림. 밟은 술래 3.5초 이동속도 50% 감소(마녀 제외), 끈끈이는 3.5초 동안 서서히 사라짐. 참고: `NewItem/껌 트랩*.png`, `NewItem/끈끈이 수류탄.zip`.
+7. 중간중간 나무는 바나나 나무, 양쪽에 비닐하우스 — 수박(건물 크기)·포도(수박의 1/2)·사과(1/2.5)·딸기(1/3).
+8. 상자 아이템 규칙 변경(연 순간 게임 상태를 보고 정함, 스파이 상자 = 로켓 부품 2 + 수리 도구 1, 리셋 규칙).
+9. 콜라 대포·하늘 대포로 날아가는 동안 점프 동작.
+
+### 90.1 조사 결과(실제 코드·씬 기준)
+
+| 번호 | 지금 | 원인·근거 |
+|---|---|---|
+| 1 | 하늘 섬 몸체 `Plateau_N/SE/SW/Model`(메시 `HOB_Plateau_Sky68`, 부분 메시 9개)이 `HOBHQ_RockDark·Grass·Rock·Moss·Foliage·Frosting·Seed·Glaze·Sprinkle1` — **Standard 셰이더·텍스처 없음** → 밑에서 보면 회백색 단색(사진 `sfx_preview/p90/under_sheet.jpg`). 윗면 바닥(`SubGround`)은 `M_HQ_ChocoFondue`·`M_HQ_Cream`·`M_HQ_Soil`(셰이더 `TagOfChaos/HOB_TriPBR`)이라 정상. 1층 큰 섬 `HOB_Island_Main85`도 같은 `HOBHQ_*`(7개) | FBX 가져올 때 생긴 기본 재질을 `M_HQ_*`로 바꾸지 않음. 서브 맵(`SubMap_Almond/Chocolate/Flour`)은 판마다 `MapLayoutRandomizer.Apply`가 세 자리(`SubSlot_N/SE/SW`)에 섞어 놓으므로, 섬 몸체 재질도 **그 자리에 온 서브 맵을 따라** 바뀌어야 한다 |
+| 2 | 술래 기술은 돌진(Shift, `MonsterController`)·사이렌 함정(`KeyAction.MonsterSkill`)·수색 폭탄(R, `EscapeOp.Throw`의 `A < 0`). 순간이동은 `MonsterElevator`(본인 화면만 옮김, 방장 판정 없음)뿐. 재료 건물 = 맵마다 `QuadrantBuilding` 4채(`Building_Q1~Q4`) | 술래 도착 자리·문 연출·건물 고르기 화면이 없다 |
+| 3 | 부서짐은 `DestructionNet.Hit/Break(id)`(방장만, Room Prop). Heaven Of Bakery 부서지는 물체 = 건물 4(전부 재료 건물 `QuadrantBuilding`)·텐트 3·소품 379. 거대 괴물 사람 판정은 `GiantBrain.Judge`(`HitCount 2` + `DeathCause.Giant`) | 투사체는 `ProjectileSystem`(방장 판정·모든 화면 같은 계산)을 그대로 쓸 수 있다. 재료 건물 제외는 `DestructibleUnit.Root`에 `QuadrantBuilding`이 있는지로 가른다 |
+| 4 | 사탕 숲 바닥 전체(514장, 약 9만 m²)가 `CF_Tile_Moss`(높이 −0.8~1.2 m, 덩어리 대부분 0~0.4 m, 재질 `CF_GreenFloor`)로 덮임. 바닥 아이템은 `GroundItemView`가 바닥 + 0.25 m에 0.3~0.6 m 모델을 그린다 | 아이템이 이끼 덩어리 속에 묻히고, 초록 재료는 이끼 색과 같다. 표시(빛·윤곽)도 없다 |
+| 5 | 낙하 처리는 `FallGuard`·`VoidKillZone` = 스폰으로 되돌림(죽지 않음). 날기는 `HatFlight`(헬리콥터 모자, 맵 밖 탈출). 사망은 방장이 `HitCount 2` + `DeathCause`를 씀(`GrabKillAuthority`·`GiantBrain`) | 패러글라이더 아이템·낙하 사망 판정이 없다. `EscapeRecipeSO.excludedItems`(§89.25)는 "이 맵에서 뺌"만 있고 "이 맵에만"은 없다 |
+| 6 | 권투 글러브 = `ToolKind.BoxingGlove = 11`, `GloveCombo`, `HeldItemPresenter.isGlove`, `ToolHitReceiver`·`ToolUser`·`EscapeAuthority`(1322·1450행)·`OfflineModeBootstrap.startItems`. 던지기 = `ProjectileConfigSO`(`burstOnImpact`·`bounciness`) | 껌 트랩은 `burstOnImpact`로 첫 닿음에서 멈추고, 그 자리에 함정 기록을 남기면 된다(사이렌 함정 `State.Bombs`와 같은 방식) |
+| 7 | 맵이 적혀 있지 않음 — Heaven Of Bakery 1층(§89.25 "1층 빈 땅 숨을 곳 장식 촘촘히")으로 본다(질문 Q7) | 과일·바나나 나무·비닐하우스 모델 없음 |
+| 8 | `EscapeAuthority.Initialize`가 **판 시작 때** 모든 상자에 아이템을 미리 넣는다(일반 = 활성 건물 재료 ×2 + 수리키트 + 쿠키 아이템, 스파이 = 수리키트·해체 도구·무작위 3 + 상자에 없는 로켓 재료). `OpenChest`는 미리 넣은 것을 꺼낸다. 로켓에 넣은 재료는 `RespawnInEmptyChest`로 다시 생김. 안전장치 `RestoreMissingMaterials` | "연 순간 정하기"로 바꾸려면 상자에 미리 넣지 않고 `OpenChest`에서 고른다 |
+| 9 | 콜라 대포·하늘 대포 비행 중 쿠키는 `IsMovementLocked`(탑승)라 마지막 동작(대개 Idle·걷기)이 굳은 채 날아간다. AI는 `DecoyView.Follow`가 Fly 경로에서 위치만 바꾸고 동작은 Idle | 비행 구간에 `PlayerAnimationDriver.ReplayJump()`/`ChangeState(Jump)`를 걸면 된다(점프 클립은 공중에서 정점 자세를 유지) |
+
+받은 모델(클라우드 Blender에서 확인):
+- 바주카포 `Meshy_AI_Skull_Blaster`: 1.90 × 0.46 × 0.65 m, 면 49,012, 텍스처 4장(색·금속·노멀·거칠기). → 면 8천 개 정도로 줄이고 색 텍스처 2048로 다시 굽기.
+- 껌 수류탄 `Meshy_AI_Purple_Slime_Bomb`: 1.72 × 1.72 × 1.90 m, **면 492,772** → 손에 드는 크기(지름 0.22 m)·면 3천 개로 줄이고 다시 굽기. 바닥에 깔린 끈끈이는 따로 만든다(아래 M2).
+
+### 90.2 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| U1 | 섬 몸체 재질: 테마별 `HOB_TriPBR` 재질 3벌 — 초콜릿(초콜릿 퐁듀 흐름 텍스처·짙은 초코 바위·흘러내린 초코), 아몬드(크림·구운 아몬드 바위), 밀(흙·밀짚 바위). 부분 메시 9칸(`RockDark…Sprinkle1`)에 대응표. 1층 큰 섬 `HOB_Island_Main85`도 기본 바위/잔디 재질로 바꿈. 경사로·기둥(지금 흰 단색)은 Q1 답에 따라 | ⬜ |
+| U2 | `SubMapTheme`(새 컴포넌트, `SubMap_*`에 붙음): 섬 몸체 재질 배열. `MapLayoutRandomizer.Apply`가 서브 맵을 자리에 옮길 때 그 자리의 `Plateau_<slot>/Model`에 재질을 넣는다(모든 화면 같은 배치) | ⬜ |
+| T2 | 술래 순간이동 기술 — 아래 90.3 | ⬜ |
+| B3 | 술래 바주카포 기술 — 아래 90.4 | ⬜ |
+| F4 | 사탕 숲 바닥 아이템 보이기 — 아래 90.5 | ⬜ |
+| P5 | 패러글라이더 + 하늘 섬 낙하 사망(Heaven Of Bakery 한정) — 아래 90.6 | ⬜ |
+| G6 | 권투 글러브 폐기 + 껌 트랩 — 아래 90.7 | ⬜ |
+| V7 | 바나나 나무·비닐하우스·과일 — 아래 90.8 | ⬜ |
+| C8 | 상자 아이템 규칙 — 아래 90.9 | ⬜ |
+| J9 | 대포 비행 = 점프 동작 — 아래 90.10 | ⬜ |
+| T | EditMode 시험(항목마다) + Play Mode 확인 + 콘솔 | ⬜ |
+| DOC | 이 절 완료 표시 | ⬜ |
+
+### 90.3 T2 술래 순간이동(재료 건물 고르기)
+
+흐름(방장 판정 — 문 소리를 모두가 같은 시각에 듣게):
+1. 술래가 기술 키(제안 **T**, Q2)를 누르면 건물 고르기 창: 이번 판 재료 건물(활성 4채 중) 목록 — 이름·수리됨 여부·거리. 숫자 1~4 또는 마우스로 고름, 다시 T/Esc = 닫기. 창이 떠 있는 동안 술래는 그대로 움직일 수 있다(창은 커서만 보임).
+2. 고르면 `EscapeOp.MonsterWarp(A = 건물 번호)` → 방장 `MonsterWarp`: 술래인지·사냥 시간인지·쿨타임(제안 45초, Q2)·이미 순간이동 중인지 확인 → `State.Warps`에 `{Actor, Building, At}`(At = 지금 + 0.3초).
+3. 모든 화면(`MonsterWarpPresenter`):
+   - At: 출발 자리에 연기·사라짐 소리, 술래 몸 숨김.
+   - At ~ At+2초: 그 건물 술래 문(`MonsterCloset_Qn`) 앞에서 "드르륵"(덜컹거리는 문 소리, 3D, 들리는 거리 = 방 크기 + 6 m, 2초) + 문이 덜컹덜컹 흔들림.
+   - At+2초: 문이 열리고(0.5초) 술래가 문 안에서 한 걸음 나와 보임. 문은 3초 뒤 닫힘.
+   - 본인 화면: At에 문 안쪽 자리로 옮기고(`TeleportTo`) 2.5초 이동 잠금(문이 열릴 때까지).
+4. 방장: At+2.5초 지나면 `Warps`에서 지움. 술래 이동 검사(`TrackPositions`)는 쿠키만 보므로 따로 예외는 필요 없다.
+
+술래 도착 자리:
+- 건물마다 `MonsterCloset_Qn`(문 달린 벽장, 술래가 서는 자리 `Stand`·나오는 자리 `Exit`). 5개 맵 × 재료 건물 4채 = 20곳(Heaven Of Bakery 4곳 포함). 방 안 벽에 붙이고, 술래 키(6.47 m)가 들어가는 깊이 2.5 m·높이 7 m(HOB B안 건물은 문 7 m라 들어감. 다른 맵 재료 건물 실내 높이는 맵마다 재서 맞춤 — 낮은 건물은 벽장 대신 바닥 뚜껑(지하에서 올라옴)으로 바꾸는 안, Q2).
+- 자리 확인 시험: 각 `Exit`가 NavMesh 위, `Stand` → `Exit` 캡슐(반지름 1 m·키 6.47 m) 막힘 없음.
+
+코드 스니펫(실제 소스 기준):
+
+```csharp
+// EscapeNet.cs — EscapeOp 끝에 추가(번호 고정)
+MonsterWarp = 30,    // §90 T2 A = 재료 건물 번호(0~3)
+
+// EscapeState.cs — v13
+public const byte FormatVersion = 13; // §90 술래 순간이동(Warps)·껌 트랩(Bombs.Kind)·상자 내용 지연(Chest.Filled)
+public struct Warp { public int Actor; public byte Building; public double At; }
+public readonly List<Warp> Warps = new List<Warp>();
+
+// EscapeAuthority.Handle
+case EscapeOp.MonsterWarp: changed = MonsterWarp(r.Sender, r.A); break;
+
+private bool MonsterWarp(int actor, int building)
+{
+    if (!RoomState.IsMonster(actor) || building < 0 || building >= State.Buildings.Count) return false;
+    if (!MonsterElevator.PhaseAllows(GamePhaseState.Current) || !State.Buildings[building].Active) return false;
+    if (warpReadyAt.TryGetValue(actor, out float ready) && Time.time < ready - CooldownSlack) return false;
+    foreach (EscapeState.Warp w in State.Warps) if (w.Actor == actor) return false;
+    warpReadyAt[actor] = Time.time + MonsterWarpRules.Cooldown;
+    State.Warps.Add(new EscapeState.Warp { Actor = actor, Building = (byte)building, At = PhotonNetwork.Time + MonsterWarpRules.Lead });
+    return true;
+}
+
+// 새 파일 MonsterWarpRules.cs
+public static class MonsterWarpRules
+{
+    public const float Lead = 0.3f;        // 요청 → 사라짐(모든 화면이 받을 여유)
+    public const float RattleSeconds = 2f; // 문 덜컹 소리(사용자: 2초)
+    public const float OpenSeconds = 0.5f;
+    public const float Cooldown = 45f;     // Q2
+    public static double DoneAt(EscapeState.Warp w) => w.At + RattleSeconds + OpenSeconds;
+}
+```
+
+`SkillHud`: 술래 칸 3 → 5(돌진·사이렌·수색·순간이동·바주카포). 소리: 새 `SoundId.ClosetRattle`(나무 문 덜컹 2초, 합성) 1개.
+
+### 90.4 B3 술래 바주카포
+
+동작:
+- 키(제안: **우클릭을 누르고 있으면 어깨에 메고 조준, 그 상태에서 좌클릭 발사**, Q3 — 좌클릭 단독은 이미 잡기 `MonsterGrab`). 쿨타임 10초.
+- 발사: 로켓이 곧게(중력 거의 없음) 초속 45 m로 최대 90 m. 꼬리에 불꽃 + 연기 줄. 발사 순간 포구 불꽃·반동.
+- 닿으면 폭발: 불꽃 구 + 연기 + 파편(닿은 물체 재질 색 조각 20~30개) + 소리 + 카메라 흔들림(가까운 사람).
+- 판정(방장, 제안값 — Q3에서 의논):
+  - 사람·AI: 폭발 중심 **3.5 m 안**은 잡힘(쿠키·스파이 = `HitCount 2`·`DeathCause.Bazooka`, AI = 잡힌 AI와 같이 사라짐). 3.5~6 m는 넘어짐(기절 1.5초)만. 벽 뒤(중심에서 몸까지 막힌 선)는 맞지 않음.
+  - 건물: 맞은 물체가 재료 건물이 아닌 건물·텐트·소품이면 `DestructionNet.Break(id)`(한 방). 재료 건물은 그을음 자국만, 안 부서짐. 폭발 둘레 6 m 소품도 부서짐.
+  - 무너진 건물 안 사람: 폭발 3.5 m 안이면 잡힘, 밖이면 살아서 드러남(거대 괴물 결정 3과 같게).
+  - 술래 자신·다른 술래·마녀는 맞지 않음.
+- Heaven Of Bakery는 재료 건물 말고 건물이 없어 소품·텐트만 부서진다(그대로 둠).
+
+모델·동작(Blender):
+- M1 바주카포: 받은 Meshy FBX를 면 8천으로 줄이고 2048 텍스처 굽기, 손잡이 기준 원점. 로켓(빨간 몸통·은색 머리·꼬리 날개 — 사진 오른쪽)은 새로 만듦(0.6 m).
+- A1 술래 동작 2개: `Bazooka_Aim`(어깨에 메고 겨눔, 반복) · `Bazooka_Fire`(반동 0.4초). 술래 리그에 맞춰 만들고 사진 확인.
+
+코드 스니펫:
+
+```csharp
+// ToolSO.cs ToolKind 끝에
+Bazooka = 14,   // §90 B3 술래 바주카포: 곧게 나는 로켓, 닿으면 폭발(사람·AI 잡힘, 재료 건물 제외 한 방)
+GumTrap = 15,   // §90 G6 껌 트랩
+
+// EscapeNet.cs DeathCause
+Bazooka = 4,    // §90 B3
+Fall = 5,       // §90 P5 하늘 섬에서 떨어짐
+
+// EscapeAuthority.Throw — 술래 투척(A < 0)에 바주카포 추가: A = -1 수색 폭탄, A = -2 바주카포
+if (r.A < 0)
+{
+    def = r.A == -2 ? catalog.Bazooka : catalog.SearchBomb;
+    if (def == null || !def.IsTool || !RoomState.IsMonster(r.Sender)) return RejectThrow(r, ThrowReject.NotAllowed);
+    Dictionary<int, float> ready = r.A == -2 ? bazookaReadyAt : searchReadyAt;
+    if (ready.TryGetValue(r.Sender, out float at) && Time.time < at - CooldownSlack) return RejectThrow(r, ThrowReject.Cooldown);
+}
+...
+else if (r.A == -2) bazookaReadyAt[r.Sender] = Time.time + BazookaRules.Cooldown;
+else searchReadyAt[r.Sender] = Time.time + SearchCooldown;
+
+// 새 파일 BazookaRules.cs — 순수 계산(시험)
+public static class BazookaRules
+{
+    public const float Cooldown = 10f;
+    public const float KillRadius = 3.5f;   // Q3
+    public const float StunRadius = 6f;
+    public const float PropRadius = 6f;
+    public static bool CanBreak(DestructibleUnit u) => u != null && !u.Broken && u.Root.GetComponentInChildren<QuadrantBuilding>(true) == null
+                                                       && u.Root.GetComponentInParent<QuadrantBuilding>() == null;
+}
+
+// ProjectileConfigSO "Projectile_Bazooka": gravity 1, bounciness 0, burstOnImpact = true, maxLifeSeconds 2(90 m), radius 0.2, spinSpeed 0
+// 방장이 끝낼 때(ProjectileSystem → ToolHit) 효과는 ToolHitReceiver.Apply가 처리 — 새 case ToolKind.Bazooka:
+//   모든 화면: BazookaFx.Explode(point, normal, 맞은 물체 색)
+//   방장: BazookaAuthority.Judge(point) — 사람·AI·물체 판정(위 규칙)
+```
+
+### 90.5 F4 사탕 숲 바닥 아이템 보이기
+
+이끼를 낮추면 맵 분위기가 바뀌므로, 아이템 쪽을 보이게 한다(제안 — Q4에서 고름):
+- (가) 바닥 아이템을 이끼 위로: `GroundItemView.Show`에서 그 자리 위로 이끼 덩어리(풀·이끼 표시가 붙은 렌더러)가 덮는지 재서 모델을 덮는 높이 + 0.2 m(최대 1.3 m)에 띄워 천천히 위아래로 흔들림.
+- (나) 재료(건물·로켓 재료)만 바닥에 있을 때 쿠키 화면에 옅은 재료 색 빛기둥(높이 6 m, 15 m 안에서만) + 바닥 빛 고리.
+- (다) 윤곽선: 쿠키 화면에서 12 m 안 바닥 아이템을 이끼 너머로도 흰 윤곽(깊이 무시 셰이더).
+권장: (가) + (나). 모든 맵에 같은 규칙(사탕 숲에서 가장 효과가 큼).
+
+```csharp
+// GroundItemView.Show — 이끼·덤불 위로 띄우기(§90 F4)
+model.transform.localPosition = Vector3.up * (0.25f + FoliageCover(position));
+
+private static float FoliageCover(Vector3 p)
+{
+    // 위에서 아래로 쏴서 바닥보다 위에 맞는 첫 렌더러 경계(충돌체 없는 이끼라 렌더러 경계로 잰다 — 시작 때 한 번 모아 둔 GroundCover 목록)
+    float top = GroundCover.TopAt(p);              // 없으면 p.y
+    return Mathf.Clamp(top - p.y + 0.2f, 0f, 1.3f);
+}
+```
+
+### 90.6 P5 패러글라이더 + 하늘 섬 낙하 사망(Heaven Of Bakery)
+
+아이템:
+- 새 쿠키 아이템 `Paraglider`(`ToolKind.Paraglider = 16`). **이 맵에서만 상자에 나옴** — `EscapeRecipeSO`에 `exclusiveItems`(이 맵에만 나오는 아이템) 추가, 다른 레시피는 자동으로 뺌. 콜라 대포가 차지하던 비율(3)을 그대로 받음(Q5).
+- 쓰기: 아이템 칸에서 고르고 공중(또는 섬 가장자리에서 뛰어내리며) 사용 키 → 펼침(0.4초). 펴는 동안 `PlayerMoveState.Glide`(새 상태, 끝에 추가).
+- 비행(본인 화면 물리, 위치는 캐릭터 동기화로 보임): 앞으로 초속 11 m, 내려가는 속도 초속 1.6 m(48 m 섬 → 1층까지 약 30초·330 m 활공), 마우스·A/D로 방향, W = 빠르게(앞 14 m/s, 하강 3 m/s), S = 천천히(앞 7 m/s, 하강 1.2 m/s). "고공 비행" = 높은 곳에서 오래 활공(오르지는 않음 — Q5에서 상승 기류 여부 확인).
+- 땅에 닿거나 Space를 누르면 접힘. 1회용(접히면 없어짐) 또는 3회(Q5).
+- 비행 중 술래가 잡을 수 있음(높이 6.5 m 아래일 때만), 상자 열기·줍기 불가(모자 비행과 같은 규칙).
+
+낙하 사망(이 맵만):
+- 하늘 섬 세 곳 윗면(높이 48 m)에서 떨어져 **높이 30 m 아래로 내려가면** 패러글라이더를 펴지 않은 쿠키·스파이는 죽음(`DeathCause.Fall`). 경사로 위는 섬 밖이 아니므로 경사로에서 떨어져도 같음(경사로 아래쪽 줄 높이 < 30 m에서 떨어진 것은 1층 착지로 살아남음 — 낮은 높이).
+- 판정: 본인 화면이 `EscapeOp.FellFromSky`를 보내고, 방장이 위치 기록(`PositionHistory`)으로 "최근 3초 안에 섬 윗면(높이 ≥ 44 m)에 있었고 지금 30 m 아래·패러글라이더 아님"을 확인한 뒤 `HitCount 2`. 요청이 안 와도(조작) 방장이 0.2초마다 같은 조건으로 판정.
+- 술래·AI: 술래는 죽지 않고 지금처럼 스폰으로(`FallGuard`), AI는 떨어지지 않는다(길 위만).
+- 시각 효과: 땅에 부딪히면 쿠키 부서짐 연출(기존 `Broken`).
+
+```csharp
+// EscapeRecipeSO.cs — §89.25 excludedItems 옆에
+[Tooltip("§90 P5 Items that appear ONLY on this map (other maps skip them).")]
+[SerializeField] private ItemSO[] exclusiveItems = new ItemSO[0];
+public bool OwnsExclusive(string id) { foreach (ItemSO i in exclusiveItems) if (i != null && i.ItemId == id) return true; return false; }
+
+// EscapeAuthority.WeightOf — 다른 맵 전용 아이템은 무게 0
+if (EscapeCatalogSO.Current.IsExclusiveElsewhere(items[i].ItemId, recipe)) return 0;
+
+// 새 파일 SkyFallRules.cs
+public static class SkyFallRules
+{
+    public const float IslandTop = 48f, WasOnIsland = 44f, DeathHeight = 30f, MemorySeconds = 3f;
+    public static bool Dies(bool mapHasSkyFall, float recentMaxY, float y, bool gliding) =>
+        mapHasSkyFall && !gliding && recentMaxY >= WasOnIsland && y < DeathHeight;
+}
+```
+
+모델·동작(Blender) — 사진 `NewItem/패러글라이더 예시 및 애니메이션.png` 기준:
+- M3 패러글라이더: 분홍·크림 줄무늬 캐노피(셀 11칸, 앞쪽 공기 구멍, 바느질 결이 보이는 부드러운 천·말랑한 점토 느낌), 줄 10가닥(밝은 회색), 고리·버클(짙은 갈색), 엉덩이 받침 안장 + 등 가방(짙은 가죽). 캐노피 폭 약 4.5 m(쿠키 키 1.1 m의 4배 — 사진 비율). 손에 들 때 모습 = 접힌 가방(0.35 m).
+- A2 쿠키 동작 `Glide_Sit`: 안장에 앉아 두 손으로 줄을 잡음(반복, 몸이 살짝 흔들림) + 좌·우 기울기 2개(돌 때). 쿠키 4종 리그 공용.
+- 품질: 텍스처 2048(색·노멀·거칠기) — 캐노피 칸마다 부풀어 오른 모양, 바느질 노멀. 사진처럼 나오는지 Blender 렌더 사진으로 먼저 확인받는다.
+
+### 90.7 G6 권투 글러브 폐기 + 껌 트랩
+
+폐기(주석 처리 — 지우지 않음): 상자 목록(`EscapeCatalogSO.cookieItems`)에서 뺌, `ToolKind.BoxingGlove = 11`은 번호를 비워 두고 주석, `GloveCombo`·`isGlove`·`ToolHitReceiver`/`ToolUser`/`EscapeAuthority`의 글러브 분기 주석, `OfflineModeBootstrap.startItems`의 "BoxingGlove" → "GumTrap". 글러브 모델·동작 파일은 남겨 둠.
+
+껌 트랩:
+- 던지기: 물풍선과 같은 손 동작·같은 조준(20°·중력 14.2, §64). `Projectile_GumTrap`: `burstOnImpact = true`, `bounciness = 0`.
+- 깔림: 처음 닿은 자리에서 아래로 바닥을 찾아(벽에 맞으면 벽 아래 바닥) 지름 2.4 m 보라 끈끈이 웅덩이. 방장이 `State.Bombs`에 `Kind = Gum`으로 기록(사이렌 함정과 같은 목록, v13에 `Kind` 1바이트).
+- 밟음: 술래(`MonsterController`)가 웅덩이 반지름 + 몸 반지름 안에 들어오면(방장 판정) → 술래 이동속도 50% 3.5초. 마녀는 대상 아님. 쿠키·AI는 영향 없음.
+- 밟힌 뒤: 끈끈이가 술래 발에 늘어붙는 줄(사진 아래 줄) + 3.5초 동안 웅덩이가 줄어들며 사라짐. 한 번 밟히면 끝(1회용).
+- 안 밟히면: 90초 뒤 사라짐(Q6).
+- 아이템 횟수 2회(Q6), 쿨타임 2초.
+
+```csharp
+// EscapeState.Bomb — v13
+public byte Kind;          // §90 G6 0 = 사이렌 함정, 1 = 껌 트랩
+public double TriggeredAt; // 껌 트랩: 술래가 밟은 시각(0 = 아직)
+
+// MonsterController — 이동속도(FixedUpdate의 horizontal = moveInput * speed)
+Vector3 horizontal = moveInput * speed * GumTrapRules.SpeedFactor(EscapeManager.Instance?.State, ActorNumber, PhotonNetwork.Time);
+
+// 새 파일 GumTrapRules.cs
+public static class GumTrapRules
+{
+    public const float SlowSeconds = 3.5f, SlowFactor = 0.5f, Radius = 1.2f, IdleSeconds = 90f;
+    public static float SpeedFactor(EscapeState s, int monsterActor, double now)
+    {
+        if (s == null) return 1f;
+        foreach (EscapeState.Bomb b in s.Bombs)
+            if (b.Kind == 1 && b.Victim == monsterActor && b.TriggeredAt > 0 && now < b.TriggeredAt + SlowSeconds) return SlowFactor;
+        return 1f;
+    }
+    public static float PuddleScale(double triggeredAt, double now) =>
+        triggeredAt <= 0 ? 1f : Mathf.Clamp01(1f - (float)(now - triggeredAt) / SlowSeconds);
+}
+```
+
+모델(Blender):
+- M2 껌 수류탄: 받은 Meshy FBX(면 49만)를 면 3천·지름 0.22 m로 줄이고 2048 텍스처 다시 굽기. 사진 1(`껌 트랩 핀 없는 버전`)과 사진 2(핀 있는 버전) 중 어느 것인지 Q6.
+- M2b 바닥 끈끈이: 납작한 보라 웅덩이 + 초콜릿색 껌 조각 테두리(사진 아래 왼쪽), 지름 2.4 m, 면 1,500. 밟을 때 늘어나는 끈 = 실행 중 만드는 선(LineRenderer 3~5가닥, 발 뼈 ↔ 웅덩이).
+- 소리 2개: 펴질 때 "철퍽", 밟을 때 "쩍".
+
+### 90.8 V7 바나나 나무·비닐하우스·과일(Heaven Of Bakery 1층, Q7)
+
+- 1층 장식 중 지금 나무(케이크·과자 나무)를 바나나 나무로 바꿈(같은 자리·같은 수).
+- 비닐하우스 2동: 1층 양쪽(탈출구를 막지 않는 동·서 가장자리, Q7), 길이 30 m·폭 14 m·높이 8 m 반원 터널(투명한 비닐 + 흰 뼈대), 입구 양쪽 열림 — 안을 지나가며 숨을 수 있음.
+- 과일(하우스 안팎에 놓음, 숨을 곳): 수박 기준 = "건물 크기" → Q7(제안: 수박 지름 12 m — 1층 숨는 건물 높이와 비슷). 포도송이 6 m(1/2), 사과 4.8 m(1/2.5), 딸기 4 m(1/3). 모두 부서지는 소품(§82 조각 모델).
+- 모델(Blender): M4 바나나 나무, M5 비닐하우스, M6 수박·포도·사과·딸기 4종 + 조각 모델. 사진 확인 뒤 배치.
+
+### 90.9 C8 상자 아이템 규칙
+
+새 규칙(사용자 원문 그대로 옮김):
+1. 상자를 열 때 지금 게임 상태를 보고 정한다(판 시작 때 미리 넣지 않음).
+2. 아직 수리하지 않은 건물의 재료, 또는 스파이 재료를 먼저 준다.
+3. 스파이 상자 = 로켓에 필요한 부품 2개 + 수리 도구 1개.
+4. 수리가 끝난 재료는 더 나오지 않는다(단, 스파이가 건물에서 빼서 자기 로켓에 붙이면 그 재료는 다시 상자에 들어간다 — 지금 `RocketInsert`의 `RespawnInEmptyChest`와 같은 뜻).
+5. 필요한 재료가 없으면 쿠키 아이템.
+6. 이미 연 상자는 내용을 유지한다.
+7. 상자가 모두 열렸거나 판 시작 8분이 지나면 모든 상자를 되돌린다(닫힘·빈 상자). 이때 끼운 재료·스파이가 끼운 재료도 다시 나올 수 있다.
+
+고르는 순서(일반 상자, 방장 `OpenChest` 순간):
+
+```
+필요 = 수리 안 된 활성 건물의 재료 중  "쿠키가 닿는 곳(일반 상자에 들어 있음·바닥·쿠키 손)에 있는 수" < 목표 수(2) 인 것
+       + (스파이가 남아 있으면) 로켓 빈 칸 재료 중 스파이가 닿는 곳에 없는 것
+필요가 있으면 → 그중 가장 모자란 것(같으면 무작위)
+없으면 → 쿠키 아이템(PickWeighted, 이 맵 제외·전용 규칙 그대로)
+리셋 뒤(규칙 7)에는 "수리 끝난 재료 안 나옴"을 끄고, 모든 재료를 같은 목록에 넣는다
+```
+
+스파이 상자(스파이만 엶): 로켓 빈 칸 재료 2개 + 수리키트 1개를 한 번에(스파이 손에 빈칸만큼, 나머지는 상자 위에 떠서 스파이만 주울 수 있음 — Q8). 스파이 상자 수는 지금(스파이 × 5)대로.
+
+```csharp
+// EscapeState.Chest — v13
+public bool Filled;     // §90 C8 열 때 내용을 정했다(연 뒤에도 내용을 유지)
+
+// EscapeAuthority.Initialize — 일반·스파이 상자에 미리 넣던 부분(127~171행)을 주석 처리하고 상자만 만든다.
+// (수리키트·해체 도구는 스파이 상자 규칙으로 옮김 — 해체 도구를 어디서 주는지 Q8)
+
+// EscapeAuthority.OpenChest — 꺼내기 전에 정한다
+if (!c.Filled) { FillChest(chest); c = State.Chests[chest]; }
+
+private void FillChest(int chest)
+{
+    EscapeState.Chest c = State.Chests[chest];
+    var ids = c.Spy ? ChestRules.SpyContents(State, catalog, rng) : new List<string> { ChestRules.NormalPick(State, catalog, recipe, afterReset, rng, PickCookieItem) };
+    foreach (string id in ids) { ItemSO def = catalog.Find(id); if (def == null) continue; var e = NewItem(def); e.Loc = ItemLocation.Chest; e.A = chest; State.Items.Add(e); }
+    c.Filled = true;
+    State.Chests[chest] = c;
+}
+
+// Tick — 리셋(규칙 7)
+if (!chestsReset8 && now >= huntStartedAt + ChestRules.ResetSeconds || ChestRules.AllOpened(State)) ResetChests(now);   // 8분은 한 번, 모두 열림은 될 때마다
+```
+
+- `ChestRules`(새 파일, 순수 계산)로 빼서 시험: 수리된 재료 안 나옴, 모자란 재료 먼저, 스파이 상자 3개 구성, 모두 열면 리셋, 8분 리셋.
+- 안전장치 `RestoreMissingMaterials`는 그대로 둔다(닫힌 상자가 없을 때 바닥·빈 상자에 만듦).
+- 상자 위에 떠 있는 아이템(연 상자, §69 B2)은 리셋 때 그대로 바닥 아이템으로 남는다(Q8).
+
+### 90.10 J9 대포 비행 = 점프 동작
+
+```csharp
+// ColaCannonView.RideLocal·SkyCannonView.RideLocal — 발사 뒤(else 구간)
+me.PlayAirborne();   // 처음 한 번 ReplayJump, 이후 Jump 유지(동기화로 다른 화면도 Jump)
+
+// HideOrSeekPlayer
+public void PlayAirborne() { if (animationDriver.CurrentState != PlayerMoveState.Jump) animationDriver.ReplayJump(); }
+// 탑승 잠금(IsMovementLocked) 동안에도 networkSync가 currentState를 보내므로 다른 화면에도 점프 동작이 보인다. 착지 때 Idle.
+
+// DecoyView.Follow — Fly 경로
+if (flyRoute) SetMotion(pose.Flying ? PlayerMoveState.Jump : PlayerMoveState.Idle, 0);
+```
+
+### 90.11 모델링 목록(Blender)
+
+| 번호 | 모델 | 바탕 |
+|---|---|---|
+| M1 | 바주카포 + 로켓 | 받은 Meshy FBX(면 줄이기·다시 굽기) + 로켓 새로 |
+| M2 | 껌 수류탄 + 바닥 끈끈이 | 받은 Meshy FBX + 끈끈이 새로 |
+| M3 | 패러글라이더(펼친 것·접힌 가방) | 사진 보고 새로(또는 사용자 Meshy FBX — Q5) |
+| M4~M6 | 바나나 나무·비닐하우스·수박·포도·사과·딸기(+ 조각 모델) | 새로 |
+| M7 | 술래 벽장(드르륵 문 — 미닫이 나무 문 두 짝, 맵 테마 색 4벌) | 새로 |
+| A1 | 술래 `Bazooka_Aim`·`Bazooka_Fire` | 술래 리그 |
+| A2 | 쿠키 `Glide_Sit`(+ 좌우 기울기) | 쿠키 리그 |
+| U1 | 하늘 섬 몸체 테마 재질 3벌 + 1층 섬 재질 | Unity 재질(HOB_TriPBR) |
+
+### 90.12 질문
+
+- Q1 하늘 섬 밑면: 초콜릿 섬 = 흘러내리는 초콜릿 바위(퐁듀 색), 아몬드 섬 = 크림·구운 아몬드 바위, 밀 섬 = 흙·밀짚 바위로 하면 될까? 1층 큰 섬 밑면도 같은 문제(텍스처 없음)인데 같이 고칠까? 경사로·기둥(흰 단색)은 대리석처럼 둘까, 섬 테마를 따를까?
+- Q2 순간이동: 키(제안 T)·쿨타임(제안 45초)? 고를 수 있는 건물 = 이번 판 활성 재료 건물 모두(수리 끝난 건물 포함)? 실내가 낮은 맵(진저브레드 지하 등)은 벽장 대신 바닥 뚜껑으로 올라와도 될까?
+- Q3 바주카포: 키(제안 우클릭 조준 + 좌클릭 발사), 잡힘 반경 3.5 m·기절 6 m, 사거리 90 m, 벽 뒤 안전 — 이대로? 스파이도 같이 잡히나?
+- Q4 사탕 숲: (가) 이끼 위로 띄우기 + (나) 재료 빛기둥으로 할까, 윤곽선(다)도 넣을까?
+- Q5 패러글라이더: 사진 보고 Blender로 만들기 vs 사용자가 Meshy FBX 제공 — 어느 쪽? (권장: 캐노피·줄·안장은 단순한 모양이라 Blender로 사진 품질에 맞춰 만들고 렌더 사진으로 확인, 마음에 안 들면 Meshy). 상승(위로 오르기) 필요? 1회용? 상자 확률 3(콜라 대포 몫)?
+- Q6 껌 트랩: 핀 있는 모델/없는 모델 중? 안 밟힌 웅덩이 유지 시간(제안 90초)? 아이템 횟수(제안 2회)? 술래 말고 AI·쿠키는 영향 없음 맞나?
+- Q7 바나나 나무·비닐하우스·과일은 어느 맵? (Heaven Of Bakery 1층으로 이해) 수박 "건물 크기" = 지름 몇 m(제안 12 m)? 비닐하우스 위치 "양쪽" = 동·서?
+- Q8 상자: 스파이 상자의 "수리 도구" = 수리키트 맞나? 해체 도구는 어디서 주나(지금은 스파이 상자 첫 칸)? 스파이 상자 3개 중 손에 다 못 들면 상자 위에 띄워 둘까? 리셋 때 상자 위에 떠 있던 아이템은 남길까 없앨까? 8분 리셋은 한 번만(8분 시점)인가, 8분마다인가?
+
+### 90.13 질문 답(사용자, 2026-11-19) — 확정
+
+| 질문 | 결정 |
+|---|---|
+| Q1 섬 밑면 | 추천안: 초콜릿 = 흘러내리는 초코 바위(퐁듀 색), 아몬드 = 크림·구운 아몬드 바위, 밀 = 흙·밀짚 바위. 1층 큰 섬 밑면도 같이 고침. 경사로·기둥은 대리석 느낌 그대로 |
+| Q2 순간이동 | 키 T, **쿨타임 10초**. 활성 재료 건물 모두(수리 끝난 건물 포함). 실내가 낮은 건물은 벽장 대신 바닥 뚜껑 |
+| Q3 바주카포 | 우클릭 조준 + 좌클릭 발사, 잡힘 3.5 m·기절 6 m·사거리 90 m·벽 뒤 안전. **스파이도 잡힘** |
+| Q4 바닥 아이템 | 이끼 위로 띄우기 + 빛기둥 대신 **반짝이게**(별빛 반짝임·은은한 빛 테두리). **모든 아이템, 모든 맵** |
+| Q5 패러글라이더 | 사진 보고 Blender로 만듦(렌더 사진 확인 뒤, 안 되면 Meshy). **높은 곳에서 오래 활공으로 충분**(오르기 없음). 1회용, 상자 비율 3(콜라 대포 몫) |
+| Q6 껌 트랩 | **핀 없는 모델**. 안 밟힌 웅덩이는 **사라지지 않음**, 대신 사람당 최대 4개(5번째를 깔면 그 사람의 가장 오래된 웅덩이가 사라짐). 아이템 2회 |
+| Q7 과일 장식 | Heaven Of Bakery 1층, 수박 지름 12 m(포도 6·사과 4.8·딸기 4 m), 비닐하우스 동·서 |
+| Q8 상자 | "수리 도구" = 수리키트. **스파이 상자는 하나에 하나씩**(상자 수를 늘림: 스파이 × 5 → 스파이 × 8). 스파이가 연 스파이 상자에서 나오는 차례: 그 스파이의 첫 상자 = 해체 도구 → 그 뒤로는 로켓 부품 2 : 수리키트 1 비율(로켓에 아직 필요한 부품·스파이가 닿는 곳에 없는 것 먼저, 필요한 부품이 없으면 수리키트, 둘 다 필요 없으면 스파이 무작위 도구). 리셋: 상자가 모두 열렸을 때마다 + **게임 시작 8분 시점에 한 번만** |
+
+90.9의 스파이 상자 설명("세 개를 한 번에")은 위 Q8 결정으로 바뀐다:
+
+```csharp
+// ChestRules.SpyPick — 스파이 상자 하나 = 아이템 하나(§90.13 Q8)
+public static string SpyPick(EscapeState s, EscapeCatalogSO catalog, int spy, ISet<int> gotDismantle, int partsGiven, int kitsGiven, System.Random rng)
+{
+    if (!gotDismantle.Contains(spy)) return catalog.DismantleTool.ItemId;                 // 그 스파이의 첫 상자
+    string part = MissingRocketPart(s, catalog);                                            // 로켓 빈 칸 재료 중 스파이가 닿는 곳에 없는 것
+    bool kitTurn = kitsGiven * 2 < partsGiven;                                              // 부품 2 : 수리키트 1
+    if (part != null && !kitTurn) return part;
+    if (catalog.RepairKit != null && RocketNeedsKit(s)) return catalog.RepairKit.ItemId;
+    if (part != null) return part;
+    return catalog.SpyRandomTools[rng.Next(catalog.SpyRandomTools.Count)].ItemId;
+}
+```
+
+껌 트랩 90.7 고침: `IdleSeconds` 없음 — `GumTrapRules.MaxPerOwner = 4`, 깔 때 그 주인의 웅덩이가 4개면 가장 오래된 것을 지운다.
+바닥 아이템 90.5 고침: (나) 빛기둥 → 반짝임(`GroundItemSparkle` — 작은 별 입자 3~5개가 모델 둘레에서 깜박임 + 모델 가장자리 밝아짐, 쿠키·스파이 화면, 모든 아이템·모든 맵). (가) 이끼 위로 띄우기는 그대로.
+
+### 90.14 재료 부족 검토와 보완(2026-11-19, 사용자 확인)
+
+확정: 스파이 상자 = 스파이 1명당 8개(하나에 하나씩). 로켓에 필요한 부품은 쿠키 건물에서 이미 수리된 재료라도 스파이 상자에서 나온다(규칙 4 "수리 끝난 재료 안 나옴"은 일반 상자에만).
+
+이미 막혀 있는 경우(지금 코드): 스파이 해체 → 건물 수리 풀림 + 2초 검사(`RestoreMissingMaterials`, 스파이 손은 쿠키 몫으로 안 셈) → 없으면 새로 만듦. 로켓에 끼우면 `RocketInsert`가 상자에 다시 넣음. 잡히거나 탈출하면 들고 있던 것을 떨어뜨림(`OnPlayerBroken`·`Exit` → `DropAll`, 닿지 않는 곳이면 `SafeGroundPoint`가 건물 옆으로).
+
+보완(C8에 포함):
+| 번호 | 내용 |
+|---|---|
+| R1 | 안전장치가 새로 만든 재료: 닫힌(내용 안 정한) 일반 상자가 남아 있으면 "다음에 열리는 상자에서 먼저"(필요 목록 맨 앞), 닫힌 상자가 없으면 그 건물 옆 바닥에 바로 놓고 쿠키에게 알림(`MaterialRestored`) |
+| R2 | 하늘 섬에서 떨어져 죽거나(§90 P5) 패러글라이더 비행 중 잡히면, 들고 있던 것은 마지막으로 서 있던 땅(위치 기록에서 최근 3초 안 바닥 위 점) 또는 가까운 건물 옆에 떨어뜨린다 |
+| R3 | 시험: 스파이가 재료를 빼서 숨음 → 4초 안에 쿠키 쪽에 같은 재료가 생김 / 일반 상자를 다 연 뒤 재료가 없어짐 → 바닥에 생김 / 로켓 부품이 수리된 건물 재료여도 스파이 상자에서 나옴 |
+
+### 90.15 추가 질문 답(사용자, 2026-11-19) — 껌은 "던져 맞히기 + 빗나가면 웅덩이"
+
+| 질문 | 결정 |
+|---|---|
+| 껌 사용 방식 | 껌 수류탄을 **술래에게 던져 맞히면** 이동속도 50% 3.5초. 사진처럼 끈적임이 몸(발·다리)에 붙고 3.5초 동안 서서히 없어짐 |
+| 맞는 범위 | 처음 닿은 자리에서 터지고 둘레 **1.5 m 안** 술래가 맞음(물풍선과 같은 방식, 몸 반지름 포함) |
+| 빗나가면 | **바닥에 웅덩이로 남음**(벽에 맞으면 벽 아래 바닥). 술래가 밟으면 같은 효과(50% 3.5초, 웅덩이는 3.5초 동안 줄며 사라짐). 안 밟히면 사라지지 않음, 사람당 최대 4개(넘으면 가장 오래된 것 사라짐) |
+| 웅덩이 보이기 | 모두에게 보임(사진처럼 보라 웅덩이) |
+| 거대 괴물 | 제외(밟아도 효과 없음, 웅덩이만 사라짐). 마녀도 제외 |
+| 바닥 아이템 반짝임 | 쿠키·스파이 화면만 |
+| 일반 상자 "필요한 재료" | 수리 안 된 건물의 재료가 쿠키가 닿는 곳(상자 위·바닥·쿠키 손)에 **2개 미만**일 때 |
+
+90.7 고침 — 판정(방장):
+```csharp
+// ToolHitReceiver / EscapeAuthority — 껌 투사체가 끝났을 때(ProjectileSystem → 방장 판정)
+// 1) 터진 자리 1.5 m(+ 술래 몸 반지름) 안 술래(마녀·거대 괴물 제외)가 있으면: State.Slows에 {Actor, At} → 50% 3.5초, 웅덩이 없음
+// 2) 없으면: 아래 바닥을 찾아 State.Bombs에 Kind = Gum 웅덩이(주인별 최대 4개)
+// 3) 웅덩이: 방장이 0.2초마다 술래 발 위치와 거리 확인 → 밟으면 TriggeredAt = now, Slows에 추가, 3.5초 뒤 지움
+public static class GumTrapRules
+{
+    public const float SlowSeconds = 3.5f, SlowFactor = 0.5f, HitRadius = 1.5f, PuddleRadius = 1.2f;
+    public const int MaxPuddlesPerOwner = 4;
+    public static float StickAmount(double hitAt, double now) => Mathf.Clamp01(1f - (float)(now - hitAt) / SlowSeconds); // 몸에 붙은 껌 = 1 → 0
+}
+```
+모습: 맞으면 술래 발·다리에 보라 껌 덩어리(모델 M2c) + 발과 바닥을 잇는 늘어나는 껌 줄(걸을 때), 3.5초 동안 줄어듦. 모델: M2 껌 수류탄(**핀 없는** 판 `껌 트랩 핀 없는 버전.png`), M2b 바닥 웅덩이, M2c 몸에 붙는 껌 덩어리.
+
+### 90.16 추가 질문 답(사용자, 2026-11-19)
+
+| 질문 | 결정 |
+|---|---|
+| 바주카포 조준 중 | 천천히 걷기(이동속도 50%), 돌진·잡기 불가, 카메라는 어깨 너머로 조금 당김 |
+| 순간이동 건물 고르기 | T → 화면 가운데 작은 맵 지도에 재료 건물 4채(번호·수리 여부), 1~4 키 또는 마우스 클릭으로 고름, T/Esc로 닫기 |
+| 상자 리셋 알림 | 쿠키·스파이 화면에만 "상자가 다시 채워졌습니다" + 짧은 소리 |
+| 1층 과일 장식 수 | 총 40개 정도 — 비닐하우스 2동 안팎(하우스마다 수박 1·포도 2·사과 3·딸기 4 = 20) + 1층 빈 땅에 고루 20개(수박 2·포도 4·사과 6·딸기 8). 탈출구·길·상자 자리·건물 자리와 겹치지 않게 맵 빌더가 놓음 |
+| 바나나 나무 | 1층 나무만 같은 자리·같은 수의 바나나 나무로 바꿈. 하늘 섬은 섬 테마 나무 그대로 |

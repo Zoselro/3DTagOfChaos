@@ -85,7 +85,8 @@ public static class HeavenOfBakeryMapBuilder
     public static readonly float[] LotDeg = { 270f };   // §89.24 1층은 재료 건물(딸기잼 공장)만 — 일반 건물 3채는 맵에 두지 않는다
     // public const float LotRadius = 55f, LotHalf = 8f;
     // public const float LotRadius = 55f, LotHalf = 12.5f;   // §89.22 베이커리 건물(폭 16~24 m)이 들어가게 자리 16 → 25 m
-    public const float LotRadius = 50f, LotHalf = 12.5f;   // §89.24 큰 섬 r 85 — 둥근 길(r 25) 밖·섬 가장자리 안(자리 크기는 B안 건물 크기에서 다시 정한다)
+    // public const float LotRadius = 50f, LotHalf = 12.5f;
+    public const float LotRadius = 50f, LotHalf = 27f;   // §89.24 B안: 딸기잼 공장 51 × 35 m(문 7 m) — 테두리 타일·자리 비움을 건물 크기에 맞춤   // §89.24 큰 섬 r 85 — 둥근 길(r 25) 밖·섬 가장자리 안(자리 크기는 B안 건물 크기에서 다시 정한다)
     // public static readonly float[] WaterfallDeg = { 205f, 235f, 305f, 335f };
     public static readonly float[] WaterfallDeg = { 0f, 60f, 120f, 180f };   // §89.24 경사로(90·210·330°)·탈출구 피해
     // public static readonly float[] CookieSpawnDeg = { 215f, 245f, 295f, 325f };
@@ -559,7 +560,8 @@ public static class HeavenOfBakeryMapBuilder
     private static bool LocalFree(Vector3 l, float r, List<(Vector3 c, float r)> used, Rect building)
     {
         float d = new Vector2(l.x, l.z).magnitude;
-        if (d + r > 26f) return false;
+        // if (d + r > 26f) return false;
+        if (d + r > SubGroundR - 1f) return false;   // §89.24 B안: 둘레 고리 52 m까지
         if (d > 12f - r && l.z < 0f && Mathf.Abs(Mathf.Atan2(l.x, -l.z) * Mathf.Rad2Deg) < 55f) return false;
         if (l.x + r > building.xMin && l.x - r < building.xMax && l.z + r > building.yMin && l.z - r < building.yMax) return false;
         return used.All(u => (new Vector2(u.c.x - l.x, u.c.z - l.z)).magnitude >= u.r + r);
@@ -569,7 +571,8 @@ public static class HeavenOfBakeryMapBuilder
     {
         for (int t = 0; t < 400; t++)
         {
-            float a = (float)(rng.NextDouble() * 360.0), d = 4f + (float)rng.NextDouble() * 22f;
+            // float a = (float)(rng.NextDouble() * 360.0), d = 4f + (float)rng.NextDouble() * 22f;
+            float a = (float)(rng.NextDouble() * 360.0), d = 4f + (float)rng.NextDouble() * (SubGroundR - 6f);   // §89.24 B안: 4~26 m는 이제 모두 건물 밑 — 둘레 고리(SubGroundR)까지
             var l = new Vector3(Mathf.Sin(a * Mathf.Deg2Rad) * d, 0f, Mathf.Cos(a * Mathf.Deg2Rad) * d);
             if (LocalFree(l, r, used, building)) { used.Add((l, r)); return l; }
         }
@@ -577,7 +580,41 @@ public static class HeavenOfBakeryMapBuilder
     }
 
     // private static readonly Rect BuildingRect = Rect.MinMaxRect(-8.5f, 0.5f, 8.5f, 17.5f);   // 재료 건물 자리(로컬 x, z)
-    private static readonly Rect BuildingRect = Rect.MinMaxRect(-11.8f, 0.0f, 11.8f, 18.2f);   // §89.22 베이커리 건물(폭 최대 22.7 m·깊이 16.7 m)
+    // private static readonly Rect BuildingRect = Rect.MinMaxRect(-11.8f, 0.0f, 11.8f, 18.2f);
+    // §89.24 B안: 섬 건물이 2.59배(폭 44~56 m) — 설치한 세 건물의 실제 바닥 넓이(서브 맵 로컬 x, z)를 합쳐 정한다(UpdateBuildingRect). 처음 값은 예전 크기.
+    private static Rect BuildingRect = Rect.MinMaxRect(-11.8f, 0.0f, 11.8f, 18.2f);
+    private static void UpdateBuildingRect(Transform content, GameObject building, bool first)
+    {
+        if (building == null) return;
+        Rect r = first ? new Rect(0f, 9f, 0f, 0f) : BuildingRect;
+        bool any = false;
+        foreach (Renderer rd in building.GetComponentsInChildren<Renderer>(true))
+        {
+            if (!UnderModel(rd.transform)) continue;   // 외관·내부(Model 아래)만 — 소품·밀 다발·조명은 건물 밖까지 나가 넓이가 90 m가 됐다
+            // 세계 축 상자(rd.bounds)는 돌린 건물에서 커지고 로컬로 되돌리면 또 커져 90 m가 됐다 — 메시 자기 상자 8모서리를 서브 맵 로컬로
+            MeshFilter mf = rd.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+            Bounds b = mf.sharedMesh.bounds;
+            for (int k = 0; k < 8; k++)
+            {
+                Vector3 cl = new Vector3((k & 1) == 0 ? b.min.x : b.max.x, (k & 2) == 0 ? b.min.y : b.max.y, (k & 4) == 0 ? b.min.z : b.max.z);
+                Vector3 l = content.InverseTransformPoint(rd.transform.TransformPoint(cl));
+                if (!any && first) { r = Rect.MinMaxRect(l.x, l.z, l.x, l.z); any = true; }
+                r = Rect.MinMaxRect(Mathf.Min(r.xMin, l.x), Mathf.Min(r.yMin, l.z), Mathf.Max(r.xMax, l.x), Mathf.Max(r.yMax, l.z));
+            }
+        }
+        BuildingRect = r;
+    }
+
+    private static bool UnderModel(Transform t)
+    {
+        for (; t != null; t = t.parent)
+        {
+            if (t.name == "Props" || t.name == "Lights") return false;
+            if (t.name == "Model") return true;
+        }
+        return false;
+    }   // §89.22 베이커리 건물(폭 최대 22.7 m·깊이 16.7 m)
     private static readonly List<(Vector3 c, float r)>[] localUsed = { new List<(Vector3, float)>(), new List<(Vector3, float)>(), new List<(Vector3, float)>() };
 
     private static int Scatter(Transform content, int s, System.Random rng, (string prefab, int count, float r)[] list, Transform target = null)
@@ -607,7 +644,8 @@ public static class HeavenOfBakeryMapBuilder
         // 아몬드: 임시 재료 건물 + 아몬드 나무·자루·통·상자 무리·벤치·등
         Transform almond = contentRoots[0];
         PlaceBuilding(placeholders[0], almond, new Vector3(0f, 0f, 9f));
-        InstallBakery(placeholders[0], "HOB_BLD_AlmondFactory", SubYaw, true);   // §89.22
+        // InstallBakery(placeholders[0], "HOB_BLD_AlmondFactory", SubYaw, true);   // §89.22
+        UpdateBuildingRect(almond, InstallBakery(placeholders[0], "HOB_BLD_AlmondFactory", SubYaw, true), true);   // §89.24 B안: 건물 바닥 넓이를 장식 비움에 씀
         // §89.17 건물 자리 밖은 아몬드 타일 바닥 + 아몬드 나무만(§89.16 길 타일·울타리·소품 대신)
         // n += BuildThemeGround(almond, 0, "Almond", null);
         // n += Scatter(almond, 0, rng, new[] { ("HOB_AlmondTree", 7, 1.8f), ("HOB_AlmondCrate", 3, 0.9f), ("HOB_AlmondSackDeco", 4, 0.9f), ("HOB_AlmondBig", 2, 0.9f), ("HOB_AlmondHalf", 2, 0.8f),
@@ -639,7 +677,8 @@ public static class HeavenOfBakeryMapBuilder
             //     float a = 30f + k * 60f;   // 앞(−Z, 수리 자리)은 비운다
             //     PutLocal("HOB_ChocoPillar", choco, new Vector3(0f, 0f, 9f) + new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * 7.5f, 0f);
             // }
-            InstallBakery(q2, "HOB_BLD_ChocoFactory", SubYaw, false);
+            // InstallBakery(q2, "HOB_BLD_ChocoFactory", SubYaw, false);
+            UpdateBuildingRect(choco, InstallBakery(q2, "HOB_BLD_ChocoFactory", SubYaw, false), false);
         }
         // §89.17 건물 자리 밖은 녹은 초콜릿 바닥 + 초코 퐁듀(냄비·큰 꼬치·웅덩이)와 초콜릿 소품만(§89.16 길 타일·케이크·꽃 대신)
         // n += BuildThemeGround(choco, 1, "Choco", null);
@@ -656,7 +695,8 @@ public static class HeavenOfBakeryMapBuilder
         // 밀가루: 임시 재료 건물 + 밀밭 2 · 작은 절벽 폭포 · 자루 무리 · 표지판
         Transform flour = contentRoots[2];
         PlaceBuilding(placeholders[2], flour, new Vector3(0f, 0f, 9f));
-        InstallBakery(placeholders[2], "HOB_BLD_WheatMill", SubYaw, true);   // §89.22
+        // InstallBakery(placeholders[2], "HOB_BLD_WheatMill", SubYaw, true);   // §89.22
+        UpdateBuildingRect(flour, InstallBakery(placeholders[2], "HOB_BLD_WheatMill", SubYaw, true), false);
         // §89.17 건물 자리 밖 전부 밀밭(흙 바닥 + 2 m 밀밭 덩어리) — 상자 표시를 놓은 뒤 FillWheat가 깐다(예전: 8 × 7 m 밀밭 둘)
         // n += BuildWheatField(flour, 2, new Vector3(-15f, 0f, 6f), new Vector2(8f, 7f), rng);
         // n += BuildWheatField(flour, 2, new Vector3(15f, 0f, 6f), new Vector2(8f, 7f), rng);
@@ -728,7 +768,8 @@ public static class HeavenOfBakeryMapBuilder
 
     private const string ChoPropDir = "Assets/04. Prefabs/ChocolateFactory/Props";
     // private static readonly Rect BuildingKeepOut = Rect.MinMaxRect(-10.5f, -1.5f, 10.5f, 19.5f);
-    private static readonly Rect BuildingKeepOut = Rect.MinMaxRect(-12.8f, -2.0f, 12.8f, 20.2f);   // §89.22
+    // private static readonly Rect BuildingKeepOut = Rect.MinMaxRect(-12.8f, -2.0f, 12.8f, 20.2f);   // §89.22
+    private static Rect BuildingKeepOut => Rect.MinMaxRect(BuildingRect.xMin - 1f, BuildingRect.yMin - 2f, BuildingRect.xMax + 1f, BuildingRect.yMax + 2f);   // §89.24 B안: 실제 건물 넓이 + 둘레
 
     private static Transform Env(Transform content, string group) => Group(Group(content, "Environment"), group);
 
@@ -912,7 +953,8 @@ public static class HeavenOfBakeryMapBuilder
 
     // ---------------------------------------------------------------- §89.17 sub-map floors (no green grass)
 
-    public const float SubGroundR = 27.6f;   // 아몬드 고원 가장자리 덤불·꽃(r 28 m~)과 둘레 울타리(29.8 m) 안쪽 — 세 고원 모두에 맞는다
+    // public const float SubGroundR = 27.6f;
+    public const float SubGroundR = 52f;   // §89.24 B안: 건물(폭 44~56 m)이 커져 둘레 장식·타일·밀밭 고리를 섬 r 68 안 52 m까지(그 밖은 바닥만)   // 아몬드 고원 가장자리 덤불·꽃(r 28 m~)과 둘레 울타리(29.8 m) 안쪽 — 세 고원 모두에 맞는다
 
     // 잔디 재질 슬롯만 바꾼다(씬 사본): 고원 윗면 → 크림 돌, 아몬드 나무 밑동 잔디 둔덕 → 흙
     private static void NoGrassTop(GameObject go, string material)
