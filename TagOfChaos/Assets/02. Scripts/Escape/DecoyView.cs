@@ -139,8 +139,11 @@ public class DecoyView : MonoBehaviour
     {
         if (!manager.Routes.TryActive(d.Id, now, out DecoyRoute route)) { SetMotion(PlayerMoveState.Idle, 0); ApplyLiftOnly(); return; }
         DecoyRoute.Pose pose = DecoyRoute.Sample(route, now, yawSet ? yaw : d.Yaw);
+        bool flyRoute = route.Gait == DecoyGait.Fly; // §89.24 하늘 대포: 경로 높이 그대로(땅 맞춤 없음), 병 안에서는 몸을 그리지 않는다
+        SetHidden(pose.Hidden);
+        if (flyRoute) { targetGroundOffset = 0f; groundOffset = 0f; nextGroundCheck = Time.time + GroundCheckSeconds; }
 
-        if (Time.time >= nextGroundCheck)
+        if (!flyRoute && Time.time >= nextGroundCheck)
         {
             nextGroundCheck = Time.time + GroundCheckSeconds;
             // 몸 캡슐 안에서 쏘므로 자기 몸에는 맞지 않는다.
@@ -178,6 +181,15 @@ public class DecoyView : MonoBehaviour
         }
         else if (route.Gait == DecoyGait.Dance && now < route.StartAt + route.HoldUntil) SetMotion(PlayerMoveState.Dance, route.DanceId);
         else SetMotion(PlayerMoveState.Idle, 0);
+    }
+
+    // §89.24 대포 병 안: 그리기만 끈다(forceRenderingOff — 캐릭터 모델 교체가 꺼 둔 몸을 다시 켜지 않게, §69 B5와 같은 이유).
+    private bool hiddenInCannon;
+    private void SetHidden(bool hidden)
+    {
+        if (hiddenInCannon == hidden) return;
+        hiddenInCannon = hidden;
+        foreach (Renderer r in GetComponentsInChildren<Renderer>(true)) r.forceRenderingOff = hidden;
     }
 
     // 경로가 없는(서 있는) AI도 갇히면 떠오른다 — 지금 보탠 높이만 바꾼다.

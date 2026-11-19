@@ -33,6 +33,7 @@ public enum EscapeOp : byte
     CarriageBoard = 26, // A = 마차 번호(주인이 문 앞에서 E — 문 열림·탑승·순간이동, §68.7)
     CannonBoard = 27,   // A = 대포 번호, B = 보는 방향(도) — 주인이 뒤 계단에서 E(해치·탑승·겨눔·발사, §68.9)
     Throw = 28,         // A = 인벤토리 칸(-1 = 술래 수색 폭탄), B = 물풍선 색, Pos = 손(시작점), Dir = 처음 속도, Stamp = 손을 떠난 시각, Targets[0] = 던진 사람 번호(§70.3)
+    SkyCannonBoard = 29, // A = 하늘 대포 번호(씬의 SkyCannonView.Index) — 쿠키가 대포 뒤 계단에서 E(쿠키·AI만, 한 대 한 명, §89.24·§89.25)
 }
 
 public enum EscapeNoticeKind : byte

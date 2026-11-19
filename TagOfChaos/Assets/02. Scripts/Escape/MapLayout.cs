@@ -10,7 +10,8 @@ public static class MapLayout
         new[] { 0, 1, 2 }, new[] { 0, 2, 1 }, new[] { 1, 0, 2 }, new[] { 1, 2, 0 }, new[] { 2, 0, 1 }, new[] { 2, 1, 0 },
     };
 
-    public const int LotCount = 4; // 과일 밭 자리: 재료 건물 1 + 일반 건물 3
+    // public const int LotCount = 4; // 과일 밭 자리: 재료 건물 1 + 일반 건물 3
+    public const int LotCount = 1; // §89.24 1층 과일 밭 자리는 재료 건물 하나만(일반 건물 3채는 두지 않음)
 
     public struct Layout
     {

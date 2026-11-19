@@ -26,7 +26,8 @@ public enum RainbowState : byte { None = 0, Closed = 1, Opened = 2, Broken = 3 }
 // v10(§69 E3): 대포 비행 천장(Ceiling — 지하처럼 위가 막힌 곳에서 포물선이 천장을 넘지 않게).
 public sealed class EscapeState
 {
-    public const byte FormatVersion = 11; // §74 P12: 사이렌 함정에 놓은 건물(Site)
+    // public const byte FormatVersion = 11; // §74 P12: 사이렌 함정에 놓은 건물(Site)
+    public const byte FormatVersion = 12; // §89.24 하늘 대포 탑승(Cannon.Sky)
     public const int BuildingCount = 4;
     public const int ExitCount = 4;
     public const float RepairSeconds = 10f;      // 재료 넣기(수리) 게이지가 다 차는 시간(§25.5 E)
@@ -184,8 +185,13 @@ public sealed class EscapeState
         public Vector3 Dest;
         public float Flight;
         public float Ceiling;    // 비행 꼭대기 한계(월드 y, 0 = 위가 열림)
+        // §89.24 하늘 대포(Heaven Of Bakery 섬 사이에 박힌 대포): 0 = 콜라 대포 아이템, n = 씬의 하늘 대포 n − 1번에 탄 기록.
+        // 기본값 0이 콜라 대포라 예전 코드(콜라 대포 추가)는 그대로 맞다. Owner는 쿠키 액터 번호 또는 −AI 번호.
+        public sbyte Sky;
 
         public bool Boarded => BoardAt > 0;
+        public bool IsSky => Sky > 0;
+        public int SkyIndex => Sky - 1;
     }
 
     public int Revision; // 방장이 커밋할 때마다 1씩 오른다 — 방장 화면은 늦게 도착한 옛 상태를 무시한다(F-18)
@@ -297,7 +303,8 @@ public sealed class EscapeState
     // 이 사람이 탄 대포(BoardAt이 있는 것) 번호, 없으면 -1.
     public int RiddenCannonOf(int actor)
     {
-        for (int i = 0; i < Cannons.Count; i++) if (Cannons[i].Owner == actor && Cannons[i].Boarded) return i;
+        // for (int i = 0; i < Cannons.Count; i++) if (Cannons[i].Owner == actor && Cannons[i].Boarded) return i;
+        for (int i = Cannons.Count - 1; i >= 0; i--) if (Cannons[i].Owner == actor && Cannons[i].Boarded) return i;   // §89.24 가장 최근 것(하늘 대포 착지 뒤 쿨다운 동안 남은 옛 기록보다 새 탑승)
         return -1;
     }
 
@@ -375,7 +382,8 @@ public sealed class EscapeState
             w.Write(Carriages.Count);
             foreach (Carriage c in Carriages) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); WriteVector(w, c.Dest); }
             w.Write(Cannons.Count);
-            foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); w.Write(c.Ceiling); }
+            // foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); w.Write(c.Ceiling); }
+            foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); w.Write(c.Ceiling); w.Write(c.Sky); }
             w.Flush();
             return ms.ToArray();
         }
@@ -441,7 +449,8 @@ public sealed class EscapeState
                     s.Carriages.Add(new Carriage { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), Dest = ReadVector(r) });
                 int cannons = r.ReadInt32();
                 for (int i = 0; i < cannons; i++)
-                    s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle(), Ceiling = r.ReadSingle() });
+                    // s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle(), Ceiling = r.ReadSingle() });
+                    s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle(), Ceiling = r.ReadSingle(), Sky = r.ReadSByte() });
                 return s;
             }
         }

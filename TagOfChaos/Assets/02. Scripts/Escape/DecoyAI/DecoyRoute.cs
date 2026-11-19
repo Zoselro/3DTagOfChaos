@@ -11,6 +11,7 @@ public enum DecoyGait : byte
     Hide = 3,   // 숨을 곳 안에서 가만히
     Repair = 4, // 건물 방 안에서 수리하는 척(서서 건물 쪽 바라보기)
     Dance = 5,  // 제자리 춤(DanceId = DanceCatalogSO 번호)
+    Fly = 6,    // §89.24 하늘 대포 비행: StartAt = 탄 시각, Speed = 비행 초, Points = 계단 앞·병 안·발사 입구·착지(SkyCannonRules.DecoyFlightPoints)
 }
 
 public struct DecoyRoute
@@ -40,6 +41,8 @@ public struct DecoyRoute
         public float Yaw;
         public bool Moving;
         public bool Running; // 달리는 구간(Run 경로의 RunUntil 전)
+        public bool Hidden;  // §89.24 대포 병 안(몸을 그리지 않음)
+        public bool Flying;  // §89.24 대포로 날아가는 중
     }
 
     public bool RunsPartly => Gait == DecoyGait.Run && RunUntil > 0f && RunUntil < Length - 1e-3f;
@@ -74,6 +77,7 @@ public struct DecoyRoute
     {
         get
         {
+            if (Gait == DecoyGait.Fly) return 0f; // §89.24 비행 시간은 HoldUntil(탄 뒤 착지까지)
             if (Speed <= 0.01f) return 0f;
             float length = Length;
             if (!RunsPartly) return length / Speed;
@@ -89,6 +93,7 @@ public struct DecoyRoute
         var pose = new Pose { Yaw = fallbackYaw };
         if (!r.IsValid) return pose;
         pose.Position = r.Points[0];
+        if (r.Gait == DecoyGait.Fly) return SampleFly(r, now, fallbackYaw);
         float lastYaw = fallbackYaw;
         if (r.Points.Length == 1 || r.Speed <= 0.01f)
         {
@@ -115,6 +120,27 @@ public struct DecoyRoute
         }
         pose.Position = r.Points[r.Points.Length - 1];
         pose.Yaw = float.IsNaN(r.FaceYaw) ? lastYaw : r.FaceYaw;
+        return pose;
+    }
+
+    // §89.24 대포 비행(모든 화면 같은 시각): 계단 앞 → 병 안(ColaCannonRules 시간표) → 숨김 → 발사 입구에서 착지까지 포물선.
+    private static Pose SampleFly(DecoyRoute r, double now, float fallbackYaw)
+    {
+        var pose = new Pose { Position = r.Points[0], Yaw = float.IsNaN(r.FaceYaw) ? fallbackYaw : r.FaceYaw };
+        if (r.Points.Length < 4) return pose;
+        float t = (float)(now - r.StartAt);
+        if (t <= 0f) return pose;
+        if (t < ColaCannonRules.FireAt)
+        {
+            float k = ColaCannonRules.EnterProgress(r.StartAt, now);
+            pose.Position = Vector3.Lerp(r.Points[0], r.Points[1], k);
+            pose.Hidden = t >= ColaCannonRules.EnterEnd;
+            return pose;
+        }
+        float flight = Mathf.Max(0.1f, r.Speed);
+        pose.Position = ColaCannonRules.FlightPoint(r.Points[2], r.Points[3], t - ColaCannonRules.FireAt, flight);
+        pose.Flying = t < ColaCannonRules.FireAt + flight;
+        if (!pose.Flying) pose.Position = r.Points[3];
         return pose;
     }
 

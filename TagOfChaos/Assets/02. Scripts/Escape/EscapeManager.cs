@@ -64,6 +64,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (PhotonNetwork.IsMasterClient && authority != null && authority.State != null) authority.ApplyDecoyHits(sender, tool, targets);
     }
 
+    // §89.24 방장 화면의 권한(AI가 하늘 대포를 탈 때 DecoyBrain이 쓴다). 방장이 아니면 null.
+    public EscapeAuthority MasterAuthority => Photon.Pun.PhotonNetwork.IsMasterClient ? authority : null;
     public EscapeAuthority OfflineAuthority => Photon.Pun.PhotonNetwork.OfflineMode && Photon.Pun.PhotonNetwork.IsMasterClient ? authority : null;
 
     // 콜라 대포(§68.9): 탄 순간부터 착지까지 이동 잠금, 해치가 닫힌 뒤 착지까지 잡히지 않는다.

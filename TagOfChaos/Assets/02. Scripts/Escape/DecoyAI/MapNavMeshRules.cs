@@ -90,6 +90,20 @@ public static class MapNavMeshRules
             foreach (DestructibleUnit u in DestructibleCatalog.Build(map, DestructionRulesSO.Current).Units)
                 if (u.Grade != DestructibleGrade.Stairs) foreach (Collider c in u.Colliders) destructible.Add(c);
         sources.RemoveAll(s => GiantPassable(s) || (s.component is Collider col && destructible.Contains(col)));
+        // §89.24 거대 괴물은 1층만: 하늘 섬으로 오르는 나선 경사로 윗면은 못 걷는 곳(경사로 아래 1층 땅은 막힌 채)
+        for (int i = 0; i < sources.Count; i++)
+            if (sources[i].component != null && IsRamp(sources[i].component.transform))
+            {
+                NavMeshBuildSource s = sources[i];
+                s.area = NotWalkableArea;
+                sources[i] = s;
+            }
         return sources;
+    }
+
+    public static bool IsRamp(Transform t)
+    {
+        for (; t != null; t = t.parent) if (t.name == "Ramps") return true;
+        return false;
     }
 }

@@ -57,3 +57,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0d0d2af450daa604d89561470b68ed5c, type: 2}
   fixedBuildingOrder: 1
   repairKitCount: 0
+  excludedItems:
+  - {fileID: 11400000, guid: 61ab8269b6744104cbc52545f46261d2, type: 2}

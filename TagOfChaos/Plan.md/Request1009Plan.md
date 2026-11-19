@@ -11919,3 +11919,533 @@ HB1 밀 v2(Blender) 끝 — 사용자 확인 대기: 이삭 1개 1.6k 삼각형,
 | DOC | 이 절·README. Blender 스크립트(`bk/`)·`hq_bakery.py`·Unity 스크립트 사본은 Zoselro/Blender 저장소에 보관 | 완료 |
 
 참고: 사과 압착기 0.72배·과일 창고 게시판 0.85배·통 0.72배·잼 보일러 0.72배·맷돌 0.72배(좁은 방). 잼 공장 꽂는 자리는 방 가운데라 문에서 곧장 들어가면 부딪히고 옆으로 돌아 들어감.
+
+### 89.23 Heaven Of Bakery 다시 배치 — 섬 크기 맞춤·서브 맵 세 방향·짧은 나선 경사로·넓은 다리·술래 건물 입장(계획, 2026-11-19)
+
+요청(요약):
+1. 1층(큰 섬)이 다른 맵(서브 맵 섬)보다 너무 크다 → 크기를 비슷하게, 1층만 조금 더 크게.
+2. 술래가 건물에 들어가기 너무 힘들다 → 술래도 들어갈 수 있게 건물 수정.
+3. 1층을 가운데에 두고 초콜릿·아몬드·밀 공장 섬이 1층 둘레 세 방향(12시·4시·8시)에 떠 있고, 1층에서 각 섬으로 나선형 경사로로 올라간다. 12시 섬은 지금보다 더 멀리. 섬끼리는 그림의 직선(삼각형)으로 오간다. 나선 경사로 길이는 지금의 75%.
+4. 마녀가 소환한 괴물(거대 괴물)이 다리를 못 건넌다 → 다리 폭을 넓혀 거대 괴물·술래 모두 다니게.
+
+#### 0. 지금 코드 기준 사실(읽은 소스)
+
+| 항목 | 지금 값 | 소스 |
+|---|---|---|
+| 큰 섬 | 반지름 100 m(`hq_island(100.0, 30.0, 15)`), 울타리 r 96, 맵 반경 190 | `HeavenOfBakeryMapBuilder.FieldRadius/FenceRadius/MapRadius`, `hob/build_hq_all.py` |
+| 서브 맵 섬 | 윗면 반지름 30.5/32.5/30.5 m, 높이 24/30/24 m, 자리 NW(−88, 121)·N(0, 152)·NE(88, 121) — 셋 다 북쪽 | `Slots` |
+| 서브 맵 내용 | 반지름 26 m 안에만 둠(`LocalFree` `d + r > 26f`), 바닥 `SubGroundR = 27.6f` | `LocalFree`, `SubGround` |
+| 경사로 | `HOB_SwitchRamp_24m` = 3줄 지그재그, 폭 3.4 m·줄 간격 5 m·한 줄 26 m(+3), 길이 약 96.7 m, 기울기 약 14°. NW·NE 2개만(N은 다리 발판 + 6 m 계단) | `hq_switch_ramp(H=24.0, W=3.4, lane=5.0, leg=26.0, …)`, `BuildRamps` |
+| 다리 | `HOB_Bridge_10m` 폭 4.0 m(난간 포함 겉 4.3 m), 10 m 토막(`SpanMax`) | `hq_bridge(L=10.0, W=4.0)`, `Spans` |
+| 거대 괴물 길 | 몸 반지름 3 m·키 10 m·오를 턱 0.6 m·기울기 30°, 굽는 층 = 땅(y 1) 한 층뿐(`floor0 y=1`) | `GiantNavMesh.AgentRadius…`, `GiantNavMeshBaker.BakeScene` |
+| 술래(MonsterPlayer) | 크기 3.14배 → 겉모습 키 6.47 m·폭 7 m, 충돌 캡슐은 반지름 0.31 m·높이 1.1 m(발밑)뿐, 카메라 거리 4.5 m | `Resources/MonsterPlayer`, `MonsterController.cameraDistance` |
+| 베이커리 건물 문 | 높이 2.7 m·폭 약 2.4 m(쿠키 키 2.27 m 기준), 방 높이 3.2~6 m | §89.22 `cfgk.py` `f = 2.7/(zt−zb)` |
+| 배치 무작위 | 서브 맵 묶음 3개를 슬롯 3곳에 순열로 옮김, 과일밭 4자리에 재료 건물 1·일반 3 | `MapLayoutRandomizer.Apply` |
+| 실내 상자 | 숨을 곳 실내를 상자로 등록(소리용), `IndoorZone.At(point)` 제공 | `IndoorZone` |
+
+원인:
+- 4번: 다리 폭 4 m에서 거대 괴물 몸 반지름 3 m를 빼면 걸을 띠가 없다(폭 6 m 이상이어야 길이 생김). 게다가 굽는 층이 땅 하나라 하늘 섬 높이(24·30 m)는 길이 아예 없다.
+- 2번: 술래의 충돌 캡슐은 작아서 몸은 문을 지나가지만, 키 6.47 m 몸과 4.5 m 뒤 카메라가 2.7 m 문·3~6 m 방에 걸리고 묻힌다.
+
+#### 1. 크기·자리 설계(제안 값)
+
+```
+큰 섬(1층)      반지름 62 m(지금 100) — 서브 맵 섬의 약 1.24배("조금 더 크게")
+서브 맵 섬 3개   윗면 반지름 50 m(지금 30.5~32.5), 세 섬 모두 같은 모델·같은 높이 24 m
+방향            초콜릿 12시(90°) · 밀 4시(330°) · 아몬드 8시(210°) — 무작위 배치는 그대로(순열)
+경사로          큰 섬 가장자리 r 58에서 바깥 공중으로 3줄 지그재그(길이 약 72 m = 지금의 75%, 기울기 약 19°)
+                꼭대기 r ≈ 84, 높이 24 m → 하늘 다리 20 m → 섬 가장자리
+섬 가운데 거리   62 + 22(경사로) + 20(다리) + 50 = r ≈ 154 (12시 섬: 지금 가장자리 틈 16 m → 42 m, 더 멀리)
+섬끼리 다리      삼각형 세 변: 중심 사이 154·√3 ≈ 267 m, 가장자리 사이 약 167 m → 쉬는 발판(작은 떠 있는 바위) 2곳씩
+다리·경사로 폭   9 m(난간 안쪽 8.4 m) — 거대 괴물 몸 지름 6 m + 여유, 술래 몸 폭 7 m도 지나감
+마녀             315°(남동, 이제 밀 섬 쪽) → 270°(남쪽, 4시·8시 섬 사이 빈 하늘)
+```
+
+큰 섬 안(반지름 62 m)에 들어갈 것:
+
+| 것 | 지금 | 바꾼 뒤 |
+|---|---|---|
+| 광장·술래방 | r 16(`PlazaScale 1.67`) | 그대로 |
+| 둥근 길 | r 23/25 | 그대로 |
+| 과일밭 자리 4곳(25 m) | r 55, 200°·250°·290°·340° | r 40, 60°·120°·240°·300°(경사로 입구 90°·210°·330° 사이) |
+| 탈출구 4곳 | r 93, N·E·S·W | r 56, 0°·150°·270°의 빈 곳 + 30°(경사로·자리 피해 다시 고름, `Exits`) |
+| 쿠키 시작·폭포 | 215~335° | 자리 사이 빈 각도로 다시 계산 |
+
+#### 2. 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| L0 | 시험 기준 잡기: 지금 맵에서 술래로 건물 7채 문 통과·방 안 이동을 Play Mode로 재고(카메라가 벽에 묻히는 위치·끼는 곳 기록), 거대 괴물 길 굽기 결과(층별 면적) 기록 | ⬜ |
+| B1 | Blender 모델: 큰 섬 `HOB_Island_Main` 반지름 62, 서브 섬 `HOB_Plateau_Sky50`(반지름 50, 세 섬 공용), 넓은 다리 `HOB_Bridge_Wide_10m`(폭 9 m), 넓고 짧은 경사로 `HOB_SwitchRamp_Wide_24m`(폭 9 m·줄 간격 10.5 m·한 줄 13 m, 받침 기둥), 쉬는 발판 바위 `HOB_SkyIslet_L`(반지름 8 m) → FBX → `HobPrefabBuilder.BuildAll` | ⬜ |
+| M1 | `HeavenOfBakeryMapBuilder` 상수·`Slots`·`LotRadius/LotDeg`·`Exits`·`WitchDeg`·`MapRadius` 바꿈(아래 코드), `BuildRamps` 3개(초콜릿 쪽도 경사로), `BuildBridge`(N 발판·6 m 계단) 대신 `BuildSkyLinks`(섬끼리 삼각형 다리 + 쉬는 발판), `SlotGaps` 3방향(경사로 다리 1 + 이웃 섬 다리 2) | ⬜ |
+| M2 | 서브 맵 내용 반지름 26 → 46 m: `LocalFree`·`LocalSpot`·`SubGround`(`SubGroundR`)·타일 바닥·나무 격자·밀밭(`FillWheat`)·상자 자리를 반지름 상수 하나(`SubContentR`)로 묶고, 장식 개수는 넓이 비례(약 3배)로 늘림. 건물 앞(−Z) 길 비움 각도는 경사로 다리 쪽 + 이웃 섬 다리 두 쪽으로 | ⬜ |
+| M3 | 거대 괴물 길: `GiantNavMeshBaker` 굽는 층에 하늘 섬 높이(24 m)를 더하고 경사로·다리를 이어서 굽기(층마다 따로 굽던 것 → 한 덩어리 범위), `RuntimeNavMeshBaker`도 같은 범위(`MapNavMeshRules.BoundsFor`는 이미 −80~+65 m라 높이는 들어감). 경사로 기울기 19° < `AgentSlope 30°` 확인 | ⬜ |
+| S1 | 술래 건물 입장(결정 필요 — 아래 Q2). 추천안: 실내에 들어가면 술래를 줄임 — 베이커리 건물 프리팹에 `IndoorZone`(방 상자 + 문 통로)을 붙이고, `MonsterController`가 실내에서 몸·카메라를 0.45배(키 약 2.9 m)로 0.3초에 걸쳐 줄였다가 나오면 되돌림. 줄인 정도는 위치로 정해지므로(각 화면이 같은 상자로 계산) 네트워크 동기화가 따로 필요 없음. 문은 높이 2.7 → 3.3 m로 조금 올림(§89.22 `cfgk.py` 문 높이 기준) | ⬜ |
+| S2 | 줄었을 때 잡기 판정·돌진 거리·발소리 크기·카메라 충돌 반지름도 같은 비율 적용(`MonsterGrabKillTrigger` 반지름, 돌진 `bodyRadius`, `cameraDistance`) — 줄인 술래가 쿠키보다 약하지 않게 잡기 판정 최소값 유지 | ⬜ |
+| T | EditMode: 새 시험 `Request1123Tests` — 섬 반지름 비(1.15~1.35), 세 섬 각도 120° 간격, 경사로 길이 ≤ 지금의 76%, 다리·경사로 충돌 폭 ≥ 8 m, 거대 괴물 길이 섬 셋에 닿음, 실내에서 술래 배율 < 0.5. Play Mode: 쿠키·술래·거대 괴물로 1층 → 경사로 → 섬 → 이웃 섬 다리 → 섬 돌아오기, 술래 7채 입장·잡기, 배치 무작위 6순열, 콘솔 오류 없음 | ⬜ |
+| DOC | 이 절 완료 표시·README | ⬜ |
+
+#### 3. 코드 스니펫(계획 — 실제 소스에 맞춘 바꿀 자리)
+
+M1 — 상수와 슬롯(`HeavenOfBakeryMapBuilder.cs` 24~55행):
+
+```csharp
+// public const float FieldRadius = 100f, FenceRadius = 96f;
+public const float FieldRadius = 62f, FenceRadius = 58f;          // §89.23 큰 섬을 서브 섬(50 m)의 약 1.24배로
+// public const float MapRadius = 190f;
+public const float MapRadius = 215f;                               // §89.23 섬 중심 r 154 + 반지름 50 + 여유
+
+public const float SkyR = 50f, SkyTop = 24f, SkyDist = 154f;       // §89.23 서브 섬 세 개 같은 크기·같은 높이
+public static readonly float[] SkyDeg = { 210f, 90f, 330f };       // 슬롯 0 = 8시(아몬드), 1 = 12시(초콜릿), 2 = 4시(밀) — 무작위 배치 순열은 그대로
+public static readonly (string name, Vector3 pos, string plateau, float top, float topR, float footR)[] Slots =
+{
+    ("SubSlot_SW", Polar(SkyDist, SkyDeg[0]), "HOB_Plateau_Sky50", SkyTop, SkyR, SkyR + 2.5f),
+    ("SubSlot_N",  Polar(SkyDist, SkyDeg[1]), "HOB_Plateau_Sky50", SkyTop, SkyR, SkyR + 2.5f),
+    ("SubSlot_SE", Polar(SkyDist, SkyDeg[2]), "HOB_Plateau_Sky50", SkyTop, SkyR, SkyR + 2.5f),
+    // 예전 §89.13: NW (−88.17, 121.35) 24 m · N (0, 152) 30 m · NE (88.17, 121.35) 24 m
+};
+
+// public const float LotRadius = 55f, LotHalf = 12.5f;
+public const float LotRadius = 40f, LotHalf = 12.5f;
+// public static readonly float[] LotDeg = { 200f, 250f, 290f, 340f };
+public static readonly float[] LotDeg = { 60f, 120f, 240f, 300f };  // 경사로 입구(90·210·330°) 사이
+// public const float WitchDeg = 315f;
+public const float WitchDeg = 270f;                                 // 4시·8시 섬 사이 빈 하늘
+```
+
+(`Polar`는 189행 `private static Vector3 Polar(float r, float deg) => RoundMapKit.Polar(r, deg);` — 메서드라 정적 필드 초기화에서 그대로 쓸 수 있다.)
+
+M1 — 경사로 3개(지금 `for (int s = 0; s <= 2; s += 2)` → 셋 다):
+
+```csharp
+// private const float RampTopR = 93f, RampLane = 5f, RampEndY = 32f, RampBackY = 4.2f;
+private const float RampBaseR = 58f;                               // 큰 섬 가장자리(울타리 틈)에서 시작해 바깥 공중으로
+private const float RampLane = 10.5f, RampEndY = 22f, RampBackY = 4.5f, RampWidth = 9f;   // 새 모델 HOB_SwitchRamp_Wide_24m
+public static Vector3 RampTopEnd(int slot) => RampOut(slot) * (RampBaseR + RampEndY);
+private static void BuildRamps(Transform ground)
+{
+    Transform group = Group(ground, "Ramps");
+    for (int s = 0; s < Slots.Length; s++)                          // 예전: s = 0, 2(N은 계단)
+    {
+        GameObject ramp = Put("HOB_SwitchRamp_Wide_24m", group, RampOrigin(s), RampRot(s));
+        if (ramp != null) ramp.name = $"Ramp_{Slots[s].name.Substring(8)}";
+        Spans(group, RampTopEnd(s) + Vector3.up * SkyTop, SkyBridgeEnd(s) + Vector3.up * SkyTop, "Sky" + s, "HOB_Bridge_Wide_10m");
+    }
+}
+```
+
+M1 — 섬끼리 삼각형 다리(지금 `BuildBridge`의 N 발판·계단은 주석 처리):
+
+```csharp
+// 섬 a → b 가장자리를 잇고 가운데 1/3·2/3 지점에 쉬는 발판(떠 있는 바위)
+private static void BuildSkyLinks(Transform ground)
+{
+    Transform group = Group(ground, "SkyLinks");
+    for (int a = 0; a < 3; a++)
+    {
+        int b = (a + 1) % 3;
+        Vector3 ca = Flat(Slots[a].pos), cb = Flat(Slots[b].pos), d = (cb - ca).normalized;
+        Vector3 ea = ca + d * (SkyR - 1f), eb = cb - d * (SkyR - 1f);
+        Vector3 p1 = Vector3.Lerp(ea, eb, 1f / 3f), p2 = Vector3.Lerp(ea, eb, 2f / 3f);
+        foreach (Vector3 p in new[] { p1, p2 }) Put("HOB_SkyIslet_L", group, p + Vector3.up * (SkyTop - 1.0f), Quaternion.LookRotation(d));
+        Spans(group, ea + Vector3.up * SkyTop, eb + Vector3.up * SkyTop, $"Link{a}{b}", "HOB_Bridge_Wide_10m");
+    }
+}
+// Spans(group, a, b, tag) → Spans(group, a, b, tag, model): 모델 이름을 받게(넓은 다리)
+```
+
+M2 — 서브 맵 내용 반지름 하나로:
+
+```csharp
+public const float SubContentR = SkyR - 4f;                         // 46 m(예전 26 = 30 − 4)
+// if (d + r > 26f) return false;
+if (d + r > SubContentR) return false;
+// 앞 ±55° 비움 → 길이 닿는 세 방향(경사로 다리·이웃 섬 다리 2) 각각 ±12°·r > 8 비움
+foreach (float g in LocalGapDeg(slot)) if (d > 8f - r && Mathf.Abs(Mathf.DeltaAngle(Mathf.Atan2(l.x, -l.z) * Mathf.Rad2Deg, g)) < 12f) return false;
+```
+
+M3 — 거대 괴물 굽는 층(`GiantNavMeshBaker` 125행 근처):
+
+```csharp
+var floors = new List<float> { ground };
+// §89.23 하늘 섬(24 m)도 거대 괴물이 다닌다 — 경사로·다리로 이어지므로 같은 굽기 범위에 넣는다
+if (scene.name == HeavenOfBakeryMapBuilder.MapName) floors.Add(HeavenOfBakeryMapBuilder.SkyTop);
+```
+
+S1 — 실내에서 술래 줄이기(`MonsterController`, 새 필드):
+
+```csharp
+public const float IndoorScale = 0.45f, IndoorScaleSeconds = 0.3f;   // §89.23 베이커리 건물 안: 키 6.47 → 약 2.9 m
+private float baseScale, indoorT, indoorK = 1f;                      // Awake(140행)에서 baseScale = transform.localScale.x
+private void LateUpdate()
+{
+    // 위치만으로 정한다(모든 화면이 같은 IndoorZone 상자로 계산) — 원격 술래도 따로 알림 없이 같은 크기
+    bool inside = IndoorZone.At(transform.position + Vector3.up * 0.5f) != null;
+    indoorT = Mathf.MoveTowards(indoorT, inside ? 1f : 0f, Time.deltaTime / IndoorScaleSeconds);
+    float k = Mathf.Lerp(1f, IndoorScale, indoorT);
+    transform.localScale = Vector3.one * baseScale * k;
+    indoorK = k;
+}
+// public float CameraDistance => cameraDistance;                     // 119행 — 카메라가 읽는 값
+public float CameraDistance => cameraDistance * indoorK;             // 실내에서 카메라도 가깝게(벽에 묻히지 않게)
+```
+
+S1 — 건물 프리팹에 실내 상자(`HobBakeryBuildings.BuildOne`, json의 방 상자·문 통로에서):
+
+```csharp
+var zone = root.AddComponent<IndoorZone>();
+zone.EditorSetBoxes(info.boxes.Select(b => BoxToLocal(b, ex, ey, ez)).Append(DoorTunnelBox(info.door, ex, ey, ez)).ToArray());
+```
+
+#### 4. 위험·확인할 것
+
+- 섬끼리 다리가 약 167 m로 길다(쉬는 발판 2곳). 더 짧게 하려면 섬 거리를 줄여야 하는데 그러면 12시 섬이 다시 가까워진다 — Q1.
+- 큰 섬이 62 m로 줄면 과일밭 4자리·탈출구 4곳·광장이 빽빽해진다. 장식(`BuildFieldDeco`)·폭포·쿠키 시작 자리 개수를 넓이 비율(약 0.38배)로 줄인다.
+- 서브 섬 모델이 커져(반지름 50) 서브 맵 장식·상자·밀밭 개수가 늘어나면 그리는 양이 늘어난다 — 정적 묶음은 서브 맵 묶음이 옮겨져서 못 쓰므로(§89.20) 장식은 GPU 인스턴싱 재질로.
+- 경사로가 큰 섬 밖 공중으로 나가므로 아래 받침(기둥·떠 있는 바위)이 없으면 떠 보인다 — 모델에 받침 기둥을 섬 아래 바위까지 내림.
+- §89.22 조각 모델·건물 프리팹은 그대로 쓴다(S1을 고르면 문 높이만 바뀌어 건물 7채를 다시 내보내고 조각 모델도 다시 만든다).
+- Unity 프로젝트가 F: → E: 드라이브로 옮겨졌다 — Blender 스크립트(`bk/`)의 F: 경로를 E:로 바꾼다.
+
+#### 5. 질문
+
+- Q1 섬 크기·거리: 큰 섬 r 62 / 서브 섬 r 50 / 섬 중심 거리 154(12시 섬 가장자리 틈 16 → 42 m, 섬끼리 다리 약 167 m)로 할지. 다리를 짧게(약 120 m) 하려면 거리 130으로 줄임(틈 18 m).
+- Q2 술래 건물 입장 방식: (A, 추천) 실내에서 술래가 0.45배로 줄어듦 + 문 3.3 m · (B) 건물·문을 술래 키에 맞게 크게(문 약 7 m — 건물 폭 40~60 m가 되어 줄어든 큰 섬에 4채가 안 들어감) · (C) 이 맵에서만 술래를 항상 작게(약 0.6배).
+- Q3 삼각형 다리를 섬 가장자리끼리 곧게 잇는 것(그림 그대로)으로 할지, 경사로 꼭대기끼리 잇는 것으로 할지.
+
+### 89.24 §89.23 고침 — 다리 모두 없앰·섬마다 하늘 대포 2개(AI도 사용)·1층 일반 건물 뺌·술래 크기 건물(계획, 2026-11-19)
+
+§89.23에서 바뀐 결정(사용자):
+- 1층(큰 섬)에는 재료 건물(딸기잼 공장)만 둔다 — 일반 건물 3채(과일 창고·오렌지 공방·사과 공방)는 뺀다.
+- 다리는 모두 없앤다(지금의 하늘 다리·N 발판·계단, §89.23의 섬끼리 삼각형 다리). 1층 → 세 섬은 나선 경사로 3개(지금의 75% 길이)로만.
+- 세 섬 사이는 대포로 오간다. 섬마다 대포 2개: 초콜릿 섬 → 밀·아몬드, 아몬드 섬 → 밀·초콜릿, 밀 섬 → 초콜릿·아몬드. AI(쿠키 미끼)도 쓴다.
+- 술래 입장: B안 — 건물·문을 술래 키(6.47 m)에 맞게 키움(문 높이 7 m, 건물 2.59배). 텍스처 깨짐·z-fighting 없게.
+- 대포 모델은 사용자가 FBX로 줄 예정 — 그전까지 임시 대포(`HOB_SkyCannon`)를 쓴다.
+
+배치도: `layout_8923_v3.png`(위에서 본 그림) · 임시 대포: `skycannon_prev.png`
+
+#### 1. 배치(제안 값)
+
+| 항목 | 값 |
+|---|---|
+| 큰 섬(1층) | 반지름 85 m. 광장·술래방 + 남쪽(270°) 재료 건물 자리 1곳(64 × 50 m) + 탈출구 4곳(30°·150°·240°·300°) |
+| 서브 섬 3개 | 반지름 68 m(큰 섬이 약 1.25배), 모두 높이 24 m, 같은 모델 |
+| 섬 방향·거리 | 초콜릿 90°·아몬드 210°·밀 330°, 섬 중심 r 177(큰 섬 가장자리 85 + 경사로 24 + 섬 반지름 68) |
+| 나선 경사로 | 큰 섬 가장자리 → 서브 섬 가장자리에 바로 닿음(다리 없음). 3줄 지그재그, 길이 약 72 m(지금 96.7 m의 75%), 폭 9 m, 기울기 약 19° |
+| 대포 | 섬마다 2개, 가장자리에서 12 m 안쪽, 포구가 목표 섬을 봄. 착지 자리 = 목표 섬 가장자리에서 18 m 안쪽(흰 원) |
+| 대포 비행 | 약 201 m, `ColaCannonRules.FlightSeconds` = min(7, 1 + 201/40) ≈ 6초, 꼭대기 +40 m(`ApexHeight` 상한) |
+| 마녀 오는 쪽 | 270°(아몬드·밀 섬 사이 빈 하늘) |
+| AI 경로 좌표 | 가장 먼 곳 r 177 + 68 = 245 m < `DecoyRoute.CoordLimit` 327 m — 그대로 담김 |
+
+#### 2. 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| A0 | 임시 대포 `HOB_SkyCannon`(클라우드 Blender): 받침 + `SkyCannon_Turret` + `SkyCannon_Barrel`(핀 2.2 m, 포구 +Z 2.8 m, 뒤 −Z 1.8 m) + `SkyCannon_Hatch`(뒤, 위로 젖혀짐) + 뒤 계단 4칸. 사용자 FBX가 오면 같은 이름(Turret/Barrel/Hatch) 규칙으로 바꿔 끼움 | 모델 완료(미리보기) · Unity 넣기 ✅(`HOB_SkyCannon` 프리팹·섬마다 2대 배치) |
+| M1 | `HeavenOfBakeryMapBuilder`: 큰 섬 r 85·서브 섬 r 68(모델 다시 만듦)·`Slots` 세 방향·`LotDeg` 1자리·`Exits`·`WitchDeg 270`·`MapRadius`. `BuildBridge`·`Spans`·`SkyBridgeEnd` 호출 주석 처리, `BuildRamps` 3개(경사로 꼭대기가 섬 가장자리에 바로 닿게), `SlotGaps`는 경사로 1곳만 | ✅ 2026-11-19 — 사용자 확인 뒤 하늘 섬 고도 24 → 48 m(섬 중심 r 168 → 192, `MapRadius` 270), 경사로 `HOB_SwitchRamp_Wide_48m`(같은 기울기, 한 줄 36.4 m, 길 145 m). 시험 굽기: 쿠키 AI 1층→세 섬 PathComplete(275~321 m), 거대 괴물 섬·경사로 못 감 |
+| M2 | 1층 일반 건물 빼기: `BuildLots`의 `generalModels` 설치 주석, `LotDeg` 1개, `MapLayout.LotCount` 4 → 1(재료 건물 자리 고정), `MapLayoutRandomizer`의 `generalBuildings` 빈 배열 허용 | ✅ 2026-11-19 |
+| C1 | 고정 대포 데이터: `EscapeState.Cannon`에 `FixedId`(sbyte, −1 = 콜라 대포 아이템) 추가, 직렬화 1바이트. 씬의 `SkyCannonPoint`(번호·목표 섬·착지 자리) 6개를 `EscapeManager`가 들고 있음 | ✅ 2026-11-19 |
+| C2 | 탑승: 새 요청 `EscapeOp.SkyCannonBoard = 29`(A = 대포 번호, B = 탈 사람 — 0이면 보낸 사람, AI면 AI 번호). 방장 `EscapeAuthority.SkyCannonBoard`가 쓰는 중인지·거리·쿨다운을 보고 `State.Cannons`에 `FixedId` 항목을 넣음(Dest = 착지 자리, AimYaw = 대포 방향 고정) — 시간표·보호·`IsRidingCannon`은 콜라 대포 것을 그대로 씀 | ✅ 2026-11-19 |
+| C3 | 화면: `SkyCannonView`(씬에 놓인 대포 — 생성·사라짐 없음) — `ColaCannonView`의 해치·회전대·포신·거품·비행·착지 그리기를 공통 함수로 빼서 같이 씀. 다른 사람도 탈 수 있게 안내 문구 "E 대포 타기(→ 밀 공장)". 한 번에 한 명, 쿨다운 2초 | ✅ 2026-11-19 |
+| C4 | AI: `DecoyGait.Fly = 6` 추가 — `DecoyRoute.Sample`이 Fly 경로를 `ColaCannonRules.FlightPoint`(입구 → 착지, 모든 화면이 같은 시각으로 계산)로 그림. `DecoyBrain`: 목표 지점이 다른 섬이고 대포 쪽이 더 가까울 때(또는 도망칠 때 술래 반대쪽 섬으로) → 대포 계단까지 걷기 경로 → 도착 시각에 `SkyCannonBoard`(B = AI 번호) → 들어가기 1.5초 + 비행 경로(Fly) → 착지 뒤 다음 행동 | ✅ 2026-11-19 |
+| C5 | 거대 괴물·술래: 대포는 쿠키·AI만(술래·거대 괴물은 경사로) — 확인 필요(Q1) | ✅ 2026-11-19 |
+| B1 | 건물 B안: §89.22 파이프라인(`bk/cfgk.py`)의 문 높이 기준 2.7 → 7.0 m(`f = 7.0/(zt−zb)`, 2.59배) → s1(UV·굽기 4096을 다시 — 늘린 크기에 맞춰 텍스처 늘이지 않고 새로 굽기) → s2(방은 외관 0.4 m 안·문 통로) → 소품(쿠키 크기 그대로, 넓어진 방에 더 놓음) → s3 → 조각 모델 다시. 1층 재료 건물 1채 + 섬 3채 = 4채만(일반 3채는 보관) | ⬜ |
+| B2 | 건물 내부 높이가 커지므로 다락 높이(`deck_h`)·계단 길이·조명 범위·`IndoorZone` 상자 다시 계산. 술래 카메라(4.5 m)가 방 안에서 벽에 묻히지 않는지 Play Mode로 확인 | ⬜ |
+| N1 | 거대 괴물 길: 하늘 섬 높이(24 m) 굽기 추가(`GiantNavMeshBaker` floors), 경사로 폭 9 m라 몸 반지름 3 m가 지나감. 쿠키 AI 길(`DecoyNavMesh`)은 섬 셋이 경사로로만 이어지고, 섬끼리는 대포(길 밖)로 이어짐 | ✅ 2026-11-19 — 사용자 답에 따라 거대 괴물은 1층만: `MapNavMeshRules.GiantSources`가 `Ramps` 아래 충돌체를 못 걷는 곳으로 둠. 시험 굽기: 쿠키 AI 1층→세 섬 PathComplete(199~247 m), 거대 괴물 세 섬 PathPartial·경사로 위 샘플 없음 |
+| T | EditMode `Request1124Tests`: 대포 6개가 각자 다른 두 섬을 봄·착지 자리가 목표 섬 위·비행 ≤ 7초, `DecoyRoute` Fly 직렬화 왕복, `SkyCannonBoard` 거절(이미 탄 중·멀리·술래). Play Mode: 쿠키가 대포 6개 모두 타고 착지, AI가 대포를 써서 섬을 옮김(방장 교체 중에도), 술래가 4채 모두 들어가 방 안을 돎, 거대 괴물이 경사로로 섬에 올라감, 콘솔 오류 없음 | 🟨 2026-11-19 대포·AI·거대 괴물(1층만) 부분 완료 — 술래가 건물 4채에 들어가는 시험은 건물 B안(B1·B2) 뒤 |
+| DOC | 이 절 완료 표시·README | ⬜ |
+
+#### 3. 코드 스니펫(실제 소스 기준 바꿀 자리)
+
+C1 — `EscapeState.Cannon`(지금 175~189행)에 고정 대포 번호:
+
+```csharp
+public struct Cannon
+{
+    public int Id;
+    public int Owner;        // 탄 사람(쿠키 액터 번호 또는 AI 번호)
+    public Vector3 Pos;
+    public float Yaw;
+    public double SummonedAt;
+    public double BoardAt;   // 0 = 아직 안 탐
+    public float AimYaw;
+    public Vector3 Dest;
+    public float Flight;
+    public float Ceiling;
+    public sbyte FixedId;    // §89.24 −1 = 콜라 대포 아이템, 0~5 = 하늘 섬에 놓인 대포(SkyCannonPoint 번호) — 모델을 새로 만들지 않고 씬의 대포를 움직인다
+    public bool Boarded => BoardAt > 0;
+}
+```
+
+C2 — 요청과 방장 처리(`EscapeNet.cs` 35행 뒤, `EscapeAuthority.cs` 481행 `switch`):
+
+```csharp
+// EscapeNet.cs
+SkyCannonBoard = 29, // A = 하늘 대포 번호(0~5), B = 탈 AI 번호(0 = 보낸 쿠키) — 섬 → 다른 섬으로 발사(§89.24)
+
+// EscapeAuthority.cs
+case EscapeOp.SkyCannonBoard: changed = SkyCannonBoard(r.Sender, r.A, r.B); break;
+
+private bool SkyCannonBoard(int actor, int fixedId, int decoyId)
+{
+    SkyCannonPoint p = manager.SkyCannon(fixedId);
+    if (p == null) return false;
+    int rider = decoyId != 0 ? decoyId : actor;
+    if (decoyId != 0 ? !PhotonNetwork.IsMasterClient || actor != PhotonNetwork.LocalPlayer.ActorNumber : !IsActiveEscaper(actor) || RoomState.IsMonster(actor)) return false;
+    double now = PhotonNetwork.Time;
+    foreach (EscapeState.Cannon c in State.Cannons)
+        if (c.FixedId == fixedId && now < c.BoardAt + ColaCannonRules.LandAt(c.Flight)) return false;   // 한 번에 한 명
+    Vector3 steps = ColaCannonRules.StepsPoint(p.transform.position, p.Yaw);
+    if (decoyId == 0 && !IsNear(actor, steps, ColaCannonRules.BoardReach + 1f)) return false;
+    Vector3 mouth = ColaCannonRules.Mouth(p.transform.position, p.Yaw, ColaCannonRules.FirePitch);
+    float flight = ColaCannonRules.FlightSeconds(Flat(p.Landing.position - mouth));
+    State.Cannons.Add(new EscapeState.Cannon
+    {
+        Id = State.NextId++, Owner = rider, Pos = p.transform.position, Yaw = p.Yaw, SummonedAt = now, BoardAt = now,
+        AimYaw = p.Yaw, Dest = p.Landing.position, Flight = flight, Ceiling = ColaCannonRules.NoCeiling, FixedId = (sbyte)fixedId,
+    });
+    if (decoyId == 0) moveExemptUntil[actor] = Time.realtimeSinceStartup + ColaCannonRules.LandAt(flight) + 3f;
+    return true;
+}
+```
+
+(지금 `CannonBoard`의 착지 찾기 `TryCannonLanding`은 "보는 방향 맵 끝"이라 하늘 대포에는 쓰지 않는다 — 착지 자리를 맵 빌더가 정한다.)
+
+C3 — 화면: `ColaCannonPresenter.Sync`(지금 `Instantiate(prefab, …)`)에서 고정 대포는 만들지 않고 씬 대포에 붙인다:
+
+```csharp
+foreach (EscapeState.Cannon c in s.Cannons)
+{
+    if (c.FixedId >= 0) { SkyCannonView sky = manager.SkyCannon(c.FixedId)?.View; if (sky != null) sky.Apply(c); continue; }   // §89.24
+    if (views.TryGetValue(c.Id, out ColaCannonView view) && view != null) { view.Apply(c); continue; }
+    ...
+}
+```
+
+C4 — AI 비행 경로(`DecoyRoute.cs`):
+
+```csharp
+public enum DecoyGait : byte { Idle = 0, Walk = 1, Run = 2, Hide = 3, Repair = 4, Dance = 5,
+    Fly = 6,   // §89.24 하늘 대포: Points = {입구, 착지}, HoldUntil = 비행 초 — 포물선은 ColaCannonRules.FlightPoint
+}
+
+public static Pose Sample(DecoyRoute r, double now, float fallbackYaw = 0f)
+{
+    if (r.Gait == DecoyGait.Fly && r.Points != null && r.Points.Length == 2)
+    {
+        float t = (float)(now - r.StartAt);
+        Vector3 a = r.Points[0], b = r.Points[1];
+        return new Pose { Position = ColaCannonRules.FlightPoint(a, b, t, r.HoldUntil), Yaw = Mathf.Atan2(b.x - a.x, b.z - a.z) * Mathf.Rad2Deg, Moving = true };
+    }
+    ...   // 지금 그대로
+}
+```
+
+C4 — `DecoyBrain`(지금 `Begin`·`PickMapPoint`·`TryRoute` 둘레):
+
+```csharp
+// 목표가 다른 하늘 섬이면: 걸어서 경사로 2개(내려갔다 올라감)보다 대포가 가까울 때 대포를 쓴다
+private bool TryCannonHop(Agent a, Vector3 pos, Vector3 target, double now)
+{
+    int from = manager.IslandOf(pos), to = manager.IslandOf(target);
+    if (from < 0 || to < 0 || from == to) return false;              // 1층(−1)이나 같은 섬이면 걷기
+    SkyCannonPoint c = manager.SkyCannonFor(from, to);
+    if (c == null || !TryRoute(a, pos, ColaCannonRules.StepsPoint(c.transform.position, c.Yaw), DecoyGait.Walk, now, 0f, c.Yaw)) return false;
+    a.PendingCannon = c.Id;                                           // 경로 끝(HoldUntil)에서 SkyCannonBoard(c.Id, a.Id)를 보내고
+    a.PendingAfter = target;                                          // 비행 경로(Fly)를 쓴 뒤 착지점에서 target으로 이어 간다
+    return true;
+}
+```
+
+M1 — 다리 없애기(`Build()` 131행 근처, `BuildRamps`):
+
+```csharp
+BuildRamps(ground);
+// BuildBridge(ground);                                  // §89.24 다리 모두 없앰(N 발판·6 m 계단·하늘 다리)
+BuildSkyCannons(ground);                                 // §89.24 섬마다 대포 2개 + 착지 자리
+...
+private static void BuildSkyCannons(Transform ground)
+{
+    Transform group = Group(ground, "SkyCannons");
+    int id = 0;
+    for (int s = 0; s < Slots.Length; s++)
+        for (int t = 0; t < Slots.Length; t++)
+        {
+            if (t == s) continue;
+            Vector3 cs = Flat(Slots[s].pos), ct = Flat(Slots[t].pos), d = (ct - cs).normalized, side = Vector3.Cross(Vector3.up, d) * 7f;
+            Vector3 at = cs + d * (SkyR - 12f) + side + Vector3.up * SkyTop;
+            Vector3 land = ct - d * (SkyR - 18f) + side + Vector3.up * SkyTop;
+            GameObject gun = Put("HOB_SkyCannon", group, at, Quaternion.LookRotation(d));
+            var point = gun.AddComponent<SkyCannonPoint>();
+            point.EditorSet(id++, s, t, Empty(group, $"SkyLanding_{s}{t}", land, Quaternion.LookRotation(-d)));
+        }
+}
+```
+
+(번호는 콜라 대포 설치와 같이 `State.NextId++`(1225행). 대포·착지 자리는 서브 맵 묶음이 아니라 슬롯(땅)에 붙인다 — 섬 내용은 판마다 옮겨지지만 섬 자리·방향은 그대로라 대포가 가리키는 섬도 그대로다. 안내 문구의 목표 이름은 `MapLayoutRandomizer.Current`로 그 판에 그 슬롯에 온 섬 이름을 쓴다.)
+
+B1 — 건물 크기(`bk/cfgk.py`):
+
+```python
+# f = max(1, 2.7 / (zt - zb))          # §89.22: 쿠키 키(2.27 m)에 맞춰 문 2.7 m
+f = 7.0 / (zt - zb)                    # §89.24 B안: 술래 키 6.47 m + 여유 → 문 7 m(2.59배)
+```
+
+(텍스처는 늘이지 않는다 — s1에서 키운 모델로 UV를 다시 펼치고 4096으로 다시 굽는다. 방·통로는 §89.22와 같이 외관에서 0.4 m 안쪽이라 겹친 면이 없다.)
+
+#### 4. 질문
+
+- Q1 대포는 쿠키·AI만 쓰나요, 술래도 쓰나요? (거대 괴물은 경사로로만 — 대포 안에 안 들어감)
+- Q2 대포 쿨다운: 한 대에 한 명씩, 착지 뒤 2초면 다음 사람이 탈 수 있게 할까요?
+- Q3 이 배치(큰 섬 r 85 · 서브 섬 r 68 · 섬 중심 r 177 · 대포 비행 약 201 m/6초)로 진행할까요?
+
+### 89.25 §89.24 확정 — 하늘 대포는 쿠키·AI만·한 대 한 명·착지 2초 뒤·배치 v3 그대로, Heaven Of Bakery에서 콜라 대포 아이템 뺌(계획, 2026-11-19)
+
+§89.24 질문 답(사용자):
+- Q1 대포는 쿠키와 AI만. 술래는 나중에 텔레포트 스킬을 따로 만든다.
+- Q2 대포 한 대에 한 명, 착지 2초 뒤 다음 사람.
+- Q3 배치도 v3 그대로(큰 섬 r 85·서브 섬 r 68·섬 중심 r 177·대포 비행 약 201 m/6초).
+- 추가: 하늘 대포가 생기면 콜라 대포는 필요 없으므로 **이 맵에 한해** 콜라 대포를 없앤다(다른 맵은 그대로).
+
+#### 0. 지금 코드 — 콜라 대포가 맵에 들어오는 길(읽은 소스)
+
+| 길 | 소스 | 지금 값 |
+|---|---|---|
+| 일반 상자의 쿠키 아이템 | `EscapeAuthority.cs` 132~137행 `while (normalItems.Count < normalChests) { ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights); … }` | `EscapeCatalog.cookieItems` = Skates 5 · Pumpkin 3 · Recorder 5 · Flashbang 3 · BoxingGlove 4 · **ColaCannon 3**(23 중 3, 약 13%) — 맵 구분 없음 |
+| 설치(아이템 사용) | `ToolUser.cs` 275행 `case ToolKind.ColaCannon:` → `EscapeAuthority.cs` 1222~1225행 `State.Cannons.Add(…)`, 검사 `CanSummonCannon`(1035행) | 맵 구분 없음 |
+| 개발용 시작 아이템 | `OfflineModeBootstrap.cs` 29행 `startItems = { "ColaCannon", "Pumpkin", "Flashbang", "BoxingGlove" }` → `DevGive`(990행) | 오프라인 시험 판에서 1칸에 콜라 대포 |
+| 그리기 | `ColaCannonPresenter.Sync` — `State.Cannons`에 생긴 것을 `Resources/Escape/ColaCannon`으로 만든다 | §89.24 C3에서 `FixedId >= 0`(하늘 대포)은 만들지 않고 씬 대포에 붙인다 |
+
+맵별 값은 이미 레시피(`EscapeRecipeSO`, 맵마다 `Recipe_<맵>`, `catalog.RecipeFor(mapName)`)에 둔다 — 콜라 대포 빼기도 레시피에 둔다(카탈로그는 모든 맵 공용이라 거기서 지우면 다른 맵에서도 사라진다).
+
+#### 1. 단계
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| X1 | `EscapeRecipeSO`에 `excludedItems`(ItemSO[]) — 이 맵에서 상자·시작 아이템으로 나오지 않는 아이템. `Recipe_HeavenOfBakery`에 ColaCannon 넣음(`EscapeAssetsBuilder`가 레시피를 다시 만들 때도 유지) | ✅ 2026-11-19 |
+| X2 | 상자 채우기: `PickWeighted`에 제외 목록을 넘겨 콜라 대포 몫(3)을 빼고 나머지 비율(5:3:5:3:4)로 고름 | ✅ 2026-11-19 |
+| X3 | 설치 거절(방어): `CanSummonCannon`이 이 맵(`recipe.Excludes`)이면 false — 다른 경로(개발 주기·옛 상태)로 들어와도 설치되지 않게. `ToolUser`는 설치 자리를 못 찾았을 때와 같은 거절 알림을 띄운다(문구는 구현 때 지금 쓰는 것 확인) | ✅ 2026-11-19 |
+| X4 | 개발용: `OfflineModeBootstrap`의 시작 아이템 중 제외 아이템은 건너뜀(Heaven Of Bakery 오프라인 시험 판에서 콜라 대포가 손에 들리지 않게) — 다른 맵은 그대로 | ✅ 2026-11-19 |
+| S1 | 하늘 대포 탈 사람: 쿠키(`IsActiveEscaper && !IsMonster`)·AI만 — `SkyCannonBoard`에서 술래·스파이 술래 모습 거절, 술래 화면에는 E 안내를 띄우지 않음(`SkyCannonView.CanInteract`) | ✅ 2026-11-19 |
+| S2 | 한 대 한 명·쿨다운: 같은 `FixedId`가 비행 중이거나 착지 뒤 2초(`SkyCannonRules.Cooldown = 2f`) 안이면 거절. AI는 쓰기 전에 대포가 비었는지 보고, 차 있으면 기다리거나 경사로로 감 | ✅ 2026-11-19 |
+| T | EditMode `Request1125Tests`: Heaven Of Bakery 레시피로 상자 1000개를 채워도 ColaCannon 0개·다른 쿠키 아이템 비율 유지, 다른 맵 레시피는 ColaCannon이 나옴, `CanSummonCannon` 이 맵에서 거절, 하늘 대포 술래 거절·쿨다운 2초. Play Mode: HOB 오프라인 판 시작 아이템에 콜라 대포 없음, 상자에서 안 나옴, 쿠키·AI가 하늘 대포로 섬을 옮김 | ✅ 2026-11-19 |
+| DOC | 이 절·§89.24 완료 표시·README | ⬜ |
+
+(§89.24의 A0~N1 단계는 그대로 하고, C5는 "쿠키·AI만"으로 확정한다.)
+
+#### 2. 코드 스니펫(실제 소스 기준 바꿀 자리)
+
+X1 — `EscapeRecipeSO.cs`(지금 `repairKitCount` 다음):
+
+```csharp
+[Header("Request1009Plan.md §89.25 — 이 맵에서 빼는 아이템")]
+[Tooltip("이 맵의 상자·시작 아이템에서 나오지 않고, 써도 설치되지 않는 아이템(예: Heaven Of Bakery의 콜라 대포 — 섬 사이 하늘 대포가 대신한다).")]
+[SerializeField] private ItemSO[] excludedItems = new ItemSO[0];
+public bool Excludes(ItemSO item) => item != null && System.Array.IndexOf(excludedItems, item) >= 0;
+public bool Excludes(string itemId)
+{
+    foreach (ItemSO it in excludedItems) if (it != null && it.ItemId == itemId) return true;
+    return false;
+}
+```
+
+X2 — `EscapeAuthority.cs` 134행과 209행:
+
+```csharp
+// ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights);
+ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights, recipe);   // §89.25 이 맵에서 뺀 아이템(Heaven Of Bakery의 콜라 대포)은 고르지 않는다
+
+private ItemSO PickWeighted(IReadOnlyList<ItemSO> items, IReadOnlyList<int> weights, EscapeRecipeSO except = null)
+{
+    if (items == null || items.Count == 0) return null;
+    int total = 0;
+    for (int i = 0; i < items.Count; i++) if (except == null || !except.Excludes(items[i])) total += WeightAt(weights, i);
+    if (total <= 0) return null;                                                  // 예전: 무게가 없으면 아무거나 — 빼야 할 것까지 나올 수 있었다
+    int roll = rng.Next(total);
+    for (int i = 0; i < items.Count; i++)
+    {
+        if (except != null && except.Excludes(items[i])) continue;
+        roll -= WeightAt(weights, i);
+        if (roll < 0) return items[i];
+    }
+    return null;
+}
+```
+
+(`total <= 0`일 때 예전처럼 `items[rng.Next(items.Count)]`를 돌려주면 빼야 할 아이템이 나올 수 있어 `null`로 바꾼다 — 호출하는 쪽(137행)은 이미 `if (extra == null) break;`.)
+
+X3 — `EscapeAuthority.cs` 1035행:
+
+```csharp
+private bool CanSummonCannon(int actor, Vector3 pos)
+{
+    if (!IsActiveEscaper(actor) || RoomState.IsMonster(actor)) return false;
+    if (recipe != null && recipe.Excludes(catalog.Find("ColaCannon"))) return false;   // §89.25 Heaven Of Bakery: 하늘 대포가 대신한다
+    foreach (EscapeState.Cannon c in State.Cannons) if (c.Owner == actor && c.FixedId < 0) return false;   // §89.24 하늘 대포 탑승은 세지 않는다
+    return IsNear(actor, pos, ColaCannonRules.SummonReach) && manager.IsValidTeleport(pos);
+}
+```
+
+X4 — `OfflineModeBootstrap.cs` 164~165행:
+
+```csharp
+EscapeRecipeSO recipe = EscapeCatalogSO.Current != null ? EscapeCatalogSO.Current.RecipeFor(gameObject.scene.name) : null;   // 맵 씬 이름 = 레시피 mapName
+for (int slot = 0; slot < slotItems.Length && slot < startItems.Length; slot++)
+{
+    if (string.IsNullOrEmpty(startItems[slot]) || (recipe != null && recipe.Excludes(startItems[slot]))) continue;   // §89.25 이 맵에서 뺀 아이템은 주지 않는다
+    if (auth.DevGive(actor, startItems[slot], slot)) slotItems[slot] = startItems[slot];
+}
+```
+
+S1·S2 — 하늘 대포 규칙(§89.24 `SkyCannonBoard`에 더함):
+
+```csharp
+public static class SkyCannonRules
+{
+    public const float Cooldown = 2f;   // §89.25 착지 뒤 다음 사람이 탈 수 있을 때까지
+    // 같은 대포가 비행 중이거나 착지 뒤 Cooldown 안이면 바쁨
+    public static bool Busy(EscapeState s, int fixedId, double now)
+    {
+        foreach (EscapeState.Cannon c in s.Cannons)
+            if (c.FixedId == fixedId && now < c.BoardAt + ColaCannonRules.LandAt(c.Flight) + Cooldown) return true;
+        return false;
+    }
+}
+
+// SkyCannonBoard: 쿠키·AI만(술래 거절 — 술래는 나중에 텔레포트 스킬, §89.25 Q1)
+if (decoyId == 0 && (!IsActiveEscaper(actor) || RoomState.IsMonster(actor))) return false;
+if (SkyCannonRules.Busy(State, fixedId, now)) return false;
+```
+
+(방장이 목록을 지우는 곳 — `EscapeAuthority.cs` 334행 `bool done = c.Boarded ? now >= c.BoardAt + LandAt + LandGrace …` — 하늘 대포는 `LandGrace`(0.8초) 대신 `Cooldown`(2초)까지 남겨 둬야 `Busy`가 맞다: `float keep = c.FixedId >= 0 ? SkyCannonRules.Cooldown : ColaCannonRules.LandGrace;`)
+
+#### 3. 영향·확인할 것
+
+- 상자 쿠키 아이템이 6종 → 5종(이 맵): 일반 상자 수(쿠키 × 8)는 그대로라 나머지 아이템이 조금씩 더 나온다(스케이트 5/20 = 25% 등).
+- `ColaCannonPresenter`·`ColaCannonView`·콜라 대포 모델은 지우지 않는다 — 다른 맵에서 쓰고, 하늘 대포가 화면 코드(해치·회전대·포신·비행)를 같이 쓴다.
+- 아이템 설명 화면·튜토리얼에 콜라 대포가 맵별로 나오는 곳이 있으면(로비 아이템 목록) 이 맵에서는 하늘 대포 안내로 바꿀지 — 이번 계획에는 넣지 않고 확인만 한다.
+
+#### 89.25 추가 결정(2026-11-19, 구현 전 질문 답)
+
+| 항목 | 결정 |
+|---|---|
+| 섬 크기 | 1층(큰 섬) 반지름 85 m · 하늘 섬 3개 모두 68 m(높이 24 m) · 섬 중심 r 177 |
+| 거대 괴물 | 1층만 — 경사로·하늘 섬은 거대 괴물 길(NavMesh)에서 뺀다(굽는 층 추가 안 함, 경사로 입구에 못 걷는 상자) |
+| 나선 경사로 폭 | 9 m(술래 몸 겉 폭 약 7 m) |
+| 하늘 섬 장식 | 건물 둘레(약 30 m 안)만 지금 밀도로, 바깥은 바닥 타일만 |
+| 1층 빈 땅 | 숨을 곳 장식(나무·꽃밭·수레·큰 과일 등)으로 촘촘히 |
+| 자리 배분 | 탈출구 4곳은 1층 가장자리, 상자·로켓·무지개 상자 자리는 1층과 섬 3곳에 고르게, 쿠키 시작은 1층 |
+| 대포 모델 | 임시 대포 `HOB_SkyCannon`으로 끝까지 구현·시험(부품 이름 Turret/Barrel/Hatch) — 사용자 FBX가 오면 교체 |
+| 일반 건물 3채 | 지금 크기로 보관(프리팹·조각 모델 유지, 맵에는 안 놓음) |
+| 아이템(상자 내용) | 나중에 따로 고침(이번 범위 아님) |
+| 진행 | 단계마다 Unity 사진으로 확인받고 다음 단계 |
+
+#### 4. 구현 결과(2026-11-19)
+
+- 하늘 섬 고도 24 → 48 m(사용자: "지금 고도의 2배"), 섬 중심 r 192, 맵 반경 270. 나선 경사로 `HOB_SwitchRamp_Wide_48m`(한 줄 36.4 m, 길 145 m) — 반환점 두 곳은 평평하게(오르는 반환점은 안쪽 가장자리가 약 60°라 걷지 못했다), 곧은 세 줄만 약 23°로 오른다.
+- 상태 v12: `EscapeState.Cannon.Sky`(0 = 콜라 대포, n = 하늘 대포 n−1). 요청 `EscapeOp.SkyCannonBoard = 29`. 방장 `SkyCannonBoard`(쿠키만, 술래 거절, 이미 탄 중 거절, 계단 앞 4.3 m), `DecoySkyCannonBoard`(AI, Owner = −AI 번호). 기록은 착지 + 2초(`SkyCannonRules.Cooldown`)까지 남아 `Busy`가 그 대포를 막는다.
+- 화면: 씬에 박힌 대포마다 `SkyCannonView`(맵 빌더가 붙임) — 해치·포신(쉬는 20° → 발사 40°)·거품·착지 연기, 탄 쿠키 화면만 몸을 옮김, E 안내 "대포 타기 → (섬 이름)"(판마다 바뀌는 섬 내용을 따라감). `ColaCannonPresenter`는 하늘 대포 기록을 건너뛴다.
+- AI: `DecoyGait.Fly = 6`(계단 앞 → 병 안(숨김) → 포물선 → 착지, 모든 화면 같은 시각), `DecoyBrain`이 하늘 섬에서 행동을 마칠 때 30% 확률로 같은 섬의 빈 대포 계단으로 걸어가 탄다(바쁘면 8초까지 기다림). 비행 중에는 도망·맞기·잡기 없음. `NetJumpProbe`는 대포 비행을 순간이동으로 세지 않는다.
+- 콜라 대포: `Recipe_HeavenOfBakery.excludedItems = [ColaCannon]` — 상자(`PickWeighted` 제외), 개발용 시작·주기 아이템(`DevGive`), 설치(`CanSummonCannon`) 모두 막음. 다른 맵 레시피는 그대로.
+- 거대 괴물: `MapNavMeshRules.GiantSources`가 `Ramps` 아래를 못 걷는 곳으로 — 1층만.
+- 시험: EditMode `Request1124Tests` 7개 + 관련 묶음(DecoyAi·Escape·Request1123) 72개 통과. 전체 512개 중 실패 1개는 이번 작업과 무관(`Request1107Tests` 거대 괴물 등장 확률이 설정 에셋에서 1.0 — 30% 기대).
+- Play Mode(오프라인 판): 쿠키가 대포 0(SW → N)에 E → 병 안(몸 숨김·잡기 보호) → 6.6초 비행 → 착지 자리, 착지 + 2초 동안 AI 탑승 거절, 그 뒤 비어 있음. AI가 75초 동안 대포 6대를 모두 써서 섬을 옮김(숨김·비행·착지 뒤 걷기). 상자·손에 콜라 대포 없음. 콘솔 오류 없음(시험용 순간이동 NetGuard 경고만).

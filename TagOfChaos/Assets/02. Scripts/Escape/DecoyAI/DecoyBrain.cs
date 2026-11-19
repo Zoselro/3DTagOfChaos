@@ -47,7 +47,16 @@ public class DecoyBrain : MonoBehaviour
         public bool FleeAfterHit;
         public Vector3 FleeFrom;
         public double FleeRetryUntil;   // 길을 못 찾으면 이때까지 다시 시도
+        // §89.24 하늘 대포로 다른 섬에 가려고 대포 계단 앞으로 걷는 중(대포 번호, −1 = 아님). HopUntil까지 바쁘면 기다린다.
+        public int Hop = -1;
+        public double HopUntil;
+        public bool Flying(double now) => HasRoute && Route.Gait == DecoyGait.Fly && now < Route.EndsAt;
     }
+
+    // §89.24 하늘 섬 위에서 한 행동을 마칠 때 이 확률로 같은 섬의 대포를 타고 다른 섬으로 간다.
+    public const float CannonHopChance = 0.3f;
+    private const float HopWaitSeconds = 8f;      // 대포가 바쁘면(앞 사람 비행 + 2초) 계단 앞에서 이만큼까지 기다린다
+    private const float HopStepsReach = 3f;       // 계단 앞 이 거리 안이면 탄다
 
     // 방장: AI가 스턴건·물풍선·섬광탄에 맞았다(§76 A6). 그 자리에 seconds 동안 세우고(모든 화면이 같은 경로로 멈춘다),
     // 끝나면 쓴 사람 반대쪽으로 도망친다(Q6 — 세 가지 모두).
@@ -57,8 +66,10 @@ public class DecoyBrain : MonoBehaviour
         int i = manager.State.DecoyIndex(decoyId);
         if (i < 0 || manager.State.Decoys[i].Caught) return;
         double now = PhotonNetwork.Time;
+        if (a.Flying(now)) return; // §89.24 대포 안·비행 중에는 맞지 않는다
         Vector3 pos = manager.Routes.PositionOf(manager.State.Decoys[i], now);
         Release(a);
+        a.Hop = -1;
         a.Continue = false;
         a.SafeSince = -1;
         a.Act = DecoyRules.Activity.Rest;
@@ -239,6 +250,7 @@ public class DecoyBrain : MonoBehaviour
             if (i < 0) continue;
             Vector3 pos = manager.Routes.PositionOf(s.Decoys[i], now);
             if (now < a.HitUntil) continue; // 맞아서 서 있는 중(§76 A6)
+            if (a.Flying(now)) continue;     // §89.24 대포 안·비행 중(도망·판단 없음)
             if (a.FleeAfterHit && !prepare)
             {
                 Flee(a, pos, a.FleeFrom, now);
@@ -278,6 +290,7 @@ public class DecoyBrain : MonoBehaviour
                 a.Continue = false;
                 if (TryRoute(a, pos, a.ContinueTo, a.ContinueGait, now, a.ContinueRest, a.ContinueYaw)) continue;
             }
+            if (a.Hop >= 0 && BoardHop(a, pos, now)) continue; // §89.24 대포 계단 앞에 왔다
             if (a.Act == DecoyRules.Activity.Flee) a.Act = DecoyRules.Activity.Wander; // 준비 시간·술래 없음
             Next(a, pos, now, prepare);
         }
@@ -286,6 +299,7 @@ public class DecoyBrain : MonoBehaviour
     // 하던 일을 마쳤다: 다른 행동과 같은 비중으로 춤(§74 P16, 연달아 추지 않음), 아니면 가중치로 다음 일.
     private void Next(Agent a, Vector3 pos, double now, bool prepare)
     {
+        if (StartHop(a, pos, now)) return; // §89.24 하늘 섬에서 가끔 대포로 다른 섬에
         DanceCatalogSO dances = DanceCatalogSO.Current;
         bool justDanced = a.Act == DecoyRules.Activity.Dance;
         if (!justDanced && a.Act != DecoyRules.Activity.None && dances != null && DecoyRules.RollDance(a.Rng.NextDouble(), a.P, prepare, manager.BuildingCount > 0, DecoyHideSpot.All.Count > 0)
@@ -409,6 +423,64 @@ public class DecoyBrain : MonoBehaviour
         a.NextZigzag = now + DecoyRules.Range(a.Rng.NextDouble(), 1, 2);
         if (bestScore > float.MinValue && TryRoute(a, pos, bestPoint, DecoyGait.Run, now, 0f, float.NaN)) return;
         a.DecideAt = now + 0.5; // 길이 없으면 잠시 뒤 다시
+    }
+
+    // ---------------- 하늘 대포(§89.24) ----------------
+
+    // 지금 하늘 섬 위라면 같은 섬의 대포 하나(비어 있는 것)를 골라 뒤 계단 앞까지 걷는다.
+    private bool StartHop(Agent a, Vector3 pos, double now)
+    {
+        a.Hop = -1;
+        IReadOnlyList<SkyCannonView> guns = SkyCannonView.All;
+        if (guns.Count == 0 || a.Rng.NextDouble() >= CannonHopChance) return false;
+        int start = a.Rng.Next(guns.Count);
+        for (int k = 0; k < guns.Count; k++)
+        {
+            SkyCannonView gun = guns[(start + k) % guns.Count];
+            if (gun == null || !OnSameIsland(pos, gun) || SkyCannonRules.Busy(manager.State, gun.Index, now)) continue;
+            if (!NavMesh.SamplePosition(gun.StepsPoint, out NavMeshHit hit, 2.5f, DecoyNavMesh.Filter)) continue;
+            if (!TryRoute(a, pos, hit.position, DecoyGait.Walk, now, 0f, gun.Yaw)) continue;
+            Release(a);
+            a.Act = DecoyRules.Activity.Wander;
+            a.Hop = gun.Index;
+            a.HopUntil = a.Route.EndsAt + HopWaitSeconds;
+            return true;
+        }
+        return false;
+    }
+
+    // 섬 윗면 높이가 같고 가까운 대포만(1층·다른 섬의 대포는 아님).
+    private static bool OnSameIsland(Vector3 pos, SkyCannonView gun)
+    {
+        Vector3 g = gun.Pos;
+        return Mathf.Abs(pos.y - g.y) < 3f && new Vector2(pos.x - g.x, pos.z - g.z).sqrMagnitude < 75f * 75f;
+    }
+
+    // 계단 앞에 왔다: 비었으면 방장 권한으로 탑승 기록을 넣고 비행 경로(Fly)를 쓴다. 바쁘면 HopUntil까지 기다린다.
+    private bool BoardHop(Agent a, Vector3 pos, double now)
+    {
+        SkyCannonView gun = SkyCannonView.Find(a.Hop);
+        EscapeAuthority auth = manager.MasterAuthority;
+        if (gun == null || auth == null || (pos - gun.StepsPoint).sqrMagnitude > HopStepsReach * HopStepsReach) { a.Hop = -1; return false; }
+        if (SkyCannonRules.Busy(manager.State, gun.Index, now))
+        {
+            if (now > a.HopUntil) { a.Hop = -1; return false; }
+            a.DecideAt = now + 0.5;
+            return true;
+        }
+        if (!auth.DecoySkyCannonBoard(a.Id, gun.Index, out EscapeState.Cannon ride)) { a.Hop = -1; return false; }
+        a.Hop = -1;
+        Release(a);
+        a.Act = DecoyRules.Activity.Wander;
+        Vector3[] points = SkyCannonRules.DecoyFlightPoints(ride.Pos, ride.Yaw, ride.Dest);
+        for (int i = 0; i < points.Length; i++) points[i] = DecoyRoute.Quantize(points[i]);
+        points[0] = DecoyRoute.Quantize(pos); // 지금 자리에서 해치로
+        Write(a, new DecoyRoute
+        {
+            StartAt = ride.BoardAt, Gait = DecoyGait.Fly, Speed = ride.Flight, FaceYaw = ride.Yaw,
+            HoldUntil = ColaCannonRules.LandAt(ride.Flight) + 0.3f, Points = points,
+        });
+        return true;
     }
 
     // ---------------- 길 ----------------

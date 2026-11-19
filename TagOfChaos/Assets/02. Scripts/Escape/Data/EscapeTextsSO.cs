@@ -76,6 +76,11 @@ public class EscapeTextsSO : ScriptableObject
     public string carriageBoard = "Ride Pumpkin Carriage";   // 호박 마차 문 앞 E 안내(§68.7)
     public string carriageNoRoom = "No room for the carriage"; // 소환할 빈 바닥이 없음
     public string cannonBoard = "Ride Cola Cannon";          // 콜라 대포 뒤 계단 E 안내(§68.9)
+    [Tooltip("§89.24 Heaven Of Bakery 하늘 대포 뒤 계단 E 안내. {0} = 날아갈 섬 이름")]
+    public string skyCannonBoard = "Ride Cannon → {0}";
+    public string skyIslandAlmond = "Almond Factory";       // §89.24 하늘 섬 이름(대포 안내)
+    public string skyIslandChocolate = "Chocolate Factory";
+    public string skyIslandFlour = "Wheat Mill";
     public string cannonNoRoom = "No room for the cannon";   // 설치할 빈 바닥이 없음
     public string hostChanged = "{0} is now the host.";       // 대기실 방장이 바뀜(§69 A4, {0} = 닉네임)
     public string recorderAim = "Aim at your own AI";         // 녹음기: 조준한 내 AI가 없음(§69 B3)

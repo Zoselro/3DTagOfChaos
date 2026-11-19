@@ -62,6 +62,7 @@ public class NetJumpProbe : MonoBehaviour
         {
             IGameCharacter c = all[i];
             if (c == null || c.View == null || c.View.IsMine || !CharacterRegistry.IsAlive(c)) continue;
+            if (EscapeManager.IsRidingVehicle(c.View.OwnerActorNr)) { last[c.gameObject.transform] = c.gameObject.transform.position; continue; } // §89.24 대포 비행(초속 50 m 안팎)은 순간이동이 아니다
             Check(c.gameObject.transform, $"{c.Role} actor {c.View.OwnerActorNr}", Describe(c));
         }
         if (Time.unscaledTime >= nextDecoyRefresh)
@@ -71,7 +72,9 @@ public class NetJumpProbe : MonoBehaviour
         }
         EscapeManager m = EscapeManager.Instance;
         foreach (DecoyView v in decoys)
-            if (v != null && v.isActiveAndEnabled) Check(v.transform, $"AI {v.Id}", m != null ? $"route rev {m.Routes.Revision}" : "-");
+            if (v != null && v.isActiveAndEnabled && m != null && m.Routes.TryActive(v.Id, PhotonNetwork.Time, out DecoyRoute fly) && fly.Gait == DecoyGait.Fly && PhotonNetwork.Time < fly.EndsAt + 0.5)
+                last[v.transform] = v.transform.position; // §89.24 하늘 대포 비행 중인 AI
+            else if (v != null && v.isActiveAndEnabled) Check(v.transform, $"AI {v.Id}", m != null ? $"route rev {m.Routes.Revision}" : "-");
 
         // 사라진 대상 정리
         drop.Clear();

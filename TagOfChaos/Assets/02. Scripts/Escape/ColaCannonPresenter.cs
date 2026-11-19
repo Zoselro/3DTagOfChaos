@@ -40,6 +40,7 @@ public class ColaCannonPresenter : MonoBehaviour
         if (s == null || prefab == null) return;
         foreach (EscapeState.Cannon c in s.Cannons)
         {
+            if (c.IsSky) continue; // §89.24 하늘 대포 탑승 기록 — 씬에 박힌 대포(SkyCannonView)가 그린다
             if (views.TryGetValue(c.Id, out ColaCannonView view) && view != null) { view.Apply(c); continue; }
             var go = Instantiate(prefab, c.Pos, ColaCannonRules.Rotation(c.Yaw));
             go.name = "ColaCannon_" + c.Id;

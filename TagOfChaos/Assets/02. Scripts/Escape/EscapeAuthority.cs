@@ -131,7 +131,8 @@ public sealed class EscapeAuthority
         if (catalog.RepairKit != null) for (int k = 1; k < kitCount; k++) normalItems.Add(catalog.RepairKit.ItemId);
         while (normalItems.Count < normalChests)
         {
-            ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights);
+            // ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights);
+            ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights, recipe);   // §89.25 이 맵에서 뺀 아이템(Heaven Of Bakery의 콜라 대포)은 고르지 않는다
             if (extra == null) break;
             normalItems.Add(extra.ItemId);
         }
@@ -206,20 +207,41 @@ public sealed class EscapeAuthority
 
     private EscapeState.Item NewItem(ItemSO item) => new EscapeState.Item { Id = item.ItemId, Charges = item.IsTool ? item.Tool.Charges : 0 };
 
-    private ItemSO PickWeighted(IReadOnlyList<ItemSO> items, IReadOnlyList<int> weights)
+    // private ItemSO PickWeighted(IReadOnlyList<ItemSO> items, IReadOnlyList<int> weights)
+    // {
+    //     if (items == null || items.Count == 0) return null;
+    //     int total = 0;
+    //     for (int i = 0; i < items.Count; i++) total += WeightAt(weights, i);
+    //     if (total <= 0) return items[rng.Next(items.Count)];
+    //     int roll = rng.Next(total);
+    //     for (int i = 0; i < items.Count; i++)
+    //     {
+    //         roll -= WeightAt(weights, i);
+    //         if (roll < 0) return items[i];
+    //     }
+    //     return items[items.Count - 1];
+    // }
+    // §89.25 except(레시피)가 뺀 아이템은 무게 0으로 본다. 남은 무게가 없으면 아무것도 고르지 않는다(예전처럼 아무거나 고르면 뺀 아이템이 나올 수 있다).
+    private ItemSO PickWeighted(IReadOnlyList<ItemSO> items, IReadOnlyList<int> weights, EscapeRecipeSO except = null)
     {
         if (items == null || items.Count == 0) return null;
         int total = 0;
-        for (int i = 0; i < items.Count; i++) total += WeightAt(weights, i);
-        if (total <= 0) return items[rng.Next(items.Count)];
+        for (int i = 0; i < items.Count; i++) total += WeightOf(items, weights, i, except);
+        if (total <= 0) return except == null ? items[rng.Next(items.Count)] : null;
         int roll = rng.Next(total);
         for (int i = 0; i < items.Count; i++)
         {
-            roll -= WeightAt(weights, i);
+            roll -= WeightOf(items, weights, i, except);
             if (roll < 0) return items[i];
         }
-        return items[items.Count - 1];
+        return null;
     }
+
+    private static int WeightOf(IReadOnlyList<ItemSO> items, IReadOnlyList<int> weights, int i, EscapeRecipeSO except) =>
+        except != null && except.Excludes(items[i]) ? 0 : WeightAt(weights, i);
+
+    // §89.25 이 맵(레시피)에서 뺀 아이템인지 — 개발용 아이템 주기(OfflineModeBootstrap)가 건너뛴다.
+    public bool ExcludesItem(string itemId) => recipe != null && recipe.Excludes(itemId);
 
     private static int WeightAt(IReadOnlyList<int> weights, int i) => weights != null && i < weights.Count ? Mathf.Max(0, weights[i]) : 1;
 
@@ -331,6 +353,7 @@ public sealed class EscapeAuthority
         for (int i = State.Cannons.Count - 1; i >= 0; i--)
         {
             EscapeState.Cannon c = State.Cannons[i];
+            if (c.IsSky) { if (now >= SkyCannonRules.ReleaseAt(c)) { State.Cannons.RemoveAt(i); changed = true; } continue; } // §89.24 하늘 대포: 착지 + 쿨다운 2초까지 남긴다(Busy)
             bool done = c.Boarded ? now >= c.BoardAt + ColaCannonRules.LandAt(c.Flight) + ColaCannonRules.LandGrace : now >= c.SummonedAt + ColaCannonRules.IdleSeconds;
             if (done || (!IsActiveEscaper(c.Owner) && !(c.Boarded && now < c.BoardAt + ColaCannonRules.LandAt(c.Flight)))) { State.Cannons.RemoveAt(i); changed = true; }
         }
@@ -479,6 +502,7 @@ public sealed class EscapeAuthority
             case EscapeOp.CageMash: changed = CageMash(r.Sender, r.A); break;
             case EscapeOp.CarriageBoard: changed = CarriageBoard(r.Sender, r.A); break;
             case EscapeOp.CannonBoard: changed = CannonBoard(r.Sender, r.A, r.B); break;
+            case EscapeOp.SkyCannonBoard: changed = SkyCannonBoard(r.Sender, r.A); break;
             default: changed = false; break;
         }
         if (changed) Commit();
@@ -991,6 +1015,7 @@ public sealed class EscapeAuthority
     {
         ItemSO def = catalog.Find(itemId);
         if (State == null || def == null || slot < 0 || slot >= InventorySlots) return false;
+        if (recipe != null && recipe.Excludes(def)) return false;   // §89.25 이 맵에서 뺀 아이템(Heaven Of Bakery 콜라 대포)은 개발용으로도 주지 않는다
         int old = State.HeldItemAt(actor, slot);
         if (old >= 0) { EscapeState.Item gone = State.Items[old]; gone.Loc = ItemLocation.Gone; State.Items[old] = gone; }
         State.Items.Add(new EscapeState.Item { Id = def.ItemId, Loc = ItemLocation.Held, A = actor, B = slot, Charges = def.IsTool ? def.Tool.Charges : 0 });
@@ -1035,7 +1060,9 @@ public sealed class EscapeAuthority
     private bool CanSummonCannon(int actor, Vector3 pos)
     {
         if (!IsActiveEscaper(actor) || RoomState.IsMonster(actor)) return false;
-        foreach (EscapeState.Cannon c in State.Cannons) if (c.Owner == actor) return false;
+        if (recipe != null && recipe.Excludes(ToolKind.ColaCannon)) return false;   // §89.25 Heaven Of Bakery: 섬 사이 하늘 대포가 대신한다
+        // foreach (EscapeState.Cannon c in State.Cannons) if (c.Owner == actor) return false;
+        foreach (EscapeState.Cannon c in State.Cannons) if (c.Owner == actor && !c.IsSky) return false;   // §89.24 하늘 대포 탑승은 세지 않는다
         return IsNear(actor, pos, ColaCannonRules.SummonReach) && manager.IsValidTeleport(pos);
     }
 
@@ -1047,6 +1074,7 @@ public sealed class EscapeAuthority
         EscapeState.Cannon c = State.Cannons[i];
         double now = PhotonNetwork.Time;
         if (c.Owner != actor || c.Boarded || !IsActiveEscaper(actor)) return false;
+        if (c.IsSky) return false; // §89.24 하늘 대포는 SkyCannonBoard
         if (ColaCannonRules.StageAt(c.SummonedAt, 0, 0f, now) != ColaCannonRules.Stage.Waiting) return false;
         if (!IsNear(actor, ColaCannonRules.StepsPoint(c.Pos, c.Yaw), ColaCannonRules.BoardReach + 1f)) return false;
         if (!TryCannonLanding(c.Pos, aimYaw, out Vector3 dest, out float flight, out float ceiling)) return false;
@@ -1058,6 +1086,50 @@ public sealed class EscapeAuthority
         State.Cannons[i] = c;
         moveExemptUntil[actor] = Time.realtimeSinceStartup + ColaCannonRules.LandAt(flight) + 3f; // 들어감·비행은 이동 검사에서 뺀다
         Debug.Log($"[EscapeAuthority] Actor {actor} fired cola cannon {id} toward {aimYaw}° -> {dest} ({flight:F1}s).");
+        return true;
+    }
+
+    // ---------------- 하늘 대포(§89.24·§89.25) ----------------
+
+    // 쿠키가 하늘 대포 뒤 계단에서 E: 쿠키만(술래 거절 — 술래는 나중에 텔레포트 스킬), 한 대 한 명(앞 사람 착지 + 2초 뒤).
+    private bool SkyCannonBoard(int actor, int index)
+    {
+        if (!IsActiveEscaper(actor) || RoomState.IsMonster(actor)) return false;
+        if (EscapeManager.IsRidingVehicle(actor)) return false;
+        SkyCannonView gun = SkyCannonView.Find(index);
+        if (gun == null || !IsNear(actor, gun.StepsPoint, SkyCannonRules.AuthorityReach)) return false;
+        if (!TryBoardSky(gun, actor, out float flight)) return false;
+        moveExemptUntil[actor] = Time.realtimeSinceStartup + ColaCannonRules.LandAt(flight) + 3f; // 들어감·비행은 이동 검사에서 뺀다
+        Debug.Log($"[EscapeAuthority] Actor {actor} rode sky cannon {index} -> {gun.Landing} ({flight:F1}s).");
+        return true;
+    }
+
+    // 방장의 DecoyBrain: AI가 계단 앞에 왔다 — 탈 수 있으면 기록을 넣고 바로 커밋한다(Owner = −AI 번호).
+    public bool DecoySkyCannonBoard(int decoyId, int index, out EscapeState.Cannon ride)
+    {
+        ride = default;
+        if (State == null || !EscapeManager.ActionsAllowed) return false;
+        int d = State.DecoyIndex(decoyId);
+        SkyCannonView gun = SkyCannonView.Find(index);
+        if (d < 0 || State.Decoys[d].Caught || gun == null) return false;
+        if (!TryBoardSky(gun, -decoyId, out _)) return false;
+        ride = State.Cannons[State.Cannons.Count - 1];
+        Commit();
+        return true;
+    }
+
+    private bool TryBoardSky(SkyCannonView gun, int owner, out float flight)
+    {
+        flight = 0f;
+        double now = PhotonNetwork.Time;
+        if (SkyCannonRules.Busy(State, gun.Index, now)) return false;
+        Vector3 dest = gun.Landing;
+        flight = SkyCannonRules.FlightSeconds(gun.Pos, gun.Yaw, dest);
+        State.Cannons.Add(new EscapeState.Cannon
+        {
+            Id = State.NextId++, Owner = owner, Pos = gun.Pos, Yaw = gun.Yaw, SummonedAt = now, BoardAt = now, AimYaw = gun.Yaw,
+            Dest = dest, Flight = flight, Ceiling = ColaCannonRules.NoCeiling, Sky = (sbyte)(gun.Index + 1),
+        });
         return true;
     }
 
@@ -1124,6 +1196,11 @@ public sealed class EscapeAuthority
         // 움직이는 AI는 경로 위치로 잰다(모든 화면이 같은 경로로 그린다, Request1009Plan.md §44.6).
         DecoyRoute.Pose pose = manager.Routes.PoseOf(d, now);
         if (d.Caught) return false; // 이미 잡히는 중(같은 요청이 겹침) — 진행 중인 잡기를 끊지 않게 거절 알림도 보내지 않는다
+        if (manager.Routes.TryActive(id, now, out DecoyRoute flying) && flying.Gait == DecoyGait.Fly && now < flying.EndsAt)
+        {
+            NoticeTo(actor, EscapeNoticeKind.DecoyCatchRejected, id.ToString()); // §89.24 대포 안·비행 중인 AI는 잡지 못한다(진짜 쿠키 IsCannonProtected와 같게)
+            return false;
+        }
         if (decoyJailedUntil.TryGetValue(id, out double jailed) && now < jailed)
         {
             NoticeTo(actor, EscapeNoticeKind.DecoyCatchRejected, id.ToString()); // 물풍선에 갇힌 AI는 진짜 쿠키처럼 잡지 못한다(§76 A8)

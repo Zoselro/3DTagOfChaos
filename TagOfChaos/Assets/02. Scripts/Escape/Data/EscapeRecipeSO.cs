@@ -67,6 +67,25 @@ public class EscapeRecipeSO : ScriptableObject
     [SerializeField, Min(0)] private int repairKitCount;
     public int RepairKitCount => repairKitCount;
 
+    [Header("Request1009Plan.md §89.25 — 이 맵에서 빼는 아이템")]
+    [Tooltip("이 맵의 상자·시작 아이템에서 나오지 않고, 써도 설치되지 않는 아이템(예: Heaven Of Bakery의 콜라 대포 — 섬 사이 하늘 대포가 대신한다).")]
+    [SerializeField] private ItemSO[] excludedItems = new ItemSO[0];
+    public ItemSO[] ExcludedItems => excludedItems;
+    public bool Excludes(ItemSO item) => item != null && System.Array.IndexOf(excludedItems, item) >= 0;
+    public bool Excludes(string itemId)
+    {
+        if (string.IsNullOrEmpty(itemId) || excludedItems == null) return false;
+        foreach (ItemSO it in excludedItems) if (it != null && it.ItemId == itemId) return true;
+        return false;
+    }
+    public bool Excludes(ToolKind kind)
+    {
+        if (excludedItems == null) return false;
+        foreach (ItemSO it in excludedItems) if (it != null && it.Tool != null && it.Tool.Kind == kind) return true;
+        return false;
+    }
+    public void EditorSetExcludedItems(ItemSO[] items) => excludedItems = items ?? new ItemSO[0];
+
     public string MapName => mapName;
     public EscapeExitKind ExitKind => exitKind;
     public RecipeMode Mode => mode;

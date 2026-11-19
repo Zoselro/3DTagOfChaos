@@ -21,9 +21,12 @@ public static class HeavenOfBakeryMapBuilder
     private const string PrefabDir = HobPrefabBuilder.PrefabDir;
 
     // ---- 섬
-    public const float FieldRadius = 100f, FenceRadius = 96f;
+    // public const float FieldRadius = 100f, FenceRadius = 96f;
+    public const float FieldRadius = 85f, FenceRadius = 81f;          // §89.24 큰 섬 r 85(하늘 섬 68 m의 약 1.25배)
     public const float PlazaScale = 1.67f, PlazaTop = 0.82f;
-    public const float MapRadius = 190f;                    // §89.13 떠 있는 섬 3개가 큰 섬 밖 r 150~187
+    // public const float MapRadius = 190f;                 // §89.13 떠 있는 섬 3개가 큰 섬 밖 r 150~187
+    // public const float MapRadius = 245f;
+    public const float MapRadius = 270f;   // 2026-11-19 하늘 섬 고도 48 m: 섬 중심 r 192 + 반지름 68 + 여유                    // §89.24 하늘 섬 중심 r 168 + 반지름 68 + 여유
     // public const float MapRadius = 130f;                 // 예전: 고원이 큰 섬 가장자리에 걸침(r ≈ 124)
     private const float FenceHeight = 6f, FenceThickness = 0.8f;
 
@@ -37,19 +40,29 @@ public static class HeavenOfBakeryMapBuilder
     public static readonly (string name, Vector3 pos, string plateau, float top, float topR, float footR)[] Slots =
     {
         // §89.13 하늘에 떠 있는 섬: 큰 섬(r ≈ 103) 밖으로 약 15 m 틈, 윗면 높이 2배(12 → 24, 15 → 30). 모델 원점 = 윗면.
-        ("SubSlot_NW", new Vector3(-88.17f, 0f, 121.35f), "HOB_Plateau_Almond", 24f, 30.5f, 33f),   // r 150, 126°
-        ("SubSlot_N", new Vector3(0f, 0f, 152f), "HOB_Plateau_Choco", 30f, 32.5f, 35f),
-        ("SubSlot_NE", new Vector3(88.17f, 0f, 121.35f), "HOB_Plateau_Almond", 24f, 30.5f, 33f),    // r 150, 54°
+        // ("SubSlot_NW", new Vector3(-88.17f, 0f, 121.35f), "HOB_Plateau_Almond", 24f, 30.5f, 33f),   // r 150, 126°
+        // ("SubSlot_N", new Vector3(0f, 0f, 152f), "HOB_Plateau_Choco", 30f, 32.5f, 35f),
+        // ("SubSlot_NE", new Vector3(88.17f, 0f, 121.35f), "HOB_Plateau_Almond", 24f, 30.5f, 33f),    // r 150, 54°
+        // §89.24 하늘 섬 3개 같은 모델(r 68)·같은 높이(24 m), 섬 중심 r 168, 120° 간격 — 슬롯 0 = 8시(210°), 1 = 12시(90°), 2 = 4시(330°)
+        ("SubSlot_SW", Polar(SkyDist, 210f), "HOB_Plateau_Sky68", SkyTop, SkyR, SkyR + 2f),
+        ("SubSlot_N", Polar(SkyDist, 90f), "HOB_Plateau_Sky68", SkyTop, SkyR, SkyR + 2f),
+        ("SubSlot_SE", Polar(SkyDist, 330f), "HOB_Plateau_Sky68", SkyTop, SkyR, SkyR + 2f),
         // 예전(큰 섬에 붙은 고원): NW (−66, 64) 12 m · N (0, 92) 15 m · NE (66, 64) 12 m
     };
     public static readonly string[] SubMapNames = { "SubMap_Almond", "SubMap_Chocolate", "SubMap_Flour" };
+    // public const float SkyR = 68f, SkyTop = 24f, SkyDist = 168f;
+    public const float SkyR = 68f, SkyTop = 48f, SkyDist = 192f;   // 2026-11-19 고도 24 → 48 m(하늘에 뜬 섬으로 보이게), 경사로가 길어진 만큼 섬도 24 m 바깥으로     // §89.24 하늘 섬 반지름·윗면 높이·섬 중심 거리(경사로 꼭대기가 섬 가장자리에 바로 닿게)
 
     // ---- 경사로·다리·계단
     // private static readonly Vector3 RampDirNW = new Vector3(0.087f, 0f, -0.996f).normalized;   // 예전 나선 경사로(고원 → 아래)
     // private static readonly Vector3 RampDirNE = new Vector3(-0.087f, 0f, -0.996f).normalized;
     // private const float RampLength = 32f, RampTopInset = 0.5f;
     // §89.13 큰 섬 가장자리 지그재그 경사로(HOB_SwitchRamp_24m, 다리 3줄·간격 5 m) → 꼭대기 끝(r 93, 24 m)에서 하늘 다리로 NW·NE 섬
-    private const float RampTopR = 93f, RampLane = 5f, RampEndY = 32f, RampBackY = 4.2f;   // 모델: 1줄 시작 (+5, 0), 꼭대기 끝 (−5, 32), 뒤로 4.2 m
+    // private const float RampTopR = 93f, RampLane = 5f, RampEndY = 32f, RampBackY = 4.2f;   // 모델: 1줄 시작 (+5, 0), 꼭대기 끝 (−5, 32), 뒤로 4.2 m
+    // §89.24 HOB_SwitchRamp_Wide_24m: 폭 9 m·줄 간격 10.5 m·한 줄 12.2 m(길 72.6 m = 예전의 75%). 모델 원점(가운데 줄 아래) = 큰 섬 r 83.5,
+    // 1줄 시작 (+10.5, 0) = 큰 섬 위 땅, 꼭대기 끝 (−10.5, 18.2) = 하늘 섬 가장자리(높이 24 m). 뒤 머리핀은 y −5.25(큰 섬 위 13.5 m 높이).
+    // private const float RampBaseR = 83.5f, RampLane = 10.5f, RampEndY = 18.2f, RampBackY = 5.6f, RampWidth = 9f;
+    private const float RampBaseR = 83.5f, RampLane = 10.5f, RampEndY = 42.4f, RampBackY = 5.6f, RampWidth = 9f;   // 48 m 경사로(한 줄 36.4 m, 길 145 m, 기울기 그대로)
     public const float BridgeY = 24f, BridgeZ = 103.5f, PadHalf = 3.5f;   // 가운데 발판(7 × 7 m, 작은 떠 있는 바위 위) — 예전 12 m · z 48.5
     private const float SpanMax = 10f;                                  // 다리 한 토막 최대 길이(모델 10 m)
     // private const int SpanSegments = 4;
@@ -57,28 +70,38 @@ public static class HeavenOfBakeryMapBuilder
     // ---- 탈출구
     public static readonly (string name, string key, Vector3 pos)[] Exits =
     {
-        ("Exit_N", "N", new Vector3(0f, 0f, 93f)), ("Exit_E", "E", new Vector3(93f, 0f, 0f)),   // N: 예전 (0, 46) 다리 밑 절벽 앞 → 다른 셋처럼 가장자리
-        ("Exit_S", "S", new Vector3(0f, 0f, -93f)), ("Exit_W", "W", new Vector3(-93f, 0f, 0f)),
+        // ("Exit_N", "N", new Vector3(0f, 0f, 93f)), ("Exit_E", "E", new Vector3(93f, 0f, 0f)),   // N: 예전 (0, 46) 다리 밑 절벽 앞 → 다른 셋처럼 가장자리
+        // ("Exit_S", "S", new Vector3(0f, 0f, -93f)), ("Exit_W", "W", new Vector3(-93f, 0f, 0f)),
+        // §89.24 큰 섬 r 85: 가장자리 r 77, 경사로 입구(90·210·330° 둘레)와 재료 건물 자리(270°) 사이
+        ("Exit_N", "N", Polar(77f, 30f)), ("Exit_E", "E", Polar(77f, 150f)),
+        ("Exit_S", "S", Polar(77f, 240f)), ("Exit_W", "W", Polar(77f, 300f)),
     };
     private static readonly RoundMapKit.ExitSize Exit = new RoundMapKit.ExitSize { Opening = 4f, PostWidth = 1.5f, Height = 5f, PadDepth = 6f };
     private static readonly Color ExitColor = new Color(1f, 0.82f, 0.4f);
     private static readonly Color RoomColor = new Color(1f, 0.45f, 0.7f);
 
     // ---- 과일 밭 자리(재료 건물 1 + 일반 건물 3이 판마다 나뉘어 들어간다)
-    public static readonly float[] LotDeg = { 200f, 250f, 290f, 340f };
+    // public static readonly float[] LotDeg = { 200f, 250f, 290f, 340f };
+    public static readonly float[] LotDeg = { 270f };   // §89.24 1층은 재료 건물(딸기잼 공장)만 — 일반 건물 3채는 맵에 두지 않는다
     // public const float LotRadius = 55f, LotHalf = 8f;
-    public const float LotRadius = 55f, LotHalf = 12.5f;   // §89.22 베이커리 건물(폭 16~24 m)이 들어가게 자리 16 → 25 m
-    public static readonly float[] WaterfallDeg = { 205f, 235f, 305f, 335f };
-    public static readonly float[] CookieSpawnDeg = { 215f, 245f, 295f, 325f };
-    public const float WitchDeg = 315f;
+    // public const float LotRadius = 55f, LotHalf = 12.5f;   // §89.22 베이커리 건물(폭 16~24 m)이 들어가게 자리 16 → 25 m
+    public const float LotRadius = 50f, LotHalf = 12.5f;   // §89.24 큰 섬 r 85 — 둥근 길(r 25) 밖·섬 가장자리 안(자리 크기는 B안 건물 크기에서 다시 정한다)
+    // public static readonly float[] WaterfallDeg = { 205f, 235f, 305f, 335f };
+    public static readonly float[] WaterfallDeg = { 0f, 60f, 120f, 180f };   // §89.24 경사로(90·210·330°)·탈출구 피해
+    // public static readonly float[] CookieSpawnDeg = { 215f, 245f, 295f, 325f };
+    public static readonly float[] CookieSpawnDeg = { 45f, 135f, 200f, 340f };   // §89.24 재료 건물 자리(270°) 피해
+    // public const float WitchDeg = 315f;
+    public const float WitchDeg = 270f;   // §89.24 아몬드(210°)·밀(330°) 섬 사이 빈 하늘
 
     private static readonly RoundMapKit.Placement placed = new RoundMapKit.Placement();
     private static readonly List<(Vector3 a, Vector3 b, float half)> pathSegs = new List<(Vector3, Vector3, float)>();
     private static readonly List<(Vector3 c, Quaternion r, Vector2 half)> keepOut = new List<(Vector3, Quaternion, Vector2)>();
     private static readonly Transform[] slotRoots = new Transform[3];
     private static readonly Transform[] contentRoots = new Transform[3];
-    private static readonly Transform[] lotRoots = new Transform[4];
-    private static readonly Transform[] generals = new Transform[3];
+    // private static readonly Transform[] lotRoots = new Transform[4];
+    // private static readonly Transform[] generals = new Transform[3];
+    private static readonly Transform[] lotRoots = new Transform[LotDeg.Length];
+    private static readonly Transform[] generals = new Transform[0];   // §89.24 1층 일반 건물 없음
     private static readonly Transform[] placeholders = new Transform[4];
     // §89.20 테스트 맵 정자는 부품이 Z-위(−Z = 위)로 놓여 뿌리에 X 90°가 있어야 선다. 자리에 놓을 때 Y 회전만 주면 옆으로 누워
     // 절반이 땅(고원 윗면) 속에 묻혔고, 튀어나온 벽·기둥 충돌체에 술래가 끼었다 → 원래 "위" 축을 위로 돌리는 보정을 기억해 곱한다.
@@ -128,7 +151,8 @@ public static class HeavenOfBakeryMapBuilder
         BuildMonsterRoom(map);
         BuildSlots(ground);
         BuildRamps(ground);
-        BuildBridge(ground);
+        // BuildBridge(ground);   // §89.24 다리 모두 없앰(N 발판·6 m 계단·하늘 다리)
+        BuildSkyCannons(ground);   // §89.24 섬마다 대포 2개(다른 두 섬으로) + 착지 자리
         int exits = BuildExits(map);
         BuildLots(map);
         Physics.SyncTransforms();
@@ -245,7 +269,8 @@ public static class HeavenOfBakeryMapBuilder
 
     private static void BuildIsland(Transform ground)
     {
-        Put("HOB_Island_Main", ground, Vector3.zero, Quaternion.identity);
+        // Put("HOB_Island_Main", ground, Vector3.zero, Quaternion.identity);
+        Put("HOB_Island_Main85", ground, Vector3.zero, Quaternion.identity);   // §89.24 r 85
         Put("HOB_RoundPlaza", ground, Vector3.zero, Quaternion.identity, true, new Vector3(PlazaScale, 1f, PlazaScale));
         placed.Take(Vector3.zero, 9.6f * PlazaScale + 1f);
     }
@@ -297,8 +322,11 @@ public static class HeavenOfBakeryMapBuilder
     private static Quaternion RampRot(int slot) => Quaternion.LookRotation(-RampOut(slot));
     private static Vector3 RampRight(int slot) => RampRot(slot) * Vector3.right;
     private static Vector3 RampLocal(int slot, float x, float y) => RampOrigin(slot) - RampRight(slot) * x + RampOut(slot) * y;
-    public static Vector3 RampTopEnd(int slot) => RampOut(slot) * RampTopR;                                   // 꼭대기 끝(24 m) — 하늘 다리가 시작
-    private static Vector3 RampOrigin(int slot) => RampTopEnd(slot) - RampOut(slot) * RampEndY - RampRight(slot) * RampLane;
+    // public static Vector3 RampTopEnd(int slot) => RampOut(slot) * RampTopR;                                   // 꼭대기 끝(24 m) — 하늘 다리가 시작
+    // private static Vector3 RampOrigin(int slot) => RampTopEnd(slot) - RampOut(slot) * RampEndY - RampRight(slot) * RampLane;
+    // §89.24 모델 원점(가운데 줄) = 큰 섬 r 83.5. 꼭대기 끝은 3줄 쪽(−x) — 하늘 섬 가장자리에 바로 닿는다(다리 없음)
+    private static Vector3 RampOrigin(int slot) => RampOut(slot) * RampBaseR;
+    public static Vector3 RampTopEnd(int slot) => RampLocal(slot, -RampLane, RampEndY);
     public static Vector3 RampEntry(int slot) => RampLocal(slot, RampLane, -3f);                              // 1줄 시작 앞(땅)
     private static Vector3 SkyBridgeEnd(int slot) => Flat(Slots[slot].pos) - RampOut(slot) * (Slots[slot].topR - 1f);
 
@@ -306,9 +334,10 @@ public static class HeavenOfBakeryMapBuilder
     private static IEnumerable<(Vector3 dir, float half)> SlotGaps(int s)
     {
         Vector3 c = Flat(Slots[s].pos);
-        if (s == 1) { yield return (Vector3.back, 3f); yield break; }   // N: 계단
-        yield return (-RampOut(s), 3f);                          // 큰 섬 경사로에서 오는 하늘 다리
-        yield return ((BridgeEnd(s) - c).normalized, 2.6f);
+        // if (s == 1) { yield return (Vector3.back, 3f); yield break; }   // N: 계단
+        // yield return (-RampOut(s), 3f);                          // 큰 섬 경사로에서 오는 하늘 다리
+        // yield return ((BridgeEnd(s) - c).normalized, 2.6f);
+        yield return ((Flat(RampTopEnd(s)) - c).normalized, RampWidth / 2f + 1f);   // §89.24 나선 경사로 꼭대기만(다리 없음)
     }
 
     private static void BuildSlots(Transform ground)
@@ -355,15 +384,50 @@ public static class HeavenOfBakeryMapBuilder
     private static void BuildRamps(Transform ground)
     {
         Transform group = Group(ground, "Ramps");
-        for (int s = 0; s <= 2; s += 2)
+        // for (int s = 0; s <= 2; s += 2)   // 예전: NW·NE 두 곳(N은 다리 발판 + 계단)
+        for (int s = 0; s < Slots.Length; s++)   // §89.24 세 섬 모두 나선 경사로(다리 없음)
         {
-            GameObject ramp = Put("HOB_SwitchRamp_24m", group, RampOrigin(s), RampRot(s));
-            if (ramp != null) ramp.name = s == 0 ? "Ramp_W" : "Ramp_E";
+            // GameObject ramp = Put("HOB_SwitchRamp_24m", group, RampOrigin(s), RampRot(s));
+            // GameObject ramp = Put("HOB_SwitchRamp_Wide_24m", group, RampOrigin(s), RampRot(s));
+            GameObject ramp = Put("HOB_SwitchRamp_Wide_48m", group, RampOrigin(s), RampRot(s));
+            // if (ramp != null) ramp.name = s == 0 ? "Ramp_W" : "Ramp_E";
+            if (ramp != null) ramp.name = $"Ramp_{Slots[s].name.Substring(8)}";
             float mid = (RampEndY - RampBackY) / 2f;
-            keepOut.Add((RampLocal(s, 0f, mid), RampRot(s), new Vector2(RampLane + 3.5f, (RampEndY + RampBackY) / 2f + 2f)));
+            keepOut.Add((RampLocal(s, 0f, mid), RampRot(s), new Vector2(RampLane + RampWidth / 2f + 2f, (RampEndY + RampBackY) / 2f + 2f)));
             // 꼭대기 끝 → 떠 있는 섬 가장자리: 하늘 다리
-            Spans(group, RampTopEnd(s) + Vector3.up * BridgeY, SkyBridgeEnd(s) + Vector3.up * BridgeY, s == 0 ? "SkyW" : "SkyE");
+            // Spans(group, RampTopEnd(s) + Vector3.up * BridgeY, SkyBridgeEnd(s) + Vector3.up * BridgeY, s == 0 ? "SkyW" : "SkyE");
         }
+    }
+
+    // §89.24 섬마다 대포 2개: 슬롯 s → 다른 두 슬롯 t. 대포는 가장자리 12 m 안쪽·옆으로 7 m(같은 쌍의 두 방향이 겹치지 않게), 포구 = 목표 섬.
+    // 착지 자리는 목표 섬 가장자리 18 m 안쪽. 슬롯 아래에 둔다(섬 내용은 판마다 옮겨지지만 섬 자리·방향은 그대로).
+    public const float CannonInset = 12f, LandingInset = 18f, CannonSide = 7f;
+    private static void BuildSkyCannons(Transform ground)
+    {
+        Transform group = Group(ground, "SkyCannons");
+        int id = 0;
+        for (int s = 0; s < Slots.Length; s++)
+            for (int t = 0; t < Slots.Length; t++)
+            {
+                if (t == s) continue;
+                Vector3 cs = Flat(Slots[s].pos), ct = Flat(Slots[t].pos), d = (ct - cs).normalized, side = Vector3.Cross(Vector3.up, d) * CannonSide;
+                Vector3 at = cs + d * (SkyR - CannonInset) + side + Vector3.up * SkyTop;
+                Vector3 land = ct - d * (SkyR - LandingInset) + side + Vector3.up * SkyTop;
+                GameObject gun = Put("HOB_SkyCannon", group, at, Quaternion.LookRotation(d), false);
+                // if (gun != null) gun.name = $"SkyCannon_{id}_{Slots[s].name.Substring(8)}_to_{Slots[t].name.Substring(8)}";
+                // Empty(group, $"SkyLanding_{id}_{Slots[t].name.Substring(8)}", land, Quaternion.LookRotation(-d));
+                Transform landing = Empty(group, $"SkyLanding_{id}_{Slots[t].name.Substring(8)}", land, Quaternion.LookRotation(-d));
+                if (gun != null)
+                {
+                    gun.name = $"SkyCannon_{id}_{Slots[s].name.Substring(8)}_to_{Slots[t].name.Substring(8)}";
+                    // 몸통만 막는 상자(계단 쪽 z −2.9 뒤는 비움 — 쿠키는 계단 앞에서 E, 오르는 모습은 SkyCannonView가 그린다)
+                    var box = gun.AddComponent<BoxCollider>();
+                    box.center = new Vector3(0f, 1.6f, 0f);
+                    box.size = new Vector3(3.6f, 3.2f, 5.8f);
+                    gun.AddComponent<SkyCannonView>().EditorBind(id, landing);
+                }
+                id++;
+            }
     }
 
     private static void BuildBridge(Transform ground)
@@ -475,7 +539,8 @@ public static class HeavenOfBakeryMapBuilder
             InstallBakery(q4, "HOB_BLD_JamFactory", LotYaw, true);   // §89.22 재료 건물 = 딸기잼 공장
         }
         string[] generalModels = { "HOB_BLD_FruitWarehouse", "HOB_BLD_OrangeWorkshop", "HOB_BLD_AppleWorkshop" };   // §89.22 일반 건물 3채
-        for (int g = 0; g < 3; g++)
+        // for (int g = 0; g < 3; g++)
+        for (int g = 0; g < generals.Length; g++)   // §89.24 1층 일반 건물 없음(generals 0개) — 프리팹은 보관
         {
             generals[g] = Empty(buildings, $"General_{g + 1}", lotRoots[g + 1].position, lotRoots[g + 1].rotation);
             // PutLocal("HOB_Signpost", generals[g], new Vector3(0f, 0f, 0f), 0f);   // 예전 빈 자리 표지판
@@ -866,7 +931,8 @@ public static class HeavenOfBakeryMapBuilder
         var tris = new List<int>();
         for (int ring = 1; ring <= Rings; ring++)
         {
-            float r = SubGroundR * ring / Rings;
+            // float r = SubGroundR * ring / Rings;
+            float r = (SkyR - 1f) * ring / Rings;   // §89.24 바닥 원판은 섬 전체(r 67), 장식·타일·밀밭은 건물 둘레(SubGroundR)만
             for (int k = 0; k < Seg; k++)
             {
                 float a = k * Mathf.PI * 2f / Seg;
@@ -1085,11 +1151,17 @@ public static class HeavenOfBakeryMapBuilder
                 if (Put("HOB_Tile_Checker", group, Polar(r, a) + Vector3.up * 0.01f, Quaternion.Euler(0f, -a, 0f), false, new Vector3(2f, 1f, 2f)) != null) n++;
             }
         // 방사 길: 동·남·서 탈출구, 북쪽 다리 밑 탈출구, 두 경사로 입구
-        n += TileRun(group, "HOB_Tile_Diamond", Polar(26f, 0f), Exits[1].pos + Polar(-8f, 0f), 4f);
-        n += TileRun(group, "HOB_Tile_Diamond", Polar(26f, 270f), Exits[2].pos + Polar(8f, 270f) * -1f, 4f);
-        n += TileRun(group, "HOB_Tile_Diamond", Polar(26f, 180f), Exits[3].pos + Polar(8f, 0f), 4f);
-        n += TileRun(group, "HOB_Tile_Star", Polar(26f, 90f), Exits[0].pos + Vector3.back * 6f, 4f);
-        for (int s = 0; s <= 2; s += 2)
+        // n += TileRun(group, "HOB_Tile_Diamond", Polar(26f, 0f), Exits[1].pos + Polar(-8f, 0f), 4f);
+        // n += TileRun(group, "HOB_Tile_Diamond", Polar(26f, 270f), Exits[2].pos + Polar(8f, 270f) * -1f, 4f);
+        // n += TileRun(group, "HOB_Tile_Diamond", Polar(26f, 180f), Exits[3].pos + Polar(8f, 0f), 4f);
+        // n += TileRun(group, "HOB_Tile_Star", Polar(26f, 90f), Exits[0].pos + Vector3.back * 6f, 4f);
+        foreach ((string name, string key, Vector3 pos) in Exits)   // §89.24 탈출구 4곳까지(가장자리 r 77)
+        {
+            float ea = Mathf.Atan2(pos.z, pos.x) * Mathf.Rad2Deg;
+            n += TileRun(group, "HOB_Tile_Diamond", Polar(26f, ea), Polar(Flat(pos).magnitude - 7f, ea), 4f);
+        }
+        // for (int s = 0; s <= 2; s += 2)
+        for (int s = 0; s < Slots.Length; s++)   // §89.24 나선 경사로 입구 3곳
         {
             Vector3 entry = RampEntry(s);
             Vector3 from = Polar(26f, Mathf.Atan2(entry.z, entry.x) * Mathf.Rad2Deg);
@@ -1127,8 +1199,12 @@ public static class HeavenOfBakeryMapBuilder
     private static int BuildRim(Transform map)
     {
         Transform rim = Group(map, "Rim");
-        float[] exitDeg = { 0f, 90f, 270f, 180f };   // §89.13 Exit_N도 가장자리
-        float half = Exit.Opening / 2f + Exit.PostWidth;
+        // float[] exitDeg = { 0f, 90f, 270f, 180f };   // §89.13 Exit_N도 가장자리
+        // §89.24 탈출구 4곳 + 나선 경사로 1줄 입구 3곳(경사로가 울타리 선을 낮게 지나가는 곳)
+        float[] exitDeg = Exits.Select(e => Mathf.Atan2(e.pos.z, e.pos.x) * Mathf.Rad2Deg)
+            .Concat(Enumerable.Range(0, Slots.Length).Select(sl => { Vector3 en = RampLocal(sl, RampLane, 4f); return Mathf.Atan2(en.z, en.x) * Mathf.Rad2Deg; })).ToArray();
+        // float half = Exit.Opening / 2f + Exit.PostWidth;
+        float half = Mathf.Max(Exit.Opening / 2f + Exit.PostWidth, RampWidth / 2f + 1f);   // §89.24 경사로 폭 9 m가 지나가게
         int n = 0;
         float r = FenceRadius + 0.4f;
         int segments = Mathf.RoundToInt(2f * Mathf.PI * r / 2.15f);
@@ -1146,7 +1222,8 @@ public static class HeavenOfBakeryMapBuilder
             if (exitDeg.Any(e => Mathf.Abs(Mathf.DeltaAngle(a, e)) < 6f) || UnderPlateau(p, 0f)) continue;
             if (Put("HOB_BannerLamp", rim, p, FaceCenter(p)) != null) { placed.Take(p, 1f); n++; }
         }
-        foreach (float e in exitDeg)
+        // foreach (float e in exitDeg)
+        foreach (float e in exitDeg.Take(Exits.Length))   // §89.24 사탕 아치는 탈출구만(경사로 입구에는 두지 않음)
         {
             Vector3 p = Polar(FenceRadius - 10f, e);
             if (Put("HOB_CandyArch", rim, p, FaceCenter(p)) != null) { placed.Take(p, 3f); n++; }
@@ -1169,7 +1246,9 @@ public static class HeavenOfBakeryMapBuilder
 
     // §89.15 마녀가 걸어오는 구름 바닥: 떠 있는 섬들 밖(r 195)부터 900 m까지 구름 바다(높이 −1.5 m, 마녀 발은 0 m — 발목이 구름에 잠긴다).
     // 마녀 길(앵커 방향 ±45 m)은 평평하게, 나머지는 살짝 울퉁불퉁 + 큰 뭉게구름. 충돌체 없음. 길 위의 구름은 지운다(WitchBackdropBuilder.OnWitchPath).
-    public const float CloudFloorInner = 195f, CloudFloorOuter = 900f, CloudFloorY = -1.5f;
+    // public const float CloudFloorInner = 195f, CloudFloorOuter = 900f, CloudFloorY = -1.5f;
+    // public const float CloudFloorInner = 260f, CloudFloorOuter = 950f, CloudFloorY = -1.5f;
+    public const float CloudFloorInner = 285f, CloudFloorOuter = 980f, CloudFloorY = -1.5f;   // 하늘 섬(r 260까지) 밖   // §89.24 하늘 섬(r 236까지) 밖
 
     private static int BuildCloudFloor(Scene scene, Transform far, System.Random rng)
     {
@@ -1307,7 +1386,8 @@ public static class HeavenOfBakeryMapBuilder
     private static bool FieldFree(Vector3 p, float r)
     {
         float d = Flat(p).magnitude;
-        if (d < 30f + r || d > 90f - r) return false;
+        // if (d < 30f + r || d > 90f - r) return false;
+        if (d < 30f + r || d > FieldRadius - 10f - r) return false;   // §89.24 r 85
         if (UnderPlateau(p, r) || InKeepOut(p, r + 1.5f) || OnPath(p, r + 1f)) return false;
         if (Exits.Any(e => (Flat(p) - Flat(e.pos)).magnitude < 11f + r)) return false;
         if (CookieSpawnDeg.Any(a => (Flat(p) - Polar(36f, a)).magnitude < 4f + r)) return false;
@@ -1331,7 +1411,8 @@ public static class HeavenOfBakeryMapBuilder
             for (int k = 0; k < count; k++)
                 for (int t = 0; t < 200; t++)
                 {
-                    Vector3 p = Polar(30f + (float)rng.NextDouble() * 60f, (float)(rng.NextDouble() * 360.0));
+                    // Vector3 p = Polar(30f + (float)rng.NextDouble() * 60f, (float)(rng.NextDouble() * 360.0));
+                    Vector3 p = Polar(30f + (float)rng.NextDouble() * (FieldRadius - 40f), (float)(rng.NextDouble() * 360.0));   // §89.24
                     if (!FieldFree(p, r)) continue;
                     Quaternion rot = prefab.StartsWith("HOB_House_") || prefab == "HOB_MarketStall" || prefab == "HOB_Bench"
                         ? FaceCenter(p) : Quaternion.Euler(0f, (float)(rng.NextDouble() * 360.0), 0f);
@@ -1368,7 +1449,8 @@ public static class HeavenOfBakeryMapBuilder
         {
             for (int t = 0; t < 600; t++)
             {
-                Vector3 p = Polar(30f + (float)rng.NextDouble() * 58f, (float)(rng.NextDouble() * 360.0));
+                // Vector3 p = Polar(30f + (float)rng.NextDouble() * 58f, (float)(rng.NextDouble() * 360.0));
+                Vector3 p = Polar(30f + (float)rng.NextDouble() * (FieldRadius - 42f), (float)(rng.NextDouble() * 360.0));   // §89.24
                 if (UnderPlateau(p, 1f) || InKeepOut(p, radius + 1f) || !placed.IsFree(p, radius) || spots.Any(s => (s - p).magnitude < minGap)) continue;
                 if (Exits.Any(e => (Flat(p) - Flat(e.pos)).magnitude < 9f)) continue;
                 if (!MarkerClear(p, radius, 0f)) continue;
@@ -1461,7 +1543,9 @@ public static class HeavenOfBakeryMapBuilder
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.78f, 0.87f, 0.98f);
-        RenderSettings.fogStartDistance = 220f;   // §89.13 맵 반경 190 — 예전 140
+        // RenderSettings.fogStartDistance = 220f;   // §89.13 맵 반경 190 — 예전 140
+        // RenderSettings.fogStartDistance = 280f;
+        RenderSettings.fogStartDistance = 310f;   // §89.24 맵 반경 245
         RenderSettings.fogEndDistance = 750f;     // 예전 460
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = new Color(0.72f, 0.8f, 0.95f);
@@ -1491,7 +1575,8 @@ public static class HeavenOfBakeryMapBuilder
         }
         foreach (ReflectionProbe p in lighting.GetComponentsInChildren<ReflectionProbe>(true).ToList())
             if (p.name.StartsWith("Probe_HAU")) Object.DestroyImmediate(p.gameObject);
-            else { p.transform.position = new Vector3(0f, 15f, 30f); p.size = new Vector3(2f * MapRadius + 20f, 100f, 2f * MapRadius + 20f); }
+            // else { p.transform.position = new Vector3(0f, 15f, 30f); p.size = new Vector3(2f * MapRadius + 20f, 100f, 2f * MapRadius + 20f); }
+            else { p.transform.position = new Vector3(0f, 35f, 30f); p.size = new Vector3(2f * MapRadius + 20f, 150f, 2f * MapRadius + 20f); }   // 하늘 섬 48 m + 건물
     }
 
     private static void SetAmbience(Scene scene)
@@ -1502,7 +1587,8 @@ public static class HeavenOfBakeryMapBuilder
             SerializedProperty boxes = so.FindProperty("boxes");
             if (boxes == null) continue;
             boxes.arraySize = 1;
-            boxes.GetArrayElementAtIndex(0).boundsValue = new Bounds(new Vector3(0f, 25f, 20f), new Vector3(2f * MapRadius + 40f, 80f, 2f * MapRadius + 40f));
+            // boxes.GetArrayElementAtIndex(0).boundsValue = new Bounds(new Vector3(0f, 25f, 20f), new Vector3(2f * MapRadius + 40f, 80f, 2f * MapRadius + 40f));
+            boxes.GetArrayElementAtIndex(0).boundsValue = new Bounds(new Vector3(0f, 40f, 20f), new Vector3(2f * MapRadius + 40f, 130f, 2f * MapRadius + 40f));   // 하늘 섬 48 m + 건물
             so.ApplyModifiedPropertiesWithoutUndo();
         }
     }

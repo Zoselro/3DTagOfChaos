@@ -196,6 +196,7 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
         if (cycle.Count == 0) return;
         int current = cycle.FindIndex(i => i.ItemId == slotItems[slot]);
         int next = current < 0 ? (step > 0 ? 0 : cycle.Count - 1) : (current + step + cycle.Count) % cycle.Count;
+        for (int k = 0; k < cycle.Count && auth.ExcludesItem(cycle[next].ItemId); k++) next = (next + (step >= 0 ? 1 : -1) + cycle.Count) % cycle.Count;   // §89.25 이 맵에서 뺀 아이템은 건너뜀
         if (auth.DevGive(actor, cycle[next].ItemId, slot)) slotItems[slot] = cycle[next].ItemId;
     }
 
