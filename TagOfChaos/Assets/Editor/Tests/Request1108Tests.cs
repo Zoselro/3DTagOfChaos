@@ -158,7 +158,8 @@ public class Request1108Tests
     public void Rules_HaveFracturedModelsAndCrackDecals()
     {
         DestructionRulesSO rules = DestructionRulesSO.Current;
-        Assert.AreEqual(38, rules.FracturedNames.Length, "GD2: 38 fractured buildings");
+        // Assert.AreEqual(38, rules.FracturedNames.Length, "GD2: 38 fractured buildings");
+        Assert.AreEqual(45, rules.FracturedNames.Length, "GD2: 38 fractured buildings + §89.22 bakery 7");
         // §73.11: 규칙 에셋은 모델을 직접 가리키지 않는다(맵을 열 때 876 MB를 한꺼번에 읽던 원인) — 이름마다 작은 에셋이 하나씩
         foreach (string dep in UnityEditor.AssetDatabase.GetDependencies(DestructionRulesSetup.AssetPath, true))
             StringAssert.DoesNotEndWith("_Fractured.fbx", dep, "the rules asset must not reference fractured models directly");

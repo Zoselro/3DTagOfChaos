@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1d0e0ad76b92094b8cb2904b1254814, type: 3}
+  m_Name: HOB_BLD_WheatMill
+  m_EditorClassIdentifier: 
+  model: {fileID: 919132149155446097, guid: d79caa7513650f2488777a3a6cc76ec4, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 14fb554ffc1449c4e806d9d7e9c40777, type: 3}
+  - {fileID: -1609281748187839663, guid: 14fb554ffc1449c4e806d9d7e9c40777, type: 3}
+  - {fileID: 723096430288179899, guid: 14fb554ffc1449c4e806d9d7e9c40777, type: 3}
+  - {fileID: 1963079803359675471, guid: 14fb554ffc1449c4e806d9d7e9c40777, type: 3}
+  pushes:
+  - {x: -0.99953896, y: -0.030362913, z: 0.00000007474576}
+  - {x: 0.98811424, y: -0.1537213, z: -0.00000006445567}
+  - {x: 0.16668065, y: 0.98601097, z: 0.00000008528782}
+  - {x: -0.018208476, y: -0.99983424, z: -0.00000006881233}
+  style: 6

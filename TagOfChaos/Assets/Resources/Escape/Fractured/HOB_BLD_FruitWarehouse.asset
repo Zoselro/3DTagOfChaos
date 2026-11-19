@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1d0e0ad76b92094b8cb2904b1254814, type: 3}
+  m_Name: HOB_BLD_FruitWarehouse
+  m_EditorClassIdentifier: 
+  model: {fileID: 919132149155446097, guid: 2312c4b76c4a8f5429f925120787bcf1, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 68b7a29785e3ccb409caf5346d7f67e7, type: 3}
+  - {fileID: -1609281748187839663, guid: 68b7a29785e3ccb409caf5346d7f67e7, type: 3}
+  - {fileID: 723096430288179899, guid: 68b7a29785e3ccb409caf5346d7f67e7, type: 3}
+  - {fileID: 1963079803359675471, guid: 68b7a29785e3ccb409caf5346d7f67e7, type: 3}
+  pushes:
+  - {x: -0.909726, y: -0.415209, z: -0.00000004003178}
+  - {x: 0.9165338, y: -0.39995712, z: -0.00000003362457}
+  - {x: 0.4175194, y: 0.908668, z: -0.000000053011252}
+  - {x: -0.07935009, y: -0.99684685, z: -0.00000018459485}
+  style: 6

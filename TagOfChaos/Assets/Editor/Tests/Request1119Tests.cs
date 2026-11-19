@@ -25,7 +25,8 @@ public class Request1119Tests
             Assert.AreEqual(1, so.ClipCount, name + ": one burst clip");
             Assert.Greater(so.Clip(0).length, 1.5f, name + ": clip length");
         }
-        Assert.AreEqual(38, rules.FracturedNames.Length, "buildings");
+        // Assert.AreEqual(38, rules.FracturedNames.Length, "buildings");
+        Assert.AreEqual(45, rules.FracturedNames.Length, "buildings (+ §89.22 bakery 7)");
         foreach (string name in rules.FracturedNames)
         {
             FracturedModelSO so = Holder(name);

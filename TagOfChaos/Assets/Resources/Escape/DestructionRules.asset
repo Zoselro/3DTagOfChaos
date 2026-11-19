@@ -105,6 +105,13 @@ MonoBehaviour:
   - GIN_UG_GearworksGate
   - GIN_UG_GloomgumFortress
   - GIN_UG_MacaronCottage
+  - HOB_BLD_AlmondFactory
+  - HOB_BLD_AppleWorkshop
+  - HOB_BLD_ChocoFactory
+  - HOB_BLD_FruitWarehouse
+  - HOB_BLD_JamFactory
+  - HOB_BLD_OrangeWorkshop
+  - HOB_BLD_WheatMill
   - Landmark_Cauldron
   - Landmark_ChocoBar
   - Landmark_Cogworks

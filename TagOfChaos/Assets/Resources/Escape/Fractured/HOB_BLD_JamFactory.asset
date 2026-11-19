@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1d0e0ad76b92094b8cb2904b1254814, type: 3}
+  m_Name: HOB_BLD_JamFactory
+  m_EditorClassIdentifier: 
+  model: {fileID: 919132149155446097, guid: 92b8b42b128131042b3f41e5d5c12e82, type: 3}
+  clips:
+  - {fileID: -623603649343465320, guid: 7a68695803d351c40be91987c093a6e9, type: 3}
+  - {fileID: -1609281748187839663, guid: 7a68695803d351c40be91987c093a6e9, type: 3}
+  - {fileID: 723096430288179899, guid: 7a68695803d351c40be91987c093a6e9, type: 3}
+  - {fileID: 1963079803359675471, guid: 7a68695803d351c40be91987c093a6e9, type: 3}
+  pushes:
+  - {x: -0.99990183, y: 0.014009984, z: -0.00000005724526}
+  - {x: 0.9983572, y: -0.057296373, z: -0.00000007687867}
+  - {x: 0.050821308, y: 0.9987078, z: 0.00000011617338}
+  - {x: -0.19473915, y: -0.9808551, z: -0.00000004228556}
+  style: 6

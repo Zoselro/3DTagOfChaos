@@ -66,7 +66,8 @@ public static class HeavenOfBakeryMapBuilder
 
     // ---- 과일 밭 자리(재료 건물 1 + 일반 건물 3이 판마다 나뉘어 들어간다)
     public static readonly float[] LotDeg = { 200f, 250f, 290f, 340f };
-    public const float LotRadius = 55f, LotHalf = 8f;
+    // public const float LotRadius = 55f, LotHalf = 8f;
+    public const float LotRadius = 55f, LotHalf = 12.5f;   // §89.22 베이커리 건물(폭 16~24 m)이 들어가게 자리 16 → 25 m
     public static readonly float[] WaterfallDeg = { 205f, 235f, 305f, 335f };
     public static readonly float[] CookieSpawnDeg = { 215f, 245f, 295f, 325f };
     public const float WitchDeg = 315f;
@@ -471,11 +472,19 @@ public static class HeavenOfBakeryMapBuilder
         {
             q4.SetParent(buildings, true);
             q4.SetPositionAndRotation(lotRoots[0].position, lotRoots[0].rotation * TiltOf(q4));   // §89.20 서 있게
+            InstallBakery(q4, "HOB_BLD_JamFactory", LotYaw, true);   // §89.22 재료 건물 = 딸기잼 공장
         }
+        string[] generalModels = { "HOB_BLD_FruitWarehouse", "HOB_BLD_OrangeWorkshop", "HOB_BLD_AppleWorkshop" };   // §89.22 일반 건물 3채
         for (int g = 0; g < 3; g++)
         {
             generals[g] = Empty(buildings, $"General_{g + 1}", lotRoots[g + 1].position, lotRoots[g + 1].rotation);
-            PutLocal("HOB_Signpost", generals[g], new Vector3(0f, 0f, 0f), 0f);
+            // PutLocal("HOB_Signpost", generals[g], new Vector3(0f, 0f, 0f), 0f);   // 예전 빈 자리 표지판
+            GameObject pf = AssetDatabase.LoadAssetAtPath<GameObject>($"{HobBakeryBuildings.PrefabDir}/{generalModels[g]}.prefab");
+            if (pf != null)
+            {
+                var inst = (GameObject)PrefabUtility.InstantiatePrefab(pf, generals[g]);
+                inst.transform.localPosition = Vector3.zero; inst.transform.localRotation = Quaternion.Euler(0f, LotYaw, 0f);
+            }
         }
     }
 
@@ -502,7 +511,8 @@ public static class HeavenOfBakeryMapBuilder
         return new Vector3(float.NaN, 0f, 0f);
     }
 
-    private static readonly Rect BuildingRect = Rect.MinMaxRect(-8.5f, 0.5f, 8.5f, 17.5f);   // 재료 건물 자리(로컬 x, z)
+    // private static readonly Rect BuildingRect = Rect.MinMaxRect(-8.5f, 0.5f, 8.5f, 17.5f);   // 재료 건물 자리(로컬 x, z)
+    private static readonly Rect BuildingRect = Rect.MinMaxRect(-11.8f, 0.0f, 11.8f, 18.2f);   // §89.22 베이커리 건물(폭 최대 22.7 m·깊이 16.7 m)
     private static readonly List<(Vector3 c, float r)>[] localUsed = { new List<(Vector3, float)>(), new List<(Vector3, float)>(), new List<(Vector3, float)>() };
 
     private static int Scatter(Transform content, int s, System.Random rng, (string prefab, int count, float r)[] list, Transform target = null)
@@ -532,6 +542,7 @@ public static class HeavenOfBakeryMapBuilder
         // 아몬드: 임시 재료 건물 + 아몬드 나무·자루·통·상자 무리·벤치·등
         Transform almond = contentRoots[0];
         PlaceBuilding(placeholders[0], almond, new Vector3(0f, 0f, 9f));
+        InstallBakery(placeholders[0], "HOB_BLD_AlmondFactory", SubYaw, true);   // §89.22
         // §89.17 건물 자리 밖은 아몬드 타일 바닥 + 아몬드 나무만(§89.16 길 타일·울타리·소품 대신)
         // n += BuildThemeGround(almond, 0, "Almond", null);
         // n += Scatter(almond, 0, rng, new[] { ("HOB_AlmondTree", 7, 1.8f), ("HOB_AlmondCrate", 3, 0.9f), ("HOB_AlmondSackDeco", 4, 0.9f), ("HOB_AlmondBig", 2, 0.9f), ("HOB_AlmondHalf", 2, 0.8f),
@@ -549,19 +560,21 @@ public static class HeavenOfBakeryMapBuilder
             foreach (Transform c in q2.Cast<Transform>().ToList())
                 if (!(c.name.StartsWith("Repair_Point") || c.name.StartsWith("Socket_") || c.name.StartsWith("ESC_Glow"))) Object.DestroyImmediate(c.gameObject);
             PlaceBuilding(q2, choco, new Vector3(0f, 0f, 9f), false);   // 정자 부품을 지우고 분수를 Y-위로 붙이므로 기울이지 않는다
-            GameObject fountain = Put("HOB_ChocoFountain", q2, q2.position, q2.rotation);
-            if (fountain != null) fountain.name = "Model";
-            foreach (Transform c in q2.Cast<Transform>())
-            {
-                if (c.name.StartsWith("Repair_Point")) c.localPosition = new Vector3(0f, 1.2f, -6.8f);
-                else if (c.name.StartsWith("Socket_")) c.localPosition = new Vector3(0f, 0.5f, -5.9f);
-                else if (c.name.StartsWith("ESC_Glow")) c.localPosition = new Vector3(0f, 7.2f, 0f);
-            }
-            for (int k = 0; k < 6; k++)
-            {
-                float a = 30f + k * 60f;   // 앞(−Z, 수리 자리)은 비운다
-                PutLocal("HOB_ChocoPillar", choco, new Vector3(0f, 0f, 9f) + new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * 7.5f, 0f);
-            }
+            // §89.22 초콜릿 분수 + 초콜릿 기둥 고리 → 초콜릿 공장 건물(꼭대기 퐁듀 단에서 초콜릿이 흐름)
+            // GameObject fountain = Put("HOB_ChocoFountain", q2, q2.position, q2.rotation);
+            // if (fountain != null) fountain.name = "Model";
+            // foreach (Transform c in q2.Cast<Transform>())
+            // {
+            //     if (c.name.StartsWith("Repair_Point")) c.localPosition = new Vector3(0f, 1.2f, -6.8f);
+            //     else if (c.name.StartsWith("Socket_")) c.localPosition = new Vector3(0f, 0.5f, -5.9f);
+            //     else if (c.name.StartsWith("ESC_Glow")) c.localPosition = new Vector3(0f, 7.2f, 0f);
+            // }
+            // for (int k = 0; k < 6; k++)
+            // {
+            //     float a = 30f + k * 60f;   // 앞(−Z, 수리 자리)은 비운다
+            //     PutLocal("HOB_ChocoPillar", choco, new Vector3(0f, 0f, 9f) + new Vector3(Mathf.Sin(a * Mathf.Deg2Rad), 0f, Mathf.Cos(a * Mathf.Deg2Rad)) * 7.5f, 0f);
+            // }
+            InstallBakery(q2, "HOB_BLD_ChocoFactory", SubYaw, false);
         }
         // §89.17 건물 자리 밖은 녹은 초콜릿 바닥 + 초코 퐁듀(냄비·큰 꼬치·웅덩이)와 초콜릿 소품만(§89.16 길 타일·케이크·꽃 대신)
         // n += BuildThemeGround(choco, 1, "Choco", null);
@@ -578,6 +591,7 @@ public static class HeavenOfBakeryMapBuilder
         // 밀가루: 임시 재료 건물 + 밀밭 2 · 작은 절벽 폭포 · 자루 무리 · 표지판
         Transform flour = contentRoots[2];
         PlaceBuilding(placeholders[2], flour, new Vector3(0f, 0f, 9f));
+        InstallBakery(placeholders[2], "HOB_BLD_WheatMill", SubYaw, true);   // §89.22
         // §89.17 건물 자리 밖 전부 밀밭(흙 바닥 + 2 m 밀밭 덩어리) — 상자 표시를 놓은 뒤 FillWheat가 깐다(예전: 8 × 7 m 밀밭 둘)
         // n += BuildWheatField(flour, 2, new Vector3(-15f, 0f, 6f), new Vector2(8f, 7f), rng);
         // n += BuildWheatField(flour, 2, new Vector3(15f, 0f, 6f), new Vector2(8f, 7f), rng);
@@ -648,7 +662,8 @@ public static class HeavenOfBakeryMapBuilder
     // 건물 자리(BuildingRect) + 2 m와 입구 쪽 ±55°·12 m 밖(경사로·다리가 닿는 곳)은 비운다 — 자리는 모두 localUsed로 겹침을 막는다.
 
     private const string ChoPropDir = "Assets/04. Prefabs/ChocolateFactory/Props";
-    private static readonly Rect BuildingKeepOut = Rect.MinMaxRect(-10.5f, -1.5f, 10.5f, 19.5f);
+    // private static readonly Rect BuildingKeepOut = Rect.MinMaxRect(-10.5f, -1.5f, 10.5f, 19.5f);
+    private static readonly Rect BuildingKeepOut = Rect.MinMaxRect(-12.8f, -2.0f, 12.8f, 20.2f);   // §89.22
 
     private static Transform Env(Transform content, string group) => Group(Group(content, "Environment"), group);
 
@@ -970,6 +985,37 @@ public static class HeavenOfBakeryMapBuilder
         // §89.14 서브 맵 안 "Buildings" 묶음 — 부서지기 규칙이 건물 등급(4번)으로 본다
         building.SetParent(Group(content, "Buildings"), true);
         building.SetPositionAndRotation(content.TransformPoint(local), content.rotation * (keepTilt ? TiltOf(building) : Quaternion.identity));
+    }
+
+    // §89.22 베이커리 건물: 프리팹 앞(문) = 로컬 +Z. 서브 맵 묶음은 −Z가 맵 가운데라 180°, 과일 밭 자리는 +Z가 가운데라 0°.
+    private const float SubYaw = 180f, LotYaw = 0f;
+
+    // §89.22 재료 건물 자리(QuadrantBuilding)에 베이커리 건물을 넣는다: 임시 정자 부품(기둥·벽·지붕 고리)은 지우고 프리팹을 자식으로,
+    // 수리 자리·소켓·빛기둥은 남겨 건물 안 재료 꽂는 자리(프리팹의 SocketPoint)로 옮긴다. 뿌리의 정자 기울기(tilted)는 풀고 자식의 세계 회전은 유지.
+    private static GameObject InstallBakery(Transform building, string prefab, float yaw, bool tilted)
+    {
+        GameObject pf = AssetDatabase.LoadAssetAtPath<GameObject>($"{HobBakeryBuildings.PrefabDir}/{prefab}.prefab");
+        if (building == null || pf == null) { Debug.LogWarning($"[HeavenOfBakeryMap] bakery building missing: {prefab}"); return null; }
+        Quaternion upright = tilted ? building.rotation * Quaternion.Inverse(TiltOf(building)) : building.rotation;
+        var keep = new Dictionary<Transform, Quaternion>();
+        foreach (Transform c in building.Cast<Transform>().ToList())
+        {
+            if (c.name.StartsWith("Repair_Point") || c.name.StartsWith("Socket_") || c.name.StartsWith("ESC_Glow")) keep[c] = Quaternion.Inverse(upright) * c.rotation;
+            else Object.DestroyImmediate(c.gameObject);
+        }
+        building.rotation = upright;
+        var inst = (GameObject)PrefabUtility.InstantiatePrefab(pf, building);
+        inst.transform.localPosition = Vector3.zero; inst.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+        Transform sp = inst.transform.Find("SocketPoint");
+        Vector3 s = sp != null ? sp.position : building.position;
+        foreach (KeyValuePair<Transform, Quaternion> kv in keep)
+        {
+            Transform c = kv.Key; c.rotation = upright * kv.Value;
+            if (c.name.StartsWith("Repair_Point")) c.position = s + Vector3.up * 1.2f;
+            else if (c.name.StartsWith("Socket_")) { c.position = s + Vector3.up * 0.35f; c.localScale = Vector3.one * 0.7f; }
+            else c.position = s + Vector3.up * 4.5f;
+        }
+        return inst;
     }
 
     // 뿌리의 어느 축이 세계 위를 보고 있는지(테스트 맵 원래 자세) → 그 축을 위로 돌리는 회전(Y 회전과 곱해 쓴다)
