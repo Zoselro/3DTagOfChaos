@@ -34,6 +34,10 @@ public enum EscapeOp : byte
     CannonBoard = 27,   // A = 대포 번호, B = 보는 방향(도) — 주인이 뒤 계단에서 E(해치·탑승·겨눔·발사, §68.9)
     Throw = 28,         // A = 인벤토리 칸(-1 = 술래 수색 폭탄), B = 물풍선 색, Pos = 손(시작점), Dir = 처음 속도, Stamp = 손을 떠난 시각, Targets[0] = 던진 사람 번호(§70.3)
     SkyCannonBoard = 29, // A = 하늘 대포 번호(씬의 SkyCannonView.Index) — 쿠키가 대포 뒤 계단에서 E(쿠키·AI만, 한 대 한 명, §89.24·§89.25)
+    MonsterWarp = 30,    // §90 T2 A = 재료 건물 번호(0~3) — 술래가 그 건물 벽장으로 순간이동
+    GlideOpen = 31,      // §90 P5 A = 인벤토리 칸 — 패러글라이더를 편다(공중에서)
+    GlideClose = 32,     // §90 P5 땅에 닿았거나 Space로 접었다(1회용 — 아이템이 없어진다)
+    FellFromSky = 33,    // §90 P5 본인 화면이 "떨어져 부서짐"을 알림 — 방장이 위치 기록으로 확인한다
 }
 
 public enum EscapeNoticeKind : byte
@@ -55,6 +59,7 @@ public enum EscapeNoticeKind : byte
     ThrowRejected = 15,      // 방장이 던지기를 받지 않았다(던진 사람에게만, §71 T1). 내용: "던진 사람 번호|이유(ThrowReject)"
     RequestAck = 16,         // 방장이 요청을 받았다(보낸 사람에게만, §72 E3). 내용: 요청 번호(문자열)
     BombRejected = 17,       // 사이렌 함정을 놓지 못했다(놓은 괴물에게만, §74 P12). 내용: 이유(EscapeRules.BombPlace, 문자열)
+    ChestsRefilled = 18,     // §90 C8 상자가 모두 되돌려졌다(쿠키·스파이 화면만 "상자가 다시 채워졌습니다")
 }
 
 // 던지기를 받지 않은 이유(§71 T1). 번호는 알림에 실려 가므로 고정한다.
@@ -84,6 +89,8 @@ public enum DeathCause
     Monster = 1,
     Witch = 2,
     Giant = 3, // 거대 괴물에게 밟힘(Request1009Plan.md §64) — 쿠키·스파이·술래
+    Bazooka = 4, // §90 B3 술래 바주카포 폭발 3.5 m 안
+    Fall = 5,    // §90 P5 Heaven Of Bakery 하늘 섬·경사로에서 12 m 넘게 떨어짐
 }
 
 // 보낸 사람별로 최근 받은 요청 번호(방장, §72 E3). 같은 번호가 다시 오면(재전송) 처리하지 않는다. 오래된 번호는 Capacity개를 넘으면 버린다.

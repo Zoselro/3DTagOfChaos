@@ -114,10 +114,15 @@ public static class EscapeAssetsBuilder
         catalog.EditorSetupReform(repairKit, dismantle, new[] { stunGun, hammer, balloon } /* 감옥 풍선은 물풍선에 합쳤다(§45.8 Q1) */, new[] { skates, pumpkin, recorder }, new[] { 5, 3, 5 }, heliHat, noiseBomb);
         // §68·§68.9에서 따로 더한 아이템(섬광탄·권투 글러브·콜라 대포 = 쿠키 상자, 수색 폭탄 = 술래 스킬)도 남긴다.
         // 예전에는 이 빌더를 다시 돌리면 목록에서 빠졌다(§89 HB4에서 찾음).
-        ItemSO flash = Existing("Item_Flashbang"), glove = Existing("Item_BoxingGlove"), cannon = Existing("Item_ColaCannon"), search = Existing("Item_SearchBomb");
-        if (flash != null && glove != null && cannon != null && search != null)
-            catalog.EditorSetRequest1108(items.Concat(new[] { flash, glove, cannon, search }.Where(x => !items.Contains(x))).ToArray(),
-                new[] { skates, pumpkin, recorder, flash, glove, cannon }, new[] { 5, 3, 5, 3, 4, 3 }, search);
+        // ItemSO flash = Existing("Item_Flashbang"), glove = Existing("Item_BoxingGlove"), cannon = Existing("Item_ColaCannon"), search = Existing("Item_SearchBomb");
+        // if (flash != null && glove != null && cannon != null && search != null)
+        // catalog.EditorSetRequest1108(items.Concat(new[] { flash, glove, cannon, search }.Where(x => !items.Contains(x))).ToArray(),
+        // new[] { skates, pumpkin, recorder, flash, glove, cannon }, new[] { 5, 3, 5, 3, 4, 3 }, search);
+        // §91 권투 글러브 완전 삭제 → 껌 수류탄(§90 G6)·패러글라이더(§90 P5, Heaven Of Bakery 전용) — P90AssetSetup과 같은 목록
+        ItemSO flash = Existing("Item_Flashbang"), gum = Existing("Item_GumTrap"), cannon = Existing("Item_ColaCannon"), search = Existing("Item_SearchBomb"), glider = Existing("Item_Paraglider");
+        if (flash != null && gum != null && cannon != null && search != null && glider != null)
+            catalog.EditorSetRequest1108(items.Concat(new[] { flash, gum, cannon, search, glider }.Where(x => !items.Contains(x))).ToArray(),
+                new[] { skates, pumpkin, recorder, flash, gum, cannon, glider }, new[] { 5, 3, 5, 3, 4, 3, 3 }, search);
         else Debug.LogWarning("[EscapeAssets] §68 items missing — cookie chest list keeps only skates·pumpkin·recorder");
         BuildXRayMaterial();
         EditorUtility.SetDirty(catalog);

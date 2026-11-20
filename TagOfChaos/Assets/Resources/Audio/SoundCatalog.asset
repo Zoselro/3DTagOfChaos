@@ -683,6 +683,45 @@ MonoBehaviour:
     cooldown: 0.05
     maxInstances: 2
     importance: 2
+  - id: 519
+    clips:
+    - {fileID: 8300000, guid: 00a61e3dfd8c4b447ae6a127dcb43d00, type: 3}
+    volume: 0.8
+    pitchRange: {x: 0.95, y: 1.05}
+    space: 0
+    bus: 2
+    maxDistance: 15
+    minDistance: 1.5
+    falloff: 2
+    cooldown: 0.05
+    maxInstances: 4
+    importance: 1
+  - id: 520
+    clips:
+    - {fileID: 8300000, guid: e93564f694be7ee4ab30415a91fd119c, type: 3}
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    space: 1
+    bus: 1
+    maxDistance: 32
+    minDistance: 4
+    falloff: 3
+    cooldown: 0.05
+    maxInstances: 4
+    importance: 2
+  - id: 521
+    clips:
+    - {fileID: 8300000, guid: 35496847647b9014a8bf155334e5c03f, type: 3}
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    space: 1
+    bus: 1
+    maxDistance: 20
+    minDistance: 2
+    falloff: 2
+    cooldown: 0.05
+    maxInstances: 4
+    importance: 1
   - id: 600
     clips:
     - {fileID: 8300000, guid: 7345af597a2e14d4b917ce2615447c68, type: 3}
@@ -800,9 +839,48 @@ MonoBehaviour:
     cooldown: 0.05
     maxInstances: 1
     importance: 3
-  - id: 609
+  - id: 610
     clips:
-    - {fileID: 8300000, guid: 57994913ffb8c3f49ae51a098eb3b34b, type: 3}
+    - {fileID: 8300000, guid: 59e61ce511efa064b9038bf416e2c1e7, type: 3}
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    space: 1
+    bus: 1
+    maxDistance: 45
+    minDistance: 3
+    falloff: 1
+    cooldown: 0.05
+    maxInstances: 4
+    importance: 2
+  - id: 611
+    clips:
+    - {fileID: 8300000, guid: 7c2df9b10e0e97441983f2fa054a1b91, type: 3}
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    space: 1
+    bus: 1
+    maxDistance: 75
+    minDistance: 5
+    falloff: 1
+    cooldown: 0.05
+    maxInstances: 3
+    importance: 3
+  - id: 612
+    clips:
+    - {fileID: 8300000, guid: 77793d150e3dff54bbe806a078fd3feb, type: 3}
+    volume: 1
+    pitchRange: {x: 0.95, y: 1.05}
+    space: 1
+    bus: 1
+    maxDistance: 22
+    minDistance: 2
+    falloff: 2
+    cooldown: 0.05
+    maxInstances: 4
+    importance: 1
+  - id: 613
+    clips:
+    - {fileID: 8300000, guid: d3426cbdc731c65489aae541f70494c9, type: 3}
     volume: 1
     pitchRange: {x: 0.95, y: 1.05}
     space: 1

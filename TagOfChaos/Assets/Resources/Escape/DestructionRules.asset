@@ -197,6 +197,9 @@ MonoBehaviour:
   - HOB_AlmondHalf
   - HOB_AlmondSackDeco
   - HOB_AlmondTree
+  - HOB_Apple
+  - HOB_BananaTree_A
+  - HOB_BananaTree_B
   - HOB_BannerLamp
   - HOB_Barrel
   - HOB_Bench
@@ -230,6 +233,8 @@ MonoBehaviour:
   - HOB_GoldFence
   - HOB_GoldLamp
   - HOB_GoldPost
+  - HOB_Grape
+  - HOB_Greenhouse
   - HOB_HeartBonbon
   - HOB_House_Cake
   - HOB_House_Strawberry
@@ -244,6 +249,7 @@ MonoBehaviour:
   - HOB_Signpost
   - HOB_StrawberryChocoCake
   - HOB_StrawberryCupcake
+  - HOB_Strawberry
   - HOB_Tree_Fruit
   - HOB_Tree_Pine_L
   - HOB_Tree_Pine_S
@@ -251,6 +257,7 @@ MonoBehaviour:
   - HOB_Truffle
   - HOB_Truffles
   - HOB_Urn
+  - HOB_Watermelon
   - HOB_WheatBanner
   - HOB_WheatBundle
   - HOB_WoodFootbridge

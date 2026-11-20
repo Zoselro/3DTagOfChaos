@@ -262,6 +262,7 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
     {
         if (pv == null || pv.Owner == null) return;
         if (IsBeingGrabKilled) return; // 붙잡힘 동안에는 부서지는 순간(FinishGrabKill)까지 숨기기를 미룬다
+        if (fallBreaking) return;      // §91 낙하: 땅(또는 허공 끝)에 닿는 순간(FallBreak)까지 몸을 보이며 떨어진다
         // 대기실에서는 늘 살아 있는 모습 — 이전 판 HitCount가 방장의 초기화 전에 잠깐 남아 있다(2026-10-12 멀티 시험).
         LifeState desired = EscapeManager.IsActive && RoomState.IsBroken(pv.Owner) ? LifeState.Broken : LifeState.Alive;
         if (desired == LifeState.Broken) EnterSpectatorIfConfirmed(); // 처형 연출이 먼저 끝나고 확정이 나중에 온 경우·마녀
@@ -271,6 +272,7 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
         {
             if (reason == "callback" && DiedToWitch()) ShatterByWitch(); // 내리치는 순간 몸이 조각나며 가루로(Request1009Plan.md §23.5 X7)
             else if (reason == "callback" && DiedToGiant()) StompedByGiant(); // 거대 괴물에게 밟힘(§64.6)
+            else if (reason == "callback" && DiedFromFall() && !visualsHidden) { StartCoroutine(FallBreak()); return; } // §91 떨어져 부서짐
             ApplyBroken();
         }
         else if (appliedState == LifeState.Broken) RestoreAlive();
@@ -282,6 +284,60 @@ public class CookieLifeStatePresenter : MonoBehaviourPunCallbacks
 
     private bool DiedToWitch() =>
         RoomState.TryGetPlayerInt(pv.Owner, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Witch;
+
+    private bool DiedFromFall() =>
+        RoomState.TryGetPlayerInt(pv.Owner, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Fall;
+
+    // ---------------- §91 떨어져 부서짐(Heaven Of Bakery) ----------------
+    // 방장은 12 m 넘게 떨어지는 도중에 확정한다 — 몸은 계속 떨어지다가 땅에 닿는 순간(또는 허공 아래 끝) 부서진다.
+    // 쿠키 = 몸이 조각나며 부스러기, 슬라임 캐릭터(에이드공주) = 부스러기 없이 철퍽 퍼지는 슬라임.
+    public const float FallBreakMaxSeconds = 8f;
+    private const float FallGroundProbe = 0.55f;
+    private bool fallBreaking;
+
+    private System.Collections.IEnumerator FallBreak()
+    {
+        fallBreaking = true;
+        crumbsSpawned = true; // 처형용 가루는 터뜨리지 않는다
+        float until = Time.time + FallBreakMaxSeconds;
+        float voidY = GameSettings.Current.FallRespawnHeight + 10f;
+        yield return null;
+        while (Time.time < until)
+        {
+            Vector3 p = transform.position;
+            if (p.y < voidY || FallLanded(p)) break;
+            yield return null;
+        }
+        FallImpact(transform.position);
+        fallBreaking = false;
+        ApplyBroken();
+        appliedState = LifeState.Broken;
+        Debug.Log($"[CookieLife] view={pv.ViewID} broken by the fall at {transform.position:F1}");
+        EnterSpectatorIfConfirmed();
+    }
+
+    // 발밑 가까이에 (내 몸이 아닌) 땅이 있으면 닿은 것.
+    private bool FallLanded(Vector3 feet)
+    {
+        foreach (RaycastHit h in Physics.RaycastAll(feet + Vector3.up * 0.3f, Vector3.down, 0.3f + FallGroundProbe, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+            if (!h.collider.transform.IsChildOf(transform)) return true;
+        return false;
+    }
+
+    private void FallImpact(Vector3 feet)
+    {
+        if (visualsHidden) return;
+        GiantSettingsSO settings = GiantSettingsSO.Current;
+        if (settings != null && settings.OozesSlime(PlayerSkinApplier.CharacterIndexOf(pv.Owner)))
+        {
+            GameAudio.PlayAt(SoundId.GumSplat, feet);       // 철퍽(슬라임)
+            GiantDeathFx.Slime(feet, settings.SlimeColor);   // 부서지지 않고 납작하게 퍼진다
+            return;
+        }
+        GameAudio.PlayAt(SoundId.CookieCrumble, feet);
+        WitchShatter.ShatterBody(GetComponentsInChildren<Renderer>(), fallbackCrumbColor); // 몸 조각이 튀며 흩어진다
+        GiantDeathFx.Crumbs(feet, CharacterCrumbColors(pv.Owner), fallbackCrumbColor);
+    }
 
     private bool DiedToGiant() =>
         RoomState.TryGetPlayerInt(pv.Owner, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Giant;

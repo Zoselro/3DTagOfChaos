@@ -24,6 +24,7 @@ public static class HeavenOfBakeryMapBuilder
     // public const float FieldRadius = 100f, FenceRadius = 96f;
     public const float FieldRadius = 85f, FenceRadius = 81f;          // §89.24 큰 섬 r 85(하늘 섬 68 m의 약 1.25배)
     public const float PlazaScale = 1.67f, PlazaTop = 0.82f;
+    public const float PlazaLift = 0.02f; // §91 광장 맨 아래 계단판(y 0)이 섬 바닥(y 0)과 겹쳐 깜박였다(z-fighting) — 2 cm 올린다
     // public const float MapRadius = 190f;                 // §89.13 떠 있는 섬 3개가 큰 섬 밖 r 150~187
     // public const float MapRadius = 245f;
     public const float MapRadius = 270f;   // 2026-11-19 하늘 섬 고도 48 m: 섬 중심 r 192 + 반지름 68 + 여유                    // §89.24 하늘 섬 중심 r 168 + 반지름 68 + 여유
@@ -191,6 +192,8 @@ public static class HeavenOfBakeryMapBuilder
             EditorUtility.SetDirty(manager);
         }
         BindLayout(scene);
+        GameObject[] cannonSkins = P91CannonSetup.LoadPrefabs();   // §91 하늘 대포 6종(테마 쌍마다 모습)
+        if (cannonSkins.All(x => x != null)) P91CannonSetup.AttachSkins(cannonSkins);
         ClearBakedNavMesh(scene);
         RoundMapKit.MoveSpawn(scene, SceneSpawnPoints.Cookie, map, "Spawn_Cookie_Q1");
         RoundMapKit.MoveSpawn(scene, SceneSpawnPoints.Monster, map, "Spawn_Monster");
@@ -272,7 +275,8 @@ public static class HeavenOfBakeryMapBuilder
     {
         // Put("HOB_Island_Main", ground, Vector3.zero, Quaternion.identity);
         Put("HOB_Island_Main85", ground, Vector3.zero, Quaternion.identity);   // §89.24 r 85
-        Put("HOB_RoundPlaza", ground, Vector3.zero, Quaternion.identity, true, new Vector3(PlazaScale, 1f, PlazaScale));
+        // Put("HOB_RoundPlaza", ground, Vector3.zero, Quaternion.identity, true, new Vector3(PlazaScale, 1f, PlazaScale));
+        Put("HOB_RoundPlaza", ground, Vector3.up * PlazaLift, Quaternion.identity, true, new Vector3(PlazaScale, 1f, PlazaScale));
         placed.Take(Vector3.zero, 9.6f * PlazaScale + 1f);
     }
 

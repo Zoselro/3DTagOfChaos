@@ -63,6 +63,7 @@ public class EscapeHud : MonoBehaviour
         instance.Build();
         owner.StateChanged += instance.RefreshRequirements;
         PlayerListHud.Create(); // Tab 참가자 목록(§59 PL) — 게임 맵에만 생긴다
+        go.AddComponent<FallWarningHud>().Init(owner, go.transform);   // §90 W2·W3 Heaven Of Bakery 낙하 경고
     }
 
     private void OnDestroy()
@@ -132,6 +133,11 @@ public class EscapeHud : MonoBehaviour
                 ItemSO restored = instance.manager.Catalog.Find(itemId);
                 string restoredName = restored == null ? itemId : instance.IsUnknownToLocal(restored) ? t.unknownMaterial : restored.DisplayName;
                 Toast(string.Format(t.materialRestored, restoredName));
+                break;
+            case EscapeNoticeKind.ChestsRefilled:   // §90 C8 쿠키·스파이 화면만(방장이 술래에게는 보내지 않는다)
+                if (RoomState.IsLocalMonster()) break;
+                Toast(t.chestsRefilled);
+                GameAudio.Play(SoundId.ChestRefill);
                 break;
             case EscapeNoticeKind.NoiseBomb:
                 Toast(t.noiseBombAlarm, alert: true);

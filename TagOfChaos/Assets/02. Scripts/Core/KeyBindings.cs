@@ -30,6 +30,7 @@ public enum KeyAction
     ShowCursor, // 누르고 있는 동안 커서 보이기·시점 멈춤(§59 CL — 대기실 버튼 누르기)
     MonsterSearch, // 술래 수색 폭탄(§68 GP5)
     MonsterGrab,   // 술래 잡기(§69 F3 — 예전에는 E)
+    MonsterWarp,   // §90 T2 술래 순간이동(재료 건물 고르기) — 끝에 붙인다
 }
 
 // 같은 때 쓰이는 조작끼리의 묶음 — 겹침(빨간 경고)은 같은 묶음 안에서만 본다(쿠키 달리기와 괴물 돌진은 같은 Shift여도 된다).
@@ -98,6 +99,7 @@ public static class KeyBindings
             case KeyAction.MonsterDash:
             case KeyAction.MonsterSkill:
             case KeyAction.MonsterSearch:
+            case KeyAction.MonsterWarp:
                 return KeyGroup.Monster;
             case KeyAction.SpectateNext:
                 return KeyGroup.Spectate;
@@ -156,6 +158,7 @@ public static class KeyBindings
             case KeyAction.ShowCursor: return b.ShowCursorKey;
             case KeyAction.MonsterSearch: return KeyCode.R;
             case KeyAction.MonsterGrab: return KeyCode.Mouse0;
+            case KeyAction.MonsterWarp: return KeyCode.T;   // §90.13 Q2 사용자 결정(말하기 키와 같으면 설정에서 바꿀 수 있다)
             default: return KeyCode.None;
         }
     }

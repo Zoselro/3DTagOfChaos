@@ -86,6 +86,12 @@ public class EscapeRecipeSO : ScriptableObject
     }
     public void EditorSetExcludedItems(ItemSO[] items) => excludedItems = items ?? new ItemSO[0];
 
+    [Tooltip("§90 P5 Items that appear ONLY on this map (other maps skip them) — e.g. the Heaven Of Bakery paraglider.")]
+    [SerializeField] private ItemSO[] exclusiveItems = new ItemSO[0];
+    public ItemSO[] ExclusiveItems => exclusiveItems;
+    public bool OwnsExclusive(ItemSO item) => item != null && exclusiveItems != null && System.Array.IndexOf(exclusiveItems, item) >= 0;
+    public void EditorSetExclusiveItems(ItemSO[] items) => exclusiveItems = items ?? new ItemSO[0];
+
     public string MapName => mapName;
     public EscapeExitKind ExitKind => exitKind;
     public RecipeMode Mode => mode;

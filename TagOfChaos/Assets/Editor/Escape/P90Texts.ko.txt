@@ -1,0 +1,17 @@
+# §90 한국어 문구(P90AssetSetup이 읽어 EscapeTexts·아이템 표시 이름에 넣는다). 형식: 키=값
+item.GumTrap=껌 수류탄
+item.Paraglider=패러글라이더
+item.Bazooka=바주카포
+chestsRefilled=상자가 다시 채워졌습니다
+fallWarning=⚠ 떨어지면 부서집니다
+fallWarningGlider=패러글라이더를 펴면 안전합니다
+fallIntro=하늘 섬과 경사로에서 떨어지면 부서집니다. 패러글라이더로 내려가세요.
+fallSign=⚠ 낙하 주의 — 떨어지면 부서집니다
+fallSignSmall=패러글라이더가 있으면 안전
+warpTitle=순간이동할 건물 (1~4 / 클릭, T로 닫기)
+warpRepaired=수리됨
+warpCooldown=순간이동 {0}초 뒤 가능
+gumStuck=껌에 붙었다! 느려집니다
+gliderNeedsAir=높은 곳에서 뛰어내리며 펴세요
+skillWarp=순간이동
+skillBazooka=바주카포

@@ -23,15 +23,15 @@ public class Request1115Tests
         Assert.IsFalse(AimMotion.IsAimWalk(PlayerMoveState.Walk));
     }
 
-    // C1: 첫 주먹은 오른손, 이어 치면 왼손·오른손 번갈아, 1.5초 쉬면 다시 오른손.
-    [Test]
-    public void Punch_AlternatesRightThenLeft()
-    {
-        Assert.IsFalse(AimMotion.NextPunchIsLeft(false, 99f), "first punch: right");
-        Assert.IsTrue(AimMotion.NextPunchIsLeft(true, 0.5f), "after right: left");
-        Assert.IsFalse(AimMotion.NextPunchIsLeft(false, 0.5f), "after left: right");
-        Assert.IsFalse(AimMotion.NextPunchIsLeft(true, AimMotion.PunchComboWindow + 0.1f), "pause: right again");
-    }
+//     // C1: 첫 주먹은 오른손, 이어 치면 왼손·오른손 번갈아, 1.5초 쉬면 다시 오른손.
+//     [Test]
+//     public void Punch_AlternatesRightThenLeft()
+//     {
+//         Assert.IsFalse(AimMotion.NextPunchIsLeft(false, 99f), "first punch: right");
+//         Assert.IsTrue(AimMotion.NextPunchIsLeft(true, 0.5f), "after right: left");
+//         Assert.IsFalse(AimMotion.NextPunchIsLeft(false, 0.5f), "after left: right");
+//         Assert.IsFalse(AimMotion.NextPunchIsLeft(true, AimMotion.PunchComboWindow + 0.1f), "pause: right again");
+//     }
 
     // 동기화는 상태를 int로 보낸다 — 새 이동 상태는 끝에 붙어 옛 번호가 바뀌지 않는다.
     [Test]
@@ -58,7 +58,8 @@ public class Request1115Tests
         Assert.That(carry < hold && hold < action, $"layer order carry {carry} < hold {hold} < action {action}");
         Assert.NotNull(c.layers[hold].avatarMask, "right arm mask");
         AssertState(c.layers[hold].stateMachine, PlayerActionPose.ItemHoldState);
-        foreach (string s in new[] { PlayerActionPose.SwingState, PlayerActionPose.HammerHoldState, PlayerActionPose.GloveGuardState, PlayerActionPose.PunchRState, PlayerActionPose.PunchLState })
+        // foreach (string s in new[] { PlayerActionPose.SwingState, PlayerActionPose.HammerHoldState, PlayerActionPose.GloveGuardState, PlayerActionPose.PunchRState, PlayerActionPose.PunchLState })
+        foreach (string s in new[] { PlayerActionPose.SwingState, PlayerActionPose.HammerHoldState }) // §91 글러브 가드·주먹 상태 삭제
             AssertState(c.layers[action].stateMachine, s);
         foreach (PlayerMoveState m in new[] { PlayerMoveState.StrafeLeft, PlayerMoveState.StrafeRight, PlayerMoveState.WalkBack })
         {
@@ -79,13 +80,14 @@ public class Request1115Tests
     public void Clips_MatchCodeTiming()
     {
         Assert.AreEqual(PlayerActionPose.SwingSeconds, Clip("Cookie_HammerSwing").length, 0.02f);
-        Assert.AreEqual(PlayerActionPose.PunchSeconds, Clip("Cookie_PunchR").length, 0.02f);
-        Assert.AreEqual(PlayerActionPose.PunchSeconds, Clip("Cookie_PunchL").length, 0.02f);
+        // Assert.AreEqual(PlayerActionPose.PunchSeconds, Clip("Cookie_PunchR").length, 0.02f);
+        // Assert.AreEqual(PlayerActionPose.PunchSeconds, Clip("Cookie_PunchL").length, 0.02f);
         Assert.Less(ToolUser.HammerSweepFrom, PlayerActionPose.SwingHit);
         Assert.Greater(ToolUser.HammerSweepTo, PlayerActionPose.SwingHit);
-        Assert.Less(ToolUser.GloveSweepFrom, PlayerActionPose.PunchHit);
-        Assert.Greater(ToolUser.GloveSweepTo, PlayerActionPose.PunchHit);
-        foreach (string loop in new[] { "Cookie_HammerHold", "Cookie_GloveGuard", "Cookie_ItemHold", "Cookie_StrafeLeft", "Cookie_StrafeRight" })
+        // Assert.Less(ToolUser.GloveSweepFrom, PlayerActionPose.PunchHit);
+        // Assert.Greater(ToolUser.GloveSweepTo, PlayerActionPose.PunchHit);
+        // foreach (string loop in new[] { "Cookie_HammerHold", "Cookie_GloveGuard", "Cookie_ItemHold", "Cookie_StrafeLeft", "Cookie_StrafeRight" })
+        foreach (string loop in new[] { "Cookie_HammerHold", "Cookie_ItemHold", "Cookie_StrafeLeft", "Cookie_StrafeRight" }) // §91
             Assert.IsTrue(Clip(loop).isLooping, loop + " loops");
     }
 

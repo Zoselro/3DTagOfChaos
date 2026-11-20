@@ -36,8 +36,10 @@ public sealed class EscapeAuthority
     private readonly EscapeRecipeSO recipe;
     private readonly System.Random rng = new System.Random();
     private readonly Dictionary<int, float> toolReadyAt = new Dictionary<int, float>();
-    private readonly GloveCombo gloveCombo = new GloveCombo();                  // 권투 글러브 연타(§68 GP3)
+    // private readonly GloveCombo gloveCombo = new GloveCombo();                  // 권투 글러브 연타(§68 GP3) — §90 G6 폐기 뒤에도 옛 요청 판정에 남겨 둔다
     private readonly Dictionary<int, float> searchReadyAt = new Dictionary<int, float>(); // 수색 폭탄 쿨타임(§68 GP5)
+    private readonly Dictionary<int, float> bazookaReadyAt = new Dictionary<int, float>(); // §90 B3 바주카포 쿨타임
+    private readonly Dictionary<int, float> warpReadyAt = new Dictionary<int, float>();    // §90 T2 순간이동 쿨타임
     private readonly Dictionary<int, float> mashAt = new Dictionary<int, float>();       // 사이렌 철창 연타 간격(§68 GP5)
     private readonly Dictionary<int, Vector3> lastPositions = new Dictionary<int, Vector3>();
     private readonly Dictionary<int, HoldStart> dismantleStarts = new Dictionary<int, HoldStart>();
@@ -115,60 +117,70 @@ public sealed class EscapeAuthority
         int kitCount = spies > 0 ? Mathf.Max(1, recipe.RepairKitCount > 0 ? recipe.RepairKitCount : s.RocketSlots.Count) : 0; // 키트 수 = 로켓 칸 수(§26)
         s.RocketAnchor = manager.RocketAnchorCount > 0 ? rng.Next(manager.RocketAnchorCount) : -1;
 
-        // 상자: 일반 = 쿠키 × 8, 스파이 = 스파이 × 5(§25 요청). 상자 자리 중에서 무작위.
+        // // 상자: 일반 = 쿠키 × 8, 스파이 = 스파이 × 5(§25 요청). 상자 자리 중에서 무작위.
+        // var anchors = new List<int>();
+        // for (int i = 0; i < chestAnchorCount; i++) anchors.Add(i);
+        // Shuffle(anchors);
+        // int spyChests = Mathf.Min(spies * 5 + spyExtras.Count, anchors.Count);
+        // int normalChests = Mathf.Min(cookies * 8, anchors.Count - spyChests);
+        // for (int i = 0; i < normalChests; i++) s.Chests.Add(new EscapeState.Chest { Anchor = anchors[i], Spy = false });
+        // for (int i = 0; i < spyChests; i++) s.Chests.Add(new EscapeState.Chest { Anchor = anchors[normalChests + i], Spy = true });
+        //
+        // // 일반 상자: 활성 건물 재료 각 2개 + (스파이가 있으면) 수리키트(칸 수 − 1개) + 남은 상자는 쿠키 아이템(비율 5:3:5, §25.3.2 S1)
+        // var normalItems = new List<string>();
+        // foreach (EscapeState.Building b in s.Buildings)
+        //     if (b.Active) { normalItems.Add(b.MaterialId); normalItems.Add(b.MaterialId); }
+        // if (catalog.RepairKit != null) for (int k = 1; k < kitCount; k++) normalItems.Add(catalog.RepairKit.ItemId);
+        // while (normalItems.Count < normalChests)
+        // {
+        //     // ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights);
+        //     ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights, recipe);   // §89.25 이 맵에서 뺀 아이템(Heaven Of Bakery의 콜라 대포)은 고르지 않는다
+        //     if (extra == null) break;
+        //     normalItems.Add(extra.ItemId);
+        // }
+        // var normalIndices = new List<int>();
+        // for (int i = 0; i < s.Chests.Count; i++) if (!s.Chests[i].Spy) normalIndices.Add(i);
+        // Shuffle(normalIndices);
+        // for (int i = 0; i < normalItems.Count; i++)
+        // {
+        //     ItemSO item = catalog.Find(normalItems[i]);
+        //     if (item == null) continue;
+        //     var entry = NewItem(item);
+        //     if (i < normalIndices.Count) { entry.Loc = ItemLocation.Chest; entry.A = normalIndices[i]; }
+        //     else { entry.Loc = ItemLocation.Ground; entry.Pos = manager.DropPointNear(manager.BuildingRepairPoint(i % EscapeState.BuildingCount), rng.Next()); } // 상자가 모자라면 건물 옆 바닥
+        //     s.Items.Add(entry);
+        // }
+        //
+        // // 스파이 상자: 스파이 1명당 수리키트 1 + 해체 도구 1 + 나머지 3개는 겹치지 않게 무작위(§25.3.2 R8)
+        // var spyIndices = new List<int>();
+        // for (int i = 0; i < s.Chests.Count; i++) if (s.Chests[i].Spy) spyIndices.Add(i);
+        // for (int spy = 0; spy < spies; spy++)
+        // {
+        //     var kit = new List<ItemSO> { catalog.RepairKit, catalog.DismantleTool };
+        //     var pool = new List<ItemSO>(catalog.SpyRandomTools);
+        //     Shuffle(pool);
+        //     for (int k = 0; k < 3 && k < pool.Count; k++) kit.Add(pool[k]);
+        //     if (spy == 0) kit.AddRange(spyExtras); // 상자에 없는 로켓 재료(스파이 한 명 몫)
+        //     int first = spy * 5 + (spy > 0 ? spyExtras.Count : 0);
+        //     for (int k = 0; k < kit.Count && first + k < spyIndices.Count; k++)
+        //     {
+        //         if (kit[k] == null) continue;
+        //         var entry = NewItem(kit[k]);
+        //         entry.Loc = ItemLocation.Chest;
+        //         entry.A = spyIndices[first + k];
+        //         s.Items.Add(entry);
+        //     }
+        // }
+        // §90 C8: 상자는 비어서 시작하고 여는 순간 내용을 정한다(ChestRules). 일반 = 쿠키 × 8, 스파이 = 스파이 × 8(하나에 하나씩).
+        // 수리키트·해체 도구는 스파이 상자 차례로 옮겼고, 로켓 재료도 스파이 상자에서 필요한 만큼 나온다(§90.13 Q8·§90.14).
         var anchors = new List<int>();
         for (int i = 0; i < chestAnchorCount; i++) anchors.Add(i);
         Shuffle(anchors);
-        int spyChests = Mathf.Min(spies * 5 + spyExtras.Count, anchors.Count);
-        int normalChests = Mathf.Min(cookies * 8, anchors.Count - spyChests);
+        int spyChests = Mathf.Min(spies * ChestRules.SpyChestsPerSpy, anchors.Count);
+        int normalChests = Mathf.Min(cookies * ChestRules.NormalChestsPerCookie, anchors.Count - spyChests);
         for (int i = 0; i < normalChests; i++) s.Chests.Add(new EscapeState.Chest { Anchor = anchors[i], Spy = false });
         for (int i = 0; i < spyChests; i++) s.Chests.Add(new EscapeState.Chest { Anchor = anchors[normalChests + i], Spy = true });
-
-        // 일반 상자: 활성 건물 재료 각 2개 + (스파이가 있으면) 수리키트(칸 수 − 1개) + 남은 상자는 쿠키 아이템(비율 5:3:5, §25.3.2 S1)
-        var normalItems = new List<string>();
-        foreach (EscapeState.Building b in s.Buildings)
-            if (b.Active) { normalItems.Add(b.MaterialId); normalItems.Add(b.MaterialId); }
-        if (catalog.RepairKit != null) for (int k = 1; k < kitCount; k++) normalItems.Add(catalog.RepairKit.ItemId);
-        while (normalItems.Count < normalChests)
-        {
-            // ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights);
-            ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights, recipe);   // §89.25 이 맵에서 뺀 아이템(Heaven Of Bakery의 콜라 대포)은 고르지 않는다
-            if (extra == null) break;
-            normalItems.Add(extra.ItemId);
-        }
-        var normalIndices = new List<int>();
-        for (int i = 0; i < s.Chests.Count; i++) if (!s.Chests[i].Spy) normalIndices.Add(i);
-        Shuffle(normalIndices);
-        for (int i = 0; i < normalItems.Count; i++)
-        {
-            ItemSO item = catalog.Find(normalItems[i]);
-            if (item == null) continue;
-            var entry = NewItem(item);
-            if (i < normalIndices.Count) { entry.Loc = ItemLocation.Chest; entry.A = normalIndices[i]; }
-            else { entry.Loc = ItemLocation.Ground; entry.Pos = manager.DropPointNear(manager.BuildingRepairPoint(i % EscapeState.BuildingCount), rng.Next()); } // 상자가 모자라면 건물 옆 바닥
-            s.Items.Add(entry);
-        }
-
-        // 스파이 상자: 스파이 1명당 수리키트 1 + 해체 도구 1 + 나머지 3개는 겹치지 않게 무작위(§25.3.2 R8)
-        var spyIndices = new List<int>();
-        for (int i = 0; i < s.Chests.Count; i++) if (s.Chests[i].Spy) spyIndices.Add(i);
-        for (int spy = 0; spy < spies; spy++)
-        {
-            var kit = new List<ItemSO> { catalog.RepairKit, catalog.DismantleTool };
-            var pool = new List<ItemSO>(catalog.SpyRandomTools);
-            Shuffle(pool);
-            for (int k = 0; k < 3 && k < pool.Count; k++) kit.Add(pool[k]);
-            if (spy == 0) kit.AddRange(spyExtras); // 상자에 없는 로켓 재료(스파이 한 명 몫)
-            int first = spy * 5 + (spy > 0 ? spyExtras.Count : 0);
-            for (int k = 0; k < kit.Count && first + k < spyIndices.Count; k++)
-            {
-                if (kit[k] == null) continue;
-                var entry = NewItem(kit[k]);
-                entry.Loc = ItemLocation.Chest;
-                entry.A = spyIndices[first + k];
-                s.Items.Add(entry);
-            }
-        }
+        _ = kitCount; _ = spyExtras;
 
         // AI: 쿠키·스파이 1인당 10마리를 맵에 흩어 놓는다(§25.5 L)
         foreach (Player p in RoomState.Players)
@@ -237,8 +249,11 @@ public sealed class EscapeAuthority
         return null;
     }
 
+    // private static int WeightOf(IReadOnlyList<ItemSO> items, IReadOnlyList<int> weights, int i, EscapeRecipeSO except) =>
+    //     except != null && except.Excludes(items[i]) ? 0 : WeightAt(weights, i);
+    // §90 P5 다른 맵 전용 아이템(패러글라이더 = Heaven Of Bakery)도 무게 0.
     private static int WeightOf(IReadOnlyList<ItemSO> items, IReadOnlyList<int> weights, int i, EscapeRecipeSO except) =>
-        except != null && except.Excludes(items[i]) ? 0 : WeightAt(weights, i);
+        except != null && (except.Excludes(items[i]) || (EscapeCatalogSO.Current != null && EscapeCatalogSO.Current.IsExclusiveElsewhere(items[i], except))) ? 0 : WeightAt(weights, i);
 
     // §89.25 이 맵(레시피)에서 뺀 아이템인지 — 개발용 아이템 주기(OfflineModeBootstrap)가 건너뛴다.
     public bool ExcludesItem(string itemId) => recipe != null && recipe.Excludes(itemId);
@@ -280,6 +295,7 @@ public sealed class EscapeAuthority
             }
             if (judge && c is HideOrSeekPlayer runner && lastPositions.TryGetValue(actor, out Vector3 before) && lastPositionAt.TryGetValue(actor, out float beforeAt))
                 WatchStamina(actor, runner, before, pos, now - beforeAt, exempt);
+            if (judge && c is HideOrSeekPlayer faller) JudgeSkyFall(actor, faller, pos, now, exempt);   // §90 P5
             lastPositions[actor] = pos;
             lastPositionAt[actor] = now;
         }
@@ -296,6 +312,81 @@ public sealed class EscapeAuthority
         bool skip = exempt || cookie.CurrentCarrierViewId >= 0 || cookie.IsMovementLocked;
         if (watch.Observe(dt, skip ? 0f : speed, cookie.WalkSpeed * cookie.SpeedBoost, Time.realtimeSinceStartup))
             Debug.LogWarning($"[NetGuard] Actor {actor} kept running {watch.OverrunSeconds:F1}s past the stamina limit (speed {speed:F1} m/s).");
+    }
+
+    // ---------------- §90 P5 하늘 섬 낙하·패러글라이더 ----------------
+
+    private readonly Dictionary<int, float> groundY = new Dictionary<int, float>();
+    private readonly Dictionary<int, Vector3> groundPos = new Dictionary<int, Vector3>();
+    private readonly Dictionary<int, float> fallSampleY = new Dictionary<int, float>();
+    private readonly Dictionary<int, float> fallSampleAt = new Dictionary<int, float>();
+    private readonly HashSet<int> fallJudged = new HashSet<int>();
+
+    private bool MapHasSkyFall => recipe != null && SkyFallRules.MapHasSkyFall(recipe.MapName);
+
+    private void JudgeSkyFall(int actor, HideOrSeekPlayer cookie, Vector3 pos, float now, bool exempt)
+    {
+        if (!MapHasSkyFall || State == null || RoomState.IsMonster(actor)) return;
+        float vy = 0f;
+        if (fallSampleY.TryGetValue(actor, out float py) && fallSampleAt.TryGetValue(actor, out float pt) && now - pt > 0.01f) vy = (pos.y - py) / (now - pt);
+        fallSampleY[actor] = pos.y;
+        fallSampleAt[actor] = now;
+        bool gliding = State.GlideIndex(actor) >= 0;
+        bool skip = exempt || gliding || cookie.CurrentCarrierViewId >= 0 || EscapeManager.IsRidingVehicle(actor) || manager.IsNearCookieSpawn(pos)
+                    || State.HasLeftMap(actor) || cookie.IsBroken;
+        float last = groundY.TryGetValue(actor, out float g) ? g : pos.y;
+        float next = SkyFallRules.UpdateGroundY(last, pos.y, vy, skip);
+        if (next == pos.y && !skip && vy > -SkyFallRules.FallSpeed) groundPos[actor] = pos;   // R2 마지막으로 디딘 자리
+        groundY[actor] = next;
+        if (skip || fallJudged.Contains(actor)) return;
+        if (!SkyFallRules.Dies(true, next, pos.y, gliding)) return;
+        Player p = FindPlayer(actor);
+        if (p == null || RoomState.IsBroken(p)) return;
+        fallJudged.Add(actor);
+        AuthorityProps.SetPlayer(p, new Hashtable { { NetKeys.HitCount, 2 }, { NetKeys.DeathCause, (int)DeathCause.Fall } });
+        Debug.Log($"[EscapeAuthority] Actor {actor} fell {next - pos.y:F1} m without a paraglider — broken (Fall).");
+    }
+
+    // R2: 떨어져 부서졌거나 활공 중 잡히면 들고 있던 것은 마지막으로 디딘 땅에(없으면 지금 자리 → SafeGroundPoint).
+    private Vector3 DropPointFor(Player player, Vector3 fallback)
+    {
+        int actor = player.ActorNumber;
+        bool fell = RoomState.TryGetPlayerInt(player, NetKeys.DeathCause, out int cause) && cause == (int)DeathCause.Fall;
+        bool glided = State != null && State.GlideIndex(actor) >= 0;
+        return (fell || glided) && groundPos.TryGetValue(actor, out Vector3 g) ? g : fallback;
+    }
+
+    // §91 본인 화면이 "허공으로 떨어졌다"고 알렸다 — 방장의 위치 기록도 1층 바닥보다 12 m 넘게 아래면 부서짐(DeathCause.Fall).
+    private void FellFromSky(int actor)
+    {
+        if (!MapHasSkyFall || State == null || RoomState.IsMonster(actor) || !IsActiveEscaper(actor) || fallJudged.Contains(actor)) return;
+        if (State.GlideIndex(actor) >= 0) return;
+        if (!lastPositions.TryGetValue(actor, out Vector3 at) || at.y > SkyFallRules.FloorY - SkyFallRules.LethalDrop) return;
+        Player p = FindPlayer(actor);
+        if (p == null || RoomState.IsBroken(p)) return;
+        fallJudged.Add(actor);
+        AuthorityProps.SetPlayer(p, new Hashtable { { NetKeys.HitCount, 2 }, { NetKeys.DeathCause, (int)DeathCause.Fall } });
+        Debug.Log($"[EscapeAuthority] Actor {actor} fell into the void at y={at.y:F1} — broken (Fall).");
+    }
+
+    private bool GlideOpen(int actor, int invSlot)
+    {
+        if (!IsActiveEscaper(actor) || State.GlideIndex(actor) >= 0 || State.FlightIndex(actor) >= 0) return false;
+        int item = State.HeldItemAt(actor, invSlot);
+        ItemSO def = item >= 0 ? catalog.Find(State.Items[item].Id) : null;
+        if (def == null || !def.IsTool || def.Tool.Kind != ToolKind.Paraglider) return false;
+        UseUpTool(item);   // 1회용(펴면 없어진다)
+        State.Glides.Add(new EscapeState.Glide { Actor = actor, At = PhotonNetwork.Time });
+        return true;
+    }
+
+    private bool GlideClose(int actor)
+    {
+        int g = State.GlideIndex(actor);
+        if (g < 0) return false;
+        State.Glides.RemoveAt(g);
+        if (lastPositions.TryGetValue(actor, out Vector3 at)) { groundY[actor] = at.y; fallSampleY[actor] = at.y; }   // 내려선 높이부터 다시 잰다
+        return true;
     }
 
     private bool IsSuspect(int actor) => suspectUntil.TryGetValue(actor, out float until) && Time.realtimeSinceStartup < until;
@@ -358,6 +449,9 @@ public sealed class EscapeAuthority
             if (done || (!IsActiveEscaper(c.Owner) && !(c.Boarded && now < c.BoardAt + ColaCannonRules.LandAt(c.Flight)))) { State.Cannons.RemoveAt(i); changed = true; }
         }
 
+        changed |= TickGum(now);   // §90 G6
+        changed |= State.Warps.RemoveAll(w => now >= MonsterWarpRules.RemoveAt(w)) > 0;   // §90 T2
+
         // 괴물에게 잡힌 AI: 잡는 동작이 끝나면 지운다(§26 R10)
         for (int i = State.Decoys.Count - 1; i >= 0; i--)
             if (State.Decoys[i].Caught && now >= State.Decoys[i].CaughtAt + DecoyCatchSeconds) { State.Decoys.RemoveAt(i); changed = true; }
@@ -365,6 +459,7 @@ public sealed class EscapeAuthority
         if (Time.realtimeSinceStartup >= nextMaterialCheck)
         {
             nextMaterialCheck = Time.realtimeSinceStartup + MaterialCheckSeconds;
+            changed |= TickChestReset(now);   // §90 C8
             changed |= RestoreMissingMaterials();
         }
 
@@ -387,6 +482,7 @@ public sealed class EscapeAuthority
         {
             if (!b.Active || b.Repaired || string.IsNullOrEmpty(b.MaterialId)) continue;
             if (CountReachable(b.MaterialId, forSpy: false) > 0) continue;
+            if (ChestRules.HasClosedUnfilled(State, spy: false)) continue;   // §90.14 R1 다음에 열리는 일반 상자에서 먼저 나온다
             changed |= CreateMaterial(b.MaterialId, spyChest: false);
         }
         if (SpyStillPlaying())
@@ -395,6 +491,7 @@ public sealed class EscapeAuthority
                 if (slot.Filled || slot.Accepts == null || slot.Accepts.Length == 0) continue;
                 int found = 0;
                 foreach (string id in slot.Accepts) found += CountReachable(id, forSpy: true);
+                if (found == 0 && ChestRules.HasClosedUnfilled(State, spy: true)) continue;   // §90 C8 스파이 상자 차례가 필요한 부품을 준다
                 if (found == 0) changed |= CreateMaterial(slot.Accepts[0], spyChest: true);
             }
         return changed;
@@ -440,10 +537,21 @@ public sealed class EscapeAuthority
         {
             EscapeState.Chest ch = State.Chests[chest];
             ch.Opened = false;
+            ch.Filled = true;   // §90 C8 이 재료가 내용
             State.Chests[chest] = ch;
             EscapeState.Item it = State.Items[item];
             it.Loc = ItemLocation.Chest;
             it.A = chest;
+            State.Items[item] = it;
+        }
+        else if (!spyChest)
+        {
+            // RespawnInEmptyChest(item);
+            // §90.14 R1 닫힌 상자가 없으면(모두 열림) 그 건물 옆 바닥에 바로 놓는다
+            int b = BuildingOf(itemId);
+            EscapeState.Item it = State.Items[item];
+            it.Loc = ItemLocation.Ground;
+            it.Pos = manager.DropPointNear(manager.BuildingRepairPoint(b >= 0 ? b : rng.Next(EscapeState.BuildingCount)), rng.Next());
             State.Items[item] = it;
         }
         else
@@ -453,6 +561,12 @@ public sealed class EscapeAuthority
         if (!spyChest) SendDelayedNoticeToCookies(new object[] { (byte)EscapeNoticeKind.MaterialRestored, itemId, item, PhotonNetwork.Time });
         Debug.Log($"[EscapeAuthority] Material safety net: {itemId} was nowhere reachable — created again ({(spyChest ? "spy" : "cookie")}).");
         return true;
+    }
+
+    private int BuildingOf(string materialId)
+    {
+        for (int b = 0; b < State.Buildings.Count; b++) if (State.Buildings[b].MaterialId == materialId) return b;
+        return -1;
     }
 
     private int PickEmptyChest(bool spy)
@@ -503,6 +617,11 @@ public sealed class EscapeAuthority
             case EscapeOp.CarriageBoard: changed = CarriageBoard(r.Sender, r.A); break;
             case EscapeOp.CannonBoard: changed = CannonBoard(r.Sender, r.A, r.B); break;
             case EscapeOp.SkyCannonBoard: changed = SkyCannonBoard(r.Sender, r.A); break;
+            case EscapeOp.MonsterWarp: changed = MonsterWarp(r.Sender, r.A); break;   // §90 T2
+            case EscapeOp.GlideOpen: changed = GlideOpen(r.Sender, r.A); break;       // §90 P5
+            case EscapeOp.GlideClose: changed = GlideClose(r.Sender); break;
+            // case EscapeOp.FellFromSky: changed = false; break;                          // §90 P5 방장이 위치 기록으로 직접 판정한다(TrackPositions)
+            case EscapeOp.FellFromSky: FellFromSky(r.Sender); changed = false; break;   // §91 허공으로 떨어짐(되돌리지 않고 부서짐)
             default: changed = false; break;
         }
         if (changed) Commit();
@@ -535,7 +654,11 @@ public sealed class EscapeAuthority
         if (c.Spy && !RoomState.IsSpy(actor)) return false; // 쿠키는 스파이 상자를 열 수 없다(D7)
         if (!IsNear(actor, manager.ChestPosition(c.Anchor), InteractReach)) return false;
 
+        // §90 C8 열 때 내용을 정한다(이미 정했거나 다시 생긴 재료가 들어 있으면 그대로)
+        if (!c.Filled && State.ItemInChest(chest) < 0) FillChest(chest, actor);
+        c = State.Chests[chest];
         c.Opened = true;
+        c.Filled = true;
         State.Chests[chest] = c;
         int item = State.ItemInChest(chest);
         if (item < 0) return true;
@@ -546,6 +669,225 @@ public sealed class EscapeAuthority
         shown.Pos = manager.ChestPosition(c.Anchor) + Vector3.up * ChestShowHeight;
         State.Items[item] = shown;
         return true;
+    }
+
+    // ---------------- §90 G6 껌 수류탄 ----------------
+
+    // 방장: 껌 투사체가 터졌다(ProjectileSystem). 맞은 술래가 있으면 느려지고, 없으면 그 아래 바닥에 웅덩이(주인별 최대 4개).
+    public void GumLanded(int owner, Vector3 at, int[] monsterViews)
+    {
+        if (State == null) return;
+        double now = PhotonNetwork.Time;
+        bool hit = false;
+        foreach (int viewId in monsterViews ?? new int[0])
+        {
+            PhotonView v = PhotonView.Find(viewId);
+            if (v == null || v.Owner == null || !RoomState.IsMonster(v.Owner.ActorNumber)) continue;
+            AddSlow(v.Owner.ActorNumber, now);
+            hit = true;
+        }
+        if (!hit)
+        {
+            int old = GumTrapRules.OldestToRemove(State, owner);
+            if (old >= 0) State.Puddles.RemoveAt(old);
+            State.Puddles.Add(new EscapeState.Puddle { Id = State.NextId++, Owner = owner, Pos = manager.SnapToGround(at + Vector3.up * 0.2f), PlacedAt = now });
+        }
+        Debug.Log($"[EscapeAuthority] Gum by {owner} at {at}: {(hit ? "hit monster" : "puddle")} — puddles {State.Puddles.Count}.");
+        Commit();
+    }
+
+    private void AddSlow(int monster, double now)
+    {
+        State.Slows.RemoveAll(x => x.Actor == monster);
+        State.Slows.Add(new EscapeState.Slow { Actor = monster, At = now });
+    }
+
+    // 웅덩이 밟기(술래 발 위치, 방장 화면 기준)·다 줄어든 웅덩이와 끝난 느려짐 지우기.
+    private bool TickGum(double now)
+    {
+        bool changed = State.Slows.RemoveAll(x => now >= x.At + GumTrapRules.SlowSeconds + 0.5) > 0;
+        for (int i = State.Puddles.Count - 1; i >= 0; i--)
+        {
+            EscapeState.Puddle p = State.Puddles[i];
+            if (p.Triggered) { if (now >= p.TriggeredAt + GumTrapRules.SlowSeconds) { State.Puddles.RemoveAt(i); changed = true; } continue; }
+            foreach (IGameCharacter c in CharacterRegistry.All)
+            {
+                if (c.Role != CharacterRole.Monster || !CharacterRegistry.IsAlive(c) || c.View == null || c.View.Owner == null) continue;
+                if (!GumTrapRules.Steps(p.Pos, c.gameObject.transform.position, BodyRadius(c))) continue;
+                p.TriggeredAt = now;
+                p.Victim = c.View.Owner.ActorNumber;
+                State.Puddles[i] = p;
+                AddSlow(p.Victim, now);
+                changed = true;
+                break;
+            }
+        }
+        return changed;
+    }
+
+    public static float BodyRadius(IGameCharacter c)
+    {
+        if (c == null) return 0.5f;
+        var cap = c.gameObject.GetComponent<CapsuleCollider>();
+        if (cap != null) return cap.radius * Mathf.Max(c.gameObject.transform.lossyScale.x, c.gameObject.transform.lossyScale.z);
+        var cc = c.gameObject.GetComponent<CharacterController>();
+        return cc != null ? cc.radius * c.gameObject.transform.lossyScale.x : 0.5f;
+    }
+
+    public static float BodyHeight(IGameCharacter c)
+    {
+        if (c == null) return 2f;
+        var cap = c.gameObject.GetComponent<CapsuleCollider>();
+        return cap != null ? cap.height * c.gameObject.transform.lossyScale.y : 2f;
+    }
+
+    // ---------------- §90 T2 술래 순간이동 ----------------
+
+    private bool MonsterWarp(int actor, int building)
+    {
+        float ready = warpReadyAt.TryGetValue(actor, out float r) ? r - CooldownSlack : 0f;
+        if (!MonsterWarpRules.Allows(State, actor, building, RoomState.IsMonster(actor), MonsterElevator.PhaseAllows(GamePhaseState.Current), Time.time, ready)) return false;
+        warpReadyAt[actor] = Time.time + MonsterWarpRules.Cooldown;
+        State.Warps.Add(new EscapeState.Warp { Actor = actor, Building = (byte)building, At = PhotonNetwork.Time + MonsterWarpRules.Lead });
+        Debug.Log($"[EscapeAuthority] Monster {actor} warps to building {building}.");
+        return true;
+    }
+
+    // ---------------- §90 B3 바주카포 ----------------
+
+    private readonly List<DestructibleUnit> blastUnits = new List<DestructibleUnit>();
+    private readonly List<IGameCharacter> blastPeople = new List<IGameCharacter>();
+
+    // 방장: 로켓이 터졌다(ProjectileSystem). 물체를 먼저 부수고(무너진 벽은 막지 않는다), 사람·AI를 판정한다. 기절 대상(ViewID)을 돌려준다(ToolHit로 별 효과).
+    public int[] BazookaExplode(int monster, Vector3 at, Collider touched)
+    {
+        var stunned = new List<int>();
+        if (State == null) return stunned.ToArray();
+        double now = PhotonNetwork.Time;
+        blastUnits.Clear();
+        DestructionNet net = DestructionNet.Instance;
+        if (net != null && net.Catalog != null)
+        {
+            if (touched != null && net.Catalog.TryGet(touched, out DestructibleUnit hitUnit) && BazookaRules.CanBreak(hitUnit)) blastUnits.Add(hitUnit);
+            foreach (DestructibleUnit u in net.Catalog.Units)
+                if (!blastUnits.Contains(u) && BazookaRules.PropInBlast(u, at) && BazookaRules.CanBreak(u)) blastUnits.Add(u);
+            foreach (DestructibleUnit u in blastUnits) net.Break(u.Id);
+        }
+
+        GiantBrain.CollectTargets(blastPeople);
+        int kills = 0;
+        foreach (IGameCharacter c in blastPeople)
+        {
+            if (c.Role == CharacterRole.Monster) continue;
+            Vector3 body = c.gameObject.transform.position + Vector3.up * 0.9f;
+            BazookaRules.Effect e = BazookaRules.EffectAt(Vector3.Distance(at, body), Blocked(at, body));
+            if (e == BazookaRules.Effect.Kill)
+            {
+                AuthorityProps.SetPlayer(c.View.Owner, new Hashtable { { NetKeys.HitCount, 2 }, { NetKeys.DeathCause, (int)DeathCause.Bazooka } });
+                kills++;
+            }
+            else if (e == BazookaRules.Effect.Stun) stunned.Add(c.View.ViewID);
+        }
+        int decoys = 0;
+        for (int i = State.Decoys.Count - 1; i >= 0; i--)
+        {
+            EscapeState.Decoy d = State.Decoys[i];
+            if (d.Caught) continue;
+            Vector3 body = manager.Routes.PositionOf(d, now) + Vector3.up * 0.9f;
+            BazookaRules.Effect e = BazookaRules.EffectAt(Vector3.Distance(at, body), Blocked(at, body));
+            if (e == BazookaRules.Effect.Kill) { d.CaughtBy = monster; d.CaughtAt = now - DecoyCatchSeconds; State.Decoys[i] = d; decoys++; }   // 잡힌 AI처럼 바로 사라진다(다음 Tick)
+            else if (e == BazookaRules.Effect.Stun) stunned.Add(DecoyHit.ToTarget(d.Id));
+        }
+        Debug.Log($"[Bazooka] Actor {monster} rocket at {at}: broke {blastUnits.Count}, caught {kills} player(s) + {decoys} AI, stunned {stunned.Count}.");
+        if (decoys > 0) Commit();
+        return stunned.ToArray();
+    }
+
+    // 폭발 중심 → 몸 사이를 막는 것(캐릭터·AI·트리거·방금 부순 물체 제외)이 있는지.
+    private bool Blocked(Vector3 from, Vector3 to)
+    {
+        Vector3 d = to - from;
+        float len = d.magnitude;
+        if (len < 0.3f) return false;
+        foreach (RaycastHit h in Physics.RaycastAll(from, d / len, len - 0.3f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+        {
+            if (h.collider.GetComponentInParent<IGameCharacter>() != null || h.collider.GetComponentInParent<DecoyView>() != null) continue;
+            if (BrokenNow(h.collider)) continue;
+            return true;
+        }
+        return false;
+    }
+
+    private bool BrokenNow(Collider c)
+    {
+        DestructionNet net = DestructionNet.Instance;
+        return net != null && net.Catalog != null && net.Catalog.TryGet(c, out DestructibleUnit u) && (u.Broken || blastUnits.Contains(u));
+    }
+
+    // ---------------- §90 C8 상자 내용·리셋 ----------------
+
+    private void FillChest(int chest, int opener)
+    {
+        EscapeState.Chest c = State.Chests[chest];
+        string id = c.Spy ? SpyChestPick(opener) : NormalChestPick();
+        ItemSO def = id != null ? catalog.Find(id) : null;
+        if (def == null) return;
+        var e = NewItem(def);
+        e.Loc = ItemLocation.Chest;
+        e.A = chest;
+        State.Items.Add(e);
+        Debug.Log($"[EscapeAuthority] Chest {chest} ({(c.Spy ? "spy" : "normal")}) opened by {opener}: {id}");
+    }
+
+    private string NormalChestPick()
+    {
+        string need = ChestRules.NormalPick(State, id => CountReachable(id, forSpy: false), rng);
+        if (need != null) return need;
+        ItemSO extra = PickWeighted(catalog.CookieItems, catalog.CookieItemWeights, recipe);   // 이 맵에서 뺀 아이템·다른 맵 전용 아이템은 고르지 않는다
+        return extra != null ? extra.ItemId : null;
+    }
+
+    private string SpyChestPick(int spy)
+    {
+        int g = State.SpyGiftIndex(spy);
+        EscapeState.SpyGift gift = g >= 0 ? State.SpyGifts[g] : new EscapeState.SpyGift { Actor = spy };
+        var tools = new List<string>();
+        foreach (ItemSO t in catalog.SpyRandomTools) if (t != null) tools.Add(t.ItemId);
+        string id = ChestRules.SpyPick(ref gift, ChestRules.MissingRocketPart(State, x => CountReachable(x, forSpy: true)), ChestRules.RocketNeedsKit(State),
+            catalog.RepairKit != null ? catalog.RepairKit.ItemId : null, catalog.DismantleTool != null ? catalog.DismantleTool.ItemId : null, tools, rng);
+        if (g >= 0) State.SpyGifts[g] = gift; else State.SpyGifts.Add(gift);
+        return id;
+    }
+
+    // 상자 리셋(규칙 7): 모든 상자가 닫히고 비며, 닫힌 채 들어 있던 아이템은 없어진다(필요한 재료는 다시 열 때·안전장치가 다시 만든다).
+    // 열린 상자 위에 떠 있던 아이템(바닥 아이템)은 그대로 둔다(§90 C8).
+    private void ResetChests(string why)
+    {
+        for (int i = 0; i < State.Items.Count; i++)
+        {
+            if (State.Items[i].Loc != ItemLocation.Chest) continue;
+            EscapeState.Item it = State.Items[i];
+            it.Loc = ItemLocation.Gone;
+            State.Items[i] = it;
+        }
+        for (int c = 0; c < State.Chests.Count; c++)
+        {
+            EscapeState.Chest ch = State.Chests[c];
+            ch.Opened = false;
+            ch.Filled = false;
+            State.Chests[c] = ch;
+        }
+        State.ChestResets++;
+        SendDelayedNoticeToCookies(new object[] { (byte)EscapeNoticeKind.ChestsRefilled, string.Empty });
+        Debug.Log($"[EscapeAuthority] Chests reset ({why}) — {State.Chests.Count} chests closed and empty, reset #{State.ChestResets}.");
+    }
+
+    private bool TickChestReset(double now)
+    {
+        bool hasHunt = RoomState.TryGetDouble(NetKeys.PrepareEndTime, out double huntStart);
+        if (ChestRules.Reset8Due(State, hasHunt, huntStart, now)) { State.ChestReset8Done = true; ResetChests("8 minutes"); return true; }
+        if (ChestRules.AllOpened(State, SpyStillPlaying())) { ResetChests("all opened"); return true; }
+        return false;
     }
 
     private bool PickUp(int actor, int item)
@@ -1319,7 +1661,8 @@ public sealed class EscapeAuthority
 
         double hitAt = PhotonNetwork.Time; // 던지는 도구(물풍선·섬광탄)는 위에서 막았다 — 투사체가 닿을 때 따로 알린다(§70.3)
         ApplyDecoyHits(r.Sender, def.Tool, targets); // AI도 맞는다(§76 A3) — 스턴건
-        bool knock = def.Tool.Kind == ToolKind.BoxingGlove && targets.Length > 0 && gloveCombo.Register(targets[0], PhotonNetwork.Time); // 3초 안 3대 = 쓰러짐(§68 GP3)
+        // bool knock = def.Tool.Kind == ToolKind.BoxingGlove && targets.Length > 0 && gloveCombo.Register(targets[0], PhotonNetwork.Time); // 3초 안 3대 = 쓰러짐(§68 GP3)
+        bool knock = false; // §91 권투 글러브 완전 삭제
         var payload = new object[] { it.Id, r.Sender, targets, r.Pos, r.B, hitAt, knock };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
         return true;
@@ -1338,11 +1681,16 @@ public sealed class EscapeAuthority
         if (projectiles == null) return false;
         ItemSO def;
         int item = -1;
+        bool bazooka = r.A == BazookaRules.ThrowSlot;   // §90 B3 A = -2 바주카포(A = -1 수색 폭탄)
         if (r.A < 0)
         {
-            def = catalog.SearchBomb;
+            // def = catalog.SearchBomb;
+            def = bazooka ? catalog.Bazooka : catalog.SearchBomb;
             if (def == null || !def.IsTool || !RoomState.IsMonster(r.Sender)) return RejectThrow(r, ThrowReject.NotAllowed);
-            if (searchReadyAt.TryGetValue(r.Sender, out float searchReady) && Time.time < searchReady - CooldownSlack) return RejectThrow(r, ThrowReject.Cooldown);
+            // if (searchReadyAt.TryGetValue(r.Sender, out float searchReady) && Time.time < searchReady - CooldownSlack) return RejectThrow(r, ThrowReject.Cooldown);
+            Dictionary<int, float> readyMap = bazooka ? bazookaReadyAt : searchReadyAt;
+            if (readyMap.TryGetValue(r.Sender, out float searchReady) && Time.time < searchReady - CooldownSlack) return RejectThrow(r, ThrowReject.Cooldown);
+            if (bazooka && !MonsterElevator.PhaseAllows(GamePhaseState.Current)) return RejectThrow(r, ThrowReject.NotAllowed);
         }
         else
         {
@@ -1356,8 +1704,15 @@ public sealed class EscapeAuthority
         }
         ProjectileConfigSO cfg = def.Tool.Projectile;
         if (cfg == null) return RejectThrow(r, ThrowReject.NotAllowed);
-        if (!ThrowOriginOk(r.Sender, r.Pos, r.Stamp)) return RejectThrow(r, ThrowReject.FarFromHand); // 손이 그 사람 근처
-        Vector3 velocity = Vector3.ClampMagnitude(r.Dir, ThrowSolver.MaxSpeed(cfg));
+        // if (!ThrowOriginOk(r.Sender, r.Pos, r.Stamp, bazooka ? BazookaRules.MuzzleReach : ThrowOriginReach)) return RejectThrow(r, ThrowReject.FarFromHand); // 손이 그 사람 근처
+        if (!ThrowOriginOk(r.Sender, r.Pos, r.Stamp, bazooka ? BazookaRules.MuzzleReach : ThrowOriginReach))   // 손이 그 사람 근처
+        {
+            IGameCharacter who = r.A < 0 ? MonsterOf(r.Sender) : CharacterRegistry.FindByOwner(r.Sender);
+            Debug.LogWarning($"[Projectile] FarFromHand: actor {r.Sender} origin {r.Pos:F1} body {(who != null ? who.gameObject.transform.position.ToString("F1") : "?")} age {NetAuthority.AgeOf(r.Stamp):F2}s");
+            return RejectThrow(r, ThrowReject.FarFromHand);
+        }
+        // Vector3 velocity = Vector3.ClampMagnitude(r.Dir, ThrowSolver.MaxSpeed(cfg));
+        Vector3 velocity = Vector3.ClampMagnitude(r.Dir, bazooka ? BazookaRules.Speed * 1.05f : ThrowSolver.MaxSpeed(cfg));   // §90 B3 로켓은 곧게 45 m/s
         if (velocity.sqrMagnitude < 0.01f) return RejectThrow(r, ThrowReject.BadVelocity);
         float age = NetAuthority.AgeOf(r.Stamp);
         if (r.Stamp == 0 || age < -0.1f || age > ThrowMaxAge) age = 0f;
@@ -1370,6 +1725,8 @@ public sealed class EscapeAuthority
             if (it.Charges <= 0) it.Loc = ItemLocation.Gone;
             State.Items[item] = it;
         }
+        // else searchReadyAt[r.Sender] = Time.time + SearchCooldown;
+        else if (bazooka) bazookaReadyAt[r.Sender] = Time.time + BazookaRules.Cooldown;
         else searchReadyAt[r.Sender] = Time.time + SearchCooldown;
 
         int localKey = r.Targets != null && r.Targets.Length > 0 ? r.Targets[0] : 0;
@@ -1391,10 +1748,11 @@ public sealed class EscapeAuthority
 
     // 손(시작점)이 그 사람 근처인지(§71 T2): 받은 위치 기록(최근 0.5초 + 던진 시각) 또는 예고된 돌진 길에서 수평으로 ThrowOriginReach 안.
     // 예전에는 0.2초마다 잰 방장 화면의 보간된 위치(lastPositions)로만 재서 돌진·엘리베이터 직후 거절됐다. 순간이동 예외(탈것·엘리베이터)는 막지 않는다.
-    private bool ThrowOriginOk(int actor, Vector3 origin, int stamp)
+    // private bool ThrowOriginOk(int actor, Vector3 origin, int stamp)
+    private bool ThrowOriginOk(int actor, Vector3 origin, int stamp, float reach = ThrowOriginReach)   // §90 B3 바주카 포구는 몸에서 더 멀다
     {
         IGameCharacter c = MonsterOf(actor);
-        if (c == null || c.View == null) return IsNear(actor, origin, ThrowOriginReach);
+        if (c == null || c.View == null) return IsNear(actor, origin, reach);
         if (moveExemptUntil.TryGetValue(actor, out float until) && Time.realtimeSinceStartup < until) return true;
         double now = NetAuthority.Time;
         double at = now - Mathf.Clamp(NetAuthority.AgeOf(stamp), 0f, ThrowMaxAge);
@@ -1403,12 +1761,12 @@ public sealed class EscapeAuthority
         {
             Vector3 newest = track.NewestPoint;
             Vector3 probe = new Vector3(origin.x, newest.y, origin.z);
-            if (track.TryMinDistance(probe, at - 0.5, now, newest, out float off) && off <= ThrowOriginReach) return true;
+            if (track.TryMinDistance(probe, at - 0.5, now, newest, out float off) && off <= reach) return true;
         }
-        if (MonsterDashLedger.TryGet(c.View.ViewID, at, out DashWindow dash) && dash.PathError(origin, at, MonsterDashLedger.ClaimTimeSlack) <= ThrowOriginReach) return true;
+        if (MonsterDashLedger.TryGet(c.View.ViewID, at, out DashWindow dash) && dash.PathError(origin, at, MonsterDashLedger.ClaimTimeSlack) <= reach) return true;
         Vector3 d = c.gameObject.transform.position - flat;
         d.y = 0f;
-        return d.magnitude <= ThrowOriginReach || IsNear(actor, origin, ThrowOriginReach);
+        return d.magnitude <= reach || IsNear(actor, origin, reach);
     }
 
     // 녹음기: 그 사람의 AI 중 무작위 하나가 목소리를 내며 걷기 시작한다.
@@ -1447,7 +1805,8 @@ public sealed class EscapeAuthority
         bool area = tool.IsThrown; // 물풍선·섬광탄: 떨어진 자리 둘레
         if (area && Flat(point - from) > tool.Range + ToolReachSlack) return new int[0];
 
-        int max = tool.HitsArea ? targets.Length : area || tool.Kind == ToolKind.Hammer || tool.Kind == ToolKind.BoxingGlove ? 1 : targets.Length; // 물풍선·뿅망치·글러브는 한 명, 섬광탄은 둘레 모두
+        // int max = tool.HitsArea ? targets.Length : area || tool.Kind == ToolKind.Hammer || tool.Kind == ToolKind.BoxingGlove ? 1 : targets.Length; // 물풍선·뿅망치·글러브는 한 명, 섬광탄은 둘레 모두
+        int max = tool.HitsArea ? targets.Length : area || tool.Kind == ToolKind.Hammer ? 1 : targets.Length; // 물풍선·뿅망치는 한 명, 섬광탄은 둘레 모두
         var kept = new List<int>(targets.Length);
         foreach (int viewId in targets)
         {
@@ -1563,6 +1922,7 @@ public sealed class EscapeAuthority
         if (State != null)
         {
             Vector3 at = lastPositions.TryGetValue(player.ActorNumber, out Vector3 p) ? p : manager.FallbackDropPoint(rng.Next());
+            at = DropPointFor(player, at);   // §90.14 R2
             bool changed = DropAll(player.ActorNumber, at);
             changed |= ClearPersonal(player.ActorNumber);
             changed |= RemoveDecoysOf(player.ActorNumber); // 부서진 쿠키의 AI는 모두 사라진다(§26 후속)
@@ -1605,6 +1965,8 @@ public sealed class EscapeAuthority
             if (State.Buildings[b].Repairer == actor) { StopRepair(b, now); changed = true; }
         int f = State.FlightIndex(actor);
         if (f >= 0) { State.Flights.RemoveAt(f); changed = true; }
+        int gl = State.GlideIndex(actor);   // §90 P5
+        if (gl >= 0) { State.Glides.RemoveAt(gl); changed = true; }
         dismantleStarts.Remove(actor);
         takeoffPositions.Remove(actor);
         return changed;
@@ -1702,6 +2064,7 @@ public sealed class EscapeAuthority
         }
         EscapeState.Chest ch = State.Chests[chest];
         ch.Opened = false;
+        ch.Filled = true;   // §90 C8 다시 생긴 재료가 내용(열 때 새로 정하지 않는다)
         State.Chests[chest] = ch;
         it.Loc = ItemLocation.Chest;
         it.A = chest;
@@ -1763,6 +2126,7 @@ public sealed class EscapeAuthority
     {
         if (PhotonNetwork.IsMasterClient || def == null || !def.IsTool || actor <= 0) return;
         if (def == catalog.SearchBomb) searchReadyAt[actor] = Time.time + SearchCooldown;
+        else if (def == catalog.Bazooka) bazookaReadyAt[actor] = Time.time + BazookaRules.Cooldown;   // §90 B3
         else toolReadyAt[actor] = Time.time + def.Tool.CooldownSeconds;
     }
 

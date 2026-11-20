@@ -112,8 +112,18 @@ public class PlayerInventory : MonoBehaviour
         {
             // 헬리콥터 모자도 아이템 사용 키로 쓴다(Request1009Plan.md §82 H1 — 예전에는 E). 판정은 방장(EscapeAuthority HatFly)
             if (HeldItem.Tool.Kind == ToolKind.HeliHat) manager.Request(EscapeOp.HatFly, Selected);
+            else if (HeldItem.Tool.Kind == ToolKind.Paraglider) OpenGlider();   // §90 P5
             else toolUser.Use(Selected, HeldItem);
         }
+    }
+
+    // §90 P5 패러글라이더: 공중(발밑 1.5 m 안에 땅이 없음)에서만 편다. 땅에서 누르면 안내만.
+    public const float GliderMinAir = 1.5f;
+    private void OpenGlider()
+    {
+        bool air = !Physics.Raycast(owner.transform.position + Vector3.up * 0.2f, Vector3.down, GliderMinAir + 0.2f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        if (!air) { EscapeHud.Toast(EscapeTextsSO.Current.gliderNeedsAir); UiSoundCues.Error(); return; }
+        manager.Request(EscapeOp.GlideOpen, Selected);
     }
 
     public bool TrySelect(int slot)

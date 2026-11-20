@@ -96,15 +96,18 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         shownId = id;
         if (model != null) Destroy(model);
         model = null;
-        ClearGloves();
+        // ClearGloves();
         isHammer = def != null && def.IsTool && def.Tool.Kind == ToolKind.Hammer;
-        isGlove = def != null && def.IsTool && def.Tool.Kind == ToolKind.BoxingGlove;
+        // isGlove = def != null && def.IsTool && def.Tool.Kind == ToolKind.BoxingGlove;
+        // isGlove = false;   // §90 G6 권투 글러브 폐기(두 손 글러브 모습은 아래 코드에 남겨 둔다)
         if (pose == null) pose = GetComponent<PlayerActionPose>();
         if (pose != null)
         {
             // 들기 자세(§74 P13·§75): 뿅망치 = 어깨 걸침, 글러브 = 가드, 다른 한 손 아이템 = 오른팔만 가슴 옆 앞
-            pose.SetHold(isHammer ? PlayerActionPose.Hold.Hammer : isGlove ? PlayerActionPose.Hold.Glove : PlayerActionPose.Hold.None);
-            pose.SetOneHandHold(def != null && !isHammer && !isGlove && def.HoldType == HoldType.OneHanded);
+            // pose.SetHold(isHammer ? PlayerActionPose.Hold.Hammer : isGlove ? PlayerActionPose.Hold.Glove : PlayerActionPose.Hold.None);
+            pose.SetHold(isHammer ? PlayerActionPose.Hold.Hammer : PlayerActionPose.Hold.None); // §91 권투 글러브 완전 삭제
+            // pose.SetOneHandHold(def != null && !isHammer && !isGlove && def.HoldType == HoldType.OneHanded);
+            pose.SetOneHandHold(def != null && !isHammer && def.HoldType == HoldType.OneHanded);
             pose.SetThrowAim(def != null && def.IsTool && def.Tool.IsThrown); // 조준 = 던지기 준비 자세(§77 TP1)
         }
         // 두 손 들기(Carry 층, 머리 위 두 손)는 재료 같은 두 손 아이템만 — 뿅망치는 Action 층의 어깨 걸침이 상체를 맡는다(§75 A1)
@@ -112,7 +115,7 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         if (def == null) return;
 
         holdType = def.HoldType;
-        if (isGlove) { CreateGloves(def); return; }
+        // if (isGlove) { CreateGloves(def); return; }
         bool balloon = def.IsTool && def.Tool.Kind == ToolKind.WaterBalloon;
         model = balloon ? WaterBubbleView.CreateSmall(socket, HeldBalloonSize) : EscapeVisuals.CreateItemModel(def, socket); // 물풍선은 갇힘 물방울과 같은 모양(§45.7 WB5)
         if (def.HeldScale != 1f) model.transform.localScale *= def.HeldScale; // 손에 든 동안만 키운다(뿅망치 3배 §45.5, 작은 한 손 아이템 §75 D1)
@@ -199,46 +202,46 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
 
     // ---------------- 권투 글러브 양손(§75 C1) ----------------
 
-    private GameObject gloveR, gloveL;
-    private Transform rightForearm, leftForearm;
-    private static readonly Quaternion GloveModelRotation = Quaternion.Euler(0f, 0f, 0f); // 글러브 모델 앞(주먹 면)을 팔 방향으로
-    private const float GloveForward = 0.05f; // 손목에서 주먹 쪽으로
+    // private GameObject gloveR, gloveL;
+    private Transform rightForearm, leftForearm; // 두 손 아이템 IK에서도 쓴다
+    // private static readonly Quaternion GloveModelRotation = Quaternion.Euler(0f, 0f, 0f); // 글러브 모델 앞(주먹 면)을 팔 방향으로
+    // private const float GloveForward = 0.05f; // 손목에서 주먹 쪽으로
 
-    private void CreateGloves(ItemSO def)
-    {
-        gloveR = EscapeVisuals.CreateItemModel(def, transform);
-        gloveL = EscapeVisuals.CreateItemModel(def, transform);
-        if (def.HeldScale != 1f) { gloveR.transform.localScale *= def.HeldScale; gloveL.transform.localScale *= def.HeldScale; }
-        Vector3 ls = gloveL.transform.localScale; gloveL.transform.localScale = new Vector3(-ls.x, ls.y, ls.z); // 왼손은 좌우 뒤집기
-        foreach (Renderer r in gloveL.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-        LateUpdate();
-    }
+    // private void CreateGloves(ItemSO def)
+    // {
+        // gloveR = EscapeVisuals.CreateItemModel(def, transform);
+        // gloveL = EscapeVisuals.CreateItemModel(def, transform);
+        // if (def.HeldScale != 1f) { gloveR.transform.localScale *= def.HeldScale; gloveL.transform.localScale *= def.HeldScale; }
+        // Vector3 ls = gloveL.transform.localScale; gloveL.transform.localScale = new Vector3(-ls.x, ls.y, ls.z); // 왼손은 좌우 뒤집기
+        // foreach (Renderer r in gloveL.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        // LateUpdate();
+    // }
 
-    private void ClearGloves()
-    {
-        if (gloveR != null) Destroy(gloveR);
-        if (gloveL != null) Destroy(gloveL);
-        gloveR = gloveL = null;
-    }
+    // private void ClearGloves()
+    // {
+        // if (gloveR != null) Destroy(gloveR);
+        // if (gloveL != null) Destroy(gloveL);
+        // gloveR = gloveL = null;
+    // }
 
-    // 주먹 끝(월드) — 훑기 판정용. 글러브를 안 꼈으면 false.
-    public bool TryGetFist(bool left, out Vector3 center)
-    {
-        GameObject g = left ? gloveL : gloveR;
-        center = g != null ? g.transform.position : default;
-        return g != null;
-    }
+    // // 주먹 끝(월드) — 훑기 판정용. 글러브를 안 꼈으면 false.
+    // public bool TryGetFist(bool left, out Vector3 center)
+    // {
+        // GameObject g = left ? gloveL : gloveR;
+        // center = g != null ? g.transform.position : default;
+        // return g != null;
+    // }
 
-    private void PlaceGlove(GameObject glove, Transform hand, Transform forearm, Quaternion body)
-    {
-        if (glove == null || hand == null) return;
-        Vector3 dir = forearm != null ? hand.position - forearm.position : body * Vector3.forward;
-        if (dir.sqrMagnitude < 1e-6f) dir = body * Vector3.forward;
-        dir.Normalize();
-        Vector3 up = Vector3.ProjectOnPlane(body * Vector3.up, dir);
-        if (up.sqrMagnitude < 1e-4f) up = body * Vector3.back;
-        glove.transform.SetPositionAndRotation(hand.position + dir * GloveForward, Quaternion.LookRotation(dir, up) * GloveModelRotation);
-    }
+    // private void PlaceGlove(GameObject glove, Transform hand, Transform forearm, Quaternion body)
+    // {
+        // if (glove == null || hand == null) return;
+        // Vector3 dir = forearm != null ? hand.position - forearm.position : body * Vector3.forward;
+        // if (dir.sqrMagnitude < 1e-6f) dir = body * Vector3.forward;
+        // dir.Normalize();
+        // Vector3 up = Vector3.ProjectOnPlane(body * Vector3.up, dir);
+        // if (up.sqrMagnitude < 1e-4f) up = body * Vector3.back;
+        // glove.transform.SetPositionAndRotation(hand.position + dir * GloveForward, Quaternion.LookRotation(dir, up) * GloveModelRotation);
+    // }
 
     // 한 손 아이템은 주먹 위에 올려 든다 — 예전에는 위에서 0.12 m 아래를 쥐어 작은 아이템이 큰 손(벙어리장갑 모양) 속에 묻혀 안 보였다(§75 D1).
     private static Vector3 OneHandedGripOffset(GameObject go)
@@ -259,12 +262,12 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     {
         Quaternion body = transform.rotation;
         RefreshBones();
-        if (isGlove)
-        {
-            PlaceGlove(gloveR, rightHand, rightForearm, body);
-            PlaceGlove(gloveL, leftHand, leftForearm, body);
-            return;
-        }
+        // if (isGlove)
+        // {
+            // PlaceGlove(gloveR, rightHand, rightForearm, body);
+            // PlaceGlove(gloveL, leftHand, leftForearm, body);
+            // return;
+        // }
         if (model == null) return;
         if (isHammer && rightHand != null && leftHand != null)
         {
@@ -331,7 +334,8 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     // 팔이 모자라면 옆면 뒤쪽을 잡는다. 손바닥은 아이템 옆면을 본다(PalmInward).
     private void TwoHandedIK()
     {
-        bool on = model != null && !isHammer && !isGlove && holdType == HoldType.TwoHanded
+        // bool on = model != null && !isHammer && !isGlove && holdType == HoldType.TwoHanded
+        bool on = model != null && !isHammer && holdType == HoldType.TwoHanded // §91 권투 글러브 완전 삭제
             && rightUpperArm != null && leftUpperArm != null && rightForearm != null && leftForearm != null && rightHand != null && leftHand != null;
         float dt = Application.isPlaying ? Time.deltaTime : 1f;
         twoHandIK = Mathf.MoveTowards(twoHandIK, on ? 1f : 0f, dt / HammerIKBlendSeconds);
@@ -566,7 +570,8 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
     private float hammerBottomModel, hammerHeadModel;
     private const float HammerHeadFromBottom = 0.78f; // 머리 가운데: 아래에서 78 %(ITEM_Hammer 머리 y 0.07~0.33)
     private const float MinHandGap = 0.05f;
-    private bool isHammer, isGlove;
+    // private bool isHammer, isGlove;
+    private bool isHammer; // §91 권투 글러브 완전 삭제
     private PlayerActionPose pose;
     private Vector3 hammerShaft = Vector3.up;
 }

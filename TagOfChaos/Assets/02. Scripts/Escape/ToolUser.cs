@@ -35,7 +35,8 @@ public class ToolUser : MonoBehaviour
     private CookieAimCamera aimCamera;
 
     // 우클릭 1인칭 조준을 쓰는 도구(§76 요청 2).
-    public static bool IsAimTool(ToolKind kind) => kind == ToolKind.StunGun || kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
+    // public static bool IsAimTool(ToolKind kind) => kind == ToolKind.StunGun || kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
+    public static bool IsAimTool(ToolKind kind) => kind == ToolKind.StunGun || kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang || kind == ToolKind.GumTrap;
 
     private AudioHandle aimHum;
     private PlayerActionPose pose;
@@ -44,8 +45,8 @@ public class ToolUser : MonoBehaviour
     private HideOrSeekPlayer Cookie => cookie != null ? cookie : cookie = GetComponent<HideOrSeekPlayer>();
     private HeldItemPresenter Held => held != null ? held : held = GetComponent<HeldItemPresenter>();
     private const float AimFaceRefresh = 0.2f;   // 스턴건 조준 중 몸을 돌려 두는 시간(매 프레임 다시 늘린다)
-    private bool lastPunchWasRight;
-    private float lastPunchAt = -10f;
+    // private bool lastPunchWasRight;   // §90 G6 권투 글러브 폐기
+    // private float lastPunchAt = -10f;
 
     public void Init(PlayerInventory owner, EscapeManager escape)
     {
@@ -154,13 +155,14 @@ public class ToolUser : MonoBehaviour
         switch (kind)
         {
             case ToolKind.Hammer: return SoundId.HammerSwing;
-            case ToolKind.BoxingGlove: return SoundId.CookieDodge; // 주먹 휘두르는 소리(임시)
+            // case ToolKind.BoxingGlove: return SoundId.CookieDodge; // 주먹 휘두르는 소리(임시) — §90 G6 폐기
             case ToolKind.StunGun: return SoundId.StunFire;
             case ToolKind.Skates: return SoundId.CookieDodge;   // 임시음(Request1009Plan.md §25.6 소리)
             case ToolKind.Pumpkin: return SoundId.PortalOpen;
             case ToolKind.ColaCannon: return SoundId.PortalOpen;
             case ToolKind.Recorder: return SoundId.UiConfirm;
             case ToolKind.NoiseBomb: return SoundId.UiToastAlert;
+            case ToolKind.Bazooka: return SoundId.BazookaFire;   // §90 B3
             default: return SoundId.BalloonThrow;
         }
     }
@@ -201,20 +203,22 @@ public class ToolUser : MonoBehaviour
                 if (pose != null) pose.Play(PlayerActionPose.OneShot.Swing);
                 StartCoroutine(Sweep(slot, tool, false, false));
                 return;
-            case ToolKind.BoxingGlove:
-            {
-                // 오른손부터, 이어 치면 왼손·오른손 번갈아(§75 C1). 어느 손인지는 요청 B 칸으로 다른 화면에 간다.
-                bool left = AimMotion.NextPunchIsLeft(lastPunchWasRight, Time.time - lastPunchAt);
-                lastPunchWasRight = !left;
-                lastPunchAt = Time.time;
-                if (Cookie != null) Cookie.FaceAim(aim, PlayerActionPose.PunchSeconds + 0.1f);
-                if (pose == null) pose = GetComponent<PlayerActionPose>();
-                if (pose != null) pose.Play(left ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR);
-                StartCoroutine(Sweep(slot, tool, true, left));
-                return;
-            }
+            // §90 G6 권투 글러브 폐기(상자에서 빠짐) — 주먹 원투는 주석으로 남긴다
+            // case ToolKind.BoxingGlove:
+            // {
+            //     // 오른손부터, 이어 치면 왼손·오른손 번갈아(§75 C1). 어느 손인지는 요청 B 칸으로 다른 화면에 간다.
+            //     bool left = AimMotion.NextPunchIsLeft(lastPunchWasRight, Time.time - lastPunchAt);
+            //     lastPunchWasRight = !left;
+            //     lastPunchAt = Time.time;
+            //     if (Cookie != null) Cookie.FaceAim(aim, PlayerActionPose.PunchSeconds + 0.1f);
+            //     if (pose == null) pose = GetComponent<PlayerActionPose>();
+            //     if (pose != null) pose.Play(left ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR);
+            //     StartCoroutine(Sweep(slot, tool, true, left));
+            //     return;
+            // }
             case ToolKind.Flashbang:
             case ToolKind.WaterBalloon:
+            case ToolKind.GumTrap:   // §90 G6 껌 수류탄: 물풍선과 같은 손 동작·조준
                 if (tool.Projectile == null) { readyAt = 0f; return; }
                 if (Cookie != null) Cookie.FaceAim(aim, PlayerActionPose.ThrowSeconds); // 던지는 쪽으로 돌아선다(§75 B1)
                 if (pose == null) pose = GetComponent<PlayerActionPose>();
@@ -309,13 +313,14 @@ public class ToolUser : MonoBehaviour
 
     // 훑는 구간(동작 시작부터 초): 뿅망치는 머리 위에서 내려오기 시작해 땅에 닿을 때까지, 주먹은 뻗는 동안.
     public const float HammerSweepFrom = 0.18f, HammerSweepTo = 0.48f;
-    public const float GloveSweepFrom = 0.03f, GloveSweepTo = 0.26f;
+    // public const float GloveSweepFrom = 0.03f, GloveSweepTo = 0.26f;
     public const float FistRadius = 0.32f;
 
     // 뿅망치 머리·주먹이 지나간 길을 매 프레임 캡슐로 훑어 처음 닿은 한 명을 방장에게 보낸다(§75 A4). 못 맞히면 빈 대상으로(쿨타임·소리는 같다).
     private System.Collections.IEnumerator Sweep(int slot, ToolSO tool, bool glove, bool left)
     {
-        float from = glove ? GloveSweepFrom : HammerSweepFrom, to = glove ? GloveSweepTo : HammerSweepTo;
+        // float from = glove ? GloveSweepFrom : HammerSweepFrom, to = glove ? GloveSweepTo : HammerSweepTo;
+        float from = HammerSweepFrom, to = HammerSweepTo; // §91 권투 글러브 완전 삭제
         bool have = TryTip(glove, left, out Vector3 last, out float radius);
         float t = 0f;
         IGameCharacter hit = null;
@@ -337,7 +342,7 @@ public class ToolUser : MonoBehaviour
         radius = FistRadius;
         tip = default;
         if (Held == null) return false;
-        if (glove) return Held.TryGetFist(left, out tip);
+        // if (glove) return Held.TryGetFist(left, out tip);
         return Held.TryGetHammerHead(out tip, out radius);
     }
 

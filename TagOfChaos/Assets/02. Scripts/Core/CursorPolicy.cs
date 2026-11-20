@@ -6,7 +6,8 @@ using UnityEngine;
 public static class CursorPolicy
 {
     public static bool ShouldBeFree =>
-        GamePhaseState.Current == GamePhase.Result || EscMenu.IsOpen || PlayerInput.IsChatting || ConfirmDialog.AnyOpen || PlayerInput.ShowCursorHeld;
+        GamePhaseState.Current == GamePhase.Result || EscMenu.IsOpen || PlayerInput.IsChatting || ConfirmDialog.AnyOpen || PlayerInput.ShowCursorHeld
+        || PlayerInput.WarpMapOpen;   // §90 T2 술래 순간이동 지도(마우스로 고름)
 
     public static void Apply(bool free)
     {

@@ -29,6 +29,13 @@ public static class EscapeRules
 
     // witchTimer: 마녀 타이머가 돌고 있는가(첫 탈출 뒤). witchStruckFor: 마녀가 밟은 뒤 지난 시간(초, 안 밟았으면 음수).
     // departing: 로켓 발사 연출 중 — 연출이 끝날 때까지 끝 판정을 미룬다(EscapeVisualPlan.md §4.3).
+    // 에디터 시험 전용(§90 술래 혼자 Play Mode 확인): 남은 쿠키가 없어도 판을 끝내지 않는다. 빌드에서는 늘 false.
+#if UNITY_EDITOR
+    public static bool EditorKeepAlive;
+#else
+    public const bool EditorKeepAlive = false;
+#endif
+
     public static Decision Evaluate(IReadOnlyList<PlayerInfo> players, bool witchTimer, double now, double witchTimerEnd, float witchStruckFor, bool departing = false)
     {
         if (witchStruckFor >= WitchSlamSeconds) return Decision.EndWitchStrike;
@@ -38,7 +45,8 @@ public static class EscapeRules
         int active = 0;
         foreach (PlayerInfo p in players)
             if (!p.IsMonster && !p.Escaped && !p.Broken) active++;
-        if (active == 0) return Decision.EndAllResolved;
+        // if (active == 0) return Decision.EndAllResolved;
+        if (active == 0) return EditorKeepAlive ? Decision.None : Decision.EndAllResolved;
 
         if (witchTimer && now >= witchTimerEnd) return Decision.StrikeWitch;
         return Decision.None;

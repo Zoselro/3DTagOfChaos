@@ -46,11 +46,21 @@ public class SkyCannonView : MonoBehaviour, IHoldInteractable, IInteractionLabel
 
     private void Awake()
     {
+        // barrel = EscapeCue.FindDeep(transform, BarrelName);
+        // hatch = EscapeCue.FindDeep(transform, HatchName);
+        // if (barrel != null) barrelRest = barrel.localRotation;
+        // if (hatch != null) hatchRest = hatch.localRotation;
+        RebindParts();
+        colliders = GetComponentsInChildren<Collider>(true);
+    }
+
+    // 포신·해치를 다시 찾는다 — §91 SkyCannonSkin이 판마다 테마 쌍에 맞는 모델로 바꾼 뒤 부른다.
+    public void RebindParts()
+    {
         barrel = EscapeCue.FindDeep(transform, BarrelName);
         hatch = EscapeCue.FindDeep(transform, HatchName);
         if (barrel != null) barrelRest = barrel.localRotation;
         if (hatch != null) hatchRest = hatch.localRotation;
-        colliders = GetComponentsInChildren<Collider>(true);
     }
 
     private void OnEnable()
@@ -134,7 +144,12 @@ public class SkyCannonView : MonoBehaviour, IHoldInteractable, IInteractionLabel
             target = k < 1f ? (k < 0.5f ? Vector3.Lerp(enterFrom, breech, k / 0.5f) : Vector3.Lerp(breech, inside, (k - 0.5f) / 0.5f)) : inside;
             me.transform.rotation = SkyCannonRules.Rotation(Yaw);
         }
-        else target = ColaCannonRules.FlightPoint(SkyCannonRules.LaunchPoint(Pos, Yaw), ride.Dest, t - ColaCannonRules.FireAt, ride.Flight);
+        // else target = ColaCannonRules.FlightPoint(SkyCannonRules.LaunchPoint(Pos, Yaw), ride.Dest, t - ColaCannonRules.FireAt, ride.Flight);
+        else
+        {
+            target = ColaCannonRules.FlightPoint(SkyCannonRules.LaunchPoint(Pos, Yaw), ride.Dest, t - ColaCannonRules.FireAt, ride.Flight);
+            me.PlayAirborne();   // §90 J9 나는 동안 점프 동작
+        }
         me.TeleportTo(target);
     }
 

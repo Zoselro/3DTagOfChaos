@@ -59,3 +59,5 @@ MonoBehaviour:
   repairKitCount: 0
   excludedItems:
   - {fileID: 11400000, guid: 61ab8269b6744104cbc52545f46261d2, type: 2}
+  exclusiveItems:
+  - {fileID: 11400000, guid: b910dd3e988262440bc3d87c87ea4d5c, type: 2}

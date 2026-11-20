@@ -29,6 +29,27 @@ public class EscapeCatalogSO : ScriptableObject
     [Tooltip("술래 수색 폭탄의 범위·연출 수치(ToolSO, §68 GP5). 아이템으로 줍지 않는다.")]
     [SerializeField] private ItemSO searchBomb;
 
+    [Header("Request1009Plan.md §90")]
+    [Tooltip("§90 B3 술래 바주카포(ToolSO 수치 + 로켓 투사체). 아이템으로 줍지 않는다.")]
+    [SerializeField] private ItemSO bazooka;
+    [Tooltip("§90 B3 술래 어깨에 메는 바주카포 모델(원점 = 손잡이, 포구 +Z)")]
+    [SerializeField] private GameObject bazookaModel;
+    [Tooltip("§90 G6 바닥 껌 웅덩이(지름 약 2.9 m)")]
+    [SerializeField] private GameObject gumPuddleModel;
+    [Tooltip("§90 G6 술래 발에 붙는 껌 덩어리(고리, 지름 약 0.95 m)")]
+    [SerializeField] private GameObject gumStuckModel;
+    [Tooltip("§90 P5 펼친 패러글라이더(원점 = 쿠키 엉덩이)")]
+    [SerializeField] private GameObject gliderModel;
+    [Tooltip("§90 P5 패러글라이더를 펴는 동안 쿠키 동작(Glide_Sit 반복)")]
+    [SerializeField] private AnimationClip glideClip;
+    [Tooltip("§90 B3 술래 바주카 조준(반복)·발사(0.4초) 동작")]
+    [SerializeField] private AnimationClip bazookaAimClip;
+    [SerializeField] private AnimationClip bazookaFireClip;
+    [Tooltip("§90 B3 바주카포를 술래 가슴(Chest) 뼈 기준으로 놓는 자리(조준 동작 첫 프레임에서 잰 값, P90AssetSetup)")]
+    [SerializeField] private Vector3 bazookaChestPos;
+    [SerializeField] private Quaternion bazookaChestRot = Quaternion.identity;
+    [SerializeField] private Vector3 bazookaChestScale = Vector3.one;
+
     [Header("Shared models (EscapeVisualPlan.md §3)")]
     [Tooltip("탈것에 타는 순간·좌석에 앉은 쿠키 인형")]
     [SerializeField] private GameObject passengerModel;
@@ -50,6 +71,17 @@ public class EscapeCatalogSO : ScriptableObject
     public ItemSO NoiseBomb => noiseBomb;
     public ItemSO SearchBomb => searchBomb;
     public ItemSO Hammer => hammer;
+    public ItemSO Bazooka => bazooka;
+    public GameObject BazookaModel => bazookaModel;
+    public GameObject GumPuddleModel => gumPuddleModel;
+    public GameObject GumStuckModel => gumStuckModel;
+    public GameObject GliderModel => gliderModel;
+    public AnimationClip GlideClip => glideClip;
+    public AnimationClip BazookaAimClip => bazookaAimClip;
+    public AnimationClip BazookaFireClip => bazookaFireClip;
+    public Vector3 BazookaChestPos => bazookaChestPos;
+    public Quaternion BazookaChestRot => bazookaChestRot;
+    public Vector3 BazookaChestScale => bazookaChestScale;
     public GameObject PassengerModel => passengerModel;
     public GameObject JarModel => jarModel;
     public GameObject JarCookieModel => jarCookieModel;
@@ -74,6 +106,15 @@ public class EscapeCatalogSO : ScriptableObject
         }
         byId.TryGetValue(id, out ItemSO found);
         return found;
+    }
+
+    // §90 P5 다른 맵 전용 아이템인지(이 레시피가 가진 전용 아이템이 아니고, 다른 레시피 하나가 전용으로 가짐).
+    public bool IsExclusiveElsewhere(ItemSO item, EscapeRecipeSO here)
+    {
+        if (item == null) return false;
+        if (here != null && here.OwnsExclusive(item)) return false;
+        foreach (EscapeRecipeSO r in recipes) if (r != null && r != here && r.OwnsExclusive(item)) return true;
+        return false;
     }
 
     public EscapeRecipeSO RecipeFor(string mapName)
@@ -104,6 +145,26 @@ public class EscapeCatalogSO : ScriptableObject
         searchBomb = search;
         byId = null;
     }
+
+    // §90: 새 아이템·모델·동작.
+    public void EditorSetRequest1119(ItemSO[] allItems, ItemSO[] cookie, int[] cookieWeights, ItemSO bazookaItem, GameObject bazookaMesh, GameObject puddle, GameObject stuck,
+        GameObject glider, AnimationClip glide, AnimationClip aim, AnimationClip fire)
+    {
+        items = allItems;
+        cookieItems = cookie;
+        cookieItemWeights = cookieWeights;
+        bazooka = bazookaItem;
+        bazookaModel = bazookaMesh;
+        gumPuddleModel = puddle;
+        gumStuckModel = stuck;
+        gliderModel = glider;
+        glideClip = glide;
+        bazookaAimClip = aim;
+        bazookaFireClip = fire;
+        byId = null;
+    }
+
+    public void EditorSetBazookaSocket(Vector3 pos, Quaternion rot, Vector3 scale) { bazookaChestPos = pos; bazookaChestRot = rot; bazookaChestScale = scale; }
 
     public void EditorSetup(ItemSO[] allItems, EscapeRecipeSO[] allRecipes, ItemSO hammerItem)
     {

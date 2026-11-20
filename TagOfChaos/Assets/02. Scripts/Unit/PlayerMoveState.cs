@@ -12,4 +12,5 @@ public enum PlayerMoveState
     StrafeLeft,  // 조준 방향을 본 채 왼쪽 옆걸음(§75 Q2) — 동기화는 int라 끝에만 덧붙인다
     StrafeRight, // 오른쪽 옆걸음
     WalkBack,    // 뒷걸음
+    Glide,       // §90 P5 패러글라이더 안장에 앉아 활공(Animator 트리거 Glide)
 }

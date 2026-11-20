@@ -25,8 +25,9 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
     [Header("Item test (offline room only)")]
     [Tooltip("Give items and enable the item test keys below.")]
     [SerializeField] private bool itemTest = true;
-    [Tooltip("Item IDs put in slots 1-4 when the hunt starts (empty = leave the slot). IDs: ColaCannon, Pumpkin, Flashbang, BoxingGlove, Skates, Recorder, HeliHat, StunGun, Hammer, WaterBalloon, Dismantle, RepairKit, ...")]
-    [SerializeField] private string[] startItems = { "ColaCannon", "Pumpkin", "Flashbang", "BoxingGlove" };
+    [Tooltip("Item IDs put in slots 1-4 when the hunt starts (empty = leave the slot). IDs: ColaCannon, Pumpkin, Flashbang, GumTrap, Paraglider, Skates, Recorder, HeliHat, StunGun, Hammer, WaterBalloon, Dismantle, RepairKit, ...")]
+    // [SerializeField] private string[] startItems = { "ColaCannon", "Pumpkin", "Flashbang", "BoxingGlove" }; // §90 G6 글러브 폐기
+    [SerializeField] private string[] startItems = { "ColaCannon", "Pumpkin", "Flashbang", "GumTrap" };
     [Tooltip("A used-up item comes back in the same slot after a moment (endless testing).")]
     [SerializeField] private bool infiniteItems = true;
     [SerializeField] private KeyCode nextItemKey = KeyCode.F5;    // 선택한 칸 → 다음 아이템
@@ -84,6 +85,16 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
             props[NetKeys.SpyActorNumbers] = new[] { PhotonNetwork.LocalPlayer.ActorNumber };
             props[NetKeys.EscapeState] = null; // 스파이가 있는 판으로 탈출 배치를 다시 짠다
         }
+        // 혼자 술래로 시험(§90): 몸만 술래로 낳으면 방의 술래 목록이 비어 방장이 쿠키로 본다 — 바주카포(던지기 거절)·순간이동(T 무반응)·수색 폭탄이 막힌다.
+        // 술래 목록에 자기를 넣고 탈출 배치를 다시 짜며, 남은 쿠키가 없어도 판이 끝나지 않게 한다(에디터 전용).
+        if (spawnAsMonster)
+        {
+            props[NetKeys.MonsterActorNumbers] = new[] { PhotonNetwork.LocalPlayer.ActorNumber };
+            props[NetKeys.EscapeState] = null;
+#if UNITY_EDITOR
+            EscapeRules.EditorKeepAlive = true;
+#endif
+        }
         PhotonNetwork.CurrentRoom.SetCustomProperties(props);
     }
 
@@ -93,6 +104,9 @@ public class OfflineModeBootstrap : MonoBehaviourPunCallbacks
     {
         SpawnAsMonster = false;
         GiantOverride = null;
+#if UNITY_EDITOR
+        EscapeRules.EditorKeepAlive = false;
+#endif
         PositionHistory.DebugRemoteLatency = -1f;
         MonsterDashLedger.DebugIgnore = false;
         if (PhotonNetwork.OfflineMode && !PhotonNetwork.InRoom) PhotonNetwork.OfflineMode = false;

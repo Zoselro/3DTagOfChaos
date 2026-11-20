@@ -27,7 +27,8 @@ public enum RainbowState : byte { None = 0, Closed = 1, Opened = 2, Broken = 3 }
 public sealed class EscapeState
 {
     // public const byte FormatVersion = 11; // §74 P12: 사이렌 함정에 놓은 건물(Site)
-    public const byte FormatVersion = 12; // §89.24 하늘 대포 탑승(Cannon.Sky)
+    // public const byte FormatVersion = 12; // §89.24 하늘 대포 탑승(Cannon.Sky)
+    public const byte FormatVersion = 13; // §90 상자 내용 지연(Chest.Filled)·껌 웅덩이(Puddles)·술래 순간이동(Warps)·껌 맞음(Slows)·패러글라이더(Glides)·스파이 상자 차례(SpyGifts)·상자 리셋
     public const int BuildingCount = 4;
     public const int ExitCount = 4;
     public const float RepairSeconds = 10f;      // 재료 넣기(수리) 게이지가 다 차는 시간(§25.5 E)
@@ -49,6 +50,7 @@ public sealed class EscapeState
         public int Anchor;  // 씬의 CHEST_Slot 번호
         public bool Spy;
         public bool Opened;
+        public bool Filled; // §90 C8 열 때 내용을 정했다(연 뒤에도 내용 유지, 리셋 때 false)
     }
 
     // 사분면 건물 하나. 재료는 판마다 섞어 정한다(§25 결정).
@@ -213,6 +215,43 @@ public sealed class EscapeState
     public readonly List<Cannon> Cannons = new List<Cannon>();
     public int NextId = 1; // 폭탄·AI·마차·대포 번호(지워져도 요청이 엉뚱한 것을 가리키지 않게)
 
+    // §90 T2 술래 순간이동: At에 출발 자리에서 사라지고, 그 건물 벽장 문이 덜컹(RattleSeconds) 뒤 열리며 나온다.
+    public struct Warp { public int Actor; public byte Building; public double At; }
+    // §90 G6 껌 웅덩이(빗나간 껌 수류탄): 사라지지 않고, 주인별 최대 4개(가장 오래된 것부터 지움). 술래가 밟으면 TriggeredAt부터 3.5초 동안 줄며 사라진다.
+    // 사이렌 함정(Bombs)과 따로 둔다 — 사이렌 규칙(칸 수·철창·건물)이 껌을 세지 않게.
+    public struct Puddle { public int Id; public int Owner; public Vector3 Pos; public double PlacedAt; public double TriggeredAt; public int Victim; public bool Triggered => TriggeredAt > 0; }
+    // §90 G6 껌에 맞은(또는 웅덩이를 밟은) 술래: At부터 GumTrapRules.SlowSeconds 동안 이동속도 50%.
+    public struct Slow { public int Actor; public double At; }
+    // §90 P5 패러글라이더를 편 사람과 시각(펴는 동안 낙하 사망 없음, 6.5 m 아래에서만 잡힘).
+    public struct Glide { public int Actor; public double At; }
+    // §90 C8 스파이 상자 차례(스파이마다): 첫 상자 = 해체 도구, 그 뒤 로켓 부품 2 : 수리키트 1.
+    public struct SpyGift { public int Actor; public bool Dismantle; public int Parts; public int Kits; }
+    public readonly List<Warp> Warps = new List<Warp>();
+    public readonly List<Puddle> Puddles = new List<Puddle>();
+    public readonly List<Slow> Slows = new List<Slow>();
+    public readonly List<Glide> Glides = new List<Glide>();
+    public readonly List<SpyGift> SpyGifts = new List<SpyGift>();
+    public int ChestResets;      // §90 C8 상자를 되돌린 횟수(한 번이라도 되돌린 뒤에는 수리 끝난 재료도 다시 나온다)
+    public bool ChestReset8Done; // §90 C8 8분 리셋은 한 번만
+
+    public int GlideIndex(int actor)
+    {
+        for (int i = 0; i < Glides.Count; i++) if (Glides[i].Actor == actor) return i;
+        return -1;
+    }
+
+    public int WarpIndex(int actor)
+    {
+        for (int i = 0; i < Warps.Count; i++) if (Warps[i].Actor == actor) return i;
+        return -1;
+    }
+
+    public int SpyGiftIndex(int actor)
+    {
+        for (int i = 0; i < SpyGifts.Count; i++) if (SpyGifts[i].Actor == actor) return i;
+        return -1;
+    }
+
     public int ActiveBuildingCount
     {
         get
@@ -354,6 +393,7 @@ public sealed class EscapeState
                 w.Write((byte)c.Anchor);
                 w.Write(c.Spy);
                 w.Write(c.Opened);
+                w.Write(c.Filled);
             }
             w.Write(Buildings.Count);
             foreach (Building b in Buildings)
@@ -384,6 +424,18 @@ public sealed class EscapeState
             w.Write(Cannons.Count);
             // foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); w.Write(c.Ceiling); }
             foreach (Cannon c in Cannons) { w.Write(c.Id); w.Write(c.Owner); WriteVector(w, c.Pos); w.Write(c.Yaw); w.Write(c.SummonedAt); w.Write(c.BoardAt); w.Write(c.AimYaw); WriteVector(w, c.Dest); w.Write(c.Flight); w.Write(c.Ceiling); w.Write(c.Sky); }
+            w.Write(Warps.Count);
+            foreach (Warp x in Warps) { w.Write(x.Actor); w.Write(x.Building); w.Write(x.At); }
+            w.Write(Puddles.Count);
+            foreach (Puddle x in Puddles) { w.Write(x.Id); w.Write(x.Owner); WriteVector(w, x.Pos); w.Write(x.PlacedAt); w.Write(x.TriggeredAt); w.Write(x.Victim); }
+            w.Write(Slows.Count);
+            foreach (Slow x in Slows) { w.Write(x.Actor); w.Write(x.At); }
+            w.Write(Glides.Count);
+            foreach (Glide x in Glides) { w.Write(x.Actor); w.Write(x.At); }
+            w.Write(SpyGifts.Count);
+            foreach (SpyGift x in SpyGifts) { w.Write(x.Actor); w.Write(x.Dismantle); w.Write(x.Parts); w.Write(x.Kits); }
+            w.Write(ChestResets);
+            w.Write(ChestReset8Done);
             w.Flush();
             return ms.ToArray();
         }
@@ -414,7 +466,7 @@ public sealed class EscapeState
                 }
                 int chests = r.ReadInt32();
                 for (int i = 0; i < chests; i++)
-                    s.Chests.Add(new Chest { Anchor = r.ReadByte(), Spy = r.ReadBoolean(), Opened = r.ReadBoolean() });
+                    s.Chests.Add(new Chest { Anchor = r.ReadByte(), Spy = r.ReadBoolean(), Opened = r.ReadBoolean(), Filled = r.ReadBoolean() });
                 int buildings = r.ReadInt32();
                 for (int i = 0; i < buildings; i++)
                 {
@@ -451,6 +503,18 @@ public sealed class EscapeState
                 for (int i = 0; i < cannons; i++)
                     // s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle(), Ceiling = r.ReadSingle() });
                     s.Cannons.Add(new Cannon { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), Yaw = r.ReadSingle(), SummonedAt = r.ReadDouble(), BoardAt = r.ReadDouble(), AimYaw = r.ReadSingle(), Dest = ReadVector(r), Flight = r.ReadSingle(), Ceiling = r.ReadSingle(), Sky = r.ReadSByte() });
+                int warps = r.ReadInt32();
+                for (int i = 0; i < warps; i++) s.Warps.Add(new Warp { Actor = r.ReadInt32(), Building = r.ReadByte(), At = r.ReadDouble() });
+                int puddles = r.ReadInt32();
+                for (int i = 0; i < puddles; i++) s.Puddles.Add(new Puddle { Id = r.ReadInt32(), Owner = r.ReadInt32(), Pos = ReadVector(r), PlacedAt = r.ReadDouble(), TriggeredAt = r.ReadDouble(), Victim = r.ReadInt32() });
+                int slows = r.ReadInt32();
+                for (int i = 0; i < slows; i++) s.Slows.Add(new Slow { Actor = r.ReadInt32(), At = r.ReadDouble() });
+                int glides = r.ReadInt32();
+                for (int i = 0; i < glides; i++) s.Glides.Add(new Glide { Actor = r.ReadInt32(), At = r.ReadDouble() });
+                int gifts = r.ReadInt32();
+                for (int i = 0; i < gifts; i++) s.SpyGifts.Add(new SpyGift { Actor = r.ReadInt32(), Dismantle = r.ReadBoolean(), Parts = r.ReadInt32(), Kits = r.ReadInt32() });
+                s.ChestResets = r.ReadInt32();
+                s.ChestReset8Done = r.ReadBoolean();
                 return s;
             }
         }

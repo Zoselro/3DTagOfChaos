@@ -157,3 +157,10 @@ HOB_FonduePot	shell
 HOB_FondueSkewer	pole
 HOB_Fence_2m	wood
 HOB_LampPost_Tall	pole
+HOB_BananaTree_A	chunk
+HOB_BananaTree_B	chunk
+HOB_Greenhouse	panel
+HOB_Apple	chunk
+HOB_Strawberry	chunk
+HOB_Grape	chunk
+HOB_Watermelon	chunk

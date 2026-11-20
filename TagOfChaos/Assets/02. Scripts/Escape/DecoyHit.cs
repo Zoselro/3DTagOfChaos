@@ -7,7 +7,8 @@ public static class DecoyHit
     public static bool IsDecoy(int target) => target < 0;
     public static int DecoyId(int target) => -target;
 
-    public static bool CanHit(ToolKind kind) => kind == ToolKind.StunGun || kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
+    // public static bool CanHit(ToolKind kind) => kind == ToolKind.StunGun || kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
+    public static bool CanHit(ToolKind kind) => kind == ToolKind.StunGun || kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang || kind == ToolKind.Bazooka;   // §90 B3 폭발 둘레 기절
 
     // 방장 두뇌가 AI를 세워 두는 시간: 물풍선은 갇힘 + 떨어짐(StunReceiver.FallStunSeconds), 나머지는 쿠키 기절 시간.
     public static float HoldSeconds(ToolSO tool)

@@ -11,7 +11,7 @@ public class Request1108GpTests
     {
         Assert.IsTrue(ToolSO.CanHitMonsterKind(ToolKind.StunGun));
         Assert.IsTrue(ToolSO.CanHitMonsterKind(ToolKind.Flashbang), "user decision: flashbang stuns the tagger too");
-        Assert.IsFalse(ToolSO.CanHitMonsterKind(ToolKind.BoxingGlove), "glove: cookies only");
+        // Assert.IsFalse(ToolSO.CanHitMonsterKind(ToolKind.BoxingGlove), "glove: cookies only");
         Assert.IsFalse(ToolSO.CanHitMonsterKind(ToolKind.Hammer));
         Assert.IsFalse(ToolSO.CanHitMonsterKind(ToolKind.WaterBalloon));
     }
@@ -20,40 +20,45 @@ public class Request1108GpTests
     public void NewItems_AreInTheCatalogWithTheAgreedNumbers()
     {
         EscapeCatalogSO c = EscapeCatalogSO.Current;
-        ItemSO flash = c.Find("Flashbang"), glove = c.Find("BoxingGlove");
-        Assert.IsNotNull(flash); Assert.IsNotNull(glove); Assert.IsNotNull(c.SearchBomb);
+        // ItemSO flash = c.Find("Flashbang"), glove = c.Find("BoxingGlove");
+        // Assert.IsNotNull(flash); Assert.IsNotNull(glove); Assert.IsNotNull(c.SearchBomb);
+        // §91 권투 글러브 완전 삭제: 카탈로그에 더 없다
+        ItemSO flash = c.Find("Flashbang");
+        Assert.IsNotNull(flash); Assert.IsNull(c.Find("BoxingGlove"), "§91 glove removed"); Assert.IsNotNull(c.SearchBomb);
         Assert.AreEqual(ToolKind.Flashbang, flash.Tool.Kind);
         Assert.AreEqual(3f, flash.Tool.StunSecondsCookie, 1e-4f, "3 s stun");
         Assert.AreEqual(3f, flash.Tool.StunSecondsMonster, 1e-4f, "tagger included, 3 s");
         Assert.IsTrue(flash.Tool.IsThrown && flash.Tool.HitsArea && flash.Tool.UsedByClick);
-        Assert.AreEqual(ToolKind.BoxingGlove, glove.Tool.Kind);
-        Assert.IsFalse(glove.Tool.IsThrown);
+        // Assert.AreEqual(ToolKind.BoxingGlove, glove.Tool.Kind);
+        // Assert.IsFalse(glove.Tool.IsThrown);
         Assert.AreEqual(ToolKind.SearchBomb, c.SearchBomb.Tool.Kind);
         Assert.IsFalse(c.SearchBomb.Tool.UsedByClick, "monster skill, not an item in hand");
         CollectionAssert.Contains(new System.Collections.Generic.List<ItemSO>(c.CookieItems), flash, "survivor chest");
-        CollectionAssert.Contains(new System.Collections.Generic.List<ItemSO>(c.CookieItems), glove, "survivor chest");
+        // CollectionAssert.Contains(new System.Collections.Generic.List<ItemSO>(c.CookieItems), glove, "survivor chest");
+        // CollectionAssert.DoesNotContain(new System.Collections.Generic.List<ItemSO>(c.CookieItems), glove, "§90 G6: glove retired from the chest");
+        CollectionAssert.Contains(new System.Collections.Generic.List<ItemSO>(c.CookieItems), c.Find("GumTrap"), "§90 G6: gum grenade replaces it");
         Assert.AreEqual(c.CookieItems.Count, c.CookieItemWeights.Count);
     }
 
-    // ---------------- 권투 글러브 ----------------
+//     // ---------------- 권투 글러브 ----------------
 
-    [Test]
-    public void Glove_KnocksDownOnTheThirdHitWithinThreeSeconds()
-    {
-        var combo = new GloveCombo();
-        Assert.IsFalse(combo.Register(7, 0.0));
-        Assert.IsFalse(combo.Register(7, 1.0));
-        Assert.IsFalse(combo.Register(8, 1.5), "another cookie is counted apart");
-        Assert.IsTrue(combo.Register(7, 2.9), "third hit inside 3 s -> knocked down");
-        Assert.AreEqual(0, combo.RecentHits(7, 3.0), "starts again after the knock-down");
+//     [Test]
+//     public void Glove_KnocksDownOnTheThirdHitWithinThreeSeconds()
+//     {
+//         var combo = new GloveCombo();
+//         Assert.IsFalse(combo.Register(7, 0.0));
+//         Assert.IsFalse(combo.Register(7, 1.0));
+//         Assert.IsFalse(combo.Register(8, 1.5), "another cookie is counted apart");
+//         Assert.IsTrue(combo.Register(7, 2.9), "third hit inside 3 s -> knocked down");
+//         Assert.AreEqual(0, combo.RecentHits(7, 3.0), "starts again after the knock-down");
 
-        var slow = new GloveCombo();
-        slow.Register(5, 0.0); slow.Register(5, 2.0);
-        Assert.IsFalse(slow.Register(5, 3.5), "the first hit fell out of the 3 s window");
-        Assert.IsTrue(slow.Register(5, 4.0));
-        Assert.AreEqual(0.2f, GloveCombo.FlinchSeconds, 1e-4f);
-        Assert.AreEqual(3f, GloveCombo.KnockSeconds, 1e-4f);
-    }
+//         var slow = new GloveCombo();
+//         slow.Register(5, 0.0); slow.Register(5, 2.0);
+//         Assert.IsFalse(slow.Register(5, 3.5), "the first hit fell out of the 3 s window");
+//         Assert.IsTrue(slow.Register(5, 4.0));
+//         Assert.AreEqual(0.2f, GloveCombo.FlinchSeconds, 1e-4f);
+//         Assert.AreEqual(3f, GloveCombo.KnockSeconds, 1e-4f);
+//     }
 
     // ---------------- 사이렌 함정 ----------------
 

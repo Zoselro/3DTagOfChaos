@@ -16,14 +16,15 @@ public class SkillHud : MonoBehaviour
     private EscapeManager manager;
     private EscapeTextsSO texts;
     private RectTransform root;
-    private readonly Slot[] slots = new Slot[3];
+    // private readonly Slot[] slots = new Slot[3];
+    private readonly Slot[] slots = new Slot[5];   // §90 술래 5칸(돌진·사이렌·수색·순간이동·바주카포)
     private float nextRefresh;
 
     public void Init(EscapeManager owner, EscapeTextsSO t)
     {
         manager = owner;
         texts = t;
-        root = EscapeHud.NewRect("Skills", transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-24f, 24f), new Vector2(SlotSize * 3f + 24f, SlotSize));
+        root = EscapeHud.NewRect("Skills", transform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-24f, 24f), new Vector2(SlotSize * 5f + 48f, SlotSize));
         root.pivot = new Vector2(1f, 0f);
         for (int i = 0; i < slots.Length; i++) slots[i] = BuildSlot(i);
     }
@@ -67,8 +68,11 @@ public class SkillHud : MonoBehaviour
             Set(slots[0], texts.skillDash, KeyAction.MonsterDash, monster.DashCooldownLeft, GameSettings.Current.TentacleDashCooldown, null);
             BombState(out float left, out int charges);
             Set(slots[1], texts.skillBomb, KeyAction.MonsterSkill, left, EscapeAuthority.BombCooldown, charges > 0 ? charges + "/" + EscapeAuthority.BombMaxCharges : null);
-            if (!slots[2].Root.activeSelf) { slots[2].Root.SetActive(true); Width(3); }
+            // if (!slots[2].Root.activeSelf) { slots[2].Root.SetActive(true); Width(3); }
+            if (!slots[4].Root.activeSelf) { for (int i = 2; i < slots.Length; i++) slots[i].Root.SetActive(true); Width(5); }
             Set(slots[2], texts.skillSearch, KeyAction.MonsterSearch, NoiseBombPresenter.SearchReadyAt - Time.time, EscapeAuthority.SearchCooldown, null);
+            Set(slots[3], texts.skillWarp, KeyAction.MonsterWarp, MonsterWarpPresenter.ReadyAt - Time.time, MonsterWarpRules.Cooldown, null);          // §90 T2
+            Set(slots[4], texts.skillBazooka, KeyAction.CameraRotate, BazookaSkill.ReadyAt - Time.time, BazookaRules.Cooldown, null);                 // §90 B3 우클릭 조준
         }
         else if (me is HideOrSeekPlayer cookie)
         {
@@ -76,7 +80,8 @@ public class SkillHud : MonoBehaviour
             // 스태미나가 회피 비용보다 적으면 칸을 어둡게 덮는다(쿨타임 숫자는 그대로, §46.3 ST3).
             if (cookie.DodgeCooldownLeft <= 0.05f && cookie.Stamina != null && !cookie.Stamina.CanDodge) slots[0].Cover.fillAmount = 1f;
             Set(slots[1], texts.skillUnknown, null, 0f, 1f, null, disabled: true);
-            if (slots[2].Root.activeSelf) { slots[2].Root.SetActive(false); Width(2); } // 쿠키는 칸 2개
+            // if (slots[2].Root.activeSelf) { slots[2].Root.SetActive(false); Width(2); } // 쿠키는 칸 2개
+            if (slots[2].Root.activeSelf) { for (int i = 2; i < slots.Length; i++) slots[i].Root.SetActive(false); Width(2); } // 쿠키는 칸 2개
         }
     }
 

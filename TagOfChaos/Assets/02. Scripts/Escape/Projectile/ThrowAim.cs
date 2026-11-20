@@ -12,6 +12,10 @@ public readonly struct ThrowAim
         Target = target;
     }
 
+    // §90 B3 곧게 나는 로켓: 시작점에서 dir로 speed(목표 = 사거리 끝).
+    public static ThrowAim Straight(Vector3 origin, Vector3 dir, float speed, float range) =>
+        new ThrowAim(origin, dir.normalized * speed, origin + dir.normalized * range);
+
     public static ThrowAim FromCamera(Camera cam, Vector3 hand, Vector3 fallbackForward, ProjectileConfigSO c)
     {
         Ray aim = cam != null ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)) : new Ray(hand, fallbackForward);

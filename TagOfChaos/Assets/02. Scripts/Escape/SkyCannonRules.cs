@@ -8,14 +8,20 @@ using UnityEngine;
 public static class SkyCannonRules
 {
     public const float Cooldown = 2f;          // 착지 뒤 다음 사람이 탈 수 있을 때까지
-    public const float PinHeight = 2.2f;       // 받침 바닥 → 포신 핀
-    public const float BarrelFront = 2.85f;    // 핀 → 포구
-    public const float BarrelBack = 1.85f;     // 핀 → 뒤 끝(해치)
+    // public const float PinHeight = 2.2f;       // 받침 바닥 → 포신 핀
+    // public const float BarrelFront = 2.85f;    // 핀 → 포구
+    // public const float BarrelBack = 1.85f;     // 핀 → 뒤 끝(해치)
+    // §91 사용자 Meshy 대포 6종(바퀴 달린 포가, 포신 반지름 0.95 m로 맞춤) — 6종 평균. 받침 윗면 0.9 m + 바퀴 바닥 → 핀 3.3 m.
+    public const float BaseTop = 0.9f;
+    public const float PinHeight = 4.2f;       // 받침 바닥 → 포신 핀
+    public const float BarrelFront = 2.9f;     // 핀 → 포구
+    public const float BarrelBack = 1.95f;     // 핀 → 뒤 끝(해치)
     public const float RestPitch = 20f;
     public const float FirePitch = 40f;
     public const float BoardReach = 2.8f;      // 뒤 계단 앞에서 E가 뜨는 거리
     public const float AuthorityReach = BoardReach + 1.5f;   // 방장이 받는 거리(지연 여유)
-    public static readonly Vector3 StepsLocal = new Vector3(0f, 0f, -4.9f);   // 맨 아래 계단 앞 바닥
+    // public static readonly Vector3 StepsLocal = new Vector3(0f, 0f, -4.9f);   // 맨 아래 계단 앞 바닥
+    public static readonly Vector3 StepsLocal = new Vector3(0f, 0f, -5.9f);   // §91 맨 아래 계단 앞 바닥(포가가 길어져 계단을 1 m 뒤로·2배 높이)
 
     public static Quaternion Rotation(float yaw) => Quaternion.Euler(0f, yaw, 0f);
     public static Vector3 Pivot(Vector3 pos) => pos + Vector3.up * PinHeight;

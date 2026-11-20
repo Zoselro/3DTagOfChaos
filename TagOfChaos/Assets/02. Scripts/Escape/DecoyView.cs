@@ -169,6 +169,7 @@ public class DecoyView : MonoBehaviour
         yaw = Mathf.MoveTowardsAngle(yaw, pose.Yaw, TurnSpeed * Time.deltaTime);
         transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
+        if (flyRoute && pose.Moving && !pose.Hidden) { SetMotion(PlayerMoveState.Jump, 0); return; }   // §90 J9 하늘 대포로 나는 AI도 점프 동작
         if (pose.Moving)
         {
             bool run = pose.Running; // 지친 AI는 경로의 달리기 끝 지점부터 걷는다(§46.4)

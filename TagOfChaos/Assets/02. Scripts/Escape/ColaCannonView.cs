@@ -124,6 +124,7 @@ public class ColaCannonView : MonoBehaviour, IHoldInteractable, IInteractionLabe
         {
             Vector3 mouth = ColaCannonRules.Mouth(data.Pos, worldYaw, ColaCannonRules.FirePitch) + Vector3.down * 0.9f;
             target = ColaCannonRules.FlightPoint(mouth, data.Dest, t - ColaCannonRules.FireAt, data.Flight, data.Ceiling);
+            me.PlayAirborne();   // §90 J9 나는 동안 점프 동작
         }
         me.TeleportTo(target);
     }

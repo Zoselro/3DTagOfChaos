@@ -39,7 +39,7 @@ public static class ToolHitReceiver
             if (item.Tool.IsThrown) pose.Play(PlayerActionPose.OneShot.Throw);
             else if (item.Tool.Kind == ToolKind.Hammer) pose.Play(PlayerActionPose.OneShot.Swing);
             else if (item.Tool.Kind == ToolKind.StunGun) pose.Kick(); // 쏜 사람의 반동(§77 TP2)
-            else if (item.Tool.Kind == ToolKind.BoxingGlove) pose.Play(color == 1 ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR); // 어느 손인지 = 요청 B 칸(§75 C1)
+            // else if (item.Tool.Kind == ToolKind.BoxingGlove) pose.Play(color == 1 ? PlayerActionPose.OneShot.PunchL : PlayerActionPose.OneShot.PunchR); // 어느 손인지 = 요청 B 칸(§75 C1) — §90 G6 폐기
         }
         // 물풍선·섬광탄은 투사체(ProjectileSystem)로만 날아간다 — 옛 포물선 연출(ToolShotFx.ThrowBalloon/ThrowCanister)은 지웠다(§74 P1).
         if (item.Tool.Kind == ToolKind.StunGun && from.HasValue) ToolShotFx.Beam(from.Value, point, new Color(0.55f, 1f, 0.95f, 1f));
@@ -93,16 +93,24 @@ public static class ToolHitReceiver
                 GameAudio.PlayAt(SoundId.StunHit, point);
                 break;
         }
+        if (item.Tool.Kind == ToolKind.Bazooka) BazookaFx.Explode(point);   // §90 B3 불꽃·연기·파편·소리·흔들림(모든 화면) — 기절은 아래 대상 반복이 그대로
+        if (item.Tool.Kind == ToolKind.GumTrap)   // §90 G6 껌: 터지는 모습·소리만 — 느려짐·웅덩이는 상태(Slows·Puddles)로 GumTrapPresenter가 그린다
+        {
+            GumTrapPresenter.Splat(point, targets.Length > 0);
+            GameAudio.PlayAt(SoundId.GumSplat, point);
+            return;
+        }
         bool balloon = item.Tool.Kind == ToolKind.WaterBalloon;
-        bool glove = item.Tool.Kind == ToolKind.BoxingGlove;
-        if ((!balloon || targets.Length == 0) && item.Tool.Kind != ToolKind.Flashbang && !(glove && targets.Length == 0)) ToolFx.Play(item.Tool.Kind, point, item.Tint);
+        // bool glove = item.Tool.Kind == ToolKind.BoxingGlove;
+        bool glove = false;   // §90 G6 권투 글러브 폐기
+        if ((!balloon || targets.Length == 0) && item.Tool.Kind != ToolKind.Flashbang && item.Tool.Kind != ToolKind.Bazooka && !(glove && targets.Length == 0)) ToolFx.Play(item.Tool.Kind, point, item.Tint);
         // 맞은 곳 소리(모두, 3D): 물풍선은 늘 터지고, 스턴건·뿅망치는 누군가 맞았을 때만(S5)
         switch (item.Tool.Kind)
         {
             case ToolKind.WaterBalloon: GameAudio.PlayAt(SoundId.BalloonSplash, point); break;
             case ToolKind.StunGun: if (targets.Length > 0) GameAudio.PlayAt(SoundId.StunHit, point); break;
             case ToolKind.Hammer: if (targets.Length > 0) GameAudio.PlayAt(SoundId.HammerBonk, point); break;
-            case ToolKind.BoxingGlove: if (targets.Length > 0) GameAudio.PlayAt(SoundId.GlovePunch, point); break;
+            // case ToolKind.BoxingGlove: if (targets.Length > 0) GameAudio.PlayAt(SoundId.GlovePunch, point); break;   // §90 G6 폐기
         }
 
         foreach (int viewId in targets)
@@ -123,7 +131,7 @@ public static class ToolHitReceiver
             bool isMonster = character.Role == CharacterRole.Monster;
             if (isMonster && !item.Tool.CanHitMonster) continue; // 스턴건만 괴물을 맞힌다(§59 AT4 — 옛 클라이언트·경합 대비)
             float seconds = isMonster ? item.Tool.StunSecondsMonster : item.Tool.StunSecondsCookie;
-            if (glove) seconds = knock ? GloveCombo.KnockSeconds : GloveCombo.FlinchSeconds; // 한 대 = 멈칫, 3초 안 3대 = 쓰러짐
+            // if (glove) seconds = knock ? GloveCombo.KnockSeconds : GloveCombo.FlinchSeconds; // 한 대 = 멈칫, 3초 안 3대 = 쓰러짐
             StunReceiver stun = view.GetComponent<StunReceiver>();
             if (stun != null)
             {
@@ -134,6 +142,7 @@ public static class ToolHitReceiver
 
             if (!view.IsMine || isMonster) continue;
             if (glove && !knock) continue; // 멈칫만으로는 손에 든 것을 떨어뜨리지 않는다
+            if (item.Tool.Kind == ToolKind.Bazooka) continue; // §90 B3 폭발 둘레 기절은 손에 든 것을 떨어뜨리지 않는다
             PlayerInventory inv = view.GetComponent<PlayerInventory>();
             if (inv != null) inv.RequestDropHeld(); // 손에 든 아이템 하나만(D20)
         }

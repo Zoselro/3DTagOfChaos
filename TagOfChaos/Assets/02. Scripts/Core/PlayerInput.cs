@@ -109,10 +109,30 @@ public static class PlayerInput
     private static readonly Vector2 EditorMove = Vector2.zero;
     private const bool EditorRunHeld = false;
 #endif
-    public static bool MonsterGrabPressed => !IsGameplaySuppressed && !ShowCursorHeld && (Down(KeyAction.MonsterGrab) || EditorTakeGrabPress()); // 술래 잡기(§69 F3)
+    // public static bool MonsterGrabPressed => !IsGameplaySuppressed && !ShowCursorHeld && (Down(KeyAction.MonsterGrab) || EditorTakeGrabPress()); // 술래 잡기(§69 F3)
+    public static bool MonsterGrabPressed => !IsGameplaySuppressed && !ShowCursorHeld && !BazookaAiming && !WarpMapOpen && (Down(KeyAction.MonsterGrab) || EditorTakeGrabPress()); // 술래 잡기(§69 F3) — §90 바주카 조준 중에는 잡지 않는다
+    // §90 B3 바주카포: 조준 중(우클릭 = 시점 키)에는 잡기·돌진이 막히고, 잡기 키(좌클릭)가 발사.
+    public static bool BazookaAiming;
+    public static bool WarpMapOpen;   // §90 T2 건물 고르기 지도가 떠 있으면 좌클릭은 고르기(잡기 아님)
+    public static bool BazookaFirePressed => !IsGameplaySuppressed && !ShowCursorHeld && (Down(KeyAction.MonsterGrab) || EditorTakeFirePress());
+    public static bool EditorFirePress;
+    private static bool EditorTakeFirePress() { bool p = EditorFirePress; EditorFirePress = false; return p; }
+    public static bool EditorAimHeld;
+    public static bool BazookaAimHeld => !IsGameplaySuppressed && (Held(KeyAction.CameraRotate) || EditorAimHeld);
+    // §90 T2 술래 순간이동: T = 건물 고르기 창 열기·닫기, 1~4 = 고르기.
+    public static bool MonsterWarpPressed => !IsGameplaySuppressed && (Down(KeyAction.MonsterWarp) || EditorTakeWarpPress());
+    public static bool EditorWarpPress;
+    private static bool EditorTakeWarpPress() { bool p = EditorWarpPress; EditorWarpPress = false; return p; }
+    public static int WarpPickPressed()
+    {
+        if (IsGameplaySuppressed) return -1;
+        for (int i = 0; i < 4; i++) if (Down(KeyAction.Slot1 + i)) return i;
+        return -1;
+    }
     public static bool EditorGrabPress;
     private static bool EditorTakeGrabPress() { bool p = EditorGrabPress; EditorGrabPress = false; return p; }
-    public static bool TentacleDashPressed => !IsGameplaySuppressed && Down(KeyAction.MonsterDash);
+    // public static bool TentacleDashPressed => !IsGameplaySuppressed && Down(KeyAction.MonsterDash);
+    public static bool TentacleDashPressed => !IsGameplaySuppressed && !BazookaAiming && Down(KeyAction.MonsterDash);   // §90 바주카 조준 중에는 돌진하지 않는다
     public static bool SearchBombHeld => !IsGameplaySuppressed && Held(KeyAction.MonsterSearch); // 누르고 있는 동안 궤적, 떼면 던짐(§70.3 Q4)
     public static bool SearchBombPressed => !IsGameplaySuppressed && (Down(KeyAction.MonsterSearch) || EditorTakeSearchPress()); // 술래 수색 폭탄(§68 GP5)
     public static bool EditorSearchPress;

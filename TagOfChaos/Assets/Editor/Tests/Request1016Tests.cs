@@ -11,8 +11,15 @@ public class Request1016Tests
     {
         var keys = new Dictionary<KeyAction, KeyCode>();
         foreach (KeyAction a in KeyBindings.All) keys[a] = KeyBindings.Default(a);
+        // foreach (KeyAction a in KeyBindings.All)
+        //     Assert.IsFalse(KeyBindings.HasConflict(a, x => keys[x]), "defaults must be clean: " + a);
+        // §90.13 Q2 사용자 결정: 술래 순간이동 = T(말하기 키와 같음 — 설정에서 바꿀 수 있다). 이 한 쌍만 알려진 겹침으로 둔다.
+        Assert.AreEqual(keys[KeyAction.PushToTalk], keys[KeyAction.MonsterWarp], "known overlap (user decision T)");
         foreach (KeyAction a in KeyBindings.All)
+        {
+            if (a == KeyAction.PushToTalk || a == KeyAction.MonsterWarp) continue;
             Assert.IsFalse(KeyBindings.HasConflict(a, x => keys[x]), "defaults must be clean: " + a);
+        }
 
         Assert.AreEqual(keys[KeyAction.Run], keys[KeyAction.MonsterDash], "same Shift, different groups");
         keys[KeyAction.Jump] = KeyCode.E;

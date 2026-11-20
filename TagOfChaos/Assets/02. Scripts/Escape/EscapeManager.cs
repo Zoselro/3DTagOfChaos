@@ -64,6 +64,16 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (PhotonNetwork.IsMasterClient && authority != null && authority.State != null) authority.ApplyDecoyHits(sender, tool, targets);
     }
 
+    // §90 G6 방장: 껌 투사체가 터졌다 — 맞은 술래 느려짐 또는 바닥 웅덩이.
+    public void GumLanded(int owner, Vector3 at, int[] monsterViews)
+    {
+        if (PhotonNetwork.IsMasterClient && authority != null && authority.State != null) authority.GumLanded(owner, at, monsterViews);
+    }
+
+    // §90 B3 방장: 로켓이 터졌다 — 물체·사람·AI 판정. 기절 대상(ToolHit 별 효과)을 돌려준다.
+    public int[] BazookaExplode(int monster, Vector3 at, Collider touched) =>
+        PhotonNetwork.IsMasterClient && authority != null && authority.State != null ? authority.BazookaExplode(monster, at, touched) : new int[0];
+
     // §89.24 방장 화면의 권한(AI가 하늘 대포를 탈 때 DecoyBrain이 쓴다). 방장이 아니면 null.
     public EscapeAuthority MasterAuthority => Photon.Pun.PhotonNetwork.IsMasterClient ? authority : null;
     public EscapeAuthority OfflineAuthority => Photon.Pun.PhotonNetwork.OfflineMode && Photon.Pun.PhotonNetwork.IsMasterClient ? authority : null;
@@ -238,6 +248,8 @@ public class EscapeManager : MonoBehaviourPunCallbacks, IOnEventCallback
         gameObject.AddComponent<NoiseBombPresenter>().Init(this);   // 괴물 사이렌 함정(옛 소음폭탄 §25.5 K)·수색 폭탄 입력(§68 GP5)
         StallWatch.Mark("EscapeManager.Start SirenTrapPresenter");
         gameObject.AddComponent<SirenTrapPresenter>().Init(this);   // 사이렌 철창(§68 GP5)
+        gameObject.AddComponent<GumTrapPresenter>().Init(this);     // §90 G6 껌 웅덩이·술래 발 껌
+        gameObject.AddComponent<MonsterWarpPresenter>().Init(this); // §90 T2 술래 순간이동(지도·벽장 문)
         StallWatch.Mark("EscapeManager.Start PumpkinCarriagePresenter");
         gameObject.AddComponent<PumpkinCarriagePresenter>().Init(this); // 호박 마차 탈것(§68.7)
         StallWatch.Mark("EscapeManager.Start ColaCannonPresenter");

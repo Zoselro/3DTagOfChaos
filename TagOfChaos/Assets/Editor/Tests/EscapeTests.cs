@@ -331,8 +331,10 @@ public class EscapeTests
         Assert.NotNull(c.HeliHat, "heli hat");
         Assert.NotNull(c.NoiseBomb, "noise bomb");
         Assert.AreEqual(3, c.SpyRandomTools.Count, "stun gun, hammer, water balloon (jail balloon merged, §45.8 Q1)");
-        Assert.AreEqual(6, c.CookieItems.Count, "skates, pumpkin, recorder + flashbang, boxing glove (§68 GP2·GP3) + cola cannon (§68.9)");
-        CollectionAssert.AreEqual(new[] { 5, 3, 5, 3, 4, 3 }, c.CookieItemWeights.ToArray());
+        // Assert.AreEqual(6, c.CookieItems.Count, "skates, pumpkin, recorder + flashbang, boxing glove (§68 GP2·GP3) + cola cannon (§68.9)");
+        // CollectionAssert.AreEqual(new[] { 5, 3, 5, 3, 4, 3 }, c.CookieItemWeights.ToArray());
+        Assert.AreEqual(7, c.CookieItems.Count, "skates, pumpkin, recorder, flashbang, gum grenade (§90 G6, glove retired), cola cannon, paraglider (§90 P5, Heaven Of Bakery only)");
+        CollectionAssert.AreEqual(new[] { 5, 3, 5, 3, 4, 3, 3 }, c.CookieItemWeights.ToArray());
         foreach (ItemSO item in new[] { c.RepairKit, c.DismantleTool, c.HeliHat, c.NoiseBomb }.Concat(c.SpyRandomTools).Concat(c.CookieItems))
             Assert.IsTrue(item.DisplayName.Any(ch => ch >= '가' && ch <= '힣'), item.ItemId + " name");
         foreach (string map in MapScenes.MapNames)

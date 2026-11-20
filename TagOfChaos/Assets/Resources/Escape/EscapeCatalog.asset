@@ -43,9 +43,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 42ed759c32a74df40851e7e1326f4f77, type: 2}
   - {fileID: 11400000, guid: 6e0aff05b48051e4eab1d4c1536d4395, type: 2}
   - {fileID: 11400000, guid: 86bf4bee6db549643af8f1c5903be929, type: 2}
-  - {fileID: 11400000, guid: 00a245e1f4dba6f4295b7252b57d8585, type: 2}
   - {fileID: 11400000, guid: 61ab8269b6744104cbc52545f46261d2, type: 2}
   - {fileID: 11400000, guid: 59c2b4ca9f6f1a745b51f37b7f0c7f25, type: 2}
+  - {fileID: 11400000, guid: 84b39c13bcd1a224bb25f218fc34ebd5, type: 2}
+  - {fileID: 11400000, guid: b910dd3e988262440bc3d87c87ea4d5c, type: 2}
+  - {fileID: 11400000, guid: 50b9896a8cf1f1442af3e75c27ecbb68, type: 2}
   recipes:
   - {fileID: 11400000, guid: 5ec41f19bf1fe8240a2d5e33037ae0f7, type: 2}
   - {fileID: 11400000, guid: 7d23371b31031bb48b3d0444964e31e9, type: 2}
@@ -64,12 +66,24 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 9061988fd76e3e241b1db616f03c11e7, type: 2}
   - {fileID: 11400000, guid: 30757bd4e11a5fa4d8199c8442177109, type: 2}
   - {fileID: 11400000, guid: 86bf4bee6db549643af8f1c5903be929, type: 2}
-  - {fileID: 11400000, guid: 00a245e1f4dba6f4295b7252b57d8585, type: 2}
+  - {fileID: 11400000, guid: 84b39c13bcd1a224bb25f218fc34ebd5, type: 2}
   - {fileID: 11400000, guid: 61ab8269b6744104cbc52545f46261d2, type: 2}
-  cookieItemWeights: 050000000300000005000000030000000400000003000000
+  - {fileID: 11400000, guid: b910dd3e988262440bc3d87c87ea4d5c, type: 2}
+  cookieItemWeights: 05000000030000000500000003000000040000000300000003000000
   heliHat: {fileID: 11400000, guid: 42ed759c32a74df40851e7e1326f4f77, type: 2}
   noiseBomb: {fileID: 11400000, guid: 6e0aff05b48051e4eab1d4c1536d4395, type: 2}
   searchBomb: {fileID: 11400000, guid: 59c2b4ca9f6f1a745b51f37b7f0c7f25, type: 2}
+  bazooka: {fileID: 11400000, guid: 50b9896a8cf1f1442af3e75c27ecbb68, type: 2}
+  bazookaModel: {fileID: 919132149155446097, guid: d35b4065d5499f240840e24712d9630b, type: 3}
+  gumPuddleModel: {fileID: 919132149155446097, guid: 2d4b56f131f6ad94588c8b82208d2bb3, type: 3}
+  gumStuckModel: {fileID: 919132149155446097, guid: cd087a5c3f5dc0147ac4ec8ac262f924, type: 3}
+  gliderModel: {fileID: 919132149155446097, guid: 04813597dbdc98e48bccd4092f2f62ac, type: 3}
+  glideClip: {fileID: -623603649343465320, guid: 4e586988bacc5c74a947fc898bc0e787, type: 3}
+  bazookaAimClip: {fileID: 7400000, guid: 7db3704dba99f8b4698bf1895d7d3b46, type: 2}
+  bazookaFireClip: {fileID: 7400000, guid: de3cf1c7b3ca363488b587d22d4eb400, type: 2}
+  bazookaChestPos: {x: 0.55, y: 0.158074, z: 0.21774408}
+  bazookaChestRot: {x: 0.052414417, y: 0.00000007440343, z: -0.000000003905174, w: 0.9986254}
+  bazookaChestScale: {x: 0.3184713, y: 0.31847134, z: 0.31847134}
   passengerModel: {fileID: 919132149155446097, guid: 31dbe311b4f0e0e45ba19387847dc847, type: 3}
   jarModel: {fileID: 919132149155446097, guid: 653091ba224def64c827011f161be866, type: 3}
   jarCookieModel: {fileID: 919132149155446097, guid: 2404403b270534c449950b66f78bacc5, type: 3}

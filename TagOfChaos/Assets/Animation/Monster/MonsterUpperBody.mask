@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MonsterUpperBody
+  m_Mask: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: EyeSocket
+    m_Weight: 0
+  - m_Path: Mesh_0
+    m_Weight: 0
+  - m_Path: MonsterArmature
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Grab_Socket
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Hips
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Hips/Spine
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Neck
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Neck/Head
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Neck/Head/Horn
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_L/Tentacle_02_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_L/Tentacle_02_L/Tentacle_03_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_L/Tentacle_02_L/Tentacle_03_L/Tentacle_04_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_L/Tentacle_02_L/Tentacle_03_L/Tentacle_04_L/Tentacle_05_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_L/Tentacle_02_L/Tentacle_03_L/Tentacle_04_L/Tentacle_05_L/Tentacle_06_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_R/Tentacle_02_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_R/Tentacle_02_R/Tentacle_03_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_R/Tentacle_02_R/Tentacle_03_R/Tentacle_04_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_R/Tentacle_02_R/Tentacle_03_R/Tentacle_04_R/Tentacle_05_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/Tentacle_01_R/Tentacle_02_R/Tentacle_03_R/Tentacle_04_R/Tentacle_05_R/Tentacle_06_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/UpperArm_Top_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/UpperArm_Top_L/Forearm_Top_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/UpperArm_Top_L/Forearm_Top_L/Hand_Top_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/UpperArm_Top_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/UpperArm_Top_R/Forearm_Top_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/Chest/UpperArm_Top_R/Forearm_Top_R/Hand_Top_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/UpperArm_Low_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/UpperArm_Low_L/Forearm_Low_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/UpperArm_Low_L/Forearm_Low_L/Hand_Low_L
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/UpperArm_Low_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/UpperArm_Low_R/Forearm_Low_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Spine/UpperArm_Low_R/Forearm_Low_R/Hand_Low_R
+    m_Weight: 1
+  - m_Path: MonsterArmature/Root/Hips/Thigh_L
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Hips/Thigh_L/Shin_L
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Hips/Thigh_L/Shin_L/Foot_L
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Hips/Thigh_R
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Hips/Thigh_R/Shin_R
+    m_Weight: 0
+  - m_Path: MonsterArmature/Root/Hips/Thigh_R/Shin_R/Foot_R
+    m_Weight: 0

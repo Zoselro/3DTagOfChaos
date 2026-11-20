@@ -55,6 +55,12 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         aimFaceUntil = Mathf.Max(aimFaceUntil, Time.time + seconds);
     }
 
+    // §90 J9 콜라 대포·하늘 대포로 나는 동안 점프 동작(처음 한 번 처음부터, 그 뒤 유지 — 동기화로 다른 화면도 Jump).
+    public void PlayAirborne()
+    {
+        if (animationDriver != null && animationDriver.CurrentState != PlayerMoveState.Jump) animationDriver.ReplayJump();
+    }
+
     public void TeleportTo(Vector3 position)
     {
         if (!IsMine) return;
@@ -76,6 +82,8 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
 
     private HatFlight hatFlight;
     public bool IsFlying => hatFlight != null && hatFlight.IsFlying;
+    private GliderFlight glider;   // §90 P5
+    public bool IsGliding => glider != null && glider.IsGliding;
 
     [Header("States")]
     [SerializeField] private bool isJump;
@@ -136,6 +144,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
     public bool IsMovementLocked => IsBroken || awaitingDeathUntil > 0f || (carryFollower != null && carryFollower.IsCarried) || (stun != null && stun.IsStunned)
                                     || (pv != null && pv.Owner != null && EscapeManager.HasLeftMap(pv.Owner.ActorNumber))
                                     || IsFlying // 헬리콥터 모자 비행은 HatFlight가 움직인다(§25.5 H)
+                                    || IsGliding // §90 P5 패러글라이더는 GliderFlight가 움직인다
                                     || (pv != null && pv.Owner != null && EscapeManager.IsRidingVehicle(pv.Owner.ActorNumber)); // 호박 마차·콜라 대포에 타는 중(§68.7·§68.9)
     private StunReceiver stun; // 도구에 맞아 기절(EscapePlan.md §1.8)
     private PlayerActionPose actionPose;
@@ -444,6 +453,8 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         gameObject.AddComponent<EscapeCharacterState>().Init(escape, this);
         hatFlight = gameObject.AddComponent<HatFlight>();
         hatFlight.Init(escape, this, rb);
+        glider = gameObject.AddComponent<GliderFlight>();   // §90 P5
+        glider.Init(escape, this, rb);
         if (pv.IsMine) gameObject.AddComponent<PlayerInventory>().Init(this, escape);
     }
 
@@ -474,6 +485,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
             else CancelAwaitedDeath();
         }
 
+        if (IsGliding) animationDriver.ChangeState(PlayerMoveState.Glide);   // §90 P5 안장에 앉은 자세(동기화로 다른 화면도)
         if (IsMovementLocked)
         {
             runningNow = false;
@@ -514,6 +526,7 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         dancing = false;
         if (isDodge) DodgeOut();
         jumpRequested = false;
+        if (IsGliding) return;   // §90 P5
         if (stun != null && stun.IsStunned && !IsBroken && !carryFollower.IsCarried)
         {
             animationDriver.ResumePlayback();
@@ -529,7 +542,8 @@ public class HideOrSeekPlayer : MonoBehaviourPunCallbacks, IPunObservable, IResp
         if (IsMovementLocked)
         {
             // 기절 순간의 수평 속도가 남아 미끄러지지 않게 멈춘다(research.md R5-19). 키네마틱(파괴·탑승)이면 건드리지 않는다.
-            if (!rb.isKinematic) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            // if (!rb.isKinematic) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            if (!rb.isKinematic && !IsGliding) rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);   // §90 P5 활공 속도는 GliderFlight가
             return;
         }
 

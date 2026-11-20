@@ -65,6 +65,9 @@ public enum SoundId
     WitchStep = 516,     // 마녀 발걸음(Request1009Plan.md §23.5 X4)
     WitchShatter = 517,  // 내리칠 때 맵이 무너지는 소리(§23.5 X7)
     SirenAlarm = 518,    // 사이렌 함정: 철창에 갇힌 건물에서 울리는 두 음 사이렌(한 바퀴 1.4 s, 반복 재생 — §68 GP5)
+    ChestRefill = 519,   // §90 C8 상자가 다시 채워짐(쿠키·스파이 2D 짧은 차임)
+    ClosetRattle = 520,  // §90 T2 술래 벽장 문 덜컹덜컹(나무 문 2초, 3D — 방 안에서 들림)
+    GliderOpen = 521,    // §90 P5 패러글라이더 펼침(천 펄럭)
 
     // 도구
     StunAimHum = 600,
@@ -76,7 +79,11 @@ public enum SoundId
     HammerBonk = 606,
     FlashBang = 607,  // 섬광탄 터지는 '펑' — 모두가 3D로 듣는다(§68 GP2)
     FlashRing = 608,  // 섬광 맞은 사람 본인에게만 '삐~' 귀울림(2D, §68 GP2)
-    GlovePunch = 609, // 권투 글러브가 맞았을 때 '퍽'(§68 GP3)
+    // GlovePunch = 609, // 권투 글러브가 맞았을 때 '퍽'(§68 GP3)
+    BazookaFire = 610,    // §90 B3 바주카포 발사(쉭 + 쿵)
+    BazookaExplode = 611, // §90 B3 로켓 폭발(멀리까지 3D)
+    GumSplat = 612,       // §90 G6 껌 수류탄 터짐 '철퍽'
+    GumStick = 613,       // §90 G6 술래 발에 껌이 붙음 '쩍'
 
     // 맵 연출(3D)
     CakeCrack = 701,

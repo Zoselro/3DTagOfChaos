@@ -45,9 +45,9 @@ public static class ActionLayerBuilder
             (PlayerActionPose.ThrowState, "Cookie_ThrowBalloon"),
             (PlayerActionPose.SwingState, "Cookie_HammerSwing"),       // 어깨 → 머리 위 → 내려찍기 → 어깨(§75 A2)
             (PlayerActionPose.HammerHoldState, "Cookie_HammerHold"),   // 오른쪽 어깨에 걸친 자세(반복, §74 P13)
-            (PlayerActionPose.GloveGuardState, "Cookie_GloveGuard"),   // 글러브 가드(반복, §75 C1)
-            (PlayerActionPose.PunchRState, "Cookie_PunchR"),
-            (PlayerActionPose.PunchLState, "Cookie_PunchL"),
+            // (PlayerActionPose.GloveGuardState, "Cookie_GloveGuard"),   // 글러브 가드(반복, §75 C1)
+            // (PlayerActionPose.PunchRState, "Cookie_PunchR"),
+            // (PlayerActionPose.PunchLState, "Cookie_PunchL"),
         }, ikPass: true);
         AddLayer(controller, PlayerActionPose.TrappedLayer, null, new[] { (PlayerActionPose.TrappedState, "Cookie_BalloonTrapped") });
         int moves = BuildAimWalkStates(controller);

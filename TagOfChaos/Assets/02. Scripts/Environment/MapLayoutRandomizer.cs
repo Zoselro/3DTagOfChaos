@@ -10,6 +10,8 @@ public class MapLayoutRandomizer : MonoBehaviour
     [SerializeField] private Transform[] fieldLots = new Transform[MapLayout.LotCount];
     [SerializeField] private Transform fieldMaterialBuilding;              // Building_Q4
     [SerializeField] private Transform[] generalBuildings = new Transform[MapLayout.LotCount - 1];
+    [Tooltip("§90 U2 자리(subSlots)마다 그 고원 몸체(Plateau_<slot>/Model) — 앉은 서브 맵의 SubMapTheme 재질을 넣는다")]
+    [SerializeField] private Transform[] plateauModels = new Transform[3];
 
     public static MapLayout.Layout Current { get; private set; }
     public static bool Applied { get; private set; }
@@ -49,6 +51,8 @@ public class MapLayoutRandomizer : MonoBehaviour
         {
             Transform c = order[slot] < subContents.Length ? subContents[order[slot]] : null;
             if (c != null && subSlots[slot] != null) c.SetPositionAndRotation(subSlots[slot].position, subSlots[slot].rotation);
+            SubMapTheme theme = c != null ? c.GetComponent<SubMapTheme>() : null;   // §90 U2 섬 몸체를 그 서브 맵 테마로
+            if (theme != null && plateauModels != null && slot < plateauModels.Length) theme.ApplyTo(plateauModels[slot]);
         }
         int g = 0;
         for (int lot = 0; lot < fieldLots.Length; lot++)
@@ -65,5 +69,8 @@ public class MapLayoutRandomizer : MonoBehaviour
     {
         subSlots = slots; subContents = contents; fieldLots = lots; fieldMaterialBuilding = materialBuilding; generalBuildings = generals;
     }
+
+    public void EditorBindPlateaus(Transform[] models) => plateauModels = models;
+    public Transform[] EditorSubSlots => subSlots;
 #endif
 }

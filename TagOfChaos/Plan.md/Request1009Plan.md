@@ -12492,18 +12492,18 @@ if (SkyCannonRules.Busy(State, fixedId, now)) return false;
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| U1 | 섬 몸체 재질: 테마별 `HOB_TriPBR` 재질 3벌 — 초콜릿(초콜릿 퐁듀 흐름 텍스처·짙은 초코 바위·흘러내린 초코), 아몬드(크림·구운 아몬드 바위), 밀(흙·밀짚 바위). 부분 메시 9칸(`RockDark…Sprinkle1`)에 대응표. 1층 큰 섬 `HOB_Island_Main85`도 기본 바위/잔디 재질로 바꿈. 경사로·기둥(지금 흰 단색)은 Q1 답에 따라 | ⬜ |
-| U2 | `SubMapTheme`(새 컴포넌트, `SubMap_*`에 붙음): 섬 몸체 재질 배열. `MapLayoutRandomizer.Apply`가 서브 맵을 자리에 옮길 때 그 자리의 `Plateau_<slot>/Model`에 재질을 넣는다(모든 화면 같은 배치) | ⬜ |
-| T2 | 술래 순간이동 기술 — 아래 90.3 | ⬜ |
-| B3 | 술래 바주카포 기술 — 아래 90.4 | ⬜ |
-| F4 | 사탕 숲 바닥 아이템 보이기 — 아래 90.5 | ⬜ |
-| P5 | 패러글라이더 + 하늘 섬 낙하 사망(Heaven Of Bakery 한정) — 아래 90.6 | ⬜ |
-| G6 | 권투 글러브 폐기 + 껌 트랩 — 아래 90.7 | ⬜ |
-| V7 | 바나나 나무·비닐하우스·과일 — 아래 90.8 | ⬜ |
-| C8 | 상자 아이템 규칙 — 아래 90.9 | ⬜ |
-| J9 | 대포 비행 = 점프 동작 — 아래 90.10 | ⬜ |
-| T | EditMode 시험(항목마다) + Play Mode 확인 + 콘솔 | ⬜ |
-| DOC | 이 절 완료 표시 | ⬜ |
+| U1 | 섬 몸체 재질: 테마별 `HOB_TriPBR` 재질 3벌 — 초콜릿(초콜릿 퐁듀 흐름 텍스처·짙은 초코 바위·흘러내린 초코), 아몬드(크림·구운 아몬드 바위), 밀(흙·밀짚 바위). 부분 메시 9칸(`RockDark…Sprinkle1`)에 대응표. 1층 큰 섬 `HOB_Island_Main85`도 기본 바위/잔디 재질로 바꿈. 경사로·기둥(지금 흰 단색)은 Q1 답에 따라 | ✅ |
+| U2 | `SubMapTheme`(새 컴포넌트, `SubMap_*`에 붙음): 섬 몸체 재질 배열. `MapLayoutRandomizer.Apply`가 서브 맵을 자리에 옮길 때 그 자리의 `Plateau_<slot>/Model`에 재질을 넣는다(모든 화면 같은 배치) | ✅ |
+| T2 | 술래 순간이동 기술 — 아래 90.3 | ✅ |
+| B3 | 술래 바주카포 기술 — 아래 90.4 | ✅ |
+| F4 | 사탕 숲 바닥 아이템 보이기 — 아래 90.5 | ✅ |
+| P5 | 패러글라이더 + 하늘 섬 낙하 사망(Heaven Of Bakery 한정) — 아래 90.6 | ✅ |
+| G6 | 권투 글러브 폐기 + 껌 트랩 — 아래 90.7 | ✅ |
+| V7 | 바나나 나무·비닐하우스·과일 — 아래 90.8 | ✅ |
+| C8 | 상자 아이템 규칙 — 아래 90.9 | ✅ |
+| J9 | 대포 비행 = 점프 동작 — 아래 90.10 | ✅ |
+| T | EditMode 시험(항목마다) + Play Mode 확인 + 콘솔 | ✅ |
+| DOC | 이 절 완료 표시 | ✅ |
 
 ### 90.3 T2 술래 순간이동(재료 건물 고르기)
 
@@ -12891,3 +12891,64 @@ public static class GumTrapRules
 | 상자 리셋 알림 | 쿠키·스파이 화면에만 "상자가 다시 채워졌습니다" + 짧은 소리 |
 | 1층 과일 장식 수 | 총 40개 정도 — 비닐하우스 2동 안팎(하우스마다 수박 1·포도 2·사과 3·딸기 4 = 20) + 1층 빈 땅에 고루 20개(수박 2·포도 4·사과 6·딸기 8). 탈출구·길·상자 자리·건물 자리와 겹치지 않게 맵 빌더가 놓음 |
 | 바나나 나무 | 1층 나무만 같은 자리·같은 수의 바나나 나무로 바꿈. 하늘 섬은 섬 테마 나무 그대로 |
+
+### 90.17 낙하 규칙 고침 + 경고 문구(사용자, 2026-11-19)
+
+낙하 사망(Heaven Of Bakery, 90.6 고침): 섬 윗면만이 아니라 **경사로 포함, 떨어지기 시작한 높이보다 12 m 넘게 떨어지면** 패러글라이더를 펴지 않은 쿠키·스파이는 부서진다(`DeathCause.Fall`). 경사로 맨 아래 줄·1층 안 계단·건물 위에서 내려서는 것은 12 m가 안 되어 괜찮다. 경사로 반환점 높이는 약 18 m·30 m(설정값 계산 — 구현 때 맵에서 다시 잼).
+
+```csharp
+// SkyFallRules — 떨어지기 시작한 높이(마지막으로 땅을 디딘 높이) 기준
+public const float LethalDrop = 12f;
+public static bool Dies(bool mapHasSkyFall, float lastGroundY, float y, bool gliding) =>
+    mapHasSkyFall && !gliding && lastGroundY - y > LethalDrop;
+// 방장: 위치 기록(PositionHistory)에서 최근 5초 안 마지막으로 땅을 디딘 높이를 쓰고, 땅에 닿은 순간(또는 높이 차가 12 m를 넘는 순간) 판정
+```
+
+경고 문구:
+| 번호 | 내용 |
+|---|---|
+| W1 | 경사로 아래·위 입구와 반환점 두 곳에 세운 표지판(맵 빌더가 놓음, 경사로마다 4개): "⚠ 낙하 주의 — 떨어지면 부서집니다" + 작은 글씨 "패러글라이더가 있으면 안전". 과자 판자 모양, 쿠키·스파이 화면에만(술래는 해당 없음) |
+| W2 | 화면 경고: 이 맵에서 쿠키·스파이가 경사로나 섬 가장자리 3 m 안에 있고, 그 아래로 12 m 넘게 비어 있으면(아래로 레이) 화면 위쪽에 "⚠ 떨어지면 부서집니다"(노란 글씨, 깜박임 없이 0.3초 서서히 보였다 사라짐). 패러글라이더를 들고 있으면 "패러글라이더를 펴면 안전합니다"로 바뀜 |
+| W3 | 판 시작 안내(준비 시간 중 1회, 이 맵만): "하늘 섬과 경사로에서 떨어지면 부서집니다. 패러글라이더로 내려가세요." |
+| W4 | 문구는 `EscapeTextsSO`에 `fallWarning`·`fallWarningGlider`·`fallIntro`·`fallSign` 추가(나중에 바꾸기 쉽게) |
+
+W 고침(사용자): **1층 바닥에서 12 m보다 낮은 곳에 있으면 경고를 모두 멈춘다.** 화면 경고(W2)는 (1층 바닥까지 높이 > 12 m) 그리고 (가장자리 3 m 안)일 때만 보이고, 내려와 12 m 아래가 되면 바로 사라진다. 표지판(W1)도 경사로 높이 12 m 지점(아래 입구 대신)·두 반환점·위 입구에만 세운다.
+```csharp
+// FallWarningHud — 매 0.2초(본인 쿠키·스파이, 이 맵만)
+bool high = transform.position.y - SkyFallRules.FloorY > SkyFallRules.LethalDrop;   // FloorY = 1층 바닥 높이(0)
+bool show = high && NearDropEdge(transform.position, 3f) && !gliding;
+```
+
+### 90.18 구현 결과(2026-11-20)
+
+| 항목 | 결과 |
+|---|---|
+| U1/U2 | 하늘 섬 3곳 테마 재질(초콜릿·아몬드·밀) + 1층 섬 `M_HQ_*`, `SubMapTheme`가 `MapLayoutRandomizer.Apply`에서 자리마다 재질을 넣음 |
+| T2 | `MonsterWarpPresenter`(T → 작은 지도, 1~4 또는 클릭), `MonsterCloset`(벽장 미닫이 2짝·바닥 뚜껑), 5맵 배치(`P90MapSetup.PlaceAll`). Play Mode: 고르기 → 0.3초 뒤 벽장 안, 2초 덜컹, 0.5초 열림, 잠금 풀림. 쿨타임 10초(6.5초·7.5초 재요청 거절, 10.8초 허용) |
+| B3 | `BazookaSkill`(우클릭 조준 = 걷기 50%·FOV 0.85배·상체 "Bazooka" 층, 좌클릭 발사, 10초), 로켓 초속 45 m·최대 90 m(재 보니 2.07초 96 m에서 터짐), 폭발 = 3.5 m 잡힘·6 m 기절·벽 뒤 안전·재료 건물 외 부서짐(과일 1개 + 옆 소품 1개 부서짐 확인) |
+| F4 | `GroundCover`(덮개 위로 최대 1.3 m 띄움) + `GroundItemSparkle`(별 입자·빛, 술래 화면 제외) |
+| P5 | `GliderFlight`(공중에서만 펴기, 11 / 1.6 m/s, W 14/3, S 7/1.2) — 재 보니 1.8 m/s로 가라앉아 물리 한 칸의 중력을 미리 빼도록 고침 → 1.6 m/s. 착지하면 접히고 아이템 소모, 부서지지 않음. 패러글라이더 없이 15 m 떨어지면 `DeathCause.Fall`. 경고 W1(표지판 12개)·W2(`FallWarningHud`)·W3·W4(`EscapeTextsSO`). R2 = 마지막으로 디딘 자리에 아이템 |
+| G6 | 권투 글러브 상자에서 뺌(코드는 주석), 껌 수류탄: 맞으면 50% 3.5초(4.3초 뒤 1.0으로 돌아옴 확인), 빗나가면 웅덩이(사람당 4개) |
+| V7 | 1층 바나나 나무 30그루(A 16·B 14), 비닐하우스 동·서 2동, 과일 38개(수박 2·포도 8·사과 12·딸기 16). 7종 조각 모델(`Props82/HOB_*_Fractured.fbx`, 비닐하우스 = panel 28조각, 나머지 chunk 20~28조각) |
+| C8 | 상자는 비어 시작(쿠키 × 8, 스파이 × 8), 열 때 정함: 일반 = 닿는 곳에 2개 미만인 재료 중 가장 모자란 것(Play Mode: 처음 연 상자에서 필요한 재료가 나옴), 스파이 = 해체 도구 → 부품·수리키트 2:1. 모두 열리면 + 8분에 한 번 리셋·알림 |
+| J9 | 콜라·하늘 대포 비행 중 `PlayAirborne()`(점프 동작), 하늘 대포를 타는 AI는 Jump |
+| T | EditMode `Request1121Tests` 11개 통과. 전체 512개 중 511개 통과 — 남은 1개 `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`는 `GiantSettings.asset`의 거대 괴물 확률이 1.0(시험은 30%), 이 절 작업 전(11-13)에 바뀐 값이라 그대로 둠. 옛 시험 4개는 §90 결정에 맞춰 고침(글러브 → 껌·패러글라이더, 키 순서, T 겹침). 콘솔: 오류 없음(Unity 내부 JobTempAlloc 경고와 시험용 순간이동 NetGuard 경고만) |
+
+알려진 겹침: 술래 순간이동 T(§90.13 Q2)와 말하기(PushToTalk) T가 같다. 설정에서 바꿀 수 있고, 시험은 이 한 쌍만 알려진 겹침으로 둔다.
+
+시험 도우미: `EscapeRules.EditorKeepAlive`(에디터 전용) — 술래 혼자 Play Mode에서 확인할 때 판이 바로 끝나지 않게 한다.
+
+## 91. 플레이 피드백 — 패러글라이더·낙하 연출·계단 z-fighting·혼자 술래 시험·글러브 삭제·하늘 대포 6종(2026-11-20)
+
+| 번호 | 요청 | 결과 |
+|---|---|---|
+| A | 패러글라이더가 목에 걸림 | 펼 때 한 번 엉덩이 높이에 두던 하네스를 매 프레임 엉덩이 뼈 아래·뒤(`GliderFlight.SeatOffset` (0, −0.28, −0.14))에 맞춤. 앉는 활공 자세에서도 허리 뒤에 앉음(Play Mode 사진 확인) |
+| B | 패러글라이더 없이 떨어지면 땅에 닿을 때 부서지는 연출, 에이드 공주는 다른 연출 | `CookieLifeStatePresenter.FallBreak`: 방장이 떨어지는 도중 확정(DeathCause.Fall)해도 몸은 계속 떨어지다가 땅에 닿는 순간(또는 허공 아래 끝) 부서짐 — 쿠키 = 부스러기(GiantDeathFx.Crumbs·CookieCrumble), 슬라임 캐릭터(에이드 공주) = 철퍽 퍼지는 슬라임(GiantDeathFx.Slime·GumSplat). 관전 전환도 닿은 뒤 |
+| B2 | 허공으로 떨어지면 지상으로 텔레포트하지 말고 부서지게 | `FallGuard`: Heaven Of Bakery의 쿠키·스파이는 되돌리지 않고 `EscapeOp.FellFromSky`로 알림 → 방장이 위치 기록(1층 바닥보다 12 m 넘게 아래)으로 확인해 부서짐. 3초 안에 확정되지 않으면(판 밖 등) 예전처럼 되돌림. 술래는 그대로 되돌림 |
+| C | 술래 나오는 곳 계단 z-fighting | 광장(HOB_RoundPlaza) 맨 아래 계단판(y 0)이 섬 바닥(y 0)과 겹침 → 광장을 2 cm 올림(`HeavenOfBakeryMapBuilder.PlazaLift`) |
+| D | 술래 스폰 때 지면에 끼어 못 움직임 | 원인: 씬에 직접 놓은 `MonsterPlayer`(0,0,0, 바닥에 묻힘)가 같은 입력을 받음. 정상 스폰된 술래는 움직임(2.5초에 4.3 m). 직접 놓은 복사본은 빼야 한다 |
+| E | 혼자 술래 시험: 바주카포 "던지기가 취소됐어요", T 무반응 | 원인 1: `OfflineModeBootstrap.spawnAsMonster`가 몸만 술래로 낳고 방의 술래 목록에 넣지 않아 방장이 쿠키로 판정(바주카포 거절·순간이동 지도는 술래만 열림) → 목록에 넣고 탈출 배치를 다시 짜며, 남은 쿠키가 없어도 판이 끝나지 않게(`EscapeRules.EditorKeepAlive`, 에디터 전용). 원인 2: 씬에 직접 놓은 MonsterPlayer 복사본의 BazookaSkill이 그 자리(0,0,0)에서 쏨 → 주인 없는 복사본은 입력을 받지 않게. 확인: T 지도 열림·순간이동·바주카포 발사(순간이동 직후 포함) |
+| F | 권투 글러브 완전 삭제 | 코드 주석 처리(ToolKind.BoxingGlove·GloveCombo·글러브 자세/주먹 상태·SoundId.GlovePunch 등), 에셋 8개(Item/Tool/아이콘/모델/소리/클립 3) Blender 저장소 `transfer/P91/glove_backup`에 백업 후 삭제, 애니메이터 GloveGuard·PunchR·PunchL 상태 제거, 카탈로그·소리 목록에서 뺌, 시험 정리 |
+| G | 대포 FBX 6종(`F:\3DTagOfChaos\베이커리 맵\대포 모음`) | Blender: 252k 삼각형 → 4만, 텍스처 그대로(UV 유지), 받침(바퀴)·포신(원점 = 핀)·뒤 해치(원점 = 경첩)로 나눔(포신 둘레 반지름 측정으로 나팔 포구까지 포신에), 포신 반지름 0.95 m로 크기 맞춤. Unity: `P91CannonSetup`이 재질(Standard: 색·노멀·금속/매끈)·프리팹 6개(`HOB_SkyCannon_<출발>To<도착>`)·씬 대포 6대에 `SkyCannonSkin` 연결 — 판마다 서브 맵 배치에 따라 출발 섬·도착 섬 테마 쌍의 모델로 바꿈. `SkyCannonRules` 핀 4.2 m·앞 2.9·뒤 1.95. 대포 계단은 없앰(사용자 요청 — 탑승은 대포 뒤 바닥에서 E). Play Mode: 탑승 → 해치 열림 → 포신 20°→40° → 발사·비행 |
+
+시험: 전체 510개 중 508개 통과. 남은 2개 — `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`(거대 괴물 확률 1.0, 이전부터), `BuildSceneTests.ReleaseScene_HasNoDevScripts`(시험 실행기가 열린 씬을 저장하면서 사용자가 넣어 둔 시험 물체가 저장됨 → 씬을 다시 깨끗이 저장한 뒤 9/9 통과).

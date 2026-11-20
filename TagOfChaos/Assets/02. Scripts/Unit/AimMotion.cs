@@ -7,7 +7,7 @@ public static class AimMotion
 {
     public const float ForwardCos = 0.5f;          // 앞·뒤로 보는 범위(±60°)
     public const float AimTurnDegreesPerSecond = 720f;
-    public const float PunchComboWindow = 1.5f;
+    // public const float PunchComboWindow = 1.5f;
 
     public static PlayerMoveState Classify(Vector3 move, Vector3 face)
     {
@@ -24,6 +24,6 @@ public static class AimMotion
     public static bool IsAimWalk(PlayerMoveState s) => s == PlayerMoveState.StrafeLeft || s == PlayerMoveState.StrafeRight || s == PlayerMoveState.WalkBack;
 
     // 다음 주먹이 왼손인지: 직전 주먹이 오른손이고 PunchComboWindow 안이면 왼손, 아니면 오른손(첫 주먹 포함).
-    public static bool NextPunchIsLeft(bool lastWasRight, float secondsSinceLast) =>
-        lastWasRight && secondsSinceLast >= 0f && secondsSinceLast < PunchComboWindow;
+    // public static bool NextPunchIsLeft(bool lastWasRight, float secondsSinceLast) =>
+    //     lastWasRight && secondsSinceLast >= 0f && secondsSinceLast < PunchComboWindow; // §91 권투 글러브 완전 삭제
 }

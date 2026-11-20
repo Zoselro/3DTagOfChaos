@@ -72,6 +72,8 @@ public class EscapeTextsSO : ScriptableObject
     public string skillDodge = "Dodge";
     public string skillUnknown = "TBD";        // 생존자 스킬(아직 미정)
     public string skillSearch = "Search bomb"; // 술래 수색 폭탄(§68 GP5)
+    public string skillWarp = "Teleport"; // §90 T2 술래 순간이동 칸
+    public string skillBazooka = "Bazooka"; // §90 B3 술래 바주카포 칸(우클릭 조준 + 좌클릭 발사)
     public string cageMash = "Mash [{0}] to break the cage!"; // 사이렌 철창 안({0} = 점프 키)
     public string carriageBoard = "Ride Pumpkin Carriage";   // 호박 마차 문 앞 E 안내(§68.7)
     public string carriageNoRoom = "No room for the carriage"; // 소환할 빈 바닥이 없음
@@ -104,6 +106,19 @@ public class EscapeTextsSO : ScriptableObject
 
     [Header("Timers")]
     public string timeAttackFormat = "{0:00}:{1:00}";
+
+    [Header("Request1009Plan.md §90")]
+    public string chestsRefilled = "The chests have been refilled"; // §90 C8 상자 리셋(쿠키·스파이)
+    public string fallWarning = "Careful: a fall from here will break you"; // §90 W2 화면 경고(가장자리·12 m 위)
+    public string fallWarningGlider = "Open your paraglider to land safely"; // §90 W2 패러글라이더를 들고 있을 때
+    public string fallIntro = "Falling from the sky islands or ramps breaks you. Glide down with a paraglider."; // §90 W3 준비 시간 안내(이 맵만)
+    public string fallSign = "DANGER: FALLING BREAKS YOU"; // §90 W1 표지판 큰 글씨
+    public string fallSignSmall = "A paraglider keeps you safe"; // §90 W1 표지판 작은 글씨
+    public string warpTitle = "Teleport to a building (1-4 / click, T to close)"; // §90 T2 건물 고르기 창 제목
+    public string warpRepaired = "Repaired"; // §90 T2 수리 끝난 건물 표시
+    public string warpCooldown = "Teleport ready in {0}s"; // §90 T2 쿨타임
+    public string gumStuck = "Gum! You are slowed"; // §90 G6 술래 본인 화면
+    public string gliderNeedsAir = "Jump off a ledge first to open the paraglider"; // §90 P5 땅에서 사용
 
     private static EscapeTextsSO cached;
 

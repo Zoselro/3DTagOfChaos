@@ -10,6 +10,17 @@ public class FallGuard : MonoBehaviour
 
     private IRespawnable respawnable;
     private float nextAllowedTime;
+    private float fellAt = -1f;
+    public const float FellConfirmSeconds = 3f;
+
+    private bool ShouldBreakInsteadOfRespawn(IRespawnable target)
+    {
+        if (!(target is HideOrSeekPlayer cookie) || cookie.IsBroken) return false;
+        EscapeManager m = EscapeManager.Instance;
+        if (!EscapeManager.IsActive || m == null || m.State == null || !SkyFallRules.MapHasSkyFall(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)) return false;
+        int actor = Photon.Pun.PhotonNetwork.LocalPlayer != null ? Photon.Pun.PhotonNetwork.LocalPlayer.ActorNumber : -1;
+        return !RoomState.IsMonster(actor) && !m.State.HasLeftMap(actor) && m.State.GlideIndex(actor) < 0;
+    }
 
     private void Awake()
     {
@@ -36,6 +47,14 @@ public class FallGuard : MonoBehaviour
             if (Time.time < guard.nextAllowedTime) return;
             guard.nextAllowedTime = Time.time + RespawnCooldown;
         }
+        // §91 Heaven Of Bakery: 쿠키·스파이가 허공으로 떨어지면 되돌리지 않고 부서진다(방장에게 알리고, 방장이 확정).
+        // 방장이 끝내 확정하지 않으면(예: 판 밖·이미 나감) 잠시 뒤 예전처럼 되돌린다.
+        if (guard != null && guard.ShouldBreakInsteadOfRespawn(target))
+        {
+            if (guard.fellAt < 0f) { guard.fellAt = Time.time; EscapeManager.Instance.Request(EscapeOp.FellFromSky); }
+            if (Time.time - guard.fellAt < FellConfirmSeconds) return;
+        }
+        if (guard != null) guard.fellAt = -1f;
         target.RespawnToSpawnPoint();
         if (component != null && component.TryGetComponent(out IGameCharacter character)) GameAudio.PlayCharacter(SoundId.Respawn, character); // 본인 2D(S4)
     }

@@ -13,9 +13,12 @@ public enum ToolKind
     HeliHat = 8,     // 헬리콥터 모자: 들고 아이템 사용 키 — 떠올라 맵 밖으로(§25.5 H, §82 H1)
     NoiseBomb = 9,   // 괴물 사이렌 함정(옛 소음폭탄 — §68 GP5에서 기절 대신 빼빼로 철창). 아이템으로 줍지 않는다
     Flashbang = 10,  // 섬광탄(§68 GP2): 던져 터진 둘레 모두(술래 포함) 흰 화면 + 기절
-    BoxingGlove = 11,// 권투 글러브(§68 GP3): 쿠키끼리만, 맞을 때마다 멈칫, 3초 안에 3번이면 쓰러져 기절
+    // BoxingGlove = 11,// 권투 글러브(§68 GP3): 쿠키끼리만, 맞을 때마다 멈칫, 3초 안에 3번이면 쓰러져 기절 — §90 G6에서 폐기(상자에서 빠짐, 번호는 비워 둔다)
     SearchBomb = 12, // 술래 수색 폭탄(§68 GP5): 둘레의 진짜 사람만 기침(AI는 기침하지 않음). 아이템으로 줍지 않는다
     ColaCannon = 13, // 콜라 대포(§68.9): 앞에 설치 → 뒤 계단에서 E로 들어가 보는 방향 멀리 포물선으로 날아감(도망용, 맵 안)
+    Bazooka = 14,    // §90 B3 술래 바주카포: 곧게 나는 로켓, 닿으면 폭발(사람·AI 잡힘, 재료 건물 제외 한 방). 아이템으로 줍지 않는다
+    GumTrap = 15,    // §90 G6 껌 수류탄: 던져 맞히면 술래 50% 3.5초, 빗나가면 바닥 웅덩이(사람당 4개)
+    Paraglider = 16, // §90 P5 패러글라이더: 공중에서 사용 키로 펴고 활공(Heaven Of Bakery 전용, 1회용)
 }
 
 // 도구 하나의 수치(EscapePlan.md §1.8, D23). 코드를 고치지 않고 에셋 값만 바꿔 밸런스를 테스트한다.
@@ -45,7 +48,8 @@ public class ToolSO : ScriptableObject
     public bool CanHitMonster => CanHitMonsterKind(kind);
     public static bool CanHitMonsterKind(ToolKind k) => k == ToolKind.StunGun || k == ToolKind.Flashbang;
     // 떨어진 자리 둘레를 맞히는 던지는 도구(물풍선 — 한 명, 섬광탄 — 둘레 모두).
-    public bool IsThrown => kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
+    // public bool IsThrown => kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang;
+    public bool IsThrown => kind == ToolKind.WaterBalloon || kind == ToolKind.Flashbang || kind == ToolKind.GumTrap;   // §90 G6 껌 수류탄도 물풍선처럼 던진다
     public bool HitsArea => kind == ToolKind.Flashbang;
     public int Charges => charges;
     public float Range => range;
@@ -59,7 +63,9 @@ public class ToolSO : ScriptableObject
     public ProjectileConfigSO Projectile => projectile;
 
     // 왼쪽 클릭으로 쓰는 도구인지(해체 도구는 누르기, 모자는 E, 소음폭탄은 괴물 스킬).
-    public bool UsedByClick => kind != ToolKind.Dismantle && kind != ToolKind.HeliHat && kind != ToolKind.NoiseBomb && kind != ToolKind.SearchBomb;
+    // public bool UsedByClick => kind != ToolKind.Dismantle && kind != ToolKind.HeliHat && kind != ToolKind.NoiseBomb && kind != ToolKind.SearchBomb;
+    public bool UsedByClick => kind != ToolKind.Dismantle && kind != ToolKind.HeliHat && kind != ToolKind.NoiseBomb && kind != ToolKind.SearchBomb
+                               && kind != ToolKind.Bazooka && kind != ToolKind.Paraglider;   // §90 바주카포는 술래 기술, 패러글라이더는 아이템 사용 키
 
 #if UNITY_EDITOR
     public void EditorSetProjectile(ProjectileConfigSO config) => projectile = config;

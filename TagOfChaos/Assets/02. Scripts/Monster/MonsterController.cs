@@ -144,6 +144,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         stun.Init(5.2f);
         gameObject.AddComponent<MonsterAudio>().Init(this); // 괴물 소리(SoundPlan.md S4)
         if (EscapeManager.IsActive) gameObject.AddComponent<MonsterEscapeState>().Init(this);
+        gameObject.AddComponent<BazookaSkill>().Init(this);   // §90 B3 바주카포(탈출 모드 사냥 시간에만 쓴다)
         if (!pv.IsMine) return;
 
         // HideOrSeekPlayer.Awake()와 동일한 "Main Camera에 나를 넘긴다" 패턴 — 쿠키용 3인칭 궤도
@@ -280,6 +281,14 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
             tentacleDashAnimRemaining = 0f;
         }
 
+        if (PhotonNetwork.Time < WarpLockedUntil)
+        {
+            // §90 T2 벽장 안에서 문이 열리기를 기다린다
+            moveInput = Vector3.zero;
+            ChangeState(MonsterMoveState.Idle);
+            return;
+        }
+
         if (IsStunned)
         {
             // 기절 중에는 움직이지 않는다(돌진·잡기도 불가).
@@ -309,6 +318,20 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
             ChangeState(MonsterMoveState.Walk);
         else if (!tentacleDash.IsDashing)
             ChangeState(MonsterMoveState.Idle);
+    }
+
+    // §90 B3 바주카포 조준 중 걷기 배율(BazookaSkill이 정한다).
+    public float AimSpeedScale { get; set; } = 1f;
+    // §90 T2 순간이동: 벽장 문이 열릴 때까지(PhotonNetwork.Time) 움직이지 못한다.
+    public double WarpLockedUntil { get; set; }
+
+    // §90 이동속도 배율: 바주카 조준 × 껌에 맞음(방장 상태 Slows).
+    public float MoveSpeedScale()
+    {
+        float s = AimSpeedScale;
+        EscapeState st = EscapeManager.Instance != null ? EscapeManager.Instance.State : null;
+        if (st != null && pv != null && pv.Owner != null) s *= GumTrapRules.SpeedFactor(st, pv.Owner.ActorNumber, PhotonNetwork.Time);
+        return s;
     }
 
     // Rigidbody 조작은 물리 스텝에서만(HideOrSeekPlayer.FixedUpdate()와 동일 관례).
@@ -346,7 +369,8 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
         else if (moveInput != Vector3.zero)
             rb.MoveRotation(MoveTurn.Step(rb.rotation, moveInput, Time.fixedDeltaTime)); // 3인칭 이동은 720°/초로 따라 돈다(§78 R3) — 1인칭·돌진 준비는 위에서 바로
 
-        Vector3 horizontal = moveInput * speed;
+        // Vector3 horizontal = moveInput * speed;
+        Vector3 horizontal = moveInput * speed * MoveSpeedScale();   // §90 껌(50%)·바주카 조준(50%)
         // 공중에서 벽을 향해 밀면 마찰로 벽에 붙는다 — 쿠키와 같은 규칙으로 벽을 향한 성분을 뺀다(§41 ㊴).
         if (!groundDetector.IsGrounded(transform.position)) horizontal = groundDetector.RemoveWallPush(horizontal);
         rb.linearVelocity = new Vector3(horizontal.x, verticalVelocity, horizontal.z);

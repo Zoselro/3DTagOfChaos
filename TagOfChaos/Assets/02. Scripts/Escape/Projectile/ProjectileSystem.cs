@@ -203,9 +203,14 @@ public class ProjectileSystem : MonoBehaviour
         }
         p.Done = true;
         p.DoneAt = Time.time;
-        int[] targets = p.Config.burstOnImpact ? DirectTarget(p, touched) : AreaTargets(p);
+        // int[] targets = p.Config.burstOnImpact ? DirectTarget(p, touched) : AreaTargets(p);
+        bool gum = p.Item.Tool.Kind == ToolKind.GumTrap;
+        bool rocket = p.Item.Tool.Kind == ToolKind.Bazooka;   // §90 B3
         Vector3 at = p.State.Position;
-        if (manager != null) manager.ApplyDecoyHits(p.Owner, p.Item.Tool, targets); // AI도 맞는다(§76 A4) — 세워 두기·도망·갇힘 기록
+        int[] targets = rocket ? (manager != null ? manager.BazookaExplode(p.Owner, at, touched) : new int[0])
+                      : gum ? GumTargets(p) : p.Config.burstOnImpact ? DirectTarget(p, touched) : AreaTargets(p);
+        if (gum && manager != null) manager.GumLanded(p.Owner, at, targets);   // §90 G6 맞은 술래 느려짐 또는 웅덩이
+        if (manager != null && !rocket) manager.ApplyDecoyHits(p.Owner, p.Item.Tool, targets); // AI도 맞는다(§76 A4) — 세워 두기·도망·갇힘 기록(바주카는 BazookaExplode가 직접)
         // ToolHit 형식(EscapeAuthority.ToolUse와 같음) 뒤에 투사체 번호를 덧붙인다.
         var payload = new object[] { p.Item.ItemId, p.Owner, targets, at, p.Color, NetAuthority.Time, false, p.Id };
         PhotonNetwork.RaiseEvent(NetEventCodes.ToolHit, payload, new RaiseEventOptions { Receivers = ReceiverGroup.All }, SendOptions.SendReliable);
@@ -223,6 +228,19 @@ public class ProjectileSystem : MonoBehaviour
             return decoy != null && decoy.IsHittable && DecoyHit.CanHit(p.Item.Tool.Kind) ? new[] { DecoyHit.ToTarget(decoy.Id) } : new int[0];
         }
         return IsValidTarget(c, p, includeMonsters: p.Item.Tool.CanHitMonster) ? new[] { c.View.ViewID } : new int[0];
+    }
+
+    // §90 G6 껌: 터진 자리 1.5 m(+ 몸 반지름) 안 술래(캐릭터 목록의 술래만 — 마녀·거대 괴물은 NPC라 빠진다).
+    private int[] GumTargets(Live p)
+    {
+        targetBuffer.Clear();
+        foreach (IGameCharacter c in CharacterRegistry.All)
+        {
+            if (c.Role != CharacterRole.Monster || !CharacterRegistry.IsAlive(c) || c.View == null || c.View.Owner == null) continue;
+            if (GumTrapRules.HitsBody(p.State.Position, c.gameObject.transform.position, EscapeAuthority.BodyHeight(c), EscapeAuthority.BodyRadius(c)))
+                targetBuffer.Add(c.View.ViewID);
+        }
+        return targetBuffer.ToArray();
     }
 
     // 섬광탄·수색 폭탄: 터진 자리 둘레 HitRadius. 섬광탄은 술래 포함(던진 사람 제외), 수색 폭탄은 진짜 사람만(AI는 캐릭터가 아니라 빠진다).
@@ -277,6 +295,7 @@ public class ProjectileSystem : MonoBehaviour
             GameObject m = Instantiate(model != null ? model : p.Item.ModelPrefab, go.transform, false);
             m.transform.localScale *= c.modelScale;
             foreach (Collider col in m.GetComponentsInChildren<Collider>()) Destroy(col);
+            if (p.Item.Tool.Kind == ToolKind.Bazooka) BazookaFx.AttachTrail(go.transform, 1.34f * c.modelScale);   // §90 B3 꼬리 불꽃·연기
         }
         else
         {
@@ -292,6 +311,7 @@ public class ProjectileSystem : MonoBehaviour
     private static void Draw(Live p)
     {
         p.View.position = p.State.Position;
+        if (p.Item.Tool.Kind == ToolKind.Bazooka && p.State.Velocity.sqrMagnitude > 0.01f) p.View.rotation = Quaternion.LookRotation(p.State.Velocity);   // §90 B3 로켓은 나는 방향을 본다
         if (!p.State.Resting && p.Config.spinSpeed != 0f)
         {
             Vector3 v = p.State.Velocity;
@@ -320,6 +340,7 @@ public class ProjectileSystem : MonoBehaviour
     {
         GameAudio.PlayAt(ToolUser.UseSound(item.Tool.Kind), origin);
         if (thrower != null && thrower.TryGetComponent(out PlayerActionPose pose)) pose.Play(PlayerActionPose.OneShot.Throw);
+        if (item.Tool.Kind == ToolKind.Bazooka && thrower != null && thrower.TryGetComponent(out BazookaSkill bz)) bz.PlayFireRemote(origin, Vector3.zero);   // §90 B3 발사 동작·포구 불꽃
     }
 
     // 시험용: 지금 날고 있는 투사체(번호, 위치).

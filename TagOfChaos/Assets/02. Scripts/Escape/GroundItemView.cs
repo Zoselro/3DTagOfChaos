@@ -33,6 +33,11 @@ public class GroundItemView : MonoBehaviour, IInteractable, IInteractionLabel
             model.transform.localPosition = Vector3.up * 0.25f;
             shownItem = item;
         }
+        // §90 F4 이끼·덤불이 덮는 자리면 그 위로 띄운다(최대 1.3 m) + 쿠키·스파이 화면에 반짝임
+        lift = GroundCover.LiftAt(position);
+        if (model != null) model.transform.localPosition = Vector3.up * (0.25f + lift);
+        if (sparkle == null) sparkle = GroundItemSparkle.Attach(transform);
+        sparkle.SetHeight(0.25f + lift);
         if (!gameObject.activeSelf) gameObject.SetActive(true);
         SetRegistered(true);
     }
@@ -46,9 +51,13 @@ public class GroundItemView : MonoBehaviour, IInteractable, IInteractionLabel
 
     private void OnDisable() => SetRegistered(false);
 
+    private float lift;
+    private GroundItemSparkle sparkle;
+
     private void Update()
     {
         if (model != null) model.transform.Rotate(0f, 45f * Time.deltaTime, 0f, Space.World); // 바닥 아이템이 눈에 띄게 천천히 돈다
+        if (model != null && lift > 0.01f) model.transform.localPosition = Vector3.up * (0.25f + lift + Mathf.Sin(Time.time * 2f + itemIndex) * 0.08f);   // §90 F4 띄운 아이템은 천천히 위아래로
     }
 
     private void SetRegistered(bool value)
