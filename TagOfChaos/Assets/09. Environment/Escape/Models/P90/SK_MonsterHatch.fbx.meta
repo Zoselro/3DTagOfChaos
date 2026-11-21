@@ -67,6 +67,26 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: ME_BalloonBubble
+    second: {fileID: 2100000, guid: 2e4ff9f0e54e78442b4d5011c39ef44d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ME_BalloonKnot
+    second: {fileID: 2100000, guid: 630ef80e78bbbcc4a96c5f02eb551dec, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ME_BalloonSkin
+    second: {fileID: 2100000, guid: e53a384e6d4274d4685b915eb5dd12fe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ME_BalloonWater
+    second: {fileID: 2100000, guid: c57729e8aa84e4e48887263f7888c6dd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: ME_Battery_Green
     second: {fileID: 2100000, guid: 8527d2c4e280d864eb07bb73f1368e77, type: 2}
   - first:

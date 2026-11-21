@@ -281,6 +281,9 @@ public class ProjectileSystem : MonoBehaviour
 
     // ---------------- 모습 ----------------
 
+    // §92-4 날아가는 물풍선: 모델(지름 약 0.3 m)을 충돌 공(반지름 0.2 m)만 하게 — 손에 든 것보다 조금 크게 보인다.
+    public const float BalloonFlightScale = 1.35f;
+
     private Transform CreateView(Live p)
     {
         var go = new GameObject("Projectile_" + p.Item.ItemId);
@@ -288,12 +291,14 @@ public class ProjectileSystem : MonoBehaviour
         go.transform.position = p.State.Position;
         ProjectileConfigSO c = p.Config;
         GameObject model = c.model != null ? c.model : null;
-        if (p.Item.Tool.Kind == ToolKind.WaterBalloon && model == null)
-            WaterBubbleView.CreateSmall(go.transform, c.radius * 2.8f);
-        else if (model != null || p.Item.ModelPrefab != null)
+        // if (p.Item.Tool.Kind == ToolKind.WaterBalloon && model == null)
+        //     WaterBubbleView.CreateSmall(go.transform, c.radius * 2.8f);
+        // else if (model != null || p.Item.ModelPrefab != null)
+        if (model != null || p.Item.ModelPrefab != null)   // §92-4 물풍선도 아이템 모델(물이 든 새 물풍선)로 날아간다
         {
             GameObject m = Instantiate(model != null ? model : p.Item.ModelPrefab, go.transform, false);
             m.transform.localScale *= c.modelScale;
+            if (p.Item.Tool.Kind == ToolKind.WaterBalloon && model == null) m.transform.localScale *= BalloonFlightScale;
             foreach (Collider col in m.GetComponentsInChildren<Collider>()) Destroy(col);
             if (p.Item.Tool.Kind == ToolKind.Bazooka) BazookaFx.AttachTrail(go.transform, 1.34f * c.modelScale);   // §90 B3 꼬리 불꽃·연기
         }

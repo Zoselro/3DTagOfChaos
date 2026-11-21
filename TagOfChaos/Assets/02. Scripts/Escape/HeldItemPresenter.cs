@@ -116,8 +116,9 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
 
         holdType = def.HoldType;
         // if (isGlove) { CreateGloves(def); return; }
-        bool balloon = def.IsTool && def.Tool.Kind == ToolKind.WaterBalloon;
-        model = balloon ? WaterBubbleView.CreateSmall(socket, HeldBalloonSize) : EscapeVisuals.CreateItemModel(def, socket); // 물풍선은 갇힘 물방울과 같은 모양(§45.7 WB5)
+        // bool balloon = def.IsTool && def.Tool.Kind == ToolKind.WaterBalloon;
+        // model = balloon ? WaterBubbleView.CreateSmall(socket, HeldBalloonSize) : EscapeVisuals.CreateItemModel(def, socket); // 물풍선은 갇힘 물방울과 같은 모양(§45.7 WB5)
+        model = EscapeVisuals.CreateItemModel(def, socket); // §92-4 물풍선도 아이템 모델(물이 든 새 물풍선 ITEM_WaterBalloon)
         if (def.HeldScale != 1f) model.transform.localScale *= def.HeldScale; // 손에 든 동안만 키운다(뿅망치 3배 §45.5, 작은 한 손 아이템 §75 D1)
         if (isHammer)
         {
@@ -304,7 +305,7 @@ public class HeldItemPresenter : MonoBehaviourPunCallbacks
         if (socket.localScale != Vector3.one) socket.localScale = Vector3.one;
     }
 
-    private const float HeldBalloonSize = 0.38f;
+    // private const float HeldBalloonSize = 0.38f;   // §92-4 물풍선은 아이템 모델을 쓴다
     // ---------------- 뿅망치 들기 자세(§87) ----------------
     // 들고만 있을 때 두 손을 몸 앞 대각선 자루 위에 놓는다(Action 층 IK Pass): 아래 손(왼손)은 배 앞, 위 손(오른손)은 자루를 따라 그 위,
     // 망치 머리는 오른쪽 위 앞. 클립(Cookie_HammerHold)은 두 손을 가슴 앞에 수평으로 두어 망치가 옆으로 길게 뻗었다.

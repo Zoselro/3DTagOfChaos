@@ -318,11 +318,22 @@ public class Request1011Tests
         finally { PlayerInput.CutsceneActive = before; }
     }
 
+    // [Test]
+    // public void BakeryPaint_IsNewDarkVersion()
+    // {
+    //     var clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/10. Audio/BGM/BakeryPaint.ogg");
+    //     Assert.AreEqual(96f, clip.length, 0.1f, "§18.5 version (60 bpm, 24 bars)");
+    // }
+
+    // §92-1 Heaven Of Bakery로 바뀌어 어두운 곡(§18.5) 대신 하프 곡 — 길이는 고르는 곡마다 달라 범위만 본다(반복 곡·스테레오).
     [Test]
-    public void BakeryPaint_IsNewDarkVersion()
+    public void BakeryPaint_IsAHarpLoop()
     {
         var clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/10. Audio/BGM/BakeryPaint.ogg");
-        Assert.AreEqual(96f, clip.length, 0.1f, "§18.5 version (60 bpm, 24 bars)");
+        Assert.IsNotNull(clip);
+        Assert.That(clip.length, Is.InRange(40f, 130f));
+        Assert.AreEqual(2, clip.channels);
+        Assert.IsTrue(MusicCatalogSO.IsLoopById(MusicId.BakeryPaint));
     }
 
     // ---- §18.6 로비 곡(한 번 재생) ----

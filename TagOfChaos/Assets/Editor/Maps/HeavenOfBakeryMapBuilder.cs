@@ -1446,8 +1446,10 @@ public static class HeavenOfBakeryMapBuilder
         (string prefab, int count, float r)[] list =
         {
             ("HOB_Fruit_Apple", 3, 1.3f), ("HOB_Fruit_Cherries", 3, 0.8f), ("HOB_Fruit_Grapes", 2, 1.0f), ("HOB_Fruit_Orange", 3, 1.0f),
-            ("HOB_Fruit_Pumpkin", 3, 1.3f), ("HOB_Fruit_Strawberry", 3, 1.2f), ("HOB_Cupcake_Cream", 4, 1.0f), ("HOB_Cupcake_Pink", 4, 1.0f),
-            ("HOB_StrawberryCupcake", 4, 0.9f), ("HOB_MarketStall", 3, 1.5f), ("HOB_FruitCart", 3, 1.5f), ("HOB_House_Cake", 1, 5f),
+            // ("HOB_Fruit_Pumpkin", 3, 1.3f), ("HOB_Fruit_Strawberry", 3, 1.2f), ("HOB_Cupcake_Cream", 4, 1.0f), ("HOB_Cupcake_Pink", 4, 1.0f),
+            // ("HOB_StrawberryCupcake", 4, 0.9f), ("HOB_MarketStall", 3, 1.5f),
+            ("HOB_Fruit_Pumpkin", 3, 1.3f), ("HOB_Fruit_Strawberry", 3, 1.2f),   // §92 컵케이크 3종은 뺀다(사용자 요청)
+            ("HOB_MarketStall", 3, 1.5f), ("HOB_FruitCart", 3, 1.5f), ("HOB_House_Cake", 1, 5f),
             ("HOB_House_Strawberry", 1, 5f), ("HOB_House_TierCake", 1, 5f), ("HOB_Tree_Fruit", 10, 1.3f), ("HOB_Tree_Round", 10, 1.2f),
             ("HOB_Tree_Pine_L", 5, 1.3f), ("HOB_Tree_Pine_S", 5, 1.3f), ("HOB_Bush_Berry", 8, 0.8f), ("HOB_Bush_Round", 8, 0.8f),
             ("HOB_FlowerBush", 8, 0.9f), ("HOB_FlowerBed", 6, 1.1f), ("HOB_RockBush", 4, 1.3f), ("HOB_RockMushroom", 4, 1.3f), ("HOB_Bench", 4, 1.0f),

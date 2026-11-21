@@ -7,7 +7,8 @@ using UnityEngine;
 public struct GiantState
 {
     private const byte Format = 2;
-    public const int MaxPoints = 10;
+    // public const int MaxPoints = 10;
+    public const int MaxPoints = 32;   // §92-2 경사로(다리)를 따라 걷는 꺾임까지 담는다(점 하나 12 B, 걸을 때만 쓴다)
 
     public Vector3 Spawn;       // 나오는 자리(마법진 가운데)
     public float SpawnYaw;

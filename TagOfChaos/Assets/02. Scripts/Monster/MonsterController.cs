@@ -325,6 +325,33 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     // §90 T2 순간이동: 벽장 문이 열릴 때까지(PhotonNetwork.Time) 움직이지 못한다.
     public double WarpLockedUntil { get; set; }
 
+    // §92-5 순간이동 바닥 뚜껑 아래에서 기다리고 올라오는 동안 물리를 끄고 자리를 직접 정한다(MonsterWarpPresenter).
+    public bool WarpHeld { get; private set; }
+
+    public void WarpHold(Vector3 position)
+    {
+        if (rb == null || !IsLocallyControlled) return;
+        if (!WarpHeld)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true;
+            WarpHeld = true;
+            rb.position = position;
+            transform.position = position;
+            return;
+        }
+        rb.MovePosition(position);
+    }
+
+    public void WarpRelease()
+    {
+        if (!WarpHeld) return;
+        WarpHeld = false;
+        if (rb == null) return;
+        rb.isKinematic = false;
+        rb.linearVelocity = Vector3.zero;
+    }
+
     // §90 이동속도 배율: 바주카 조준 × 껌에 맞음(방장 상태 Slows).
     public float MoveSpeedScale()
     {
@@ -338,6 +365,7 @@ public class MonsterController : MonoBehaviour, IPunObservable, IRespawnable, IG
     private void FixedUpdate()
     {
         if (!pv.IsMine) return;
+        if (WarpHeld) return;   // §92-5 뚜껑 아래(물리 끔)
 
         if (tentacleDash.IsDashing && FixedUpdateDash()) return;
         if (IsDashWindingUp)

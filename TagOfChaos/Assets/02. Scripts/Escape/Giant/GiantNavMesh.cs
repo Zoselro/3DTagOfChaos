@@ -59,12 +59,14 @@ public class GiantNavMesh : MonoBehaviour
         if (data == null) return;
         instance = NavMesh.AddNavMeshData(data);
         Ready = instance.valid;
+        GiantRampLinks.Rebuild(gameObject.scene);   // §92-2 경사로(다리) 연결
     }
 
     private void OnDisable()
     {
         if (instance.valid) instance.Remove();
         Ready = false;
+        GiantRampLinks.Clear();
     }
 
     // 판 시작 때 다시 구운 길로 바꾼다(Request1009Plan.md §89 L4 — RuntimeNavMeshBaker).
@@ -74,6 +76,7 @@ public class GiantNavMesh : MonoBehaviour
         data = fresh;
         instance = fresh != null ? NavMesh.AddNavMeshData(fresh) : default;
         Ready = instance.valid;
+        GiantRampLinks.Rebuild(gameObject.scene);   // §92-2 경사로(다리) 연결
     }
 
 #if UNITY_EDITOR

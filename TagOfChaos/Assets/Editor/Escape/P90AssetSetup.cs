@@ -14,6 +14,7 @@ public static class P90AssetSetup
     public const string FarmDir = "Assets/09. Environment/HeavenOfBakery/Farm";
     private const string SoRoot = "Assets/03. SO/Escape";
     private const string ProjDir = SoRoot + "/Projectiles";
+    public const float GumThrowGravity = 14.2f * 2.25f * 2.25f;   // §92-3 물풍선과 같은 던지기 속도(같은 20°에서 중력 × 2.25² → 속도 × 2.25, 떨어지는 자리는 같다)
     private const string MonsterController = "Assets/Animation/MonsterAnimator.controller";
     private const string CookieController = "Assets/Animation/PlayerAnimator.controller";
     private const string MonsterPrefab = "Assets/04. Prefabs/Resources/MonsterPlayer.prefab";
@@ -284,7 +285,8 @@ public static class P90AssetSetup
         GameObject bazookaMesh = AssetDatabase.LoadAssetAtPath<GameObject>(ItemDir + "/SK_Bazooka.fbx");
 
         var gumProj = LoadOrCreate<ProjectileConfigSO>(ProjDir + "/Projectile_GumTrap.asset");
-        gumProj.baseRange = 12f; gumProj.maxRange = 20f; gumProj.launchAngle = 20f; gumProj.radius = 0.15f; gumProj.gravity = 14.2f;   // 물풍선과 같은 던지기
+        // gumProj.baseRange = 12f; gumProj.maxRange = 20f; gumProj.launchAngle = 20f; gumProj.radius = 0.15f; gumProj.gravity = 14.2f;   // 물풍선과 같은 던지기
+        gumProj.baseRange = 12f; gumProj.maxRange = 20f; gumProj.launchAngle = 20f; gumProj.radius = 0.15f; gumProj.gravity = GumThrowGravity;   // §92-3 물풍선 속도(중력 14.2 × 2.25²)와 같게
         gumProj.bounciness = 0f; gumProj.burstOnImpact = true; gumProj.fuseAfterImpact = 0f; gumProj.maxLifeSeconds = 5f; gumProj.spinSpeed = 360f; gumProj.model = null; gumProj.modelScale = 1f;
         EditorUtility.SetDirty(gumProj);
         var rocketProj = LoadOrCreate<ProjectileConfigSO>(ProjDir + "/Projectile_Bazooka.asset");

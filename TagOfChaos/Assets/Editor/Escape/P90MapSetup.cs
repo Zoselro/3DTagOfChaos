@@ -177,7 +177,10 @@ public static class P90MapSetup
     // ================= Heaven Of Bakery(U1 섬 밑면·V7 바나나 나무·비닐하우스·과일·W1 낙하 표지판) =================
 
     public const string FarmPrefabDir = "Assets/04. Prefabs/Escape/P90/Farm";
-    private static readonly string[] FarmModels = { "SK_BananaTree_A", "SK_BananaTree_B", "SK_Watermelon", "SK_Grape", "SK_Apple", "SK_Strawberry" };
+    // private static readonly string[] FarmModels = { "SK_BananaTree_A", "SK_BananaTree_B", "SK_Watermelon", "SK_Grape", "SK_Apple", "SK_Strawberry" };
+    private static readonly string[] FarmModels = { "SK_BananaTree_A", "SK_BananaTree_B", "SK_Watermelon", "SK_Grape", "SK_Apple", "SK_Strawberry", "SK_StrawberryRow", "SK_MelonVineRow", "SK_GrapeTrellis" };
+    // §92-7 하우스 안 장식: 낮은 딸기 포기·수박 덩굴은 밟고 지나간다(충돌 없음). 포도 시렁은 기둥·잎 지붕에 충돌.
+    private static readonly string[] WalkThroughFarm = { "SK_StrawberryRow", "SK_MelonVineRow" };
     public static string FarmPrefabName(string model) => "HOB_" + model.Substring(3);   // SK_Watermelon → HOB_Watermelon(조각 모델 종류 이름)
 
     [MenuItem("Tools/TagOfChaos/Escape/§90 Setup Heaven Of Bakery")]
@@ -273,7 +276,9 @@ public static class P90MapSetup
                     if (film != null) { var f = (GameObject)PrefabUtility.InstantiatePrefab(film, root.transform); PrefabUtility.UnpackPrefabInstance(f, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
                         foreach (Renderer r in f.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; }
                 }
-                foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>()) mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+                // foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>()) mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+                if (!WalkThroughFarm.Contains(m))
+                    foreach (MeshFilter mf in root.GetComponentsInChildren<MeshFilter>()) mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
                 root.isStatic = true;
                 PrefabUtility.SaveAsPrefabAsset(root, $"{FarmPrefabDir}/{FarmPrefabName(m)}.prefab");
                 n++;
@@ -386,6 +391,7 @@ public static class P90MapSetup
     private static Transform Spawn(string model, Transform parent, Vector3 at, float yaw, string suffix)
     {
         GameObject prefab = Farm(model);
+        if (prefab == null) { Debug.LogWarning($"[P90MapSetup] {FarmPrefabName(model)} prefab is missing — import {model}.fbx first."); return null; }   // §92-7
         var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
         // go.name = prefab.name + suffix; // 조각 모델 종류 이름(KindName)은 " (숫자)"만 떼므로 숫자 꼬리로 붙인다.
         go.name = GameObjectUtility.GetUniqueNameForSibling(parent, prefab.name);
@@ -395,79 +401,236 @@ public static class P90MapSetup
         return go.transform;
     }
 
-    // 비닐하우스 2동: 1층 동·서 가장자리(길이 방향 남북), 탈출구·상자·건물과 겹치지 않는 자리.
+    // §92-7 예전(하우스 2동, 안에 사과·딸기 섞어 화분 틀 위) — 주석으로 남김
+    // // 비닐하우스 2동: 1층 동·서 가장자리(길이 방향 남북), 탈출구·상자·건물과 겹치지 않는 자리.
+    // private static string Greenhouses()
+    // {
+    //     placed.Clear();
+    //     Transform deco = Find("FieldDeco");
+    //     foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(t => t.name.StartsWith("HOB_Greenhouse") || t.name.StartsWith("HOB_Watermelon") || t.name.StartsWith("HOB_Grape") || t.name.StartsWith("HOB_Apple") || t.name.StartsWith("HOB_Strawberry") || t.name.StartsWith("FallSign")).ToList())
+    //         if (t != null) Object.DestroyImmediate(t.gameObject);
+    //     Physics.SyncTransforms();
+    //     var log = new List<string>();
+    //     foreach (float side in new[] { 1f, -1f })
+    //     {
+    //         bool done = false;
+    //         int removed = 0;
+    //         for (float x = 70f; x >= 34f && !done; x -= 2f)
+    //             for (float z = 0f; z <= 36f && !done; z += 2f)
+    //                 foreach (float zz in new[] { z, -z })
+    //                 {
+    //                     Vector3 at = new Vector3(side * x, 0f, zz);
+    //                     if (!Physics.Raycast(new Vector3(at.x, 30f, at.z), Vector3.down, out RaycastHit hit, 40f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(hit.point.y) > 1f) continue;
+    //                     if (!Clear(hit.point, 8f, new Vector2(7.5f, 15.5f))) continue;
+    //                     bool ok = true;
+    //                     foreach (Vector2 o in new[] { new Vector2(7, 15), new Vector2(-7, 15), new Vector2(7, -15), new Vector2(-7, -15) })
+    //                         if (!Physics.Raycast(hit.point + new Vector3(o.x, 10f, o.y), Vector3.down, out RaycastHit c, 20f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(c.point.y - hit.point.y) > 0.8f) ok = false;
+    //                     if (!ok) continue;
+    //                     // 겹치는 것이 1층 작은 장식(덤불·꽃·바위 덤불·벤치·바나나 나무)뿐이면 치우고 놓는다
+    //                     Collider[] over = Physics.OverlapBox(hit.point + Vector3.up * 4.6f, new Vector3(7.8f, 4f, 15.8f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+    //                     var props = new HashSet<GameObject>();
+    //                     foreach (Collider col in over)
+    //                     {
+    //                         Transform top = col.transform; while (top.parent != null && top.parent != deco && !top.name.StartsWith("HOB_LampPost")) top = top.parent;
+    //                         string kn = top.name;
+    //                         bool lamp = kn.StartsWith("HOB_LampPost");   // 길가 가로등은 옮겨도 된다(길은 하우스 터널로 지나간다)
+    //                         bool small = lamp || (top.parent == deco && (kn.StartsWith("HOB_Bush") || kn.StartsWith("HOB_Flower") || kn.StartsWith("HOB_RockBush") || kn.StartsWith("HOB_Bench") || kn.StartsWith("HOB_Fruit_") || kn.StartsWith("HOB_Cupcake") || kn.StartsWith("HOB_StrawberryCupcake") || kn.StartsWith("HOB_RockMushroom")));
+    //                         if (!small) { ok = false; break; }
+    //                         props.Add(top.gameObject);
+    //                     }
+    //                     if (!ok || props.Count > 8) continue;
+    //                     foreach (GameObject g in props) Object.DestroyImmediate(g);
+    //                     removed += props.Count;
+    //                     Physics.SyncTransforms();
+    //                     Transform gh = Spawn("SK_Greenhouse", deco, hit.point, 0f, side > 0 ? " (E)" : " (W)");
+    //                     log.Add((side > 0 ? "E" : "W") + gh.position.ToString("F0") + " cleared " + removed);
+    //                     Inside(gh, deco, side);
+    //                     done = true;
+    //                     break;
+    //                 }
+    //         if (!done) log.Add((side > 0 ? "E" : "W") + " none");
+    //     }
+    //     return "greenhouses " + string.Join(" ", log);
+    // }
+
+    // // 하우스마다: 안에 사과 3·딸기 4(높이가 들어가는 것), 바로 옆 바깥에 수박 1·포도 2 → 하우스 둘레 10개.
+    // private static void Inside(Transform gh, Transform deco, float side)
+    // {
+    //     Vector3 c = gh.position;
+    //     var inner = new (string m, Vector3 o)[] {
+    //         ("SK_Apple", new Vector3(-3.4f, 0, -9.5f)), ("SK_Apple", new Vector3(3.4f, 0, -1.5f)), ("SK_Apple", new Vector3(-3.4f, 0, 6.5f)),
+    //         ("SK_Strawberry", new Vector3(3.6f, 0, -10f)), ("SK_Strawberry", new Vector3(-3.6f, 0, -2.5f)), ("SK_Strawberry", new Vector3(3.6f, 0, 5f)), ("SK_Strawberry", new Vector3(-3.6f, 0, 11.5f)) };
+    //     int i = 0;
+    //     foreach (var (m, o) in inner) Spawn(m, deco, c + o, (i++ * 71) % 360, $" (GH{(side > 0 ? "E" : "W")}{i})");
+    //     // 바깥: 하우스의 맵 가운데 쪽(안쪽) 옆
+    //     float inward = -side;
+    //     var outer = new (string m, Vector3 o)[] { ("SK_Watermelon", new Vector3(inward * 15f, 0, 4f)), ("SK_Grape", new Vector3(inward * 12f, 0, -10f)), ("SK_Grape", new Vector3(inward * 12f, 0, 14f)) };
+    //     foreach (var (m, o) in outer)
+    //     {
+    //         float rad = m == "SK_Watermelon" ? 6.2f : 2.8f;
+    //         Vector3 want = c + o;
+    //         for (int k = 0; k < 30; k++)
+    //         {
+    //             Vector3 tryAt = want + new Vector3(inward * k * 1.5f, 0f, (k % 2 == 0 ? 1 : -1) * k);
+    //             bool ok = m == "SK_Watermelon" ? ClearingSpot(tryAt, rad, 10f, deco, out Vector3 g) : GroundSpot(tryAt, rad, 7f, out g);
+    //             if (ok) { Spawn(m, deco, g, (i++ * 53) % 360, $" (GH{(side > 0 ? "E" : "W")}{i})"); break; }
+    //         }
+    //     }
+    // }
+
+    // §92-7 비닐하우스 3동 — 하우스 하나에 과일 한 가지: 동 = 딸기, 서 = 수박, 남(없으면 북) = 포도. 바닥은 흙 두둑 2줄(모델).
+    public enum GreenhouseTheme { Strawberry, Watermelon, Grape }
+    public const float RidgeX = 4f, RidgeTop = 0.5f, TrellisTop = 4.6f;
+
     private static string Greenhouses()
     {
         placed.Clear();
         Transform deco = Find("FieldDeco");
-        foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(t => t.name.StartsWith("HOB_Greenhouse") || t.name.StartsWith("HOB_Watermelon") || t.name.StartsWith("HOB_Grape") || t.name.StartsWith("HOB_Apple") || t.name.StartsWith("HOB_Strawberry") || t.name.StartsWith("FallSign")).ToList())
+        foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Where(t => t.name.StartsWith("HOB_Greenhouse") || t.name.StartsWith("HOB_Watermelon") || t.name.StartsWith("HOB_Grape") || t.name.StartsWith("HOB_Apple") || t.name.StartsWith("HOB_Strawberry") || t.name.StartsWith("HOB_MelonVineRow") || t.name.StartsWith("FallSign")).ToList())
             if (t != null) Object.DestroyImmediate(t.gameObject);
         Physics.SyncTransforms();
         var log = new List<string>();
-        foreach (float side in new[] { 1f, -1f })
+        var plan = new (GreenhouseTheme theme, Vector3 outward, string tag)[]
         {
-            bool done = false;
-            int removed = 0;
-            for (float x = 70f; x >= 34f && !done; x -= 2f)
-                for (float z = 0f; z <= 36f && !done; z += 2f)
-                    foreach (float zz in new[] { z, -z })
-                    {
-                        Vector3 at = new Vector3(side * x, 0f, zz);
-                        if (!Physics.Raycast(new Vector3(at.x, 30f, at.z), Vector3.down, out RaycastHit hit, 40f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(hit.point.y) > 1f) continue;
-                        if (!Clear(hit.point, 8f, new Vector2(7.5f, 15.5f))) continue;
-                        bool ok = true;
-                        foreach (Vector2 o in new[] { new Vector2(7, 15), new Vector2(-7, 15), new Vector2(7, -15), new Vector2(-7, -15) })
-                            if (!Physics.Raycast(hit.point + new Vector3(o.x, 10f, o.y), Vector3.down, out RaycastHit c, 20f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(c.point.y - hit.point.y) > 0.8f) ok = false;
-                        if (!ok) continue;
-                        // 겹치는 것이 1층 작은 장식(덤불·꽃·바위 덤불·벤치·바나나 나무)뿐이면 치우고 놓는다
-                        Collider[] over = Physics.OverlapBox(hit.point + Vector3.up * 4.6f, new Vector3(7.8f, 4f, 15.8f), Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
-                        var props = new HashSet<GameObject>();
-                        foreach (Collider col in over)
-                        {
-                            Transform top = col.transform; while (top.parent != null && top.parent != deco && !top.name.StartsWith("HOB_LampPost")) top = top.parent;
-                            string kn = top.name;
-                            bool lamp = kn.StartsWith("HOB_LampPost");   // 길가 가로등은 옮겨도 된다(길은 하우스 터널로 지나간다)
-                            bool small = lamp || (top.parent == deco && (kn.StartsWith("HOB_Bush") || kn.StartsWith("HOB_Flower") || kn.StartsWith("HOB_RockBush") || kn.StartsWith("HOB_Bench") || kn.StartsWith("HOB_Fruit_") || kn.StartsWith("HOB_Cupcake") || kn.StartsWith("HOB_StrawberryCupcake") || kn.StartsWith("HOB_RockMushroom")));
-                            if (!small) { ok = false; break; }
-                            props.Add(top.gameObject);
-                        }
-                        if (!ok || props.Count > 8) continue;
-                        foreach (GameObject g in props) Object.DestroyImmediate(g);
-                        removed += props.Count;
-                        Physics.SyncTransforms();
-                        Transform gh = Spawn("SK_Greenhouse", deco, hit.point, 0f, side > 0 ? " (E)" : " (W)");
-                        log.Add((side > 0 ? "E" : "W") + gh.position.ToString("F0") + " cleared " + removed);
-                        Inside(gh, deco, side);
-                        done = true;
-                        break;
-                    }
-            if (!done) log.Add((side > 0 ? "E" : "W") + " none");
+            (GreenhouseTheme.Strawberry, Vector3.right, "E"), (GreenhouseTheme.Watermelon, Vector3.left, "W"), (GreenhouseTheme.Grape, Vector3.back, "S"),
+        };
+        foreach (var (theme, outward, tag) in plan)
+        {
+            Transform gh = PlaceGreenhouse(deco, outward, out int removed);
+            if (gh == null && theme == GreenhouseTheme.Grape) gh = PlaceGreenhouse(deco, Vector3.forward, out removed);
+            if (gh == null) gh = PlaceGreenhouseAnywhere(deco, out removed);   // §92-7 가장자리에 자리가 없으면 섬 어디든(다른 하우스에서 먼 곳)
+            if (gh == null) { log.Add(tag + " none"); continue; }
+            log.Add($"{theme}{gh.position:F0} yaw {gh.eulerAngles.y:F0} cleared {removed}");
+            Furnish(gh, deco, theme);
         }
         return "greenhouses " + string.Join(" ", log);
     }
 
-    // 하우스마다: 안에 사과 3·딸기 4(높이가 들어가는 것), 바로 옆 바깥에 수박 1·포도 2 → 하우스 둘레 10개.
-    private static void Inside(Transform gh, Transform deco, float side)
+    // §92-7 섬 전체 격자(반지름 70 m 안)에서 두 방향 모두 시험 — 이미 놓은 하우스에서 가장 먼 자리
+    private static Transform PlaceGreenhouseAnywhere(Transform deco, out int removed)
+    {
+        removed = 0;
+        var houses = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(t => t.parent == deco && t.name.StartsWith("HOB_Greenhouse")).Select(t => t.position).ToList();
+        var cands = new List<(Vector3 p, bool alongZ, float score)>();
+        for (float x = -70f; x <= 70f; x += 2f)
+            for (float z = -70f; z <= 70f; z += 2f)
+            {
+                if (x * x + z * z > 70f * 70f) continue;
+                float far = houses.Count == 0 ? 0f : houses.Min(h => Vector2.Distance(new Vector2(h.x, h.z), new Vector2(x, z)));
+                if (far < 26f) continue;
+                cands.Add((new Vector3(x, 0f, z), true, far)); cands.Add((new Vector3(x, 0f, z), false, far));
+            }
+        foreach (var c in cands.OrderByDescending(c => c.score))
+        {
+            Transform gh = TryGreenhouseAt(deco, c.p, c.alongZ, out removed);
+            if (gh != null) return gh;
+        }
+        return null;
+    }
+
+    private static Transform TryGreenhouseAt(Transform deco, Vector3 at, bool alongZ, out int removed)
+    {
+        removed = 0;
+        Vector2 rect = alongZ ? new Vector2(7.5f, 15.5f) : new Vector2(15.5f, 7.5f);
+        Quaternion rot = Quaternion.Euler(0f, alongZ ? 0f : 90f, 0f);
+        if (!Physics.Raycast(new Vector3(at.x, 30f, at.z), Vector3.down, out RaycastHit hit, 40f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(hit.point.y) > 1f) return null;
+        if (!Clear(hit.point, 8f, rect)) return null;
+        foreach (Vector2 c in new[] { new Vector2(7, 15), new Vector2(-7, 15), new Vector2(7, -15), new Vector2(-7, -15) })
+        {
+            Vector3 corner = hit.point + rot * new Vector3(c.x, 0f, c.y) + Vector3.up * 10f;
+            if (!Physics.Raycast(corner, Vector3.down, out RaycastHit ch, 20f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(ch.point.y - hit.point.y) > 0.8f) return null;
+        }
+        var props = new HashSet<GameObject>();
+        foreach (Collider col in Physics.OverlapBox(hit.point + Vector3.up * 4.6f, new Vector3(7.8f, 4f, 15.8f), rot, ~0, QueryTriggerInteraction.Ignore))
+        {
+            Transform top = col.transform; while (top.parent != null && top.parent != deco && !top.name.StartsWith("HOB_LampPost")) top = top.parent;
+            bool movable = top.name.StartsWith("HOB_LampPost") || (top.parent == deco && top.name.StartsWith("HOB_BananaTree")) || SmallDeco(top, deco);
+            if (!movable) return null;
+            props.Add(top.gameObject);
+        }
+        if (props.Count > 10) return null;
+        foreach (GameObject g in props) Object.DestroyImmediate(g);
+        removed = props.Count;
+        Physics.SyncTransforms();
+        return Spawn("SK_Greenhouse", deco, hit.point, rot.eulerAngles.y, "");
+    }
+
+    // 섬 가장자리 쪽(outward)에서 안쪽으로 훑어 하우스(14 × 30 m, 길이 방향 = 가장자리와 나란히)가 들어갈 빈 자리.
+    private static Transform PlaceGreenhouse(Transform deco, Vector3 outward, out int removed)
+    {
+        removed = 0;
+        bool alongZ = Mathf.Abs(outward.x) > 0.5f;           // 동·서: 길이 남북 / 남·북: 길이 동서
+        Vector3 lateral = alongZ ? Vector3.forward : Vector3.right;
+        Vector2 rect = alongZ ? new Vector2(7.5f, 15.5f) : new Vector2(15.5f, 7.5f);
+        Quaternion rot = Quaternion.Euler(0f, alongZ ? 0f : 90f, 0f);
+        for (float o = 70f; o >= 34f; o -= 2f)
+            for (float l = 0f; l <= 36f; l += 2f)
+                foreach (float ll in new[] { l, -l })
+                {
+                    Vector3 at = outward * o + lateral * ll;
+                    if (!Physics.Raycast(new Vector3(at.x, 30f, at.z), Vector3.down, out RaycastHit hit, 40f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(hit.point.y) > 1f) continue;
+                    if (!Clear(hit.point, 8f, rect)) continue;
+                    bool ok = true;
+                    foreach (Vector2 c in new[] { new Vector2(7, 15), new Vector2(-7, 15), new Vector2(7, -15), new Vector2(-7, -15) })
+                    {
+                        Vector3 corner = hit.point + rot * new Vector3(c.x, 0f, c.y) + Vector3.up * 10f;
+                        if (!Physics.Raycast(corner, Vector3.down, out RaycastHit ch, 20f, ~0, QueryTriggerInteraction.Ignore) || Mathf.Abs(ch.point.y - hit.point.y) > 0.8f) ok = false;
+                    }
+                    if (!ok) continue;
+                    Collider[] over = Physics.OverlapBox(hit.point + Vector3.up * 4.6f, new Vector3(7.8f, 4f, 15.8f), rot, ~0, QueryTriggerInteraction.Ignore);
+                    var props = new HashSet<GameObject>();
+                    foreach (Collider col in over)
+                    {
+                        Transform top = col.transform; while (top.parent != null && top.parent != deco && !top.name.StartsWith("HOB_LampPost")) top = top.parent;
+                        bool lamp = top.name.StartsWith("HOB_LampPost") || (top.parent == deco && top.name.StartsWith("HOB_BananaTree"));   // 바나나 나무는 치우고 RefillBananas가 다시 심는다
+                        if (!lamp && !SmallDeco(top, deco)) { ok = false; break; }
+                        props.Add(top.gameObject);
+                    }
+                    if (!ok || props.Count > 8) continue;
+                    foreach (GameObject g in props) Object.DestroyImmediate(g);
+                    removed = props.Count;
+                    Physics.SyncTransforms();
+                    Transform gh = Spawn("SK_Greenhouse", deco, hit.point, rot.eulerAngles.y, "");
+                    return gh;
+                }
+        return null;
+    }
+
+    private static void Scale(Transform t, float k) { if (t != null) t.localScale = Vector3.one * k; }
+
+    // 하우스 안: 두둑 2줄(지역 x = ±RidgeX, 길이 = 지역 z) 위에 한 가지 과일. 장식 줄(딸기 포기·수박 덩굴)·포도 시렁은 모델.
+    private static void Furnish(Transform gh, Transform deco, GreenhouseTheme theme)
     {
         Vector3 c = gh.position;
-        var inner = new (string m, Vector3 o)[] {
-            ("SK_Apple", new Vector3(-3.4f, 0, -9.5f)), ("SK_Apple", new Vector3(3.4f, 0, -1.5f)), ("SK_Apple", new Vector3(-3.4f, 0, 6.5f)),
-            ("SK_Strawberry", new Vector3(3.6f, 0, -10f)), ("SK_Strawberry", new Vector3(-3.6f, 0, -2.5f)), ("SK_Strawberry", new Vector3(3.6f, 0, 5f)), ("SK_Strawberry", new Vector3(-3.6f, 0, 11.5f)) };
-        int i = 0;
-        foreach (var (m, o) in inner) Spawn(m, deco, c + o, (i++ * 71) % 360, $" (GH{(side > 0 ? "E" : "W")}{i})");
-        // 바깥: 하우스의 맵 가운데 쪽(안쪽) 옆
-        float inward = -side;
-        var outer = new (string m, Vector3 o)[] { ("SK_Watermelon", new Vector3(inward * 15f, 0, 4f)), ("SK_Grape", new Vector3(inward * 12f, 0, -10f)), ("SK_Grape", new Vector3(inward * 12f, 0, 14f)) };
-        foreach (var (m, o) in outer)
+        Quaternion r = gh.rotation;
+        float yaw = gh.eulerAngles.y;
+        System.Func<float, float, float, Vector3> P = (x, y, z) => c + r * new Vector3(x, y, z);
+        switch (theme)
         {
-            float rad = m == "SK_Watermelon" ? 6.2f : 2.8f;
-            Vector3 want = c + o;
-            for (int k = 0; k < 30; k++)
-            {
-                Vector3 tryAt = want + new Vector3(inward * k * 1.5f, 0f, (k % 2 == 0 ? 1 : -1) * k);
-                bool ok = m == "SK_Watermelon" ? ClearingSpot(tryAt, rad, 10f, deco, out Vector3 g) : GroundSpot(tryAt, rad, 7f, out g);
-                if (ok) { Spawn(m, deco, g, (i++ * 53) % 360, $" (GH{(side > 0 ? "E" : "W")}{i})"); break; }
-            }
+            case GreenhouseTheme.Strawberry:
+                foreach (float x in new[] { -RidgeX, RidgeX }) Spawn("SK_StrawberryRow", deco, P(x, 0f, 0f), yaw, "");
+                int k = 0;
+                foreach (float x in new[] { -RidgeX, RidgeX })
+                    foreach (float z in x < 0 ? new[] { -9f, -1f, 7f } : new[] { -5f, 3f, 10f })
+                        Scale(Spawn("SK_Strawberry", deco, P(x, RidgeTop - 0.08f, z), yaw + (k++ * 67) % 360, ""), 0.55f);
+                break;
+            case GreenhouseTheme.Watermelon:
+                foreach (float x in new[] { -RidgeX, RidgeX }) Spawn("SK_MelonVineRow", deco, P(x, 0f, 0f), yaw, "");
+                int m = 0;
+                foreach (float x in new[] { -RidgeX, RidgeX })
+                    foreach (float z in x < 0 ? new[] { -8f, 3f } : new[] { -3f, 8f })
+                        Scale(Spawn("SK_Watermelon", deco, P(x, RidgeTop - 0.12f, z), yaw + 90f + (m++ % 2 == 0 ? 0f : 180f) + (m * 11 % 20 - 10), ""), 0.3f);
+                break;
+            case GreenhouseTheme.Grape:
+                Spawn("SK_GrapeTrellis", deco, c, yaw, "");
+                float hang = TrellisTop + 0.1f - 0.42f * 6.5f;   // 송이 맨 위(꼭지)가 시렁에 닿게
+                int g = 0;
+                foreach (float z in new[] { -9.6f, -4.8f, 4.8f, 9.6f })
+                    foreach (float x in new[] { -RidgeX, RidgeX })
+                        Scale(Spawn("SK_Grape", deco, P(x + (g % 2 == 0 ? 0.9f : -0.9f) * Mathf.Sign(x), hang, z), yaw + (g++ * 53) % 360, ""), 0.42f);
+                foreach (float x in new[] { -2.4f, 2.4f })
+                    Scale(Spawn("SK_Grape", deco, P(x, hang, 0f), yaw + (g++ * 53) % 360, ""), 0.42f);
+                break;
         }
     }
 

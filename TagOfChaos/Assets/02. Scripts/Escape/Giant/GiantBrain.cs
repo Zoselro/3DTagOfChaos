@@ -38,6 +38,7 @@ public class GiantBrain : MonoBehaviour
     private float targetSince;
     private readonly List<IGameCharacter> targets = new List<IGameCharacter>();
     private NavMeshPath path;
+    private readonly List<Vector3> rampLead = new List<Vector3>(); // §92-2 경사로 위에서 길을 찾으면 끝까지의 가운데 선(Walk가 앞에 붙인다)
     private InteractableDoor[] doors;
     private readonly Collider[] overlap = new Collider[128];
     private readonly List<DestructibleUnit> hitProps = new List<DestructibleUnit>();
@@ -260,22 +261,58 @@ public class GiantBrain : MonoBehaviour
         return GiantNavMesh.Sample(near, GiantDestruction.StairsReach + 8f, out goal) && !GiantRules.OtherFloor(goal.y, body.y);
     }
 
+    // private bool ReachableOnFoot(Vector3 from, Vector3 goal)
+    // {
+    //     if (!GiantNavMesh.Sample(from, 4f, out Vector3 start)) return false;
+    //     if (path == null) path = new NavMeshPath();
+    //     return NavMesh.CalculatePath(start, goal, GiantNavMesh.Filter, path) && path.status == NavMeshPathStatus.PathComplete;
+    // }
     private bool ReachableOnFoot(Vector3 from, Vector3 goal)
     {
-        if (!GiantNavMesh.Sample(from, 4f, out Vector3 start)) return false;
+        rampLead.Clear();
         if (path == null) path = new NavMeshPath();
+        // §92-2 경사로(다리) 위: 거대 괴물 길이 없으니 가운데 선을 따라 한쪽 끝까지 가서 거기서 길을 찾는다
+        if (GiantRampLinks.OnRamp(from, out GiantRampLinks.Ramp ramp, out int seg)) return LeaveRamp(ramp, seg, goal);
+        if (!GiantNavMesh.Sample(from, 4f, out Vector3 start)) return false;
         return NavMesh.CalculatePath(start, goal, GiantNavMesh.Filter, path) && path.status == NavMeshPathStatus.PathComplete;
+    }
+
+    // 경사로 위 → 위·아래 끝 중 목표까지 더 짧은 쪽. 성공하면 path = 그 끝에서 목표까지, rampLead = 지금 자리에서 그 끝까지.
+    private bool LeaveRamp(GiantRampLinks.Ramp ramp, int seg, Vector3 goal)
+    {
+        float best = float.MaxValue;
+        int bestSide = -1;
+        for (int side = 0; side < 2; side++)
+        {
+            bool toTop = side == 1;
+            if (!NavMesh.CalculatePath(toTop ? ramp.Top : ramp.Bottom, goal, GiantNavMesh.Filter, path) || path.status != NavMeshPathStatus.PathComplete) continue;
+            float len = PathLength(path) + GiantRampLinks.PathLength(GiantRampLinks.LeadTo(ramp, seg, toTop));
+            if (len < best) { best = len; bestSide = side; }
+        }
+        if (bestSide < 0) return false;
+        bool top = bestSide == 1;
+        NavMesh.CalculatePath(top ? ramp.Top : ramp.Bottom, goal, GiantNavMesh.Filter, path);
+        rampLead.AddRange(GiantRampLinks.LeadTo(ramp, seg, top));
+        return true;
     }
 
     private void Walk(double now, GiantState.Pose pose, Vector3 goal, float faceYaw)
     {
         // ReachableOnFoot이 방금 계산한 path를 쓴다
-        Vector3[] corners = path.corners;
-        int n = Mathf.Min(corners.Length, GiantState.MaxPoints);
-        var points = new Vector3[Mathf.Max(2, n)];
-        points[0] = pose.Position;
-        for (int i = 1; i < n; i++) points[i] = corners[i];
-        if (n < 2) points[1] = goal;
+        // Vector3[] corners = path.corners;
+        // int n = Mathf.Min(corners.Length, GiantState.MaxPoints);
+        // var points = new Vector3[Mathf.Max(2, n)];
+        // points[0] = pose.Position;
+        // for (int i = 1; i < n; i++) points[i] = corners[i];
+        // if (n < 2) points[1] = goal;
+        // §92-2 경사로 연결을 지나는 길이면 가운데 선 점을 끼워 넣고, 경사로 위에서 출발하면 끝까지의 가운데 선을 앞에 붙인다
+        Vector3[] corners = GiantRampLinks.Expand(path.corners);
+        var list = new List<Vector3>(corners.Length + rampLead.Count + 1) { pose.Position };
+        list.AddRange(rampLead);
+        for (int i = 1; i < corners.Length; i++) list.Add(corners[i]);
+        if (list.Count < 2) list.Add(goal);
+        if (list.Count > GiantState.MaxPoints) list.RemoveRange(GiantState.MaxPoints, list.Count - GiantState.MaxPoints);
+        Vector3[] points = list.ToArray();
         state.Points = points;
         state.MoveAt = now;
         state.Yaw = faceYaw;

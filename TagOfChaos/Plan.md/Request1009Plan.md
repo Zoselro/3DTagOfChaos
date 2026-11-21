@@ -12952,3 +12952,22 @@ bool show = high && NearDropEdge(transform.position, 3f) && !gliding;
 | G | 대포 FBX 6종(`F:\3DTagOfChaos\베이커리 맵\대포 모음`) | Blender: 252k 삼각형 → 4만, 텍스처 그대로(UV 유지), 받침(바퀴)·포신(원점 = 핀)·뒤 해치(원점 = 경첩)로 나눔(포신 둘레 반지름 측정으로 나팔 포구까지 포신에), 포신 반지름 0.95 m로 크기 맞춤. Unity: `P91CannonSetup`이 재질(Standard: 색·노멀·금속/매끈)·프리팹 6개(`HOB_SkyCannon_<출발>To<도착>`)·씬 대포 6대에 `SkyCannonSkin` 연결 — 판마다 서브 맵 배치에 따라 출발 섬·도착 섬 테마 쌍의 모델로 바꿈. `SkyCannonRules` 핀 4.2 m·앞 2.9·뒤 1.95. 대포 계단은 없앰(사용자 요청 — 탑승은 대포 뒤 바닥에서 E). Play Mode: 탑승 → 해치 열림 → 포신 20°→40° → 발사·비행 |
 
 시험: 전체 510개 중 508개 통과. 남은 2개 — `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`(거대 괴물 확률 1.0, 이전부터), `BuildSceneTests.ReleaseScene_HasNoDevScripts`(시험 실행기가 열린 씬을 저장하면서 사용자가 넣어 둔 시험 물체가 저장됨 → 씬을 다시 깨끗이 저장한 뒤 9/9 통과).
+
+## §92 Heaven Of Bakery 피드백 9건 (2026-11-21)
+
+| # | 요청 | 상태 | 내용 |
+|---|---|---|---|
+| 1 | 브금을 하프 연주로 | ✅ (곡 고르기 대기) | 첫 하프 곡(D장조 101초)을 `BakeryPaint.ogg`에 넣음(옛 곡은 Blender 저장소 `transfer/P92/bgm_backup`). 사용자: "하프 소리가 안 들림" → 현을 튕기는 방식(Karplus–Strong, 삼각형 당김·울림통)으로 다시 합성한 5곡 미리듣기 `sfx_preview/HOB_Harp5`(왈츠·아침 빵집·구름 자장가·하늘 정원·설탕 요정, 모두 −18 LUFS·끊김 없는 반복). 고른 곡을 `BakeryPaint.ogg`로 바꾼다. 시험 `Request1011Tests.BakeryPaint_IsAHarpLoop` |
+| 2 | 마녀가 부른 거대 괴물도 다리(경사로)를 건넘 | ✅ | 경사로 폭(약 5 m) < 거대 괴물 반지름 3 m라 NavMesh에 경사로가 없다 → `GiantRampLinks`: 경사로 윗면 가운데 선을 재서(격자 높이·가장자리 깎기·너비 우선 길·꺾임만 남김) 본섬 끝 ↔ 고원 끝을 NavMesh 연결로 잇고, 길이 연결을 쓰면 가운데 선 점을 끼워 넣음(`GiantBrain.Walk`), 경사로 위에서 다시 길을 찾으면 가까운 끝까지 가운데 선을 앞에 붙임(`LeaveRamp`). `GiantState.MaxPoints` 10 → 32. Play Mode: 고원 위 쿠키를 쫓아 경사로 N으로 0 → 48.5 m 걸어 올라가 밟음(순간이동 없음) |
+| 3 | 껌 수류탄 속도 = 물풍선 | ✅ | `Projectile_GumTrap` 중력 14.2 → 71.89(물풍선과 같은 20°·중력 → 같은 발사 속도, 떨어지는 자리는 조준점). `P90AssetSetup.GumThrowGravity`. 시험 `Request1112ThrowTests.GumGrenade_FliesAsFastAsTheBalloon` |
+| 4 | 물풍선이 공기 방울 같음 → 물이 들어 있게 | ✅ | 새 `ITEM_WaterBalloon.fbx`(Blender): 반투명 고무 껍질 + 안의 물(수면 66 %·평평한 물 윗면) + 공기방울 5개 + 묶은 매듭. 재질 `ME_BalloonSkin/Water/Bubble/Knot`(투명 순서 물 → 방울 → 껍질). 옛 모델 `transfer/P92/balloon_backup` |
+| 5 | 순간이동: 문이 열리기 전에 술래가 나옴 | ✅ | 원인: 바닥 뚜껑(해치) 건물 3채는 기다리는 자리가 바닥 위라 뚜껑이 열리기 시작하자마자 몸이 보임. → 뚜껑 아래 1.8 m에서 기다리다가(물리 끔 `MonsterController.WarpHold`) 뚜껑이 0.2초 열린 뒤 0.7초에 걸쳐 솟아오름, 다 올라올 때까지 숨김·이동 잠금(`MonsterWarpRules.BodyHidden/Rise01/LockUntil`). 벽장(미닫이)은 그대로(문이 몸을 가림). 시험 `Request1122Tests.Hatch_*`, Play Mode 확인(48.4 → 50.1 m) |
+| 6 | 바주카 연기가 네모남 | ✅ | 원인: 입자 재질에 텍스처가 없어 사각형으로 그려짐 + 정육면체 파편. → 부드러운 연기·불꽃 2×2 묶음 텍스처와 빛 텍스처(`Resources/FX/Bazooka`), 입자마다 다른 장·회전·흔들림(noise)·공기 끌림·크기 부풂·옅어짐, 불티(늘어진 빛), 파편 = 울퉁불퉁한 덩어리 메시 3종. Linear 색 공간에 맞춰 TintColor 보정. Play Mode 사진 확인 |
+| 7 | 비닐하우스: 흙밭 + 하우스 하나에 과일 하나(딸기·수박·포도) | 모델 ✅ / 배치 코드 ✅ / Unity 넣기는 사용자 | 새 `SK_Greenhouse`(화분 틀·새싹 대신 다진 흙 바닥 + 갈아 놓은 흙 두둑 2줄 + 가운데 나무 디딤판), 장식 `SK_StrawberryRow`(딸기 포기·흰 꽃·작은 딸기), `SK_MelonVineRow`(덩굴·갈라진 잎·덩굴손·노란 꽃), `SK_GrapeTrellis`(나무 기둥·들보·철선·잎 지붕). `P90MapSetup.Greenhouses`: 동 = 딸기(두둑마다 딸기 포기 + 큰 딸기 0.55배 3개), 서 = 수박(덩굴 + 수박 0.3배 2개), 남(없으면 북) = 포도(시렁 + 송이 0.42배 10개를 시렁에 매달기). 사용자가 FBX를 직접 넣은 뒤 `§90 Setup Assets` → `§90 Setup Heaven Of Bakery` |
+| 8 | 수박 꼭지 위치 | 모델 ✅ | 줄무늬가 모이는 긴 축 끝(꼭지 자리, 살짝 오목)에 꼭지 + 바닥으로 이어진 덩굴·잎. 예전에는 옆 배 위에 꽂혀 있었다 |
+| 9 | 바나나 나무 | 모델 ✅ | 사용자 참고 그림대로: 마디가 층층이 쌓인 굽은 갈색 줄기, 넓고 밝은 잎이 늘어짐, 잎 밑 짧은 꼭지에 통통한 바나나 3단(끝이 위로 휨, 양 끝 갈색), 밑동 풀 덤불·돌. A 6.5 m / B 4.8 m 모두 송이 |
+
+모델 묶음: Blender 저장소 `transfer/P92/P92_models.zip`(FBX + 색·노멀·금속/매끈 텍스처 + Blender 스크립트). 넣을 곳 = `Assets/09. Environment/HeavenOfBakery/Farm`(FBX), `.../Farm/Textures`(PNG). 옛 모델 백업 `transfer/P92/farm_backup`. 조각 모델(HOB_Greenhouse·Watermelon·BananaTree_A/B _Fractured)은 새 모델을 넣은 뒤 다시 만들어야 한다(§89.14 파이프라인).
+
+시험: 전체 516개 중 515개 통과. 남은 1개 `Request1107Tests.Settings_HaveModelClipsAndSlimeCharacter`(거대 괴물 확률 1.0 — 사용자 설정, 이전부터).
+

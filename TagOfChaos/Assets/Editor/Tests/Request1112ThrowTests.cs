@@ -213,4 +213,26 @@ public class Request1112ThrowTests
         Assert.IsFalse(search.burstOnImpact);
         Assert.AreEqual(1f, search.fuseAfterImpact, 1e-4f);
     }
+
+    // §92-3 껌 수류탄도 물풍선과 같은 속도로 날아간다(같은 각도·같은 중력 → 같은 발사 속도, 떨어지는 자리는 조준점).
+    [Test]
+    public void GumGrenade_FliesAsFastAsTheBalloon()
+    {
+        var balloon = UnityEditor.AssetDatabase.LoadAssetAtPath<ProjectileConfigSO>("Assets/03. SO/Escape/Projectiles/Projectile_WaterBalloon.asset");
+        var gum = UnityEditor.AssetDatabase.LoadAssetAtPath<ProjectileConfigSO>("Assets/03. SO/Escape/Projectiles/Projectile_GumTrap.asset");
+        Assert.IsNotNull(balloon);
+        Assert.IsNotNull(gum);
+        Assert.AreEqual(balloon.launchAngle, gum.launchAngle, 1e-4f);
+        Assert.AreEqual(balloon.gravity, gum.gravity, 1e-2f);
+        Assert.AreEqual(P90AssetSetup.GumThrowGravity, gum.gravity, 1e-2f, "builder and asset agree");
+        Assert.AreEqual(ThrowSolver.MaxSpeed(balloon), ThrowSolver.MaxSpeed(gum), 0.01f);
+        foreach (float d in new[] { 6f, 12f, 20f })
+        {
+            Vector3 t = new Vector3(0f, 0f, d);
+            Vector3 vb = ThrowSolver.LaunchVelocity(Vector3.zero, t, balloon.launchAngle, balloon.gravity);
+            Vector3 vg = ThrowSolver.LaunchVelocity(Vector3.zero, t, gum.launchAngle, gum.gravity);
+            Assert.AreEqual(vb.magnitude, vg.magnitude, 0.01f);
+            Assert.AreEqual(d, new Vector2(vg.x, vg.z).magnitude * (2f * vg.y / gum.gravity), 0.05f, "still lands on the aimed spot");
+        }
+    }
 }

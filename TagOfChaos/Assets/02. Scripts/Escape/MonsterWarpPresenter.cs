@@ -20,6 +20,7 @@ public class MonsterWarpPresenter : MonoBehaviour
     private readonly HashSet<string> started = new HashSet<string>();   // "actor@At" — 출발 연출을 한 번만
     private readonly HashSet<string> rattled = new HashSet<string>();
     private readonly Dictionary<int, Renderer[]> hidden = new Dictionary<int, Renderer[]>();
+    private readonly HashSet<MonsterController> holding = new HashSet<MonsterController>();   // §92-5 이번 프레임 뚜껑 아래에 붙잡은 본인 술래
     private RectTransform map;
     private readonly RectTransform[] icons = new RectTransform[EscapeState.BuildingCount];
     private readonly TMP_Text[] iconLabels = new TMP_Text[EscapeState.BuildingCount];
@@ -158,6 +159,7 @@ public class MonsterWarpPresenter : MonoBehaviour
         EscapeState s = manager != null ? manager.State : null;
         double now = PhotonNetwork.Time;
         var keep = new HashSet<int>();
+        holding.Clear();
         if (s != null)
             foreach (EscapeState.Warp w in s.Warps)
             {
@@ -171,7 +173,9 @@ public class MonsterWarpPresenter : MonoBehaviour
                     if (c != null && phase < MonsterWarpRules.Phase.Opening) DepartFx(c.gameObject.transform.position);
                     if (c is MonsterController mine && c.View != null && c.View.IsMine) Arrive(mine, w, closet);
                 }
-                bool inside = phase == MonsterWarpRules.Phase.Rattle;
+                // bool inside = phase == MonsterWarpRules.Phase.Rattle;
+                bool hatch = closet != null && closet.Type == MonsterCloset.Kind.Hatch;
+                bool inside = MonsterWarpRules.BodyHidden(w, now, hatch);   // §92-5 뚜껑은 올라오기 시작할 때까지 숨김
                 if (c != null) { SetHidden(w.Actor, c, inside); if (inside) keep.Add(w.Actor); }
                 if (phase == MonsterWarpRules.Phase.Rattle && rattled.Add(key) && closet != null) GameAudio.PlayAt(SoundId.ClosetRattle, closet.SoundPoint);
                 if (closet != null)
@@ -179,8 +183,16 @@ public class MonsterWarpPresenter : MonoBehaviour
                     float rattle = phase == MonsterWarpRules.Phase.Rattle ? 1f : 0f;
                     closet.Pose(MonsterWarpRules.DoorOpen(w, now), rattle, (float)now);
                 }
-                if (c is MonsterController m2 && c.View != null && c.View.IsMine) m2.WarpLockedUntil = MonsterWarpRules.DoneAt(w);
+                // if (c is MonsterController m2 && c.View != null && c.View.IsMine) m2.WarpLockedUntil = MonsterWarpRules.DoneAt(w);
+                if (c is MonsterController m2 && c.View != null && c.View.IsMine)
+                {
+                    m2.WarpLockedUntil = MonsterWarpRules.LockUntil(w, hatch);
+                    if (hatch && closet != null) Rise(m2, w, closet, now, holding);
+                }
             }
+        // §92-5 뚜껑 아래에서 붙잡아 둔 본인 술래: 순간이동이 사라졌으면(방장 정리 등) 놓아 준다
+        MonsterController local = LocalMonster();
+        if (local != null && local.WarpHeld && !holding.Contains(local)) local.WarpRelease();
         // 다 끝난 술래 몸 다시 보이기
         var release = new List<int>();
         foreach (int actor in hidden.Keys) if (!keep.Contains(actor)) release.Add(actor);
@@ -190,9 +202,24 @@ public class MonsterWarpPresenter : MonoBehaviour
     private void Arrive(MonsterController me, EscapeState.Warp w, MonsterCloset closet)
     {
         Vector3 to = closet != null ? closet.StandPoint : manager.BuildingRepairPoint(w.Building);
-        me.TeleportTo(to + Vector3.up * 0.1f);
+        // me.TeleportTo(to + Vector3.up * 0.1f);
+        if (closet != null && closet.Type == MonsterCloset.Kind.Hatch) me.WarpHold(to + Vector3.up * (0.1f - MonsterWarpRules.HatchDepth));   // §92-5 뚜껑 아래
+        else me.TeleportTo(to + Vector3.up * 0.1f);
         if (closet != null) me.transform.rotation = closet.Facing;
         MonsterViewSwitcher.ShowActionLocal();
+    }
+
+    // §92-5 바닥 뚜껑: 아래에서 기다리다가 뚜껑이 열리면 솟아오른다(본인 화면에서 몸을 옮기면 다른 화면은 위치 동기화로 같이 본다).
+    private static void Rise(MonsterController me, EscapeState.Warp w, MonsterCloset closet, double now, HashSet<MonsterController> held)
+    {
+        if (now >= MonsterWarpRules.RiseEndAt(w))
+        {
+            if (me.WarpHeld) { me.WarpHold(closet.StandPoint + Vector3.up * 0.1f); me.WarpRelease(); }
+            return;
+        }
+        float k = MonsterWarpRules.Rise01(w, now);
+        me.WarpHold(closet.StandPoint + Vector3.up * (0.1f - MonsterWarpRules.HatchDepth * (1f - k)));
+        held.Add(me);
     }
 
     private void SetHidden(int actor, IGameCharacter c, bool hide)
